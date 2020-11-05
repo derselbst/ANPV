@@ -93,7 +93,9 @@ void onDecodingStateChanged(SmartImageDecoder* self, DecodingState newState, Dec
         case DecodingState::PreviewImage:
             if(oldState == DecodingState::Metadata)
             {
-                s->addPixmap(QPixmap::fromImage(self->image()));
+                static QPixmap pp = QPixmap::fromImage(self->image());
+                p = &pp;
+                s->addPixmap(pp);
                 break;
             }
             else
