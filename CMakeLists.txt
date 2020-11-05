@@ -137,7 +137,19 @@ message("")
 
 set(SRC
 main.cpp
+DecoderFactory.hpp
+DecoderFactory.cpp
+DecodingState.hpp
 DocumentView.cpp
+DocumentView.hpp
+Formatter.hpp
+ImageDecodeTask.cpp
+ImageDecodeTask.hpp
+SmartImageDecoder.cpp
+SmartImageDecoder.hpp
+SmartJpegDecoder.cpp
+SmartJpegDecoder.hpp
+UserCancellation.hpp
 )
 
 add_executable(anpv ${SRC})

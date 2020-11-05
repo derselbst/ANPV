@@ -1,5 +1,9 @@
 
 #include "DocumentView.hpp"
+#include "DecoderFactory.hpp"
+#include "SmartImageDecoder.hpp"
+#include "ImageDecodeTask.hpp"
+
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -9,15 +13,11 @@
 #include <QSplashScreen>
 #include <QScreen>
 #include <QtDebug>
+#include <QThreadPool>
+#include <QFileInfo>
 
 #include <chrono>
 #include <thread>
-
-extern "C"
-{
-    #include <jerror.h>
-    #include <jpeglib.h>
-}
 
 using namespace std::chrono_literals;
 
@@ -84,10 +84,33 @@ void test()
      }
 }
 
-void decodeJPGBuffered(const char* file)
+void onDecodingStateChanged(SmartImageDecoder* self, DecodingState newState, DecodingState oldState)
 {
-
+    switch(newState)
+    {
+        case DecodingState::Metadata:
+            break;
+        case DecodingState::PreviewImage:
+            if(oldState == DecodingState::Metadata)
+            {
+                s->addPixmap(QPixmap::fromImage(self->image()));
+                break;
+            }
+            else
+            {
+                s->invalidate(s->sceneRect());
+            }
+            break;
+        default:
+            break;
+    }
 }
+
+void onDecodingProgress(SmartImageDecoder* self, int progress, QString message)
+{
+    qWarning() << message << progress << " %";
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -95,14 +118,9 @@ int main(int argc, char *argv[])
     
     QSplashScreen splash(QPixmap("/home/tom/EigeneProgramme/ANPV/splash.jpg"));
     splash.show();
-        
-    splash.showMessage("Loading the Image...");
-//     QPixmap pix("/home/tom/Bilder/Testbilder/PIA23623.tif"); p = &pix;
     
+    splash.showMessage("Initializing objects...");
     
-    splash.showMessage("Loading Thumbnail");
-//     QPixmap thumb("/home/tom/Bilder/Jena/panoJenzig/AAAD2760.dpp - AAAD2902.dpp_fused_enblend-preview1.jpg");
-//     thumb = thumb.scaled(pix.width(), pix.height(), Qt::KeepAspectRatio, Qt::FastTransformation);
     
     QScreen *primaryScreen = QGuiApplication::primaryScreen();
     auto screenSize = primaryScreen->availableVirtualSize();
@@ -114,149 +132,21 @@ int main(int argc, char *argv[])
     
     view.show();
     scene.addRect(QRectF(0, 0, 100, 100));
-//     scene.addPixmap(thumb);
     
-    splash.showMessage("Adding it...");
-     
-    std::this_thread::sleep_for(2s);
     
-//     SmoothPixmapView spv(pix);
-//     scene.addItem(&spv);
+    splash.showMessage("Starting the image decoding task...");
+    
+    std::unique_ptr<SmartImageDecoder> sid = DecoderFactory::load(QString(argv[1]));
+    QObject::connect(sid.get(), &SmartImageDecoder::decodingStateChanged, &::onDecodingStateChanged);
+    QObject::connect(sid.get(), &SmartImageDecoder::decodingProgress, &::onDecodingProgress);
+    
+    ImageDecodeTask t(sid.get());
+    QThreadPool::globalInstance()->start(&t);
+    
+    
     
     
     
     splash.finish(&view);
-    
-    
-    
-    
-    
-    
-    struct jpeg_decompress_struct cinfo; 
-    struct jpeg_error_mgr jerr;
-    struct jpeg_progress_mgr progMgr;
-    progMgr.progress_monitor = [](j_common_ptr cinfo) -> void
-    {
-        auto& p = *cinfo->progress;
-        double progress = (p.completed_passes *100.) / p.total_passes;
-        qWarning() << "JPEG decoding progress: " << progress << " %";
-    };
-    
-
-    // Setup decompression structure
-    cinfo.err = jpeg_std_error(&jerr);
-    
-    jpeg_create_decompress(&cinfo); 
-    cinfo.progress = &progMgr;
-    
-    
-    FILE* infile = fopen("/home/tom/Bilder/Jena/panoJenzig/AAAD2760.dpp - AAAD2902.dpp_fused_enblend.jpg", "rb");
-    jpeg_stdio_src(&cinfo, infile);
-  
-    jpeg_read_header(&cinfo, true);
-    
-    v->fitInView(0,0,cinfo.image_width/2,cinfo.image_height/2, Qt::KeepAspectRatio);
-    
-    // set overall decompression parameters
-    cinfo.buffered_image = true; /* select buffered-image mode */
-    cinfo.out_color_space = JCS_EXT_BGRX;
-    
-    /* Used to set up image size so arrays can be allocated */
-    jpeg_calc_output_dimensions(&cinfo);
-    
-    // Step 4: set parameters for decompression
-
-    cinfo.dct_method = JDCT_ISLOW;
-    cinfo.dither_mode = JDITHER_FS;
-    cinfo.do_fancy_upsampling = true;
-    cinfo.enable_2pass_quant = false;
-    cinfo.do_block_smoothing = false;
-    
-
-    // Step 5: Start decompressor
-    if (jpeg_start_decompress(&cinfo) == false)
-    {
-        qWarning() << "I/O suspension after jpeg_start_decompress()";
-    }
-    
-    // The library's output processing will automatically call jpeg_consume_input()
-    // whenever the output processing overtakes the input; thus, simple lockstep
-    // display requires no direct calls to jpeg_consume_input().  But by adding
-    // calls to jpeg_consume_input(), you can absorb data in advance of what is
-    // being displayed.  This has two benefits:
-    //   * You can limit buildup of unprocessed data in your input buffer.
-    //   * You can eliminate extra display passes by paying attention to the
-    //     state of the library's input processing.
-//     int status;
-//     do
-//     {
-//         status = jpeg_consume_input(&cinfo);
-//     } while ((status != JPEG_SUSPENDED) && (status != JPEG_REACHED_EOI));
-
-
-    switch(cinfo.output_components)
-    {
-        case 1:
-        case 3:
-        case 4:
-            break;
-        default:
-            throw std::runtime_error("Unsupported number of pixel color components");
-    }
-    
-    static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
-    
-    std::vector<JSAMPLE> decodedImg(cinfo.output_width * cinfo.output_height * sizeof(uint32_t));
-    std::vector<JSAMPLE*> bufferSetup(cinfo.output_height);
-    for(JDIMENSION i=0; i < cinfo.output_height; i++)
-    {
-        bufferSetup[i] = &decodedImg[i * cinfo.output_width * sizeof(uint32_t)];
-    }
-    
-    QImage qimg(decodedImg.data(),
-                cinfo.output_width,
-                cinfo.output_height,
-                decodedImg.size() * sizeof(JSAMPLE) / cinfo.output_height,
-                QImage::Format_RGB32);
-    auto preview = s->addPixmap(QPixmap::fromImage(qimg));
-    
-    while (!jpeg_input_complete(&cinfo))
-    {
-        /* start a new output pass */
-        jpeg_start_output(&cinfo, cinfo.input_scan_number);
-        
-        auto start = std::chrono::steady_clock::now();
-
-        while (cinfo.output_scanline < cinfo.output_height)
-        {
-            auto scanlinesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.output_height);
-            
-            auto end = std::chrono::steady_clock::now();
-            auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-            if(durationMs.count() > 100)
-            {
-                start = end;
-                s->invalidate(s->sceneRect());
-                QCoreApplication::processEvents();
-            }
-        }
-        
-        
-        /* terminate output pass */
-        jpeg_finish_output(&cinfo);
-    }
-    
-    jpeg_finish_decompress(&cinfo);
-    progMgr.completed_passes = progMgr.total_passes;
-    progMgr.progress_monitor((j_common_ptr)&cinfo);
-    jpeg_destroy_decompress(&cinfo);
-    
-    fclose(infile);
-    
-    
-    
-
-    
     return a.exec();
 }
