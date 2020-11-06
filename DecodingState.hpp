@@ -2,8 +2,9 @@
 #pragma once
 
 #include <cstdint>
+#include <QObject>
 
-enum class DecodingState : uint32_t
+enum DecodingState : quint32
 {
     // Decoder is idle, nothing has been decoded yet
     Ready,
@@ -27,4 +28,5 @@ enum class DecodingState : uint32_t
     
     // The decoding was cancelled by the user
     Cancelled
-}; 
+};
+

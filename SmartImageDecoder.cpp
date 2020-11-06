@@ -118,7 +118,7 @@ void SmartImageDecoder::decode(DecodingState targetState)
             this->setDecodingState(DecodingState::FullImage);
         } while(false);
     }
-    catch(const UserCancellation& e)
+    catch(const UserCancellation&)
     {
         this->setDecodingState(DecodingState::Cancelled);
     }

@@ -7,6 +7,7 @@
 #include <QFlags>
 #include <QTimer>
 #include <QGraphicsPixmapItem>
+#include <QWindow>
 
 #include <future>
 

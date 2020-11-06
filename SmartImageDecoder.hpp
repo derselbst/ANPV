@@ -44,6 +44,6 @@ private:
     std::unique_ptr<Impl> d;
 
 signals:
-    void decodingStateChanged(SmartImageDecoder* self, DecodingState newState, DecodingState oldState);
+    void decodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
     void decodingProgress(SmartImageDecoder* self, int progress, QString message);
 };

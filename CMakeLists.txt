@@ -99,7 +99,7 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt5Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets REQUIRED)
 #     
 #     HANDLE_FOUND(Qt5Widgets)
 #     
@@ -129,7 +129,7 @@ find_package(Qt5Widgets REQUIRED)
 #     endif(Qt5OpenGL_FOUND AND OPENGL_FOUND)
 
 
-find_package(JPEG)
+find_package(JPEG REQUIRED)
 
 message("")
 ### Show a summary of what we got
@@ -140,6 +140,8 @@ main.cpp
 DecoderFactory.hpp
 DecoderFactory.cpp
 DecodingState.hpp
+DocumentController.cpp
+DocumentController.hpp
 DocumentView.cpp
 DocumentView.hpp
 Formatter.hpp

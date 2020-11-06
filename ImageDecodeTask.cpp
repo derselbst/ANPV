@@ -27,7 +27,7 @@ struct ImageDecodeTask::Impl
 ImageDecodeTask::ImageDecodeTask(SmartImageDecoder* dec) : d(std::make_unique<Impl>(dec))
 {
     this->setAutoDelete(false);
-    d->decoder->setCancellationCallback(&ImageDecodeTask::Impl::throwIfCancelled, &d);
+    d->decoder->setCancellationCallback(&ImageDecodeTask::Impl::throwIfCancelled, d.get());
 }
 
 ImageDecodeTask::~ImageDecodeTask() = default;
