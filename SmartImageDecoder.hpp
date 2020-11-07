@@ -19,18 +19,20 @@ public:
     SmartImageDecoder(QString&&);
     virtual ~SmartImageDecoder();
 
-    void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
+    virtual QSize size() = 0;
+    
     QFileInfo fileInfo();
     // Returns a thumbnail preview image if available
     QImage thumbnail();
     QImage image();
-    void decode(DecodingState targetState);
     QString errorMessage();
+    void decode(DecodingState targetState);
+    
+    void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
     
 protected:
     static constexpr int DecodePreviewImageRefreshDuration = 100;
     
-    virtual QSize size() = 0;
     virtual void decodeHeader() = 0;
     virtual void decodingLoop(DecodingState state) = 0;
     

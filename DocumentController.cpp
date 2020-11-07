@@ -60,6 +60,18 @@ struct DocumentController::Impl
         
         taskContainer.clear();
     }
+    
+    void addThumbnailPreview(QImage thumb, QSize fullImageSize)
+    {
+        if(!thumb.isNull())
+        {
+            auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
+
+            thumbnailPreviewOverlay = std::make_unique<QGraphicsPixmapItem>(QPixmap::fromImage(thumb));
+            thumbnailPreviewOverlay->setScale(newScale);
+            scene->addItem(thumbnailPreviewOverlay.get());
+        }
+    }
 
     void removeSmoothPixmap()
     {
@@ -175,6 +187,9 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
 {
     switch (newState)
     {
+    case DecodingState::Metadata:
+        d->addThumbnailPreview(self->thumbnail(), self->size());
+        break;
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
         {
