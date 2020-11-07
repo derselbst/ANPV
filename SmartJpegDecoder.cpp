@@ -95,6 +95,21 @@ SmartJpegDecoder::SmartJpegDecoder(QString&& file) : SmartImageDecoder(std::move
 
 SmartJpegDecoder::~SmartJpegDecoder() = default;
 
+QSize SmartJpegDecoder::size()
+{
+    auto s = this->decodingState();
+    switch(s)
+    {
+        case DecodingState::Metadata:
+        case DecodingState::PreviewImage:
+        case DecodingState::FullImage:
+            qWarning() << "TODO APPLY EXIF TRNASOFMRTA";
+            return QSize(d->cinfo.output_width, d->cinfo.output_height);
+        default:
+            throw std::logic_error(Formatter() << "Wrong DecodingState: " << s);
+    }
+}
+
 void SmartJpegDecoder::decodeHeader()
 {
     auto& cinfo = d->cinfo;

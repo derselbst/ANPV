@@ -21,8 +21,8 @@ public:
 
     void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
     QFileInfo fileInfo();
-    // Returns a thumbnail preview image. The embedded exif thumbnail will be preferred. @p size is a hint, if no such embedded thumbnail is available, the full image will be decoded and scaled accordingly.
-    QImage thumbnail(QSize size);
+    // Returns a thumbnail preview image if available
+    QImage thumbnail();
     QImage image();
     void decode(DecodingState targetState);
     QString errorMessage();
@@ -30,6 +30,7 @@ public:
 protected:
     static constexpr int DecodePreviewImageRefreshDuration = 100;
     
+    virtual QSize size() = 0;
     virtual void decodeHeader() = 0;
     virtual void decodingLoop(DecodingState state) = 0;
     

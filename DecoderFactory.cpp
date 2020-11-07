@@ -3,12 +3,18 @@
 
 #include "SmartImageDecoder.hpp"
 #include "SmartJpegDecoder.hpp"
+#include "DocumentController.hpp"
 
 #include <QFile>
 
 
 
-std::unique_ptr<SmartImageDecoder> DecoderFactory::load(QString url)
+std::unique_ptr<SmartImageDecoder> DecoderFactory::load(QString url, DocumentController* dc)
 {
-    return std::make_unique<SmartJpegDecoder>(std::move(url));
+    auto sid = std::make_unique<SmartJpegDecoder>(std::move(url));
+    
+    QObject::connect(sid.get(), &SmartImageDecoder::decodingStateChanged, dc, &DocumentController::onDecodingStateChanged);
+    QObject::connect(sid.get(), &SmartImageDecoder::decodingProgress, dc, &DocumentController::onDecodingProgress);
+    
+    return std::move(sid);
 }

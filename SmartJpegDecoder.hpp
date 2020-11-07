@@ -19,6 +19,7 @@ public:
     ~SmartJpegDecoder() override;
 
 protected:
+    QSize size() override;
     void decodeHeader() override;
     void decodingLoop(DecodingState state) override;
     

@@ -147,33 +147,19 @@ QFileInfo SmartImageDecoder::fileInfo()
     return QFileInfo(d->file);
 }
 
+QString SmartImageDecoder::errorMessage()
+{
+    return d->errorMessage;
+}
+
 QImage SmartImageDecoder::image()
 {
     return d->image;
 }
 
-QImage SmartImageDecoder::thumbnail(QSize size)
+QImage SmartImageDecoder::thumbnail()
 {
-    switch(d->state)
-    {
-    case DecodingState::Metadata:
-        return d->thumbnail;
-        break;
-    case DecodingState::PreviewImage:
-    case DecodingState::FullImage:
-        if(!d->thumbnail.isNull())
-        {
-            return d->thumbnail;
-        }
-        if(!d->image.isNull())
-        {
-            d->thumbnail = d->image.scaled(size, Qt::KeepAspectRatio, Qt::FastTransformation);
-            return d->thumbnail;
-        }
-        [[fallthrough]];
-    default:
-        return QImage();
-    }
+    return d->thumbnail;
 }
 
 

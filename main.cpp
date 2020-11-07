@@ -1,8 +1,5 @@
 
 #include "DocumentController.hpp"
-#include "DecoderFactory.hpp"
-#include "SmartImageDecoder.hpp"
-#include "ImageDecodeTask.hpp"
 #include "DocumentView.hpp"
 
 
@@ -14,7 +11,6 @@
 #include <QSplashScreen>
 #include <QScreen>
 #include <QtDebug>
-#include <QThreadPool>
 #include <QFileInfo>
 
 #include <chrono>
@@ -35,17 +31,11 @@ int main(int argc, char *argv[])
     QScreen *primaryScreen = QGuiApplication::primaryScreen();
     auto screenSize = primaryScreen->availableVirtualSize();
 
-    DocumentController dc;
-
     splash.showMessage("Starting the image decoding task...");
-    std::unique_ptr<SmartImageDecoder> sid = DecoderFactory::load(QString(argv[1]));
-    QObject::connect(sid.get(), &SmartImageDecoder::decodingStateChanged, &dc, &DocumentController::onDecodingStateChanged);
-    QObject::connect(sid.get(), &SmartImageDecoder::decodingProgress, &dc, &DocumentController::onDecodingProgress);
+    DocumentController dc;
+    dc.loadImage(QString(argv[1]));
     
-    ImageDecodeTask t(sid.get());
-    QThreadPool::globalInstance()->start(&t);
     
-        
     splash.finish(dc.documentView());
     return a.exec();
 }
