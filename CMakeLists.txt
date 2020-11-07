@@ -131,6 +131,9 @@ find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 find_package(JPEG REQUIRED)
 
+add_subdirectory(libkexiv2)
+include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
+
 message("")
 ### Show a summary of what we got
 # summary_show()
@@ -144,6 +147,8 @@ DocumentController.cpp
 DocumentController.hpp
 DocumentView.cpp
 DocumentView.hpp
+ExifWrapper.cpp
+ExifWrapper.hpp
 Formatter.hpp
 ImageDecodeTask.cpp
 ImageDecodeTask.hpp
@@ -155,5 +160,5 @@ UserCancellation.hpp
 )
 
 add_executable(anpv ${SRC})
-target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES})
+target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} KF5KExiv2)
 target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS})

@@ -1,0 +1,3 @@
+[submodule "libkexiv2"]
+	path = libkexiv2
+	url = https://invent.kde.org/tommo/libkexiv2.git
