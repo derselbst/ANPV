@@ -85,6 +85,11 @@ void SmartImageDecoder::cancelCallback()
     }
 }
 
+DecodingState SmartImageDecoder::decodingState()
+{
+    return d->state;
+}
+
 void SmartImageDecoder::setDecodingState(DecodingState state)
 {
     DecodingState old = d->state;

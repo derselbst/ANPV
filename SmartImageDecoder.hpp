@@ -33,6 +33,7 @@ protected:
     virtual void decodeHeader() = 0;
     virtual void decodingLoop(DecodingState state) = 0;
     
+    DecodingState decodingState();
     void fileBuf(const unsigned char** buf, qint64* size);
     void cancelCallback();
     void setDecodingState(DecodingState state);

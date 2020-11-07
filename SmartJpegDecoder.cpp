@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdio>
 #include <QDebug>
+#include <csetjmp>
 
 extern "C"
 {
@@ -12,12 +13,18 @@ extern "C"
     #include <jpeglib.h>
 }
 
+struct my_error_mgr
+{
+    struct jpeg_error_mgr pub;
+    jmp_buf setjmp_buffer;
+};
+
 struct SmartJpegDecoder::Impl
 {
     SmartJpegDecoder* q;
     
     struct jpeg_decompress_struct cinfo; 
-    struct jpeg_error_mgr jerr;
+    struct my_error_mgr jerr;
     struct jpeg_progress_mgr progMgr;
     
     QString latestProgressMsg;
@@ -26,9 +33,11 @@ struct SmartJpegDecoder::Impl
     std::vector<JSAMPLE> decodedImg;
     
     Impl(SmartJpegDecoder* parent) : q(parent)
-    {        
-        // Setup decompression structure
-        cinfo.err = jpeg_std_error(&jerr);
+    {
+        // We set up the normal JPEG error routines, then override error_exit.
+        cinfo.err = jpeg_std_error(&jerr.pub);
+        jerr.pub.error_exit = &my_error_exit;
+        jerr.pub.output_message = &my_output_message;
         
         jpeg_create_decompress(&cinfo);
         cinfo.progress = &progMgr;
@@ -36,7 +45,7 @@ struct SmartJpegDecoder::Impl
         progMgr.progress_monitor = &Impl::libjpegProgressCallback;
     }
     
-    static void libjpegProgressCallback(j_common_ptr cinfo)
+    static void libjpegProgressCallback(j_common_ptr cinfo) noexcept
     {
         auto self = static_cast<Impl*>(cinfo->client_data);
         auto& p = *cinfo->progress;
@@ -48,6 +57,30 @@ struct SmartJpegDecoder::Impl
         }
         
         self->latestProgress = progress;
+    }
+    
+    static void my_error_exit(j_common_ptr cinfo) noexcept
+    {
+        /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
+        auto myerr = reinterpret_cast<struct my_error_mgr*>(cinfo->err);
+
+        /* Always display the message. */
+        /* We could postpone this until after returning, if we chose. */
+        (*cinfo->err->output_message) (cinfo);
+        
+        /* Return control to the setjmp point */
+        longjmp(myerr->setjmp_buffer, 1);
+    }
+    
+    static void my_output_message(j_common_ptr cinfo)
+    {
+        char buffer[JMSG_LENGTH_MAX];
+        auto self = static_cast<Impl*>(cinfo->client_data);
+
+        /* Create the message */
+        (*cinfo->err->format_message) (cinfo, buffer);
+
+        self->latestProgressMsg = buffer;
     }
     
     ~Impl()
@@ -63,21 +96,7 @@ SmartJpegDecoder::SmartJpegDecoder(QString&& file) : SmartImageDecoder(std::move
 SmartJpegDecoder::~SmartJpegDecoder() = default;
 
 void SmartJpegDecoder::decodeHeader()
-{/*
-    const char* input = this->file().toUtf8().constData();
-    if(d->infile == nullptr)
-    {
-        d->infile = fopen(input, "rb");
-    }
-    
-    if(d->infile == nullptr)
-    {
-        throw std::runtime_error(Formatter() << "Unable to open " << input << " (" << strerror(errno) << ")");
-    }
-    
-    jpeg_stdio_src(&d->cinfo, infile);
-    
-    */
+{
     auto& cinfo = d->cinfo;
     
     const unsigned char* buffer;
@@ -87,6 +106,13 @@ void SmartJpegDecoder::decodeHeader()
     jpeg_mem_src(&cinfo, buffer, nbytes);
 
     d->latestProgressMsg = "Reading JPEG Header";
+    
+    if (setjmp(d->jerr.setjmp_buffer))
+    {
+        // If we get here, the JPEG code has signaled an error.
+        throw std::runtime_error(Formatter() << d->latestProgressMsg.toStdString());
+    }
+    
     int ret = jpeg_read_header(&cinfo, true);
     if(ret != JPEG_HEADER_OK)
     {
@@ -94,8 +120,17 @@ void SmartJpegDecoder::decodeHeader()
     }
 }
 
-void SmartJpegDecoder::decodingLoop(DecodingState state)
+void SmartJpegDecoder::decodingLoop(DecodingState targetState)
 {
+    // vector has a nontrivial destructor, be careful with setjmp/longjmp
+    std::vector<JSAMPLE*> bufferSetup;
+    
+    if (setjmp(d->jerr.setjmp_buffer))
+    {
+        // If we get here, the JPEG code has signaled an error.
+        throw std::runtime_error(Formatter() << d->latestProgressMsg.toStdString());
+    }
+    
     auto& cinfo = d->cinfo;
     
     // set overall decompression parameters
@@ -108,7 +143,6 @@ void SmartJpegDecoder::decodingLoop(DecodingState state)
     
     d->latestProgressMsg = "Allocating memory for decoded image";
     static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
-    std::vector<JSAMPLE*> bufferSetup;
     size_t rowStride = cinfo.output_width * sizeof(uint32_t);
     size_t needed = rowStride * cinfo.output_height;
     try
@@ -175,7 +209,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState state)
     }
     
     d->latestProgressMsg = "Consuming and decoding JPEG input file";
-    while (!jpeg_input_complete(&cinfo))
+    while (!jpeg_input_complete(&cinfo) && this->decodingState() <= targetState)
     {
         auto start = std::chrono::steady_clock::now();
         
@@ -207,9 +241,6 @@ void SmartJpegDecoder::decodingLoop(DecodingState state)
     // call the progress monitor for a last time to report 100% to GUI
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
-    
-//     fclose(d->infile);
-//     d->infile = nullptr;
 }
 
 
