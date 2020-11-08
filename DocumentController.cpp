@@ -201,8 +201,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
         }
         break;
     case DecodingState::FullImage:
-        d->removeSmoothPixmap();
-        d->scene->invalidate(d->scene->sceneRect());
+        this->onImageRefinement(self->image());
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
@@ -217,7 +216,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
 void DocumentController::onImageRefinement(QImage img)
 {
     d->removeSmoothPixmap();
-    d->currentDocumentPixmap = QPixmap::fromImage(img);
+    d->currentDocumentPixmap = QPixmap::fromImage(img, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
     d->scene->invalidate(d->scene->sceneRect());
 }

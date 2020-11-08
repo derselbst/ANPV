@@ -253,6 +253,11 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
     }
     
     jpeg_finish_decompress(&cinfo);
+    this->setImage(QImage(d->decodedImg.data(),
+                          cinfo.output_width,
+                          cinfo.output_height,
+                          rowStride,
+                          QImage::Format_RGB32));
     
     d->latestProgressMsg = "JPEG decoding completed successfully.";
     // call the progress monitor for a last time to report 100% to GUI
