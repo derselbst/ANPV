@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 
+class ExifWrapper;
 
 class SmartImageDecoder : public QObject
 {
@@ -27,6 +28,8 @@ public:
     QImage image();
     QString errorMessage();
     void decode(DecodingState targetState);
+    
+    ExifWrapper* exif();
     
     void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
     

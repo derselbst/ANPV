@@ -174,4 +174,8 @@ QImage SmartImageDecoder::thumbnail()
     return d->thumbnail;
 }
 
+ExifWrapper* SmartImageDecoder::exif()
+{
+    return &d->exifWrapper;
+}
 
