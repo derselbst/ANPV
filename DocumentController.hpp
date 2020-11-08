@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <memory>
+#include <QImage>
 
 class SmartImageDecoder;
 class DocumentView;
@@ -24,6 +25,7 @@ public:
 public slots:
     void onBeginFovChanged();
     void onEndFovChanged();
+    void onImageRefinement(QImage img);
     void onDecodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
     void onDecodingProgress(SmartImageDecoder* self, int progress, QString message);
     void onDecodingTaskFinished(ImageDecodeTask* t);

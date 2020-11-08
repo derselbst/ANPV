@@ -170,11 +170,6 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             bufferSetup[i] = &d->decodedImg[i * rowStride];
         }
         
-        this->setImage(QImage(d->decodedImg.data(),
-                              cinfo.output_width,
-                              cinfo.output_height,
-                              rowStride,
-                              QImage::Format_RGB32));
         this->setDecodingState(DecodingState::PreviewImage);
     }
     catch(const std::bad_alloc&)
@@ -223,6 +218,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             throw std::runtime_error(Formatter() << "Unsupported number of pixel color components: " << cinfo.output_components);
     }
     
+    auto totalLinesRead = cinfo.output_scanline;
     d->latestProgressMsg = "Consuming and decoding JPEG input file";
     while (!jpeg_input_complete(&cinfo) && this->decodingState() <= targetState)
     {
@@ -233,7 +229,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
         
         while (cinfo.output_scanline < cinfo.output_height)
         {
-            jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
+            totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
             
             auto end = std::chrono::steady_clock::now();
@@ -241,13 +237,19 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             if(durationMs.count() > DecodePreviewImageRefreshDuration)
             {
                 start = end;
-                // trigger the PreviewImage state again to update the UI
-                this->setDecodingState(DecodingState::PreviewImage);
+                
+                emit this->imageRefined(QImage(d->decodedImg.data(),
+                                        cinfo.output_width,
+                                        std::min(totalLinesRead, cinfo.output_height),
+                                        rowStride,
+                                        QImage::Format_RGB32));
             }
         }
         
         /* terminate output pass */
         jpeg_finish_output(&cinfo);
+        
+        this->setDecodingState(DecodingState::PreviewImage);
     }
     
     jpeg_finish_decompress(&cinfo);
@@ -257,5 +259,3 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
 }
-
-

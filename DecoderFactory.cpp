@@ -15,6 +15,7 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::load(QString url, DocumentCon
     
     QObject::connect(sid.get(), &SmartImageDecoder::decodingStateChanged, dc, &DocumentController::onDecodingStateChanged);
     QObject::connect(sid.get(), &SmartImageDecoder::decodingProgress, dc, &DocumentController::onDecodingProgress);
+    QObject::connect(sid.get(), &SmartImageDecoder::imageRefined, dc, &DocumentController::onImageRefinement);
     
     return std::move(sid);
 }

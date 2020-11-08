@@ -40,6 +40,8 @@ struct DocumentController::Impl
     std::unique_ptr<QGraphicsPixmapItem> smoothPixmapOverlay;
     
     std::unique_ptr<QGraphicsPixmapItem> thumbnailPreviewOverlay;
+    
+    std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
 
     std::unique_ptr<QGraphicsSimpleTextItem> textOverlay;
 
@@ -69,6 +71,8 @@ struct DocumentController::Impl
 
             thumbnailPreviewOverlay = std::make_unique<QGraphicsPixmapItem>(QPixmap::fromImage(thumb));
             thumbnailPreviewOverlay->setScale(newScale);
+            
+            view->fitInView(thumbnailPreviewOverlay.get(), Qt::KeepAspectRatio);
             scene->addItem(thumbnailPreviewOverlay.get());
         }
     }
@@ -193,15 +197,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
         {
-            d->currentDocumentPixmap = QPixmap::fromImage(self->image());
-            auto* pixitem = d->scene->addPixmap(d->currentDocumentPixmap);
-            d->view->fitInView(pixitem, Qt::KeepAspectRatio);
-            break;
-        }
-        else
-        {
-            d->removeSmoothPixmap();
-            d->scene->invalidate(d->scene->sceneRect());
+            d->scene->addItem(d->currentPixmapOverlay.get());
         }
         break;
     case DecodingState::FullImage:
@@ -215,6 +211,15 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
     default:
         break;
     }
+}
+
+
+void DocumentController::onImageRefinement(QImage img)
+{
+    d->removeSmoothPixmap();
+    d->currentDocumentPixmap = QPixmap::fromImage(img);
+    d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
+    d->scene->invalidate(d->scene->sceneRect());
 }
 
 void DocumentController::onDecodingProgress(SmartImageDecoder*, int progress, QString message)

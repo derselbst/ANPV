@@ -3,6 +3,7 @@
 
 #include "UserCancellation.hpp"
 #include "Formatter.hpp"
+#include "ExifWrapper.hpp"
 #include <QtDebug>
 
 struct SmartImageDecoder::Impl
@@ -14,12 +15,15 @@ struct SmartImageDecoder::Impl
     
     QFile file;
     const unsigned char* fileMapped;
+    QByteArray byteArray;
     
     // a low resolution preview image of the original full image
     QImage thumbnail;
     
     // the fully decoded image - might be incomplete if the state is PreviewImage
     QImage image;
+    
+    ExifWrapper exifWrapper;
     
     Impl(QString&& url) : file(std::move(url))
     {}
@@ -43,10 +47,13 @@ struct SmartImageDecoder::Impl
         {
             throw std::runtime_error(Formatter() << "Could not mmap() file '" << info.absoluteFilePath().toStdString() << "'");
         }
+        
+        byteArray = QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), file.size());
     }
     
     void close()
     {
+        byteArray.clear();
         fileMapped = nullptr;
         file.close();
     }
@@ -95,7 +102,10 @@ void SmartImageDecoder::setDecodingState(DecodingState state)
     DecodingState old = d->state;
     d->state = state;
     
-    emit this->decodingStateChanged(this, state, old);
+    if(old != state)
+    {
+        emit this->decodingStateChanged(this, state, old);
+    }
 }
 
 void SmartImageDecoder::decode(DecodingState targetState)
@@ -111,7 +121,9 @@ void SmartImageDecoder::decode(DecodingState targetState)
             this->setDecodingState(DecodingState::Ready);
             
             this->decodeHeader();
-//             d->exifReader(d->file);
+            d->exifWrapper.loadFromData(d->byteArray);
+            this->setThumbnail(d->exifWrapper.thumbnail());
+            
             this->setDecodingState(DecodingState::Metadata);
                         
             if(d->state >= targetState)
