@@ -140,6 +140,8 @@ message("")
 
 set(SRC
 main.cpp
+AfPointOverlay.cpp
+AfPointOverlay.hpp
 DecoderFactory.hpp
 DecoderFactory.cpp
 DecodingState.hpp

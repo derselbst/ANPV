@@ -1,12 +1,17 @@
 
 #include "ExifWrapper.hpp"
 
+#include "AfPointOverlay.hpp"
+
 #include <QByteArray>
 #include <QImage>
 #include <QSize>
 #include <QPoint>
 #include <QRect>
 #include <cmath>
+#include <QDebug>
+#include <QPainter>
+#include <QPen>
 
 #include <exiv2/exiv2.hpp>
 
@@ -121,7 +126,6 @@ int ExifWrapper::dotsPerMeterY()
     return d->dotsPerMeter(QStringLiteral("YResolution"));
 }
 
-
 QSize ExifWrapper::size()
 {
     QSize size = d->mExivHandle.getImageDimensions();
@@ -200,4 +204,88 @@ QImage ExifWrapper::thumbnail()
         }
     }
     return image;
+}
+
+std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
+{
+    long afValidPoints, imageWidth, imageHeight;
+    if (d->mExivHandle.getExifTagLong("Exif.Canon.AFValidPoints",      afValidPoints) &&
+        d->mExivHandle.getExifTagLong("Exif.Canon.AFCanonImageWidth",  imageWidth) &&
+        d->mExivHandle.getExifTagLong("Exif.Canon.AFCanonImageHeight", imageHeight))
+    {
+        QString model = d->mExivHandle.getExifTagString("Exif.Canon.ModelID");
+        if (!model.isNull())
+        {
+            long flipY;
+            if(model.indexOf("EOS") != -1)
+            {
+                flipY = -1;
+            }
+            else if(model.indexOf("PowerShot") != -1)
+            {
+                flipY = 1;
+            }
+            else
+            {
+                qInfo() << "Canon image contains AF point information, but camera model is unknown.";
+                return nullptr;
+            }
+            
+            auto apo = std::make_unique<AfPointOverlay>(afValidPoints, QSize(imageWidth, imageHeight));
+            
+            for(long i=0; i<afValidPoints; i++)
+            {
+                long rectWidth, rectHeight, x, y;
+                
+                // should be unsigned because bitmasks
+                long foc, sel, dis;
+                
+                if (d->mExivHandle.getExifTagLong("Exif.Canon.AFAreaWidths",    rectWidth,  i) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFAreaHeights",   rectHeight, i) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFXPositions",    x,          i) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFYPositions",    y,          i) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsInFocus", foc,        i/16) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsSelected",sel,        i/16) &&
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsUnusable",dis,       i/16))
+                {
+                    long rectPosX = x + imageWidth/2 - rectWidth/2;
+                    long rectPosY = flipY * y + imageHeight/2 - rectHeight/2;
+                    
+                    QRect rectAF(rectPosX, rectPosY, rectWidth, rectHeight);
+                    
+                    AfPointOverlay::AfType type;
+                    if(dis & (1<<(i%16)))
+                    {
+                        type = AfPointOverlay::AfType::Disabled;
+                    }
+                    else
+                    {
+                        if(foc & (1<<(i%16)))
+                        {
+                            type = AfPointOverlay::AfType::HasFocus;
+                        }
+                        else if(sel & (1<<(i%16)))
+                        {
+                            type = AfPointOverlay::AfType::Selected;
+                        }
+                        else
+                        {
+                            type = AfPointOverlay::AfType::Normal;
+                        }
+                    }
+                    
+                    apo->addAfArea(rectAF, type);
+                }
+                else
+                {
+                    qWarning() << "Error while parsing Canon AF";
+                    return nullptr;
+                }
+            }
+            
+            return apo;
+        }
+    }
+    
+    return nullptr;
 }

@@ -4,6 +4,8 @@
 #include "SmartImageDecoder.hpp"
 #include "ImageDecodeTask.hpp"
 #include "DecoderFactory.hpp"
+#include "ExifWrapper.hpp"
+#include "AfPointOverlay.hpp"
 
 #include <QGraphicsScene>
 #include <QDebug>
@@ -44,9 +46,13 @@ struct DocumentController::Impl
     std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
 
     std::unique_ptr<QGraphicsSimpleTextItem> textOverlay;
+    
+    std::unique_ptr<AfPointOverlay> afPointOverlay;
 
     Impl() : scene(std::make_unique<QGraphicsScene>()), view(std::make_unique<DocumentView>(scene.get()))
-    {}
+    {
+        view->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    }
     
     ~Impl()
     {
@@ -86,6 +92,16 @@ struct DocumentController::Impl
         }
     }
 
+    void addAfPoints(std::unique_ptr<AfPointOverlay>&& afpoint)
+    {
+        if(afpoint)
+        {
+            afPointOverlay = std::move(afpoint);
+            afPointOverlay->setZValue(1);
+            scene->addItem(afPointOverlay.get());
+        }
+    }
+    
     void createSmoothPixmap()
     {
         if (currentDocumentPixmap.isNull())
@@ -143,6 +159,7 @@ struct DocumentController::Impl
         QString error = sid->errorMessage();
         textOverlay = std::make_unique<QGraphicsSimpleTextItem>(error);
         textOverlay->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+        scene->clear();
         scene->addItem(textOverlay.get());
     }
 };
@@ -198,6 +215,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
         if (oldState == DecodingState::Metadata)
         {
             d->scene->addItem(d->currentPixmapOverlay.get());
+            d->addAfPoints(self->exif()->autoFocusPoints());
         }
         break;
     case DecodingState::FullImage:

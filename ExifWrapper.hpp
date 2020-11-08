@@ -12,6 +12,7 @@ namespace Exiv2
 }
 
 class QByteArray;
+class AfPointOverlay;
 
 /**
  * This helper class loads image using libexiv2, and takes care of exception
@@ -31,6 +32,7 @@ public:
     QSize size();
     QString comment();
     QImage thumbnail();
+    std::unique_ptr<AfPointOverlay> autoFocusPoints();
 
 private:
     struct Impl;
