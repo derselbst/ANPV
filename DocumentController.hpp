@@ -7,6 +7,8 @@
 #include <memory>
 #include <QImage>
 
+class QMainWindow;
+class QProgressBar;
 class SmartImageDecoder;
 class DocumentView;
 class ImageDecodeTask;
@@ -16,10 +18,11 @@ class DocumentController : public QObject
 Q_OBJECT
 
 public:
-    DocumentController(QObject *parent = nullptr);
+    DocumentController(QMainWindow* wnd, QObject *parent = nullptr);
     ~DocumentController() override;
 
     DocumentView* documentView();
+    
     void loadImage(QString url);
 
 public slots:

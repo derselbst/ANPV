@@ -16,13 +16,18 @@
 #include <QWindow>
 #include <QScreen>
 #include <QDesktopWidget>
-
+#include <QProgressBar>
+#include <QStatusBar>
+#include <QMainWindow>
 
 
 struct DocumentController::Impl
 {
     std::unique_ptr<QGraphicsScene> scene = std::make_unique<QGraphicsScene>();
     std::unique_ptr<DocumentView> view;
+    
+    QStatusBar* statusBar = nullptr;
+    QProgressBar* progressBar = nullptr;
     
     // a container were we store all tasks that need to be processed
     std::vector<std::unique_ptr<ImageDecodeTask>> taskContainer;
@@ -165,26 +170,30 @@ struct DocumentController::Impl
     }
 };
 
-DocumentController::DocumentController(QObject *parent)
+DocumentController::DocumentController(QMainWindow* wnd, QObject *parent)
  : QObject(parent), d(std::make_unique<Impl>())
 {
-    d->scene->addRect(QRectF(0, 0, 100, 100));
-
-    connect(d->view.get(), &DocumentView::fovChangedBegin, this, &DocumentController::onBeginFovChanged);
-    connect(d->view.get(), &DocumentView::fovChangedEnd, this, &DocumentController::onEndFovChanged);
-    
     QScreen *ps = QGuiApplication::primaryScreen();
     QRect screenres = ps->geometry();
 
-    // open the widget on the primary screen
-    // setScreen() is not sufficient on Windows
-    d->view->windowHandle()->setScreen(ps);
-
-    // that's why we need to move and resize it explicitly
-    d->view->move(screenres.topLeft());
-    d->view->resize(screenres.width(), screenres.height());
+    connect(d->view.get(), &DocumentView::fovChangedBegin, this, &DocumentController::onBeginFovChanged);
+    connect(d->view.get(), &DocumentView::fovChangedEnd, this, &DocumentController::onEndFovChanged);
+        
+    std::unique_ptr<QProgressBar> progressBar = std::make_unique<QProgressBar>();
+        progressBar->setMinimum(0);
+        progressBar->setMaximum(100);
     
-    d->view->show();
+    d->progressBar = progressBar.release();
+    wnd->statusBar()->addPermanentWidget(d->progressBar);
+    wnd->setCentralWidget(d->view.get());
+    
+    // open the widget on the primary screen
+    // by moving and resize it explicitly
+    wnd->move(screenres.topLeft());
+    wnd->resize(screenres.width(), screenres.height());
+    wnd->setWindowState(Qt::WindowMaximized);
+    wnd->setWindowTitle("ANPV");
+    d->statusBar = wnd->statusBar();
 }
 
 DocumentController::~DocumentController() = default;
@@ -242,7 +251,8 @@ void DocumentController::onImageRefinement(QImage img)
 
 void DocumentController::onDecodingProgress(SmartImageDecoder*, int progress, QString message)
 {
-    qWarning() << message.toStdString().c_str() << progress << " %";
+    d->statusBar->showMessage(message, 0);
+    d->progressBar->setValue(progress);
 }
 
 void DocumentController::onDecodingTaskFinished(ImageDecodeTask* t)
@@ -284,6 +294,9 @@ void DocumentController::loadImage(QString url)
     auto* task = d->taskContainer.back().get();
     d->currentDecodeTask = task;
     connect(task, &ImageDecodeTask::finished, this, &DocumentController::onDecodingTaskFinished, Qt::QueuedConnection);
+    
+    d->progressBar->reset();
+    d->statusBar->showMessage(QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
     
     QThreadPool::globalInstance()->start(task);
 }

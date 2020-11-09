@@ -12,6 +12,9 @@
 #include <QScreen>
 #include <QtDebug>
 #include <QFileInfo>
+#include <QMainWindow>
+#include <QStatusBar>
+#include <QProgressBar>
 
 #include <chrono>
 #include <thread>
@@ -32,10 +35,14 @@ int main(int argc, char *argv[])
     auto screenSize = primaryScreen->availableVirtualSize();
 
     splash.showMessage("Starting the image decoding task...");
-    DocumentController dc;
+    
+    QMainWindow m;
+    DocumentController dc(&m);
+    
+    m.show();
+    splash.finish(&m);
+    
     dc.loadImage(QString(argv[1]));
     
-    
-    splash.finish(dc.documentView());
     return a.exec();
 }
