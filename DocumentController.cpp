@@ -21,7 +21,7 @@
 
 struct DocumentController::Impl
 {
-    std::unique_ptr<QGraphicsScene> scene;
+    std::unique_ptr<QGraphicsScene> scene = std::make_unique<QGraphicsScene>();
     std::unique_ptr<DocumentView> view;
     
     // a container were we store all tasks that need to be processed
@@ -41,16 +41,17 @@ struct DocumentController::Impl
     // a smoothly scaled version of the full resolution image
     std::unique_ptr<QGraphicsPixmapItem> smoothPixmapOverlay;
     
-    std::unique_ptr<QGraphicsPixmapItem> thumbnailPreviewOverlay;
+    std::unique_ptr<QGraphicsPixmapItem> thumbnailPreviewOverlay = std::make_unique<QGraphicsPixmapItem>();
     
     std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
 
-    std::unique_ptr<QGraphicsSimpleTextItem> textOverlay;
+    std::unique_ptr<QGraphicsSimpleTextItem> textOverlay = std::make_unique<QGraphicsSimpleTextItem>();
     
     std::unique_ptr<AfPointOverlay> afPointOverlay;
 
-    Impl() : scene(std::make_unique<QGraphicsScene>()), view(std::make_unique<DocumentView>(scene.get()))
+    Impl()
     {
+        view = std::make_unique<DocumentView>(scene.get());
         view->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     }
     
@@ -75,7 +76,7 @@ struct DocumentController::Impl
         {
             auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
 
-            thumbnailPreviewOverlay = std::make_unique<QGraphicsPixmapItem>(QPixmap::fromImage(thumb));
+            thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb));
             thumbnailPreviewOverlay->setScale(newScale);
             
             view->fitInView(thumbnailPreviewOverlay.get(), Qt::KeepAspectRatio);
@@ -88,7 +89,7 @@ struct DocumentController::Impl
         if (smoothPixmapOverlay)
         {
             scene->removeItem(smoothPixmapOverlay.get());
-            smoothPixmapOverlay.reset(nullptr);
+            smoothPixmapOverlay = nullptr;
         }
     }
 
@@ -157,7 +158,7 @@ struct DocumentController::Impl
     void setDocumentError(SmartImageDecoder* sid)
     {
         QString error = sid->errorMessage();
-        textOverlay = std::make_unique<QGraphicsSimpleTextItem>(error);
+        textOverlay->setText(error);
         textOverlay->setFlag(QGraphicsItem::ItemIgnoresTransformations);
         scene->clear();
         scene->addItem(textOverlay.get());
@@ -182,7 +183,7 @@ DocumentController::DocumentController(QObject *parent)
     // that's why we need to move and resize it explicitly
     d->view->move(screenres.topLeft());
     d->view->resize(screenres.width(), screenres.height());
-
+    
     d->view->show();
 }
 
