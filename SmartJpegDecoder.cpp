@@ -236,13 +236,12 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             if(durationMs.count() > DecodePreviewImageRefreshDuration)
             {
-                start = end;
-                
                 emit this->imageRefined(QImage(d->decodedImg.data(),
                                         cinfo.output_width,
                                         std::min(totalLinesRead, cinfo.output_height),
                                         rowStride,
                                         QImage::Format_RGB32));
+                start = end;
             }
         }
         
