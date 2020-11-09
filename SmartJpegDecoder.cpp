@@ -157,6 +157,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
     jpeg_calc_output_dimensions(&cinfo);
     
     d->latestProgressMsg = "Allocating memory for decoded image";
+    d->progMgr.progress_monitor((j_common_ptr)&cinfo);
     static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
     size_t rowStride = cinfo.output_width * sizeof(uint32_t);
     size_t needed = rowStride * cinfo.output_height;
@@ -188,6 +189,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
 
     // Start decompressor
     d->latestProgressMsg = "Starting the JPEG decompressor";
+    d->progMgr.progress_monitor((j_common_ptr)&cinfo);
     if (jpeg_start_decompress(&cinfo) == false)
     {
         qWarning() << "I/O suspension after jpeg_start_decompress()";
@@ -218,8 +220,10 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             throw std::runtime_error(Formatter() << "Unsupported number of pixel color components: " << cinfo.output_components);
     }
     
-    auto totalLinesRead = cinfo.output_scanline;
     d->latestProgressMsg = "Consuming and decoding JPEG input file";
+    d->progMgr.progress_monitor((j_common_ptr)&cinfo);
+    
+    auto totalLinesRead = cinfo.output_scanline;
     while (!jpeg_input_complete(&cinfo) && this->decodingState() <= targetState)
     {
         auto start = std::chrono::steady_clock::now();
