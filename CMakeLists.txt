@@ -131,6 +131,8 @@ find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 find_package(JPEG REQUIRED)
 
+find_package(TIFF REQUIRED)
+
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 
@@ -158,9 +160,11 @@ SmartImageDecoder.cpp
 SmartImageDecoder.hpp
 SmartJpegDecoder.cpp
 SmartJpegDecoder.hpp
+SmartTiffDecoder.cpp
+SmartTiffDecoder.hpp
 UserCancellation.hpp
 )
 
 add_executable(anpv ${SRC})
-target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} KF5KExiv2)
-target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS})
+target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2)
+target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
