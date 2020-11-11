@@ -7,6 +7,17 @@
 
 #include "tiffio.hxx"
 
+struct PageInfo
+{
+    uint32_t width;
+    uint32_t height;
+	uint16_t config;
+    // bits per pixel
+    uint16_t bpp;
+    // sample per pixel
+    uint32_t spp;
+};
+
 struct SmartTiffDecoder::Impl
 {
     SmartTiffDecoder* q;
@@ -19,14 +30,15 @@ struct SmartTiffDecoder::Impl
     
     std::vector<uint32_t> decodedImg;
     
-    int currentImageLayer = 0;
-    int totalImageLayers;
+    int currentImagePage = 0;
+    int totalImagePage = 0;
     
-    uint32_t width;
-    uint32_t height;
     
     Impl(SmartTiffDecoder* parent) : q(parent)
-    {}
+    {
+        TIFFSetErrorHandler();
+        TIFFSetWarningHandler();
+    }
     
     static void convert32BitOrder(uint32_t *target, quint32 width)
     {
@@ -44,6 +56,19 @@ struct SmartTiffDecoder::Impl
     static tsize_t qtiffReadProc(thandle_t fd, tdata_t buf, tsize_t size)
     {
         auto impl = static_cast<Impl*>(fd);
+        
+        if(impl->offset >= impl->nbytes)
+        {
+            return 0;
+        }
+        else if(impl->offset + size < impl->nbytes)
+        {
+            
+        }
+        else
+        {
+            size = impl->nbytes - impl->offset;
+        }
         
         memcpy(buf, &impl->buffer[impl->offset], size);
         
@@ -83,7 +108,7 @@ struct SmartTiffDecoder::Impl
 
     static toff_t qtiffSizeProc(thandle_t fd)
     {
-        return static_cast<Impl*>(fd)->offset;
+        return static_cast<Impl*>(fd)->nbytes;
     }
 
     static int qtiffMapProc(thandle_t /*fd*/, tdata_t* /*pbase*/, toff_t* /*psize*/)
@@ -143,14 +168,33 @@ void SmartTiffDecoder::decodeHeader()
                             d->qtiffMapProc,
                             d->qtiffUnmapProc);
     
-    TIFFSetDirectory(d->tiff, d->currentImageLayer);
-    
-    
-    if (!TIFFGetField(d->tiff, TIFFTAG_IMAGEWIDTH, &d->width) ||
-        !TIFFGetField(d->tiff, TIFFTAG_IMAGELENGTH, &d->height))
+    std::vector<PageInfo> pageInfos;
+    do
     {
-        throw std::runtime_error("Error while reading TIFF dimensions");
-    }
+        pageInfos.emplace_back({});
+        
+        auto& info = pageInfos.back();
+        
+        if (!TIFFGetField(d->tiff, TIFFTAG_IMAGEWIDTH, &info.width) ||
+            !TIFFGetField(d->tiff, TIFFTAG_IMAGELENGTH, &info.height))
+        {
+            throw std::runtime_error("Error while reading TIFF dimensions");
+        }
+        
+        if(!TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &info.config) ||
+           !TIFFGetField(d->tiff, TIFFTAG_BITSPERSAMPLE, &info.bpp) ||
+           !TIFFGetField(d->tiff, TIFFTAG_SAMPLESPERPIXEL, &info.spp))
+       {
+           throw std::runtime_error("Error while reading TIFF tags");
+       }
+
+        ++d->totalImagePage;
+    } while(TIFFReadDirectory(d->tiff));
+    
+    
+    TIFFSetDirectory(d->tiff, d->currentImagePage);
+    
+    
 }
 
 void SmartTiffDecoder::decodingLoop(DecodingState targetState)
@@ -158,7 +202,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     const quint32 width = d->width;
     const quint32 height = d->height;
 
-    d->decodedImg.resize(width * height);
+    d->decodedImg.resize(spp * bpp/8 * width * height);
     QImage image(reinterpret_cast<uint8_t*>(d->decodedImg.data()),
                 width,
                 height,
@@ -168,20 +212,13 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     
     TIFFSetDirectory(tif, 0);
     
+    uint32_t r,s;
     do
     {
-    
-	uint16 config;
-	TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &config);
-    
-    // sample per pixel
-    uint32 spp;
-	TIFFGetField(input_file, TIFFTAG_SAMPLESPERPIXEL, &spp);
-    
         if (config == PLANARCONFIG_CONTIG)
         {
             for(r = 0; r < height; r++){
-                TIFFReadScanline(tif, scanline, r, s);
+                TIFFReadScanline(tif, scanline.data(), r);
 
                 for(c = 0; c < info->width; c++)
                 {		
@@ -193,7 +230,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
         else if (config == PLANARCONFIG_SEPARATE){
             for(s = 0; s < spp; s++){
                 for(r = 0; r < height; r++){
-                    TIFFReadScanline(tif, scanline, r, s);
+                    TIFFReadScanline(tif, scanline.data(), r, s);
                     for(c = 0; c < info->width; c++)
                     {
                         image[image_offset + info->width * r + c] = *(scanline + c);
@@ -202,6 +239,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
                 }
             }
         }
+
         image_offset += info->image_size/sizeof(uint16);
     } while (TIFFReadDirectory(tif));
 
