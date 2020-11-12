@@ -28,7 +28,6 @@ struct PageInfo
 
 struct SmartTiffDecoder::Impl
 {
-    SmartTiffDecoder* q;
     QString latestProgressMsg;
     
     TIFF* tiff = nullptr;
@@ -43,7 +42,7 @@ struct SmartTiffDecoder::Impl
     
     int imagePageToDecode = 0;
     
-    Impl(SmartTiffDecoder* parent) : q(parent)
+    Impl()
     {
         TIFFSetErrorHandlerExt(myErrorHandler);
         TIFFSetWarningHandlerExt(myWarningHandler);
@@ -270,7 +269,7 @@ struct SmartTiffDecoder::Impl
     int findThumbnailResolution(std::vector<PageInfo>& pageInfo)
     {
         int ret = -1;
-        const auto fullImgAspect = this->width * 1.0 / this->height;
+        const auto fullImgAspect = this->imageInfo.width * 1.0 / this->imageInfo.height;
         uint64_t res = pageInfo[0].width * pageInfo[0].height;
         for(size_t i=0; i<pageInfo.size(); i++)
         {
@@ -289,7 +288,7 @@ struct SmartTiffDecoder::Impl
     }
 };
 
-SmartTiffDecoder::SmartTiffDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>(this))
+SmartTiffDecoder::SmartTiffDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>())
 {
 }
 
