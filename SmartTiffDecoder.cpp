@@ -3,6 +3,7 @@
 #include "Formatter.hpp"
 
 #include <cstdio>
+#include <cmath>
 #include <QDebug>
 #include <QtGlobal>
 
@@ -20,7 +21,7 @@ struct PageInfo
     // bits per sample
     uint16_t bps;
     // sample per pixel
-    uint32_t spp;
+    uint16_t spp;
 };
 
 // Note: a lot of the code has been taken from: 
@@ -93,7 +94,7 @@ struct SmartTiffDecoder::Impl
     {
         for (quint32 x=0; x<width; ++x)
         {
-            uint32 p = target[x];
+            uint32_t p = target[x];
             // convert between ARGB and ABGR
             target[x] = TIFFGetA(p) << 24 |
                         TIFFGetR(p) << 16 |
@@ -171,33 +172,41 @@ struct SmartTiffDecoder::Impl
 
     void determineImageFormat()
     {
-        auto& bitPerSample = d->imageInfo.bps;
-        auto& samplesPerPixel = d->imageInfo.spp;
+        auto& bitPerSample = imageInfo.bps;
+        auto& samplesPerPixel = imageInfo.spp;
         
-        uint32_t photometric;
+        qInfo() << "bps: " << bitPerSample << "   spp: " << samplesPerPixel;
+        
+        uint16_t photometric;
         if(!TIFFGetField(tiff, TIFFTAG_PHOTOMETRIC, &photometric))
         {
             throw std::runtime_error("Failed to read photometric tag");
         }
             
-        grayscale = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE;
+        bool grayscale = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE;
 
         if (grayscale && bitPerSample == 1 && samplesPerPixel == 1)
-            d->format = QImage::Format_Mono;
+            format = QImage::Format_Mono;
         else if (photometric == PHOTOMETRIC_MINISBLACK && bitPerSample == 8 && samplesPerPixel == 1)
-            d->format = QImage::Format_Grayscale8;
+            format = QImage::Format_Grayscale8;
         else if (photometric == PHOTOMETRIC_MINISBLACK && bitPerSample == 16 && samplesPerPixel == 1)
-            d->format = QImage::Format_Grayscale16;
+        {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
+            format = QImage::Format_Grayscale16;
+#else
+            throw std::runtime_error("Grayscale16 images are not supported in QT 5.12 and earlier.");
+#endif
+        }
         else if ((grayscale || photometric == PHOTOMETRIC_PALETTE) && bitPerSample == 8 && samplesPerPixel == 1)
-            d->format = QImage::Format_Indexed8;
+            format = QImage::Format_Indexed8;
         else if (samplesPerPixel < 4)
             if (bitPerSample == 16 && photometric == PHOTOMETRIC_RGB)
-                d->format = QImage::Format_RGBX64;
+                format = QImage::Format_RGBX64;
             else
-                d->format = QImage::Format_RGB32;
+                format = QImage::Format_RGB32;
         else {
-            uint16 count;
-            uint16 *extrasamples;
+            uint16_t count;
+            uint16_t *extrasamples;
             // If there is any definition of the alpha-channel, libtiff will return premultiplied
             // data to us. If there is none, libtiff will not touch it and  we assume it to be
             // non-premultiplied, matching behavior of tested image editors, and how older Qt
@@ -212,14 +221,14 @@ struct SmartTiffDecoder::Impl
                 if (gotField && count && extrasamples[0] == EXTRASAMPLE_UNASSALPHA)
                     premultiplied = false;
                 if (premultiplied)
-                    d->format = QImage::Format_RGBA64_Premultiplied;
+                    format = QImage::Format_RGBA64_Premultiplied;
                 else
-                    d->format = QImage::Format_RGBA64;
+                    format = QImage::Format_RGBA64;
             } else {
                 if (premultiplied)
-                    d->format = QImage::Format_ARGB32_Premultiplied;
+                    format = QImage::Format_ARGB32_Premultiplied;
                 else
-                    d->format = QImage::Format_ARGB32;
+                    format = QImage::Format_ARGB32;
             }
         }
     }
@@ -229,7 +238,7 @@ struct SmartTiffDecoder::Impl
         std::vector<PageInfo> pageInfos;
         do
         {
-            pageInfos.emplace_back({});
+            pageInfos.emplace_back(PageInfo{});
             
             auto& info = pageInfos.back();
             
@@ -245,7 +254,7 @@ struct SmartTiffDecoder::Impl
             {
                throw std::runtime_error("Error while reading TIFF tags");
             }
-        } while(TIFFReadDirectory(d->tiff));
+        } while(TIFFReadDirectory(tiff));
         
         return pageInfos;
     }
@@ -278,13 +287,49 @@ struct SmartTiffDecoder::Impl
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
                std::fabs(aspect - fullImgAspect) < 1e-4 && // aspect matches?
-               pageInfo[i].width >= 50 || pageInfo[i].height >= 50) // at least 50 px in one dimension
+               (pageInfo[i].width >= 50 || pageInfo[i].height >= 50)) // at least 50 px in one dimension
             {
                 ret = i;
                 res = len;
             }
         }
         return ret;
+    }
+    
+    size_t fixupImageFormat(uint8_t* buf, size_t bytes)
+    {
+        size_t bytesWritten=0;
+        switch(format)
+        {
+            case QImage::Format_RGBX64:
+                
+                for(size_t i=0; i<bytes; i+=sizeof(uint16_t) * 4)
+                {
+                    constexpr auto bytesToInsert = sizeof(uint16_t);
+                    decodedImg.insert(decodedImg.begin() + sizeof(uint16_t) * 4, bytesToInsert, 0xFF);
+                    bytesWritten += bytesToInsert;
+//                     bytes += bytesToInsert;
+                }
+                [[fallthrough]];
+            case QImage::Format_RGBA64_Premultiplied:
+            case QImage::Format_RGBA64:
+                
+                break;
+                
+                
+            case QImage::Format_RGB32:
+                
+                [[fallthrough]];
+                
+            case QImage::Format_ARGB32_Premultiplied:
+            case QImage::Format_ARGB32:
+                convert32BitOrder(reinterpret_cast<uint32_t*>(buf), bytes / sizeof(uint32_t));
+                break;
+            default:
+                break;
+        }
+        
+        return bytesWritten;
     }
 };
 
@@ -316,7 +361,7 @@ void SmartTiffDecoder::decodeHeader()
     emit this->decodingProgress(this, 0, "Reading TIFF Header");
     
     d->tiff = TIFFClientOpen("foo",
-                            "r",
+                            "rm",
                             d.get(),
                             d->qtiffReadProc,
                             d->qtiffWriteProc,
@@ -334,9 +379,11 @@ void SmartTiffDecoder::decodeHeader()
     std::vector<PageInfo> pageInfos = d->readPageInfos();
     
     d->imagePageToDecode = d->findHighestResolution(pageInfos);
-    d->imageInfo = pageInfos[d->imagePageToDecode]
+    d->imageInfo = pageInfos[d->imagePageToDecode];
     
-    thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
+    d->determineImageFormat();
+    
+    auto thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
     if(thumbnailPageToDecode >= 0)
     {
         this->d->latestProgressMsg = (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
@@ -351,10 +398,11 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     const quint32 width = d->imageInfo.width;
     const quint32 height = d->imageInfo.height;
 
-    auto rowStride = d->imageInfo.spp * (d->imageInfo.bps+7)/8 * width;
+    auto rowStride = d->imageInfo.spp * ((d->imageInfo.bps+7)/8) * width;
     try
     {
         d->decodedImg.resize(rowStride * height);
+        this->setDecodingState(DecodingState::PreviewImage);
     }
     catch(const std::bad_alloc&)
     {
@@ -366,7 +414,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     this->d->latestProgressMsg = (Formatter() << "Decoding TIFF image at directory no. " << d->imagePageToDecode).str().c_str();
     emit this->decodingProgress(this, 0, this->d->latestProgressMsg);
     
-    unsigned char* buf = decodedImg.data();
+    unsigned char* buf = d->decodedImg.data();
     if(TIFFIsTiled(d->tiff))
     {
         uint32_t tileWidth, tileLength;
@@ -387,7 +435,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
             
             emit this->imageRefined(QImage(d->decodedImg.data(),
                                     std::min(tile * tileWidth, width),
-                                    std::min(tile * tileHeight, height),
+                                    std::min(tile * tileLength, height),
                                     rowStride,
                                     d->format));
             
@@ -414,6 +462,8 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
             
             this->cancelCallback();
             
+            ret += d->fixupImageFormat(buf, ret);
+            
             emit this->imageRefined(QImage(d->decodedImg.data(),
                                     width,
                                     std::min(strip * rowsperstrip, height),
@@ -431,7 +481,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     
     float resX = 0;
     float resY = 0;
-    uint16 resUnit;
+    uint16_t resUnit;
     if (!TIFFGetField(d->tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
         resUnit = RESUNIT_INCH;
 
@@ -456,7 +506,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    uint32 count;
+    uint32_t count;
     void *profile;
     if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
     {
@@ -469,6 +519,6 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     
     this->setImage(std::move(image));
     
-    d->latestProgressMsg = "JPEG decoding completed successfully.";
+    d->latestProgressMsg = "TIFF decoding completed successfully.";
     emit this->decodingProgress(this, 100, d->latestProgressMsg);
 }

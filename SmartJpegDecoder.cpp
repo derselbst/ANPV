@@ -170,6 +170,8 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
         {
             bufferSetup[i] = &d->decodedImg[i * rowStride];
         }
+        
+        this->setDecodingState(DecodingState::PreviewImage);
     }
     catch(const std::bad_alloc&)
     {
