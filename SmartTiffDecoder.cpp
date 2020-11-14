@@ -148,6 +148,11 @@ struct SmartTiffDecoder::Impl
             break;
         }
 
+        if(impl->offset >= impl->nbytes)
+        {
+            return -1;
+        }
+        
         return impl->offset;
     }
 
@@ -203,7 +208,7 @@ struct SmartTiffDecoder::Impl
             if (bitPerSample == 16 && photometric == PHOTOMETRIC_RGB)
                 format = QImage::Format_RGBX64;
             else
-                format = QImage::Format_RGB32;
+                format = QImage::Format_RGB888;
         else {
             uint16_t count;
             uint16_t *extrasamples;
