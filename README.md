@@ -20,6 +20,6 @@ I haven't found an image viewer that follows those simple design principles. Ori
 
 The goal is not to use new, fancy decoders that squeeze out every millisecond of decoding time. The goal is to keep the UI updated and responsive.
 
-Note: Designing a nice and modern user interface is not my strength. Also, this is not the focus of this work. If you want this, have a look at [photoqt](https://photoqt.org/).
+One note about TIFF files: There are so many possible subformats of TIFF, that it can be hardly tested all: Tile-based, strip-based, separate, planar, etc. Avoid using JPEG compressed TIFF files. JPEGs should be stored in JPEG files. TIFF files can also be multi-layered: The core assumption of ANPV is that one image file contains one and only one picture. Perhaps at different resolutions. Those artifically generated multi-layered TIFF files where each layer contains a different image are not considered to be a real world use-case. Hence, they are guaranteed to display correctly. In a multi-layered TIFF file, always the image with the biggest available resolution will be decoded. The smallest resolution image might be used as thumbnail preview.
 
-Also, this project is designed as **viewer**! A viewer does not support editing the images. If you want this, go for [Gwenview](https://userbase.kde.org/Gwenview) or [Gimp](https://www.gimp.org/).
+Also, this project is designed as **viewer**! A viewer does not support editing the images. If you want this, go for [Gwenview](https://userbase.kde.org/Gwenview) or [Gimp](https://www.gimp.org/). Designing a nice and modern user interface, on the other hand, is not my strength. It is not the focus of this work either. If you want this, have a look at [photoqt](https://photoqt.org/).

@@ -29,19 +29,13 @@ int main(int argc, char *argv[])
     splash.show();
     
     splash.showMessage("Initializing objects...");
-    
-    
-    QScreen *primaryScreen = QGuiApplication::primaryScreen();
-    auto screenSize = primaryScreen->availableVirtualSize();
-
-    splash.showMessage("Starting the image decoding task...");
-    
     QMainWindow m;
     DocumentController dc(&m);
     
     m.show();
     splash.finish(&m);
     
+    splash.showMessage("Starting the image decoding task...");
     dc.loadImage(QString(argv[1]));
     
     return a.exec();

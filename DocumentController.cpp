@@ -84,7 +84,6 @@ struct DocumentController::Impl
             thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb));
             thumbnailPreviewOverlay->setScale(newScale);
             
-            view->fitInView(thumbnailPreviewOverlay.get(), Qt::KeepAspectRatio);
             scene->addItem(thumbnailPreviewOverlay.get());
         }
     }
@@ -219,6 +218,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
     switch (newState)
     {
     case DecodingState::Metadata:
+        d->view->fitInView(QRectF(QPointF(0,0), self->size()), Qt::KeepAspectRatio);
         d->addThumbnailPreview(self->thumbnail(), self->size());
         break;
     case DecodingState::PreviewImage:
@@ -233,6 +233,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
+        d->currentDocumentPixmap = QPixmap();
         d->setDocumentError(self);
         break;
     default:
