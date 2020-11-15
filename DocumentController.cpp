@@ -122,7 +122,7 @@ struct DocumentController::Impl
         QRectF viewportRectScene = view->mapToScene(viewportRect).boundingRect();
 
         // the user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void
-        QRectF visPixRect = viewportRectScene.intersected(view->sceneRect());
+        QRectF visPixRect = viewportRectScene.intersected(currentPixmapOverlay->sceneBoundingRect());
 
         // the "inverted zoom factor"
         // 1.0 means the pixmap is shown at native size
@@ -136,7 +136,7 @@ struct DocumentController::Impl
         {
             QPixmap imgToScale;
 
-            if (viewportRectScene.contains(view->sceneRect()))
+            if (viewportRectScene.contains(currentPixmapOverlay->sceneBoundingRect()))
             {
                 // the user sees the entire image
                 imgToScale = currentDocumentPixmap;
