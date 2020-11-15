@@ -90,7 +90,7 @@ struct SmartTiffDecoder::Impl
         impl->latestProgressMsg = QString(f.str().c_str());
     }
     
-    static void convert32BitOrder(uint32_t *target, uint32_t* src, quint32 rows, quint32 width)
+    static void convert32BitOrder(uint32_t *__restrict target, uint32_t *__restrict src, quint32 rows, quint32 width)
     {
         // swap rows from bottom to top
         quint32 to = 0;
@@ -287,6 +287,8 @@ void SmartTiffDecoder::decodeHeader()
         throw std::runtime_error("TIFFClientOpen() failed");
     }
     
+    emit this->decodingProgress(this, 0, "Parsing TIFF Image Directories");
+    
     std::vector<PageInfo> pageInfos = d->readPageInfos();
     
     d->imagePageToDecode = d->findHighestResolution(pageInfos);
@@ -297,6 +299,7 @@ void SmartTiffDecoder::decodeHeader()
     if(thumbnailPageToDecode >= 0)
     {
         this->d->latestProgressMsg = (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
+        qInfo() << d->latestProgressMsg;
         emit this->decodingProgress(this, 0, this->d->latestProgressMsg);
         //TODO
     //    d->decodeImage(thumbnailPageToDecode);
@@ -310,7 +313,8 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
 
     try
     {
-        d->decodedImg.resize(width * height);
+        emit this->decodingProgress(this, 0, "Allocating output buffer");
+        d->decodedImg.reserve(width * height);
         this->setDecodingState(DecodingState::PreviewImage);
     }
     catch(const std::bad_alloc&)
