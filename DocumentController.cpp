@@ -113,6 +113,7 @@ struct DocumentController::Impl
         {
             return;
         }
+        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
         // get the area of what the user sees
         QRect viewportRect = view->viewport()->rect();
@@ -157,6 +158,8 @@ struct DocumentController::Impl
         {
             qDebug() << "Skipping smooth pixmap scaling: Too far zoomed in";
         }
+        
+        QGuiApplication::restoreOverrideCursor();
     }
     
     void setDocumentError(SmartImageDecoder* sid)
@@ -213,28 +216,38 @@ void DocumentController::onEndFovChanged()
     d->createSmoothPixmap();
 }
 
-void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState)
+void DocumentController::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newState, quint32 oldState)
 {
+    if(dec != this->d->currentImageDecoder.get())
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    
     switch (newState)
     {
     case DecodingState::Metadata:
-        d->view->fitInView(QRectF(QPointF(0,0), self->size()), Qt::KeepAspectRatio);
-        d->addThumbnailPreview(self->thumbnail(), self->size());
+        d->view->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
+        d->addThumbnailPreview(dec->thumbnail(), dec->size());
         break;
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
         {
             d->scene->addItem(d->currentPixmapOverlay.get());
-            d->addAfPoints(self->exif()->autoFocusPoints());
+            d->addAfPoints(dec->exif()->autoFocusPoints());
         }
         break;
     case DecodingState::FullImage:
-        this->onImageRefinement(self->image());
+        this->onImageRefinement(dec->image());
+        QGuiApplication::restoreOverrideCursor();
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
         d->currentDocumentPixmap = QPixmap();
-        d->setDocumentError(self);
+        d->setDocumentError(dec);
+        [[fallthrough]];
+    case DecodingState::Cancelled:
+        QGuiApplication::restoreOverrideCursor();
         break;
     default:
         break;
@@ -250,8 +263,14 @@ void DocumentController::onImageRefinement(QImage img)
     d->scene->invalidate(d->scene->sceneRect());
 }
 
-void DocumentController::onDecodingProgress(SmartImageDecoder*, int progress, QString message)
+void DocumentController::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
 {
+    if(dec != this->d->currentImageDecoder.get())
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    
     d->statusBar->showMessage(message, 0);
     d->progressBar->setValue(progress);
 }
@@ -300,4 +319,5 @@ void DocumentController::loadImage(QString url)
     d->statusBar->showMessage(QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
     
     QThreadPool::globalInstance()->start(task);
+    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 }
