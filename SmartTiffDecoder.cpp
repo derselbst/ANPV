@@ -29,7 +29,7 @@ struct PageInfo
 
 struct SmartTiffDecoder::Impl
 {
-    QString latestProgressMsg;
+    SmartTiffDecoder* q;
     
     TIFF* tiff = nullptr;
     const unsigned char* buffer = nullptr;
@@ -43,7 +43,7 @@ struct SmartTiffDecoder::Impl
     
     int imagePageToDecode = 0;
     
-    Impl()
+    Impl(SmartTiffDecoder* q) : q(q)
     {
         TIFFSetErrorHandlerExt(myErrorHandler);
         TIFFSetWarningHandlerExt(myWarningHandler);
@@ -71,7 +71,7 @@ struct SmartTiffDecoder::Impl
         }
         f << buf;
         
-        impl->latestProgressMsg = QString(f.str().c_str());
+        impl->q->setDecodingMessage(QString(f.str().c_str()));
     }
     
     static void myWarningHandler(thandle_t self, const char* module, const char* fmt, va_list ap)
@@ -87,7 +87,7 @@ struct SmartTiffDecoder::Impl
         }
         f << buf;
         
-        impl->latestProgressMsg = QString(f.str().c_str());
+        impl->q->setDecodingMessage(QString(f.str().c_str()));
     }
     
     static void convert32BitOrder(uint32_t *__restrict target, uint32_t *__restrict src, quint32 rows, quint32 width)
@@ -244,7 +244,7 @@ struct SmartTiffDecoder::Impl
     }
 };
 
-SmartTiffDecoder::SmartTiffDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>())
+SmartTiffDecoder::SmartTiffDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>(this))
 {
 }
 
@@ -269,7 +269,7 @@ void SmartTiffDecoder::decodeHeader()
 {
     this->fileBuf(&d->buffer, &d->nbytes);
     
-    emit this->decodingProgress(this, 0, "Reading TIFF Header");
+    this->setDecodingMessage("Reading TIFF Header");
     
     d->tiff = TIFFClientOpen("foo",
                             "rm",
@@ -287,7 +287,7 @@ void SmartTiffDecoder::decodeHeader()
         throw std::runtime_error("TIFFClientOpen() failed");
     }
     
-    emit this->decodingProgress(this, 0, "Parsing TIFF Image Directories");
+    this->setDecodingMessage("Parsing TIFF Image Directories");
     
     std::vector<PageInfo> pageInfos = d->readPageInfos();
     
@@ -298,9 +298,8 @@ void SmartTiffDecoder::decodeHeader()
     auto thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
     if(thumbnailPageToDecode >= 0)
     {
-        this->d->latestProgressMsg = (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
-        qInfo() << d->latestProgressMsg;
-        emit this->decodingProgress(this, 0, this->d->latestProgressMsg);
+        this->setDecodingMessage((Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str());
+        qInfo() << (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
         //TODO
     //    d->decodeImage(thumbnailPageToDecode);
     }
@@ -313,7 +312,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
 
     try
     {
-        emit this->decodingProgress(this, 0, "Allocating output buffer");
+        this->setDecodingMessage("Allocating output buffer");
         d->decodedImg.reserve(width * height);
         this->setDecodingState(DecodingState::PreviewImage);
     }
@@ -324,8 +323,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     
     TIFFSetDirectory(d->tiff, d->imagePageToDecode);
 
-    this->d->latestProgressMsg = (Formatter() << "Decoding TIFF image at directory no. " << d->imagePageToDecode).str().c_str();
-    emit this->decodingProgress(this, 0, this->d->latestProgressMsg);
+    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << d->imagePageToDecode).str().c_str());
     
     size_t rowStride = width * sizeof(uint32_t);
     auto* buf = d->decodedImg.data();
@@ -352,7 +350,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
             else
             {
                 d->convert32BitOrder(buf, stripBuf.data(), rowsDecoded, width);
-                emit this->imageRefined(QImage(reinterpret_cast<uint8_t*>(d->decodedImg.data()),
+                this->updatePreviewImage(QImage(reinterpret_cast<uint8_t*>(d->decodedImg.data()),
                                         width,
                                         std::min<size_t>(strip * rowsperstrip, height),
                                         rowStride,
@@ -360,7 +358,7 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
             }
             
             double progress = strip * 100.0 / stripCount;
-            emit this->decodingProgress(this, progress, d->latestProgressMsg);
+            this->setDecodingProgress(progress);
 
             buf += rowsDecoded * width;
             this->cancelCallback();
@@ -409,6 +407,6 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     
     this->setImage(std::move(image));
     
-    d->latestProgressMsg = "TIFF decoding completed successfully.";
-    emit this->decodingProgress(this, 100, d->latestProgressMsg);
+    this->setDecodingProgress(100);
+    this->setDecodingMessage("TIFF decoding completed successfully.");
 }

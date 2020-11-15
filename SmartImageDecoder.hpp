@@ -34,8 +34,6 @@ public:
     void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
     
 protected:
-    static constexpr int DecodePreviewImageRefreshDuration = 100;
-    
     virtual void decodeHeader() = 0;
     virtual void decodingLoop(DecodingState state) = 0;
     
@@ -45,6 +43,10 @@ protected:
     void setDecodingState(DecodingState state);
     void setImage(QImage&& img);
     void setThumbnail(QImage&& thumb);
+    
+    void setDecodingMessage(QString&& msg);
+    void setDecodingProgress(int prog);
+    void updatePreviewImage(QImage&& img);
 
 private:
     struct Impl;

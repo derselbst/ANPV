@@ -5,12 +5,18 @@
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
 #include <QtDebug>
+#include <chrono>
 
 struct SmartImageDecoder::Impl
 {
     std::function<void(void*)> cancelCallbackInternal;
     void* cancelCallbackObject;
     DecodingState state;
+    QString decodingMessage;
+    int decodingProgress=0;
+    
+    std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
+    
     QString errorMessage;
     
     QFile file;
@@ -179,3 +185,33 @@ ExifWrapper* SmartImageDecoder::exif()
     return &d->exifWrapper;
 }
 
+void SmartImageDecoder::setDecodingMessage(QString&& msg)
+{
+    if(d->decodingMessage != msg)
+    {
+        d->decodingMessage = std::move(msg);
+        emit this->decodingProgress(this, d->decodingProgress, d->decodingMessage);
+    }
+}
+
+void SmartImageDecoder::setDecodingProgress(int prog)
+{
+    if(d->decodingProgress != prog)
+    {
+        d->decodingProgress = prog;
+        emit this->decodingProgress(this, prog, d->decodingMessage);
+    }
+}
+
+void SmartImageDecoder::updatePreviewImage(QImage&& img)
+{
+    constexpr int DecodePreviewImageRefreshDuration = 100;
+    
+    auto now = std::chrono::steady_clock::now();
+    auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
+    if(durationMs.count() > DecodePreviewImageRefreshDuration)
+    {
+        emit this->imageRefined(std::move(img));
+        d->lastPreviewImageUpdate = now;
+    }
+}
