@@ -5,6 +5,7 @@
 #include "ImageDecodeTask.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
+#include "Formatter.hpp"
 #include "AfPointOverlay.hpp"
 
 #include <QGraphicsScene>
@@ -162,6 +163,30 @@ struct DocumentController::Impl
         QGuiApplication::restoreOverrideCursor();
     }
     
+    QString getProgressStyle(bool error)
+    {
+        constexpr char successStart[] = "#99ffbb";
+        constexpr char successEnd[] = "#00cc44";
+        constexpr char errorStart[] = "#ff9999";
+        constexpr char errorEnd[] = "#d40000";
+        
+        const char* colorStart = error ? errorStart : successStart;
+        const char* colorEnd = error ? errorEnd : successEnd;
+        
+        return QString((Formatter() <<
+            "QProgressBar {"
+            "border: 2px solid grey;"
+            "border-radius: 5px;"
+            "text-align: center;"
+            "}"
+            ""
+            "QProgressBar::chunk {"
+            "background-color: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 0, stop: 0 " << colorStart << ", stop: 1 " << colorEnd << ");"
+            "width: 20px;"
+            "margin: 0px;"
+            "}").str().c_str());
+    }
+    
     void setDocumentError(SmartImageDecoder* sid)
     {
         QString error = sid->errorMessage();
@@ -182,8 +207,8 @@ DocumentController::DocumentController(QMainWindow* wnd, QObject *parent)
     connect(d->view.get(), &DocumentView::fovChangedEnd, this, &DocumentController::onEndFovChanged);
         
     std::unique_ptr<QProgressBar> progressBar = std::make_unique<QProgressBar>();
-        progressBar->setMinimum(0);
-        progressBar->setMaximum(100);
+    progressBar->setMinimum(0);
+    progressBar->setMaximum(100);
     
     d->progressBar = progressBar.release();
     wnd->statusBar()->addPermanentWidget(d->progressBar);
@@ -226,6 +251,9 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* dec, quint32 
     
     switch (newState)
     {
+    case DecodingState::Ready:
+        d->progressBar->setStyleSheet(d->getProgressStyle(false));
+        break;
     case DecodingState::Metadata:
         d->view->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
@@ -247,6 +275,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* dec, quint32 
         d->setDocumentError(dec);
         [[fallthrough]];
     case DecodingState::Cancelled:
+        d->progressBar->setStyleSheet(d->getProgressStyle(true));
         QGuiApplication::restoreOverrideCursor();
         break;
     default:
