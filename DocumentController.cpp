@@ -233,6 +233,7 @@ void DocumentController::onDecodingStateChanged(SmartImageDecoder* self, quint32
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
+        d->currentDocumentPixmap = QPixmap();
         d->setDocumentError(self);
         break;
     default:
