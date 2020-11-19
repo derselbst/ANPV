@@ -13,7 +13,6 @@
 #include <QPainter>
 #include <QPen>
 
-#include <exiv2/exiv2.hpp>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
