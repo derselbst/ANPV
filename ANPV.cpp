@@ -1,0 +1,143 @@
+#include "ANPV.hpp"
+
+#include <QMainWindow>
+#include <QProgressBar>
+#include <QStackedLayout>
+#include <QWidget>
+#include <QSplashScreen>
+#include <QStatusBar>
+#include <QGuiApplication>
+#include <QApplication>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QPixmap>
+#include <QGraphicsPixmapItem>
+#include <QSplashScreen>
+#include <QScreen>
+#include <QtDebug>
+#include <QFileInfo>
+#include <QMainWindow>
+#include <QStatusBar>
+#include <QProgressBar>
+#include <QDir>
+
+#include "DocumentView.hpp"
+#include "Formatter.hpp"
+
+
+struct ANPV::Impl
+{
+    ANPV* p;
+    
+    QProgressBar* progressBar;
+    QStackedLayout* stackedLayout;
+    QWidget *stackedLayoutWidget;
+    DocumentView* imageViewer;
+    QWidget* thumbnailViewer;
+    
+    Impl(ANPV* parent) : p(parent)
+    {
+    }
+    
+    static QString getProgressStyle(DecodingState state)
+    {
+        constexpr char successStart[] = "#99ffbb";
+        constexpr char successEnd[] = "#00cc44";
+        constexpr char errorStart[] = "#ff9999";
+        constexpr char errorEnd[] = "#d40000";
+        
+        const char* colorStart;
+        const char* colorEnd;
+        
+        switch(state)
+        {
+            case DecodingState::Error:
+            case DecodingState::Cancelled:
+                colorStart = errorStart;
+                colorEnd = errorEnd;
+                break;
+            default:
+                colorStart = successStart;
+                colorEnd = successEnd;
+                break;
+        }
+        
+        return QString((Formatter() <<
+            "QProgressBar {"
+            "border: 2px solid grey;"
+            "border-radius: 5px;"
+            "text-align: center;"
+            "}"
+            ""
+            "QProgressBar::chunk {"
+            "background-color: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 0, stop: 0 " << colorStart << ", stop: 1 " << colorEnd << ");"
+            "width: 20px;"
+            "margin: 0px;"
+            "}").str().c_str());
+    }
+};
+
+ANPV::ANPV(QSplashScreen *splash)
+ : QMainWindow(), d(std::make_unique<Impl>(this))
+{
+    QScreen *ps = QGuiApplication::primaryScreen();
+    QRect screenres = ps->geometry();
+    // open the window on the primary screen
+    // by moving and resize it explicitly
+    this->move(screenres.topLeft());
+    this->resize(screenres.width(), screenres.height());
+    this->setWindowState(Qt::WindowMaximized);
+    this->setWindowTitle("ANPV");
+    
+    splash->showMessage("Creating UI Widgets");
+    
+    d->progressBar = new QProgressBar(this);
+    d->progressBar->setMinimum(0);
+    d->progressBar->setMaximum(100);
+    this->statusBar()->addPermanentWidget(d->progressBar);
+    
+    d->imageViewer = new DocumentView(this);
+    d->thumbnailViewer = new QWidget(this);
+    
+    d->stackedLayout = new QStackedLayout(this);
+    d->stackedLayout->addWidget(d->thumbnailViewer);
+    d->stackedLayout->addWidget(d->imageViewer);
+    
+    d->stackedLayoutWidget = new QWidget(this);
+    d->stackedLayoutWidget->setLayout(d->stackedLayout);
+    this->setCentralWidget(d->stackedLayoutWidget);
+}
+
+ANPV::~ANPV() = default;
+
+
+void ANPV::showImageView()
+{
+    d->stackedLayout->setCurrentWidget(d->imageViewer);
+}
+
+void ANPV::showThumbnailView()
+{
+    d->stackedLayout->setCurrentWidget(d->thumbnailViewer);
+}
+
+void ANPV::loadImage(QString str)
+{
+    d->imageViewer->loadImage(str);
+}
+
+void ANPV::setThumbnailDir(QString str)
+{
+    
+}
+
+void ANPV::notifyProgress(int progress, QString message)
+{
+    this->statusBar()->showMessage(message, 0);
+    d->progressBar->setValue(progress);
+}
+
+void ANPV::notifyDecodingState(DecodingState state)
+{
+    d->progressBar->setStyleSheet(d->getProgressStyle(state));
+}

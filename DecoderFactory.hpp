@@ -1,11 +1,11 @@
 
 #pragma once
 
-#include <QUrl>
+#include <QString>
 #include <memory>
 
 class SmartImageDecoder;
-class DocumentController;
+class DocumentView;
 
 class DecoderFactory
 {
@@ -13,7 +13,7 @@ class DecoderFactory
 public:
     DecoderFactory() = delete;
 
-    static std::unique_ptr<SmartImageDecoder> load(QString file, DocumentController*);
+    static std::unique_ptr<SmartImageDecoder> load(QString file, DocumentView*);
 
 private:
     struct Impl;

@@ -1,6 +1,6 @@
 
-#include "DocumentController.hpp"
 #include "DocumentView.hpp"
+#include "ANPV.hpp"
 
 
 #include <QApplication>
@@ -15,6 +15,7 @@
 #include <QMainWindow>
 #include <QStatusBar>
 #include <QProgressBar>
+#include <QDir>
 
 #include <chrono>
 #include <thread>
@@ -28,15 +29,26 @@ int main(int argc, char *argv[])
     QSplashScreen splash(QPixmap("/home/tom/EigeneProgramme/ANPV/splash.jpg"));
     splash.show();
     
+    ANPV m(&splash);
+    /*
     splash.showMessage("Initializing objects...");
     QMainWindow m;
     DocumentController dc(&m);
-    
+    */
     m.show();
     splash.finish(&m);
     
-    splash.showMessage("Starting the image decoding task...");
-    dc.loadImage(QString(argv[1]));
+    if(argc == 2)
+    {
+        m.showImageView();
+        m.loadImage(QString(argv[1]));
+        splash.showMessage("Starting the image decoding task...");
+    }
+    else
+    {
+        m.showThumbnailView();
+        m.setThumbnailDir(QDir::currentPath());
+    }
     
     return a.exec();
 }

@@ -144,11 +144,11 @@ set(SRC
 main.cpp
 AfPointOverlay.cpp
 AfPointOverlay.hpp
+ANPV.hpp
+ANPV.cpp
 DecoderFactory.hpp
 DecoderFactory.cpp
 DecodingState.hpp
-DocumentController.cpp
-DocumentController.hpp
 DocumentView.cpp
 DocumentView.hpp
 ExifWrapper.cpp
