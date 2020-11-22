@@ -59,6 +59,12 @@ struct ThumbnailView::Impl
             fileSystemTree->scrollTo(mo);
         }
     }
+    
+    void onThumbnailActivated(const QModelIndex& idx)
+    {
+        anpv->showImageView();
+        anpv->loadImage(dirModel->filePath(idx));
+    }
 };
 
 ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
@@ -74,6 +80,8 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     d->thumbnailList->setViewMode(QListView::IconMode);
     d->thumbnailList->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->thumbnailList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    
+    connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     
     this->setCentralWidget(d->thumbnailList);
     
