@@ -20,8 +20,11 @@
 #include <QStatusBar>
 #include <QProgressBar>
 #include <QDir>
+#include <QFileSystemModel>
+#include <QListView>
 
 #include "DocumentView.hpp"
+#include "ThumbnailView.hpp"
 #include "Formatter.hpp"
 
 
@@ -33,7 +36,9 @@ struct ANPV::Impl
     QStackedLayout* stackedLayout;
     QWidget *stackedLayoutWidget;
     DocumentView* imageViewer;
-    QWidget* thumbnailViewer;
+    ThumbnailView* thumbnailViewer;
+    
+    QFileSystemModel* dirModel;
     
     Impl(ANPV* parent) : p(parent)
     {
@@ -89,6 +94,9 @@ ANPV::ANPV(QSplashScreen *splash)
     this->setWindowState(Qt::WindowMaximized);
     this->setWindowTitle("ANPV");
     
+    d->dirModel = new QFileSystemModel(this);
+    d->dirModel->setRootPath("");
+    
     splash->showMessage("Creating UI Widgets");
     
     d->progressBar = new QProgressBar(this);
@@ -97,7 +105,7 @@ ANPV::ANPV(QSplashScreen *splash)
     this->statusBar()->addPermanentWidget(d->progressBar);
     
     d->imageViewer = new DocumentView(this);
-    d->thumbnailViewer = new QWidget(this);
+    d->thumbnailViewer = new ThumbnailView(d->dirModel, this);
     
     d->stackedLayout = new QStackedLayout(this);
     d->stackedLayout->addWidget(d->thumbnailViewer);
@@ -128,7 +136,7 @@ void ANPV::loadImage(QString str)
 
 void ANPV::setThumbnailDir(QString str)
 {
-    
+    d->thumbnailViewer->changeDir(str);
 }
 
 void ANPV::notifyProgress(int progress, QString message)

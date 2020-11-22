@@ -40,9 +40,26 @@ int main(int argc, char *argv[])
     
     if(argc == 2)
     {
-        m.showImageView();
-        m.loadImage(QString(argv[1]));
-        splash.showMessage("Starting the image decoding task...");
+        QString arg(argv[1]);
+        QFileInfo info(arg);
+        if(info.exists())
+        {
+            if(info.isDir())
+            {
+                m.showThumbnailView();
+                m.setThumbnailDir(arg);
+            }
+            else if(info.isFile())
+            {
+                m.showImageView();
+                m.loadImage(arg);
+                splash.showMessage("Starting the image decoding task...");
+            }
+        }
+        else
+        {
+            qCritical() << "Path '" << argv[1] << "' not found";
+        }
     }
     else
     {

@@ -164,6 +164,8 @@ SmartJpegDecoder.cpp
 SmartJpegDecoder.hpp
 SmartTiffDecoder.cpp
 SmartTiffDecoder.hpp
+ThumbnailView.cpp
+ThumbnailView.hpp
 UserCancellation.hpp
 )
 
