@@ -65,6 +65,12 @@ struct ThumbnailView::Impl
         anpv->showImageView();
         anpv->loadImage(dirModel->filePath(idx));
     }
+    
+    void onTreeExpanded(const QModelIndex& idx)
+    {
+        resizeTreeColumn(idx);
+        thumbnailList->setRootIndex(idx);
+    }
 };
 
 ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
@@ -96,7 +102,7 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     d->fileSystemTree->setSelectionMode(QAbstractItemView::SingleSelection);
     d->fileSystemTree->setRootIndex(model->index(model->rootPath()));
     
-    connect(d->fileSystemTree, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
+    connect(d->fileSystemTree, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->onTreeExpanded(idx);});
     connect(d->fileSystemTree, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     
     d->fileSystemTreeDockContainer = new QDockWidget(this);
