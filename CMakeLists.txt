@@ -156,6 +156,8 @@ ExifWrapper.hpp
 Formatter.hpp
 ImageDecodeTask.cpp
 ImageDecodeTask.hpp
+MessageWidget.cpp
+MessageWidget.hpp
 SmartImageDecoder.cpp
 SmartImageDecoder.hpp
 SmartJpegDecoder.cpp

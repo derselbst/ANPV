@@ -21,6 +21,7 @@
 #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
+#include "MessageWidget.hpp"
 
 struct DocumentView::Impl
 {
@@ -31,6 +32,7 @@ struct DocumentView::Impl
     QTransform previousFovTransform;
     
     QGraphicsScene* scene;
+    MessageWidget* messageWidget;
     
     // a smoothly scaled version of the full resolution image
     std::unique_ptr<QGraphicsPixmapItem> smoothPixmapOverlay;
@@ -72,6 +74,20 @@ struct DocumentView::Impl
         }
         
         taskContainer.clear();
+    }
+    
+    void clearScene()
+    {
+        removeSmoothPixmap();
+        
+        // clear the scene without deleting anything
+        QList<QGraphicsItem*> L = scene->items();
+        while (!L.empty())
+        {
+            scene->removeItem(L.takeFirst());
+        }
+        
+        messageWidget->hide();
     }
     
     void onViewportChanged(QTransform newTransform)
@@ -174,10 +190,21 @@ struct DocumentView::Impl
     void setDocumentError(SmartImageDecoder* sid)
     {
         QString error = sid->errorMessage();
-//         textOverlay->setText(error);
-//         textOverlay->setFlag(QGraphicsItem::ItemIgnoresTransformations);
-        scene->clear();
-//         scene->addItem(textOverlay.get());
+        messageWidget->setText("leckmichfett,... ich bin am boden zerstörþ weil das nich funktionÏÏËÝT thät");
+        messageWidget->setMessageType(MessageWidget::MessageType::Error);
+        messageWidget->setIcon(QIcon::fromTheme("dialog-error"));
+        this->clearScene();
+        messageWidget->show();
+        this->centerMessageWidget(p->size());
+    }
+    
+    void centerMessageWidget(QSize wndSize)
+    {
+        auto boxSize = messageWidget->size();
+        
+        auto posX = wndSize.width()/2 - boxSize.width()/2;
+        auto posY = wndSize.height()/2 - boxSize.height()/2;
+        messageWidget->move(posX, posY);
     }
     
     void onDecodingTaskFinished(ImageDecodeTask* t)
@@ -215,6 +242,11 @@ DocumentView::DocumentView(ANPV *parent)
     
     d->scene = new QGraphicsScene(this);
     this->setScene(d->scene);
+    
+    d->messageWidget = new MessageWidget(this);
+    d->messageWidget->setCloseButtonVisible(false);
+    d->messageWidget->setWordWrap(true);
+    d->messageWidget->hide();
     
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
@@ -268,6 +300,13 @@ bool DocumentView::viewportEvent(QEvent* event)
     return QGraphicsView::viewportEvent(event);
 }
 
+void DocumentView::resizeEvent(QResizeEvent *event)
+{
+    auto wndSize = event->size();
+    d->centerMessageWidget(wndSize);
+    
+    QGraphicsView::resizeEvent(event);
+}
 
 void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
 {
@@ -332,7 +371,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
 
 void DocumentView::loadImage(QString url)
 {
-    d->scene->clear();
+    d->clearScene();
     
     if(d->currentDecodeTask)
     {

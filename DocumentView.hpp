@@ -33,6 +33,7 @@ public slots:
 protected:
     void wheelEvent(QWheelEvent *event) override;
     bool viewportEvent(QEvent* event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     struct Impl;

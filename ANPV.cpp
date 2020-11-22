@@ -62,7 +62,7 @@ struct ANPV::Impl
                 break;
         }
         
-        return QString((Formatter() <<
+        return QString(
             "QProgressBar {"
             "border: 2px solid grey;"
             "border-radius: 5px;"
@@ -70,10 +70,10 @@ struct ANPV::Impl
             "}"
             ""
             "QProgressBar::chunk {"
-            "background-color: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 0, stop: 0 " << colorStart << ", stop: 1 " << colorEnd << ");"
+            "background-color: qlineargradient(x1: 0, y1: 0.2, x2: 1, y2: 0, stop: 0 %1, stop: 1 %2);"
             "width: 20px;"
             "margin: 0px;"
-            "}").str().c_str());
+            "}").arg(colorStart).arg(colorEnd);
     }
 };
 
