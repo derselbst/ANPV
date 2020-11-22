@@ -308,6 +308,19 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     QGraphicsView::resizeEvent(event);
 }
 
+void DocumentView::keyPressEvent(QKeyEvent *event)
+{
+    switch(event->key())
+    {
+        case Qt::Key_Escape:
+            d->anpv->showThumbnailView();
+            break;
+        default:
+            QGraphicsView::keyPressEvent(event);
+            break;
+    }
+}
+
 void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
 {
     if(dec != this->d->currentImageDecoder.get())
