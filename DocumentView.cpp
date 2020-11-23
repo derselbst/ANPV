@@ -190,10 +190,9 @@ struct DocumentView::Impl
     void setDocumentError(SmartImageDecoder* sid)
     {
         QString error = sid->errorMessage();
-        messageWidget->setText("leckmichfett,... ich bin am boden zerstörþ weil das nich funktionÏÏËÝT thät");
+        messageWidget->setText(error);
         messageWidget->setMessageType(MessageWidget::MessageType::Error);
         messageWidget->setIcon(QIcon::fromTheme("dialog-error"));
-        this->clearScene();
         messageWidget->show();
         this->centerMessageWidget(p->size());
     }

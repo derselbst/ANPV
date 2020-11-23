@@ -252,17 +252,8 @@ SmartTiffDecoder::~SmartTiffDecoder() = default;
 
 QSize SmartTiffDecoder::size()
 {
-    auto s = this->decodingState();
-    switch(s)
-    {
-        case DecodingState::Metadata:
-        case DecodingState::PreviewImage:
-        case DecodingState::FullImage:
-            qWarning() << "TODO APPLY EXIF TRNASOFMRTA";
-            return QSize(d->imageInfo.width, d->imageInfo.height);
-        default:
-            throw std::logic_error(Formatter() << "Wrong DecodingState: " << s);
-    }
+    qWarning() << "TODO APPLY EXIF TRNASOFMRTA";
+    return QSize(d->imageInfo.width, d->imageInfo.height);
 }
 
 void SmartTiffDecoder::decodeHeader()
@@ -334,7 +325,10 @@ void SmartTiffDecoder::decodingLoop(DecodingState targetState)
     else
     {
         uint32_t rowsperstrip;
-        TIFFGetFieldDefaulted(d->tiff, TIFFTAG_ROWSPERSTRIP, &rowsperstrip);
+        if(!TIFFGetField(d->tiff, TIFFTAG_ROWSPERSTRIP, &rowsperstrip))
+        {
+            throw std::runtime_error("Failed to read RowsPerStip. Not a TIFF file?");
+        }
         
         std::vector<uint32_t> stripBuf(width * rowsperstrip);
         
