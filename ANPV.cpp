@@ -96,6 +96,7 @@ ANPV::ANPV(QSplashScreen *splash)
     
     d->dirModel = new QFileSystemModel(this);
     d->dirModel->setRootPath("");
+    d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
     splash->showMessage("Creating UI Widgets");
     

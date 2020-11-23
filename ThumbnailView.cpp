@@ -36,6 +36,7 @@ struct ThumbnailView::Impl
     
     QFileSystemModel* dirModel;
     
+    QFileSystemModel* fileModel;
     QDir currentDir;
     
     QListView* thumbnailList;
@@ -62,14 +63,24 @@ struct ThumbnailView::Impl
     
     void onThumbnailActivated(const QModelIndex& idx)
     {
-        anpv->showImageView();
-        anpv->loadImage(dirModel->filePath(idx));
+        QFileInfo info = fileModel->fileInfo(idx);
+        
+        if(info.isDir())
+        {
+            p->changeDir(info.absoluteFilePath());
+        }
+        else if(info.isFile())
+        {
+            anpv->showImageView();
+            anpv->loadImage(info.absoluteFilePath());
+        }
     }
     
     void onTreeExpanded(const QModelIndex& idx)
     {
         resizeTreeColumn(idx);
-        thumbnailList->setRootIndex(idx);
+        QFileInfo info = dirModel->fileInfo(idx);
+        p->changeDir(info.absoluteFilePath());
     }
 };
 
@@ -81,8 +92,10 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
+    d->fileModel = new QFileSystemModel(this);
+    
     d->thumbnailList = new QListView(this);
-    d->thumbnailList->setModel(model);
+    d->thumbnailList->setModel(d->fileModel);
     d->thumbnailList->setViewMode(QListView::IconMode);
     d->thumbnailList->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->thumbnailList->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -118,6 +131,6 @@ void ThumbnailView::changeDir(const QString& dir)
 {
     d->currentDir = dir;
     QModelIndex mo = d->dirModel->index(dir);
-    d->thumbnailList->setRootIndex(mo);
     d->fileSystemTree->setExpanded(mo, true);
+    d->thumbnailList->setRootIndex(d->fileModel->setRootPath(dir));
 }
