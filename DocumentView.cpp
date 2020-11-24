@@ -371,6 +371,8 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::Ready:
         break;
     case DecodingState::Metadata:
+        this->setSceneRect(QRectF(QPointF(0,0), dec->size()));
+        this->resetTransform();
         this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
         break;
