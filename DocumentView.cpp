@@ -229,6 +229,7 @@ struct DocumentView::Impl
         if (result != taskContainer.end())
         {
             taskContainer.erase(result);
+            QGuiApplication::restoreOverrideCursor();
         }
         else
         {
@@ -385,7 +386,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         break;
     case DecodingState::FullImage:
         this->onImageRefinement(this->d->currentImageDecoder.get(), dec->image());
-        QGuiApplication::restoreOverrideCursor();
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
@@ -393,7 +393,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         d->setDocumentError(dec);
         [[fallthrough]];
     case DecodingState::Cancelled:
-        QGuiApplication::restoreOverrideCursor();
         break;
     default:
         break;
