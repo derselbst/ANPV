@@ -80,6 +80,13 @@ struct DocumentView::Impl
     {
         removeSmoothPixmap();
         
+        // clear the scene without deleting anything
+        QList<QGraphicsItem*> L = scene->items();
+        while (!L.empty())
+        {
+            scene->removeItem(L.takeFirst());
+        }
+        
         currentDocumentPixmap = QPixmap();
         currentPixmapOverlay->setPixmap(currentDocumentPixmap);
         
@@ -89,13 +96,9 @@ struct DocumentView::Impl
             currentDecodeTask = nullptr;
         }
         currentImageDecoder = nullptr;
+        afPointOverlay = nullptr;
         
-        // clear the scene without deleting anything
-        QList<QGraphicsItem*> L = scene->items();
-        while (!L.empty())
-        {
-            scene->removeItem(L.takeFirst());
-        }
+        scene->invalidate();
         
         messageWidget->hide();
     }
@@ -115,7 +118,6 @@ struct DocumentView::Impl
         if (smoothPixmapOverlay)
         {
             scene->removeItem(smoothPixmapOverlay.get());
-            smoothPixmapOverlay->setPixmap(QPixmap());
             smoothPixmapOverlay = nullptr;
         }
     }
@@ -342,12 +344,18 @@ void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QStr
     d->anpv->notifyProgress(progress, message);
 }
 
-void DocumentView::onImageRefinement(QImage img)
+void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
 {
+    if(dec != this->d->currentImageDecoder.get())
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    
     d->removeSmoothPixmap();
     d->currentDocumentPixmap = QPixmap::fromImage(img, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
-    d->scene->invalidate(d->scene->sceneRect());
+    d->scene->invalidate();
 }
 
 void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newState, quint32 oldState)
@@ -374,7 +382,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
         break;
     case DecodingState::FullImage:
-        this->onImageRefinement(dec->image());
+        this->onImageRefinement(this->d->currentImageDecoder.get(), dec->image());
         QGuiApplication::restoreOverrideCursor();
         d->createSmoothPixmap();
         break;

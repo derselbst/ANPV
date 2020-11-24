@@ -26,7 +26,7 @@ public:
 public slots:
     void zoomIn();
     void zoomOut();
-    void onImageRefinement(QImage img);
+    void onImageRefinement(SmartImageDecoder* self, QImage img);
     void onDecodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
     void onDecodingProgress(SmartImageDecoder* self, int progress, QString message);
     

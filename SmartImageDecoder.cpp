@@ -211,7 +211,7 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
     auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
     if(durationMs.count() > DecodePreviewImageRefreshDuration)
     {
-        emit this->imageRefined(std::move(img));
+        emit this->imageRefined(this, std::move(img));
         d->lastPreviewImageUpdate = now;
     }
 }

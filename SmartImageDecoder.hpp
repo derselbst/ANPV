@@ -55,5 +55,5 @@ private:
 signals:
     void decodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
     void decodingProgress(SmartImageDecoder* self, int progress, QString message);
-    void imageRefined(QImage img);
+    void imageRefined(SmartImageDecoder* self, QImage img);
 };
