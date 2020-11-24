@@ -33,6 +33,9 @@ public:
     QString comment();
     QImage thumbnail();
     std::unique_ptr<AfPointOverlay> autoFocusPoints();
+    QString aperture();
+    QString exposureTime();
+    QString iso();
 
 private:
     struct Impl;

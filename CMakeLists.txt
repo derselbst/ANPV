@@ -151,6 +151,8 @@ DecoderFactory.cpp
 DecodingState.hpp
 DocumentView.cpp
 DocumentView.hpp
+ExifOverlay.cpp
+ExifOverlay.hpp
 ExifWrapper.cpp
 ExifWrapper.hpp
 Formatter.hpp

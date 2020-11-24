@@ -2,11 +2,11 @@
 #pragma once
 
 #include <memory>
-#include <QLabel>
+#include "MessageWidget.hpp"
 
 class ExifWrapper;
 
-class ExifOverlay : QLabel
+class ExifOverlay : public MessageWidget
 {
 public:
     ExifOverlay(QWidget* parent = nullptr);

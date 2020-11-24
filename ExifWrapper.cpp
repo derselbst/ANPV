@@ -2,6 +2,7 @@
 #include "ExifWrapper.hpp"
 
 #include "AfPointOverlay.hpp"
+#include "Formatter.hpp"
 
 #include <QByteArray>
 #include <QImage>
@@ -12,7 +13,7 @@
 #include <QDebug>
 #include <QPainter>
 #include <QPen>
-
+#include <iomanip>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
@@ -287,4 +288,52 @@ std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
     }
     
     return nullptr;
+}
+
+QString ExifWrapper::aperture()
+{
+    long num, den;
+    if(d->mExivHandle.getExifTagRational("Exif.Photo.FNumber", num, den))
+    {
+        return QString ((Formatter() << std::setprecision(2) << num * 1.0 / den).str().c_str());
+    }
+    else
+    {
+        return QString();
+    }
+}
+
+QString ExifWrapper::exposureTime()
+{
+    long num, den;
+    if(d->mExivHandle.getExifTagRational("Exif.Photo.ExposureTime", num, den))
+    {
+        double quot = num *1.0 / den;
+        
+        if(quot < 1)
+        {
+            return QString ((Formatter() << num << "/" << den).str().c_str());
+        }
+        else
+        {
+            return QString ((Formatter() << std::setprecision(3) << quot).str().c_str());
+        }
+    }
+    else
+    {
+        return QString();
+    }
+}
+
+QString ExifWrapper::iso()
+{
+    long num;
+    if(d->mExivHandle.getExifTagLong("Exif.Photo.ISOSpeedRatings", num))
+    {
+        return QString ((Formatter() << num).str().c_str());
+    }
+    else
+    {
+        return QString();
+    }
 }

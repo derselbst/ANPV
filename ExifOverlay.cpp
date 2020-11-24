@@ -2,9 +2,9 @@
 #include "ExifOverlay.hpp"
 
 #include "AfPointOverlay.hpp"
+#include "ExifWrapper.hpp"
 
 #include <QGraphicsOpacityEffect>
-#include <QLabel>
 
 
 struct ExifOverlay::Impl
@@ -12,29 +12,38 @@ struct ExifOverlay::Impl
 };
 
 ExifOverlay::ExifOverlay(QWidget* parent)
-: QLabel(parent), d(std::make_unique<Impl>())
+: MessageWidget(parent), d(std::make_unique<Impl>())
 {
-    this->setVisible(false);
-    this->setMargin(3);
-    this->setTextFormat(Qt::PlainText);
-    this->setStyleSheet("QLabel { background-color : black; color : white; border-radius: 3px} ");
+    this->setCloseButtonVisible(false);
+    this->setWordWrap(false);
+    this->hide();
     
     auto* feedbackEffect = new QGraphicsOpacityEffect(this);
     feedbackEffect->setOpacity(0.5);
-    feedbackLabel->setGraphicsEffect(feedbackEffect);
+    this->setGraphicsEffect(feedbackEffect);
 }
 
 ExifOverlay::~ExifOverlay() = default;
 
 void ExifOverlay::setMetadata(ExifWrapper* exif)
 {
-    this->setText("TEST");
+    QString t = QString(
+        "Aperture: %1\n"
+        "Exposure: %2\n"
+        "ISO     : %3")
+    .arg(exif->aperture())
+    .arg(exif->exposureTime())
+    .arg(exif->iso());
+    
+    
+    this->setText(t);
+    this->setMessageType(MessageWidget::MessageType::Positive);
     this->adjustSize();
-    this->setVisible(true);
+    this->show();
 }
 
-void ExifOverlay::unsetMetadata()
-{
-    this->setVisible(false);
-    this->clear();
-}
+// void ExifOverlay::unsetMetadata()
+// {
+//     this->setVisible(false);
+//     this->clear();
+// }

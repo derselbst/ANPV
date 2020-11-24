@@ -16,6 +16,7 @@
 #include <algorithm>
 
 #include "AfPointOverlay.hpp"
+#include "ExifOverlay.hpp"
 #include "SmartImageDecoder.hpp"
 #include "ImageDecodeTask.hpp"
 #include "ANPV.hpp"
@@ -42,6 +43,8 @@ struct DocumentView::Impl
     std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
 
     std::unique_ptr<AfPointOverlay> afPointOverlay;
+    
+    std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
     
     // a container were we store all tasks that need to be processed
@@ -101,6 +104,7 @@ struct DocumentView::Impl
         scene->invalidate();
         
         messageWidget->hide();
+        exifOverlay->hide();
     }
     
     void onViewportChanged(QTransform newTransform)
@@ -376,6 +380,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         this->resetTransform();
         this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
+        d->exifOverlay->setMetadata(dec->exif());
         break;
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
