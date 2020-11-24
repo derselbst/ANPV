@@ -288,7 +288,7 @@ void SmartTiffDecoder::decodeHeader()
     
     d->imagePageToDecode = d->findHighestResolution(pageInfos);
     d->imageInfo = pageInfos[d->imagePageToDecode];
-    d->format = QImage::Format_RGB32;
+    d->format = QImage::Format_ARGB32;
     
     auto thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
     if(thumbnailPageToDecode >= 0)
