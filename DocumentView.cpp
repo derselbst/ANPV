@@ -80,6 +80,16 @@ struct DocumentView::Impl
     {
         removeSmoothPixmap();
         
+        currentDocumentPixmap = QPixmap();
+        currentPixmapOverlay->setPixmap(currentDocumentPixmap);
+        
+        if(currentDecodeTask)
+        {
+            currentDecodeTask->cancel();
+            currentDecodeTask = nullptr;
+        }
+        currentImageDecoder = nullptr;
+        
         // clear the scene without deleting anything
         QList<QGraphicsItem*> L = scene->items();
         while (!L.empty())
@@ -105,6 +115,7 @@ struct DocumentView::Impl
         if (smoothPixmapOverlay)
         {
             scene->removeItem(smoothPixmapOverlay.get());
+            smoothPixmapOverlay->setPixmap(QPixmap());
             smoothPixmapOverlay = nullptr;
         }
     }
@@ -384,13 +395,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
 void DocumentView::loadImage(QString url)
 {
     d->clearScene();
-    
-    if(d->currentDecodeTask)
-    {
-        d->currentDecodeTask->cancel();
-        d->currentDecodeTask = nullptr;
-    }
-    d->currentDocumentPixmap = QPixmap();
     
     d->currentImageDecoder = DecoderFactory::load(url, this);
     
