@@ -30,10 +30,14 @@ void ExifOverlay::setMetadata(ExifWrapper* exif)
     QString t = QString(
         "Aperture: %1\n"
         "Exposure: %2\n"
-        "ISO     : %3")
+        "ISO: %3\n"
+        "Lens: %4\n"
+        "Focal Length: %5\n")
     .arg(exif->aperture())
     .arg(exif->exposureTime())
-    .arg(exif->iso());
+    .arg(exif->iso())
+    .arg(exif->lens())
+    .arg(exif->focalLength());
     
     
     this->setText(t);

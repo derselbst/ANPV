@@ -2,7 +2,6 @@
 #include "ImageDecodeTask.hpp"
 #include "UserCancellation.hpp"
 #include "SmartImageDecoder.hpp"
-#include "DecodingState.hpp"
 
 #include <atomic>
 #include <QDebug>
@@ -11,9 +10,12 @@
 struct ImageDecodeTask::Impl
 {
     std::shared_ptr<SmartImageDecoder> decoder;
+    
+    DecodingState targetState;
+    
     std::atomic<bool> isCancelled{false};
     
-    Impl(std::shared_ptr<SmartImageDecoder> dec) : decoder(dec)
+    Impl(std::shared_ptr<SmartImageDecoder> dec, DecodingState t) : decoder(dec), targetState(t)
     {}
     
     static void throwIfCancelled(void* self)
@@ -25,7 +27,7 @@ struct ImageDecodeTask::Impl
     }
 };
 
-ImageDecodeTask::ImageDecodeTask(std::shared_ptr<SmartImageDecoder> dec) : d(std::make_unique<Impl>(dec))
+ImageDecodeTask::ImageDecodeTask(std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState) : d(std::make_unique<Impl>(dec, targetState))
 {
     this->setAutoDelete(false);
     d->decoder->setCancellationCallback(&ImageDecodeTask::Impl::throwIfCancelled, d.get());
@@ -37,7 +39,7 @@ void ImageDecodeTask::run()
 {
     try
     {
-        d->decoder->decode(DecodingState::FullImage);
+        d->decoder->decode(d->targetState);
     }
     catch(...)
     {
@@ -52,6 +54,9 @@ void ImageDecodeTask::cancel() noexcept
     d->isCancelled = true;
 }
 
-
-
-
+// should only be called from main thread!
+void ImageDecodeTask::shutdown() noexcept
+{
+    d->decoder->disconnect();
+    this->cancel();
+}

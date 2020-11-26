@@ -36,6 +36,8 @@ public:
     QString aperture();
     QString exposureTime();
     QString iso();
+    QString lens();
+    QString focalLength();
 
 private:
     struct Impl;
