@@ -30,7 +30,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # by default, force c++11
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # in case we have any c code, use the best c standard ever
@@ -99,7 +99,7 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Concurrent REQUIRED)
 #     
 #     HANDLE_FOUND(Qt5Widgets)
 #     
@@ -158,6 +158,8 @@ ExifWrapper.hpp
 Formatter.hpp
 ImageDecodeTask.cpp
 ImageDecodeTask.hpp
+OrderedFileSystemModel.cpp
+OrderedFileSystemModel.hpp
 MessageWidget.cpp
 MessageWidget.hpp
 SmartImageDecoder.cpp
