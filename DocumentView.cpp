@@ -47,11 +47,9 @@ struct DocumentView::Impl
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
     
-    // a container were we store all tasks that need to be processed
-    std::vector<std::unique_ptr<ImageDecodeTask>> taskContainer;
     
     // a shortcut to the most recent task queued
-    ImageDecodeTask* currentDecodeTask=nullptr;
+    std::shared_ptr<ImageDecodeTask> currentDecodeTask;
 
     // the latest image decoder, the same that displays the current image
     // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
@@ -66,17 +64,11 @@ struct DocumentView::Impl
     
     ~Impl()
     {
-        for(size_t i=0; i < taskContainer.size(); i++)
+        if(currentDecodeTask)
         {
-            taskContainer[i]->cancel();
+            currentDecodeTask->cancel();
+            currentDecodeTask = nullptr;
         }
-        
-        if(!QThreadPool::globalInstance()->waitForDone(5000))
-        {
-            qWarning() << "Waited over 5 seconds for the thread pool to finish, giving up. I will probably crash now...";
-        }
-        
-        taskContainer.clear();
     }
     
     void clearScene()
@@ -206,7 +198,11 @@ struct DocumentView::Impl
     
     void setDocumentError(SmartImageDecoder* sid)
     {
-        QString error = sid->errorMessage();
+        setDocumentError(sid->errorMessage());
+    }
+    
+    void setDocumentError(QString error)
+    {
         messageWidget->setText(error);
         messageWidget->setMessageType(MessageWidget::MessageType::Error);
         messageWidget->setIcon(QIcon::fromTheme("dialog-error"));
@@ -221,29 +217,6 @@ struct DocumentView::Impl
         auto posX = wndSize.width()/2 - boxSize.width()/2;
         auto posY = wndSize.height()/2 - boxSize.height()/2;
         messageWidget->move(posX, posY);
-    }
-    
-    void onDecodingTaskFinished(ImageDecodeTask* t)
-    {
-        auto result = std::find_if(taskContainer.begin(),
-                                   taskContainer.end(),
-                                [&](std::unique_ptr<ImageDecodeTask>& other)
-                                { return other.get() == t;}
-                                );
-        if (result != taskContainer.end())
-        {
-            taskContainer.erase(result);
-            QGuiApplication::restoreOverrideCursor();
-        }
-        else
-        {
-            qWarning() << "ImageDecodeTask '" << t << "' not found in container.";
-        }
-        
-        if(currentDecodeTask == t)
-        {
-            currentDecodeTask = nullptr;
-        }
     }
 };
 
@@ -410,15 +383,32 @@ void DocumentView::loadImage(QString url)
 {
     d->clearScene();
     
-    d->currentImageDecoder = DecoderFactory::load(url, this);
-    
-    d->taskContainer.emplace_back(std::make_unique<ImageDecodeTask>(d->currentImageDecoder));
-    auto* task = d->taskContainer.back().get();
-    d->currentDecodeTask = task;
-    connect(task, &ImageDecodeTask::finished,
-            this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); }, Qt::QueuedConnection);
+    d->currentImageDecoder = DecoderFactory::globalInstance()->getDecoder(url);
+    if(!d->currentImageDecoder)
+    {
+        QString name = QFileInfo(url).fileName();
+        d->anpv->notifyProgress(100, QString("Failed to open ") + name);
+        d->setDocumentError(QString("Could not find a decoder for file %1").arg(name));
+        d->anpv->notifyDecodingState(DecodingState::Error);
+        return;
+    }
     
     d->anpv->notifyProgress(0, QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
+    
+    DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.get(), this);
+    d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
+    
+    auto* task = d->currentDecodeTask.get();
+    connect(task, &ImageDecodeTask::finished,
+            this, [&](ImageDecodeTask* t)
+            {
+                QGuiApplication::restoreOverrideCursor();
+                if(d->currentDecodeTask.get() == t)
+                {
+                    d->currentDecodeTask = nullptr;
+                }
+            }
+           );
     
     QThreadPool::globalInstance()->start(task);
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));

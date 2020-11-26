@@ -4,6 +4,7 @@
 #include <QRunnable>
 #include <QObject>
 #include <memory>
+#include "DecodingState.hpp"
 
 class SmartImageDecoder;
 
@@ -12,12 +13,14 @@ class ImageDecodeTask : public QObject, public QRunnable
     Q_OBJECT
 
 public:
-    ImageDecodeTask(std::shared_ptr<SmartImageDecoder> d);
+    ImageDecodeTask(std::shared_ptr<SmartImageDecoder> d, DecodingState targetState);
     ~ImageDecodeTask();
     void run() override;
     void cancel() noexcept;
+    void shutdown() noexcept;
 
-signals:
+signals:    
+    // emitted before the thread exits the decoding task
     void finished(ImageDecodeTask* self);
     
 private:
