@@ -337,3 +337,22 @@ QString ExifWrapper::iso()
         return QString();
     }
 }
+
+QString ExifWrapper::lens()
+{
+    return d->mExivHandle.getExifTagString("Exif.Photo.LensModel");
+}
+
+QString ExifWrapper::focalLength()
+{
+    long num, den;
+    if(d->mExivHandle.getExifTagRational("Exif.Photo.FocalLength", num, den))
+    {
+        double quot = num * 1.0 / den;
+        return QString ((Formatter() << quot).str().c_str());
+    }
+    else
+    {
+        return QString();
+    }
+}
