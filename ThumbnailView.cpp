@@ -28,6 +28,7 @@
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
+#include "OrderedFileSystemModel.hpp"
 
 struct ThumbnailView::Impl
 {
@@ -36,7 +37,7 @@ struct ThumbnailView::Impl
     
     QFileSystemModel* dirModel;
     
-    QFileSystemModel* fileModel;
+    OrderedFileSystemModel* fileModel;
     QDir currentDir;
     
     QListView* thumbnailList;
@@ -91,7 +92,7 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
-    d->fileModel = new QFileSystemModel(this);
+    d->fileModel = new OrderedFileSystemModel(this);
     
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);
@@ -132,5 +133,5 @@ void ThumbnailView::changeDir(const QString& dir)
     d->currentDir = dir;
     QModelIndex mo = d->dirModel->index(dir);
     d->fileSystemTree->setExpanded(mo, true);
-    d->thumbnailList->setRootIndex(d->fileModel->setRootPath(dir));
+    d->fileModel->changeDirAsync(dir);
 }

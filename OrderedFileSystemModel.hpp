@@ -3,6 +3,7 @@
 
 #include <QAbstractListModel>
 #include <QModelIndex>
+#include <QFileInfo>
 #include <memory>
 
 class QDir;
@@ -12,7 +13,7 @@ class OrderedFileSystemModel : public QAbstractListModel
     Q_OBJECT
     
 public:
-    OrderedFileSystemModel();
+    OrderedFileSystemModel(QObject* parent = nullptr);
     ~OrderedFileSystemModel() override;
     
     void changeDirAsync(const QDir& dir);
@@ -27,6 +28,8 @@ public: // QAbstractItemModel
 
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 
+    QFileInfo fileInfo(const QModelIndex &index) const;
+    
 signals:
     void directoryLoadingStatusMessage(QString msg);
     void directoryLoadingProgress(int progress);

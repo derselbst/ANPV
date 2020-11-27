@@ -73,7 +73,7 @@ struct OrderedFileSystemModel::Impl
     std::vector<Entry> entries;
     
     // The column which is currently sorted
-    Column currentSortedCol;
+    Column currentSortedCol = Column::FileName;
     Qt::SortOrder sortOrder;
 
     Impl(OrderedFileSystemModel* parent) : q(parent)
@@ -260,8 +260,10 @@ struct OrderedFileSystemModel::Impl
     }
 };
 
-OrderedFileSystemModel::OrderedFileSystemModel() : d(std::make_unique<Impl>(this))
-{}
+OrderedFileSystemModel::OrderedFileSystemModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
+{
+    connect(this, &OrderedFileSystemModel::directoryLoaded, this, [&](){ d->onDirectoryLoaded(); });
+}
 
 OrderedFileSystemModel::~OrderedFileSystemModel() = default;
 
@@ -449,4 +451,14 @@ void OrderedFileSystemModel::sort(int column, Qt::SortOrder order)
     d->currentSortedCol = static_cast<Column>(column);
     d->sortOrder = order;
     d->sortEntries();
+}
+
+QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
+{
+    if(index.isValid())
+    {
+        return d->entries.at(index.row()).getFileInfo();
+    }
+    
+    return QFileInfo();
 }

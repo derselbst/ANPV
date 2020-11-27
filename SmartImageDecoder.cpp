@@ -67,7 +67,8 @@ struct SmartImageDecoder::Impl
 
 SmartImageDecoder::SmartImageDecoder(QString&& url) : d(std::make_unique<Impl>(std::move(url)))
 {
-    d->open();
+//     d->open();
+//     d->close();
 }
 
 SmartImageDecoder::~SmartImageDecoder() = default;
