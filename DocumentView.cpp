@@ -11,6 +11,8 @@
 #include <QGuiApplication>
 #include <QThreadPool>
 #include <QDebug>
+#include <QFuture>
+#include <QtConcurrent/QtConcurrent>
 
 #include <vector>
 #include <algorithm>
@@ -46,7 +48,7 @@ struct DocumentView::Impl
     
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
-    
+    QFuture<void> taskFuture;
     
     // a shortcut to the most recent task queued
     std::shared_ptr<ImageDecodeTask> currentDecodeTask;
@@ -67,6 +69,7 @@ struct DocumentView::Impl
         if(currentDecodeTask)
         {
             DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
+            taskFuture.waitForFinished();
             currentDecodeTask = nullptr;
         }
     }
@@ -88,6 +91,7 @@ struct DocumentView::Impl
         if(currentDecodeTask)
         {
             DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
+            taskFuture.waitForFinished();
             currentDecodeTask = nullptr;
         }
         currentImageDecoder = nullptr;
@@ -410,8 +414,8 @@ void DocumentView::loadImage(QString url)
     DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.get(), this);
     d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
     
-    auto* task = d->currentDecodeTask.get();
-    connect(task, &ImageDecodeTask::finished,
+    auto task = d->currentDecodeTask;
+    connect(task.get(), &ImageDecodeTask::finished,
             this, [&](ImageDecodeTask* t)
             {
                 QGuiApplication::restoreOverrideCursor();
@@ -422,6 +426,6 @@ void DocumentView::loadImage(QString url)
             }
            );
     
-    QThreadPool::globalInstance()->start(task);
+    d->taskFuture = QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();});
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 }
