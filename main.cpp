@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
             else if(info.isFile())
             {
                 m.showImageView();
-                m.loadImage(arg);
+                m.loadImage(info);
                 splash.showMessage("Starting the image decoding task...");
             }
         }

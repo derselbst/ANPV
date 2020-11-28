@@ -110,14 +110,14 @@ ANPV::ANPV(QSplashScreen *splash)
             [&](QString current)
             {
                 QFileInfo i = d->fileModel->goNext(current);
-                this->loadImage(i.absoluteFilePath());
+                this->loadImage(i);
                 this->setThumbnailDir(i.absoluteDir().absolutePath());
             });
     connect(d->imageViewer, &DocumentView::requestPrev, this,
             [&](QString current)
             {
                 QFileInfo i = d->fileModel->goPrev(current);
-                this->loadImage(i.absoluteFilePath());
+                this->loadImage(i);
                 this->setThumbnailDir(i.absoluteDir().absolutePath());
             });
 
@@ -145,9 +145,10 @@ void ANPV::showThumbnailView()
     d->stackedLayout->setCurrentWidget(d->thumbnailViewer);
 }
 
-void ANPV::loadImage(QString str)
+void ANPV::loadImage(QFileInfo inf)
 {
-    d->imageViewer->loadImage(str);
+    this->setWindowTitle(inf.fileName());
+    d->imageViewer->loadImage(inf.absoluteFilePath());
 }
 
 void ANPV::setThumbnailDir(QString str)

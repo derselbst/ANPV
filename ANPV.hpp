@@ -4,6 +4,7 @@
 #include <memory>
 #include <QMainWindow>
 #include <QString>
+#include <QFileInfo>
 
 #include "DecodingState.hpp"
 
@@ -24,7 +25,7 @@ public:
 public slots:
     void showImageView();
     void showThumbnailView();
-    void loadImage(QString str);
+    void loadImage(QFileInfo str);
     void setThumbnailDir(QString str);
     
 private:
