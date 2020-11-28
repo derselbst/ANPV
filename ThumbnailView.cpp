@@ -28,6 +28,7 @@
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
+#include "SortedImageModel.hpp"
 
 struct ThumbnailView::Impl
 {
@@ -36,7 +37,7 @@ struct ThumbnailView::Impl
     
     QFileSystemModel* dirModel;
     
-    QFileSystemModel* fileModel;
+    SortedImageModel* fileModel;
     QDir currentDir;
     
     QListView* thumbnailList;
@@ -81,6 +82,29 @@ struct ThumbnailView::Impl
         QFileInfo info = dirModel->fileInfo(idx);
         p->changeDir(info.absoluteFilePath());
     }
+    
+    void onDirectoryLoadingProgress(int prog)
+    {
+        anpv->notifyProgress(prog);
+    }
+    
+    void onDirectoryLoadingStatusMessage(int prog, QString& msg)
+    {
+        anpv->notifyProgress(prog, msg);
+    }
+    
+    void onDirectoryLoadingFailed(QString& msg, QString& details)
+    {
+        anpv->notifyDecodingState(DecodingState::Error);
+        anpv->notifyProgress(100, msg + ": " + details);
+        QGuiApplication::restoreOverrideCursor();
+    }
+    
+    void onDirectoryLoaded()
+    {
+        anpv->notifyProgress(100, "Directory content successfully loaded");
+        QGuiApplication::restoreOverrideCursor();
+    }
 };
 
 ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
@@ -91,13 +115,21 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
-    d->fileModel = new QFileSystemModel(this);
+    d->fileModel = new SortedImageModel(this);
+    connect(d->fileModel, &SortedImageModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
+    connect(d->fileModel, &SortedImageModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
+    connect(d->fileModel, &SortedImageModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
+    connect(d->fileModel, &SortedImageModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
     
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);
     d->thumbnailList->setViewMode(QListView::IconMode);
     d->thumbnailList->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->thumbnailList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    d->thumbnailList->setResizeMode(QListView::Adjust);
+    d->thumbnailList->setWordWrap(true);
+    d->thumbnailList->setWrapping(true);
+    d->thumbnailList->setSpacing(2);
     
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     
@@ -132,5 +164,7 @@ void ThumbnailView::changeDir(const QString& dir)
     d->currentDir = dir;
     QModelIndex mo = d->dirModel->index(dir);
     d->fileSystemTree->setExpanded(mo, true);
-    d->thumbnailList->setRootIndex(d->fileModel->setRootPath(dir));
+    d->anpv->notifyDecodingState(DecodingState::Ready);
+    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    d->fileModel->changeDirAsync(dir);
 }

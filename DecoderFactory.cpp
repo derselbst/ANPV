@@ -22,6 +22,7 @@ struct DecoderFactory::Impl
     {
         for(size_t i=0; i < taskContainer.size(); i++)
         {
+            QThreadPool::globalInstance()->tryTake(taskContainer[i].get());
             // disconnect all signals
             taskContainer[i]->disconnect();
             taskContainer[i]->shutdown();
@@ -100,4 +101,17 @@ std::shared_ptr<ImageDecodeTask> DecoderFactory::createDecodeTask(std::shared_pt
                      this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
     
     return task;
+}
+
+void DecoderFactory::cancelDecodeTask(std::shared_ptr<ImageDecodeTask> task)
+{
+    if(QThreadPool::globalInstance()->tryTake(task.get()))
+    {
+        // task not started yet, manually emit finished signal
+        emit task->finished(task.get());
+    }
+    else
+    {
+        task->cancel();
+    }
 }

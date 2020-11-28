@@ -10,8 +10,8 @@
 struct SmartImageDecoder::Impl
 {
     std::function<void(void*)> cancelCallbackInternal;
-    void* cancelCallbackObject;
-    DecodingState state;
+    void* cancelCallbackObject = nullptr;
+    DecodingState state = DecodingState::Ready;
     QString decodingMessage;
     int decodingProgress=0;
     
@@ -67,7 +67,6 @@ struct SmartImageDecoder::Impl
 
 SmartImageDecoder::SmartImageDecoder(QString&& url) : d(std::make_unique<Impl>(std::move(url)))
 {
-    d->open();
 }
 
 SmartImageDecoder::~SmartImageDecoder() = default;
@@ -163,6 +162,11 @@ void SmartImageDecoder::fileBuf(const unsigned char** buf, qint64* size)
 QFileInfo SmartImageDecoder::fileInfo()
 {
     return QFileInfo(d->file);
+}
+
+QString SmartImageDecoder::latestMessage()
+{
+    return d->decodingMessage;
 }
 
 QString SmartImageDecoder::errorMessage()

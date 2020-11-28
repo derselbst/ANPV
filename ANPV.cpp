@@ -115,6 +115,8 @@ ANPV::ANPV(QSplashScreen *splash)
     d->stackedLayoutWidget = new QWidget(this);
     d->stackedLayoutWidget->setLayout(d->stackedLayout);
     this->setCentralWidget(d->stackedLayoutWidget);
+    
+    this->notifyDecodingState(DecodingState::Ready);
 }
 
 ANPV::~ANPV() = default;
@@ -143,6 +145,11 @@ void ANPV::setThumbnailDir(QString str)
 void ANPV::notifyProgress(int progress, QString message)
 {
     this->statusBar()->showMessage(message, 0);
+    this->notifyProgress(progress);
+}
+
+void ANPV::notifyProgress(int progress)
+{
     d->progressBar->setValue(progress);
 }
 

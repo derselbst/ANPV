@@ -18,6 +18,7 @@ public:
     ~ANPV() override;
 
     void notifyProgress(int progress, QString message);
+    void notifyProgress(int progress);
     void notifyDecodingState(DecodingState state);
     
 public slots:
