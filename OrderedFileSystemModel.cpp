@@ -46,7 +46,7 @@ struct Entry
     {
         if(task)
         {
-            task->cancel();
+            DecoderFactory::globalInstance()->cancelDecodeTask(task);
             task = nullptr;
         }
     }
@@ -76,9 +76,20 @@ struct Entry
         return task;
     }
     
+    const QFuture<void>& getFuture()
+    {
+        return future;
+    }
+    
+    void setFuture(QFuture<void>&& fut)
+    {
+        future = std::move(fut);
+    }
+    
 private:
     std::shared_ptr<SmartImageDecoder> dec;
     std::shared_ptr<ImageDecodeTask> task;
+    QFuture<void> future;
     QFileInfo info;
 };
 
@@ -274,19 +285,16 @@ struct OrderedFileSystemModel::Impl
     {
         Entry& e = entries.at(index.row());
         
-        if(e.getTask())
+        if(e.getFuture().isRunning())
         {
-            qInfo() << "not starting agin";
             return;
         }
         
         QObject::connect(dec.get(), &SmartImageDecoder::decodingStateChanged, q, &OrderedFileSystemModel::onBackgroundImageTaskStateChanged);
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
-        QObject::connect(task.get(), &ImageDecodeTask::finished, q, &OrderedFileSystemModel::onBackgroundImageTaskFinished);
-        
-        entries.at(index.row()).setTask(task);
-        QThreadPool::globalInstance()->start(task.get());
+        e.setTask(task);
+        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){task->run();}));
     }
     
     void setStatusMessage(int prog, QString msg)
@@ -329,7 +337,7 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
                     do
                     {
                         QFileInfo inf = fileInfoList.takeFirst();
-                        if (0||inf.isFile())
+                        if (inf.isFile())
                         {
                             auto decoder = DecoderFactory::globalInstance()->getDecoder(inf.absoluteFilePath());
                             if (decoder)
@@ -497,25 +505,6 @@ QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
     }
     
     return QFileInfo();
-}
-
-
-
-void OrderedFileSystemModel::onBackgroundImageTaskFinished(ImageDecodeTask* t)
-{
-    auto result = std::find_if(d->entries.begin(),
-                               d->entries.end(),
-                            [&](Entry& other)
-                            { return other.getTask().get() == t;}
-                            );
-    if (result != d->entries.end())
-    {
-        result->setTask(nullptr);
-    }
-    else
-    {
-        qWarning() << "ImageDecodeTask '" << t << "' not found in OrderedFileSystemModel.";
-    }
 }
 
 void OrderedFileSystemModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32)

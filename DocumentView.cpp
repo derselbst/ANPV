@@ -66,7 +66,7 @@ struct DocumentView::Impl
     {
         if(currentDecodeTask)
         {
-            currentDecodeTask->cancel();
+            DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
             currentDecodeTask = nullptr;
         }
     }
@@ -87,7 +87,7 @@ struct DocumentView::Impl
         
         if(currentDecodeTask)
         {
-            currentDecodeTask->cancel();
+            DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
             currentDecodeTask = nullptr;
         }
         currentImageDecoder = nullptr;

@@ -45,6 +45,5 @@ private:
     std::unique_ptr<Impl> d;
     
 private slots:
-    void onBackgroundImageTaskFinished(ImageDecodeTask* t);
     void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32);
 };
