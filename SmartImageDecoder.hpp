@@ -27,6 +27,7 @@ public:
     QImage thumbnail();
     QImage image();
     QString errorMessage();
+    QString latestMessage();
     void decode(DecodingState targetState);
     DecodingState decodingState();
     

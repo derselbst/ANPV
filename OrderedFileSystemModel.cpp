@@ -24,6 +24,7 @@ enum Column : int
     FirstValid = 0,
     FileName = FirstValid,
     FileSize,
+    DateModified,
     Resolution,
     DateRecorded,
     Aperture,
@@ -122,7 +123,9 @@ struct OrderedFileSystemModel::Impl
     // before we insert the items into the model
     bool sortedColumnNeedsPreloadingMetadata()
     {
-        if (currentSortedCol == Column::FileName || currentSortedCol == Column::FileSize)
+        if (currentSortedCol == Column::FileName ||
+            currentSortedCol == Column::FileSize ||
+            currentSortedCol == Column::DateModified)
         {
             return false;
         }
@@ -195,6 +198,10 @@ struct OrderedFileSystemModel::Impl
             {
                 return linfo.size() < rinfo.size();
             }
+            else if constexpr (SortCol == Column::DateModified)
+            {
+                return linfo.lastModified() < rinfo.lastModified();
+            }
             else
             {
 //                 static_assert("Unknown column to sort for");
@@ -227,11 +234,6 @@ struct OrderedFileSystemModel::Impl
         QFileInfo linfo = l.getFileInfo();
         QFileInfo rinfo = r.getFileInfo();
 
-        if(linfo.isDir() || rinfo.isDir())
-        {
-            qInfo() << "here";
-        }
-        
         bool leftIsBeforeRight =
             (linfo.isDir() && (!rinfo.isDir() || linfo.fileName() < rinfo.fileName())) ||
             (!rinfo.isDir() && sortColumnPredicateLeftBeforeRight<SortCol>(l, linfo, r, rinfo));
@@ -248,6 +250,9 @@ struct OrderedFileSystemModel::Impl
         
         case Column::FileSize:
             return [=](const Entry& l, const Entry& r) { return topLevelSortFunction<Column::FileSize>(l, r); };
+            
+        case Column::DateModified:
+            return [=](const Entry& l, const Entry& r) { return topLevelSortFunction<Column::DateModified>(l, r); };
             
         case Column::Resolution:
             return [=](const Entry& l, const Entry& r) { return topLevelSortFunction<Column::Resolution>(l, r); };
@@ -377,10 +382,10 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
                     } while (false);
 
                     d->throwIfDirectoryLoadingCancelled(d.get());
-                    emit directoryLoadingProgress(++entriesProcessed * 100. / entriesToProcess);
+                    emit directoryLoadingProgress(entriesProcessed++ * 100. / entriesToProcess);
                 }
 
-                d->setStatusMessage(100, "Sorting entries");
+                d->setStatusMessage(99, "Sorting entries");
                 d->sortEntries();
                 emit directoryLoaded();
             }
@@ -471,7 +476,9 @@ QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
                 switch (e->getDecoder()->decodingState())
                 {
                 case DecodingState::Error:
-                    return e->getDecoder()->errorMessage();
+                    return QString("<b>%1</b><br><br>Latest Message was:<br>%2")
+                    .arg(e->getDecoder()->errorMessage())
+                    .arg(e->getDecoder()->latestMessage());
                 default:
                     break;
                 }

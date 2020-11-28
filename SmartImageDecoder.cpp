@@ -164,6 +164,11 @@ QFileInfo SmartImageDecoder::fileInfo()
     return QFileInfo(d->file);
 }
 
+QString SmartImageDecoder::latestMessage()
+{
+    return d->decodingMessage;
+}
+
 QString SmartImageDecoder::errorMessage()
 {
     return d->errorMessage;
