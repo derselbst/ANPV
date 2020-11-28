@@ -1,5 +1,5 @@
 
-#include "OrderedFileSystemModel.hpp"
+#include "SortedImageModel.hpp"
 
 #include <QFuture>
 #include <QFileInfo>
@@ -96,9 +96,9 @@ private:
     QFileInfo info;
 };
 
-struct OrderedFileSystemModel::Impl
+struct SortedImageModel::Impl
 {
-    OrderedFileSystemModel* q;
+    SortedImageModel* q;
     
     std::atomic<bool> directoryLoadingCancelled{ false };
 
@@ -111,7 +111,7 @@ struct OrderedFileSystemModel::Impl
     Column currentSortedCol = Column::DateRecorded;
     Qt::SortOrder sortOrder;
 
-    Impl(OrderedFileSystemModel* parent) : q(parent)
+    Impl(SortedImageModel* parent) : q(parent)
     {}
     
     ~Impl()
@@ -316,7 +316,7 @@ struct OrderedFileSystemModel::Impl
             return;
         }
         
-        QObject::connect(dec.get(), &SmartImageDecoder::decodingStateChanged, q, &OrderedFileSystemModel::onBackgroundImageTaskStateChanged);
+        QObject::connect(dec.get(), &SmartImageDecoder::decodingStateChanged, q, &SortedImageModel::onBackgroundImageTaskStateChanged);
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
@@ -329,14 +329,14 @@ struct OrderedFileSystemModel::Impl
     }
 };
 
-OrderedFileSystemModel::OrderedFileSystemModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
+SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
 {
-    connect(this, &OrderedFileSystemModel::directoryLoaded, this, [&](){ d->onDirectoryLoaded(); });
+    connect(this, &SortedImageModel::directoryLoaded, this, [&](){ d->onDirectoryLoaded(); });
 }
 
-OrderedFileSystemModel::~OrderedFileSystemModel() = default;
+SortedImageModel::~SortedImageModel() = default;
 
-void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
+void SortedImageModel::changeDirAsync(const QDir& dir)
 {
     d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
     this->beginResetModel();
@@ -403,12 +403,12 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
 
 
 
-int OrderedFileSystemModel::columnCount(const QModelIndex &) const
+int SortedImageModel::columnCount(const QModelIndex &) const
 {
     return Column::Count;
 }
 
-int OrderedFileSystemModel::rowCount(const QModelIndex&) const
+int SortedImageModel::rowCount(const QModelIndex&) const
 {
     if (d->directoryWorker.isFinished())
     {
@@ -420,7 +420,7 @@ int OrderedFileSystemModel::rowCount(const QModelIndex&) const
     }
 }
 
-QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
+QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
     if (index.isValid())
     {
@@ -502,7 +502,7 @@ QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
     return QVariant();
 }
 
-bool OrderedFileSystemModel::insertRows(int row, int count, const QModelIndex& parent)
+bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 {
     return false;
 
@@ -511,7 +511,7 @@ bool OrderedFileSystemModel::insertRows(int row, int count, const QModelIndex& p
     this->endInsertRows();
 }
 
-void OrderedFileSystemModel::sort(int column, Qt::SortOrder order)
+void SortedImageModel::sort(int column, Qt::SortOrder order)
 {
     if (order == Qt::DescendingOrder)
     {
@@ -523,7 +523,7 @@ void OrderedFileSystemModel::sort(int column, Qt::SortOrder order)
     d->sortEntries();
 }
 
-QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
+QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
 {
     if(index.isValid())
     {
@@ -533,7 +533,7 @@ QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
     return QFileInfo();
 }
 
-void OrderedFileSystemModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
+void SortedImageModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
 {
     if(newState == DecodingState::Ready)
     {

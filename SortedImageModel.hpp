@@ -12,13 +12,13 @@ class QDir;
 class ImageDecodeTask;
 class SmartImageDecoder;
 
-class OrderedFileSystemModel : public QAbstractListModel
+class SortedImageModel : public QAbstractListModel
 {
     Q_OBJECT
     
 public:
-    OrderedFileSystemModel(QObject* parent = nullptr);
-    ~OrderedFileSystemModel() override;
+    SortedImageModel(QObject* parent = nullptr);
+    ~SortedImageModel() override;
     
     void changeDirAsync(const QDir& dir);
 

@@ -158,8 +158,8 @@ ExifWrapper.hpp
 Formatter.hpp
 ImageDecodeTask.cpp
 ImageDecodeTask.hpp
-OrderedFileSystemModel.cpp
-OrderedFileSystemModel.hpp
+SortedImageModel.cpp
+SortedImageModel.hpp
 MessageWidget.cpp
 MessageWidget.hpp
 SmartImageDecoder.cpp

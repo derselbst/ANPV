@@ -28,7 +28,7 @@
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
-#include "OrderedFileSystemModel.hpp"
+#include "SortedImageModel.hpp"
 
 struct ThumbnailView::Impl
 {
@@ -37,7 +37,7 @@ struct ThumbnailView::Impl
     
     QFileSystemModel* dirModel;
     
-    OrderedFileSystemModel* fileModel;
+    SortedImageModel* fileModel;
     QDir currentDir;
     
     QListView* thumbnailList;
@@ -115,11 +115,11 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
-    d->fileModel = new OrderedFileSystemModel(this);
-    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
-    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
-    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
-    connect(d->fileModel, &OrderedFileSystemModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
+    d->fileModel = new SortedImageModel(this);
+    connect(d->fileModel, &SortedImageModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
+    connect(d->fileModel, &SortedImageModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
+    connect(d->fileModel, &SortedImageModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
+    connect(d->fileModel, &SortedImageModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
     
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);
