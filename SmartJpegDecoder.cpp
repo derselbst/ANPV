@@ -146,7 +146,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
     size_t needed = rowStride * cinfo.output_height;
     try
     {
-        d->decodedImg.resize(needed);
+        d->decodedImg.reserve(needed);
         
         bufferSetup.resize(cinfo.output_height);
         for(JDIMENSION i=0; i < cinfo.output_height; i++)

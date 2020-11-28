@@ -426,6 +426,6 @@ void DocumentView::loadImage(QString url)
             }
            );
     
-    d->taskFuture = QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();});
+    d->taskFuture = QtConcurrent::run(QThreadPool::globalInstance(), [&](){if(d->currentDecodeTask) d->currentDecodeTask->run();});
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 }
