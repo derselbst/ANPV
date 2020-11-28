@@ -305,6 +305,18 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Escape:
             d->anpv->showThumbnailView();
             break;
+        case Qt::Key_Space:
+            if(d->currentImageDecoder)
+            {
+                emit requestNext(d->currentImageDecoder->fileInfo().absoluteFilePath());
+            }
+            break;
+        case Qt::Key_Backspace:
+            if(d->currentImageDecoder)
+            {
+                emit requestPrev(d->currentImageDecoder->fileInfo().absoluteFilePath());
+            }
+            break;
         default:
             QGraphicsView::keyPressEvent(event);
             break;

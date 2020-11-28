@@ -26,6 +26,7 @@
 #include "DocumentView.hpp"
 #include "ThumbnailView.hpp"
 #include "Formatter.hpp"
+#include "SortedImageModel.hpp"
 
 
 struct ANPV::Impl
@@ -38,7 +39,7 @@ struct ANPV::Impl
     DocumentView* imageViewer;
     ThumbnailView* thumbnailViewer;
     
-    QFileSystemModel* dirModel;
+    SortedImageModel* fileModel;
     
     Impl(ANPV* parent) : p(parent)
     {
@@ -94,10 +95,6 @@ ANPV::ANPV(QSplashScreen *splash)
     this->setWindowState(Qt::WindowMaximized);
     this->setWindowTitle("ANPV");
     
-    d->dirModel = new QFileSystemModel(this);
-    d->dirModel->setRootPath("");
-    d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
-    
     splash->showMessage("Creating UI Widgets");
     
     d->progressBar = new QProgressBar(this);
@@ -105,9 +102,25 @@ ANPV::ANPV(QSplashScreen *splash)
     d->progressBar->setMaximum(100);
     this->statusBar()->addPermanentWidget(d->progressBar);
     
-    d->imageViewer = new DocumentView(this);
-    d->thumbnailViewer = new ThumbnailView(d->dirModel, this);
+    d->fileModel = new SortedImageModel(this);
+    d->thumbnailViewer = new ThumbnailView(d->fileModel, this);
     
+    d->imageViewer = new DocumentView(this);
+    connect(d->imageViewer, &DocumentView::requestNext, this,
+            [&](QString current)
+            {
+                QFileInfo i = d->fileModel->goNext(current);
+                this->loadImage(i.absoluteFilePath());
+                this->setThumbnailDir(i.absoluteDir().absolutePath());
+            });
+    connect(d->imageViewer, &DocumentView::requestPrev, this,
+            [&](QString current)
+            {
+                QFileInfo i = d->fileModel->goPrev(current);
+                this->loadImage(i.absoluteFilePath());
+                this->setThumbnailDir(i.absoluteDir().absolutePath());
+            });
+
     d->stackedLayout = new QStackedLayout(this);
     d->stackedLayout->addWidget(d->thumbnailViewer);
     d->stackedLayout->addWidget(d->imageViewer);

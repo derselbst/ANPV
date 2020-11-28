@@ -401,6 +401,53 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
         });
 }
 
+QFileInfo SortedImageModel::goNext(const QString& currentUrl)
+{
+    return this->goTo(currentUrl, 1);
+}
+
+QFileInfo SortedImageModel::goPrev(const QString& currentUrl)
+{
+    return this->goTo(currentUrl, -1);
+}
+
+QFileInfo SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent)
+{
+    stepsFromCurrent = (d->sortOrder == Qt::DescendingOrder) ? -stepsFromCurrent : stepsFromCurrent;
+    int step = (stepsFromCurrent < 0) ? -1 : 1;
+    
+    auto result = std::find_if(d->entries.begin(),
+                               d->entries.end(),
+                            [&](Entry& other)
+                            { return other.getFileInfo().absoluteFilePath() == currentUrl; });
+    
+    if(result == d->entries.end())
+    {
+        qCritical() << "This should not happen: currentUrl not found.";
+        return QFileInfo();
+    }
+
+    do
+    {
+        result += step;
+        if(result == d->entries.end())
+        {
+            return QFileInfo();
+        }
+        
+        if(result->hasImageDecoder())
+        {
+            stepsFromCurrent -= step;
+        }
+        else
+        {
+            // skip unsupported files
+        }
+        
+    } while(stepsFromCurrent);
+    
+    return result->getFileInfo();
+}
 
 
 int SortedImageModel::columnCount(const QModelIndex &) const

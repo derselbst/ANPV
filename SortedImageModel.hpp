@@ -21,6 +21,10 @@ public:
     ~SortedImageModel() override;
     
     void changeDirAsync(const QDir& dir);
+    
+    QFileInfo goNext(const QString& currentUrl);
+    QFileInfo goPrev(const QString& currentUrl);
+    QFileInfo goTo(const QString& currentUrl, int stepsFromCurrent);
 
 public: // QAbstractItemModel
     

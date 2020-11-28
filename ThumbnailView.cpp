@@ -107,15 +107,17 @@ struct ThumbnailView::Impl
     }
 };
 
-ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
+ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
  : QMainWindow(anpv), d(std::make_unique<Impl>(this))
 {
     d->anpv = anpv;
-    d->dirModel = model;
+    d->dirModel = new QFileSystemModel(this);
+    d->dirModel->setRootPath("");
+    d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
-    d->fileModel = new SortedImageModel(this);
+    d->fileModel = model;
     connect(d->fileModel, &SortedImageModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
     connect(d->fileModel, &SortedImageModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
     connect(d->fileModel, &SortedImageModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
@@ -137,14 +139,14 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     
     d->fileSystemTree = new QTreeView(this);
     d->fileSystemTree->setHeaderHidden(true);
-    d->fileSystemTree->setModel(model);
+    d->fileSystemTree->setModel(d->dirModel);
     d->fileSystemTree->showColumn(0);
     d->fileSystemTree->hideColumn(1);
     d->fileSystemTree->hideColumn(2);
     d->fileSystemTree->hideColumn(3);
     d->fileSystemTree->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->fileSystemTree->setSelectionMode(QAbstractItemView::SingleSelection);
-    d->fileSystemTree->setRootIndex(model->index(model->rootPath()));
+    d->fileSystemTree->setRootIndex(d->dirModel->index(d->dirModel->rootPath()));
     
     connect(d->fileSystemTree, &QTreeView::clicked, this,  [&](const QModelIndex &idx){d->onTreeClicked(idx);});
     connect(d->fileSystemTree, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
@@ -161,10 +163,13 @@ ThumbnailView::~ThumbnailView() = default;
 
 void ThumbnailView::changeDir(const QString& dir)
 {
-    d->currentDir = dir;
-    QModelIndex mo = d->dirModel->index(dir);
-    d->fileSystemTree->setExpanded(mo, true);
-    d->anpv->notifyDecodingState(DecodingState::Ready);
-    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-    d->fileModel->changeDirAsync(dir);
+    if(d->currentDir != dir)
+    {
+        d->currentDir = dir;
+        QModelIndex mo = d->dirModel->index(dir);
+        d->fileSystemTree->setExpanded(mo, true);
+        d->anpv->notifyDecodingState(DecodingState::Ready);
+        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        d->fileModel->changeDirAsync(dir);
+    }
 }

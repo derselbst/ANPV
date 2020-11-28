@@ -10,7 +10,7 @@ class QGraphicsScene;
 class QWidget;
 class QPixmap;
 class QWheelEvent;
-class QFileSystemModel;
+class SortedImageModel;
 class QEvent;
 class SmartImageDecoder;
 
@@ -19,7 +19,7 @@ class ThumbnailView : public QMainWindow
 Q_OBJECT
 
 public:
-    ThumbnailView(QFileSystemModel* model, ANPV *parent);
+    ThumbnailView(SortedImageModel* model, ANPV *parent);
     ~ThumbnailView() override;
     
 public slots:

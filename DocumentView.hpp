@@ -4,6 +4,7 @@
 #include <memory>
 #include <QGraphicsView>
 #include <QImage>
+#include <QString>
 
 class ANPV;
 class QGraphicsScene;
@@ -36,6 +37,10 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
+signals:
+    void requestNext(QString cur);
+    void requestPrev(QString cur);
+    
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
