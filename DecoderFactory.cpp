@@ -101,3 +101,15 @@ std::shared_ptr<ImageDecodeTask> DecoderFactory::createDecodeTask(std::shared_pt
     
     return task;
 }
+
+void DecoderFactory::cancelDecodeTask(std::shared_ptr<ImageDecodeTask> task)
+{
+    if(QThreadPool::globalInstance()->tryTake(task.get()))
+    {
+        
+    }
+    else
+    {
+        task->cancel();
+    }
+}

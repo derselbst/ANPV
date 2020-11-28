@@ -82,6 +82,29 @@ struct ThumbnailView::Impl
         QFileInfo info = dirModel->fileInfo(idx);
         p->changeDir(info.absoluteFilePath());
     }
+    
+    void onDirectoryLoadingProgress(int prog)
+    {
+        anpv->notifyProgress(prog);
+    }
+    
+    void onDirectoryLoadingStatusMessage(int prog, QString& msg)
+    {
+        anpv->notifyProgress(prog, msg);
+    }
+    
+    void onDirectoryLoadingFailed(QString& msg, QString& details)
+    {
+        anpv->notifyDecodingState(DecodingState::Error);
+        anpv->notifyProgress(100, msg + ": " + details);
+        QGuiApplication::restoreOverrideCursor();
+    }
+    
+    void onDirectoryLoaded()
+    {
+        anpv->notifyProgress(100, "Directory content successfully loaded");
+        QGuiApplication::restoreOverrideCursor();
+    }
 };
 
 ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
@@ -93,6 +116,10 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
     d->fileModel = new OrderedFileSystemModel(this);
+    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
+    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
+    connect(d->fileModel, &OrderedFileSystemModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
+    connect(d->fileModel, &OrderedFileSystemModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
     
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);
@@ -133,5 +160,7 @@ void ThumbnailView::changeDir(const QString& dir)
     d->currentDir = dir;
     QModelIndex mo = d->dirModel->index(dir);
     d->fileSystemTree->setExpanded(mo, true);
+    d->anpv->notifyDecodingState(DecodingState::Ready);
+    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     d->fileModel->changeDirAsync(dir);
 }

@@ -10,8 +10,8 @@
 struct SmartImageDecoder::Impl
 {
     std::function<void(void*)> cancelCallbackInternal;
-    void* cancelCallbackObject;
-    DecodingState state;
+    void* cancelCallbackObject = nullptr;
+    DecodingState state = DecodingState::Ready;
     QString decodingMessage;
     int decodingProgress=0;
     

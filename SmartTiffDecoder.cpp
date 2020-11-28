@@ -45,15 +45,12 @@ struct SmartTiffDecoder::Impl
     
     Impl(SmartTiffDecoder* q) : q(q)
     {
-        qInfo() << "Creating " << q->fileInfo() << "   " << q;
-        
         TIFFSetErrorHandlerExt(myErrorHandler);
         TIFFSetWarningHandlerExt(myWarningHandler);
     }
     
     ~Impl()
     {
-        qInfo() << "Destroying " << q->fileInfo() << "   " << q;
         if (tiff)
         {
             TIFFClose(tiff);

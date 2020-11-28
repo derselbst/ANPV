@@ -20,7 +20,8 @@
 
 enum Column : int
 {
-    FileName,
+    FirstValid = 0,
+    FileName = FirstValid,
     FileSize,
     Resolution,
     DateRecorded,
@@ -41,14 +42,23 @@ struct Entry
     Entry(std::unique_ptr<SmartImageDecoder>&& d) : dec(std::move(d))
     {}
     
+    ~Entry()
+    {
+        if(task)
+        {
+            task->cancel();
+            task = nullptr;
+        }
+    }
+    
     QFileInfo getFileInfo() const
     {
         return this->hasImageDecoder() ? this->dec->fileInfo() : this->info;
     }
 
-    SmartImageDecoder* getDecoder() const
+    std::shared_ptr<SmartImageDecoder> getDecoder() const
     {
-        return this->hasImageDecoder() ? this->dec.get() : nullptr;
+        return this->hasImageDecoder() ? this->dec : nullptr;
     }
     
     bool hasImageDecoder() const
@@ -56,8 +66,19 @@ struct Entry
         return dec != nullptr;
     }
     
+    void setTask(std::shared_ptr<ImageDecodeTask> t)
+    {
+        this->task = std::move(t);
+    }
+    
+    std::shared_ptr<ImageDecodeTask> getTask()
+    {
+        return task;
+    }
+    
 private:
-    std::unique_ptr<SmartImageDecoder> dec;
+    std::shared_ptr<SmartImageDecoder> dec;
+    std::shared_ptr<ImageDecodeTask> task;
     QFileInfo info;
 };
 
@@ -104,8 +125,8 @@ struct OrderedFileSystemModel::Impl
     template<Column SortCol>
     static bool sortColumnPredicateLeftBeforeRight(const Entry& l, QFileInfo& linfo, const Entry& r, QFileInfo& rinfo)
     {
-        auto* ldec = l.getDecoder();
-        auto* rdec = r.getDecoder();
+        auto ldec = l.getDecoder();
+        auto rdec = r.getDecoder();
 
         if (ldec && rdec)
         {
@@ -249,14 +270,28 @@ struct OrderedFileSystemModel::Impl
         q->endResetModel();
     }
 
-    void startImageDecoding(SmartImageDecoder* dec, DecodingState targetState)
+    void startImageDecoding(const QModelIndex& index, std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState)
     {
-
+        Entry& e = entries.at(index.row());
+        
+        if(e.getTask())
+        {
+            qInfo() << "not starting agin";
+            return;
+        }
+        
+        QObject::connect(dec.get(), &SmartImageDecoder::decodingStateChanged, q, &OrderedFileSystemModel::onBackgroundImageTaskStateChanged);
+        
+        auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
+        QObject::connect(task.get(), &ImageDecodeTask::finished, q, &OrderedFileSystemModel::onBackgroundImageTaskFinished);
+        
+        entries.at(index.row()).setTask(task);
+        QThreadPool::globalInstance()->start(task.get());
     }
     
-    void setStatusMessage(QString msg)
+    void setStatusMessage(int prog, QString msg)
     {
-        emit q->directoryLoadingStatusMessage(msg);
+        emit q->directoryLoadingStatusMessage(prog, msg);
     }
 };
 
@@ -270,21 +305,21 @@ OrderedFileSystemModel::~OrderedFileSystemModel() = default;
 void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
 {
     d->directoryLoadingCancelled = true;
-    d->setStatusMessage("Waiting for previous directory parsing to finish...");
+    d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
     d->directoryWorker.waitForFinished();
     d->directoryLoadingCancelled = false;
 
     d->clear();
     d->currentDir = dir;
 
-    d->setStatusMessage("Loading Directory Entries");
+    d->setStatusMessage(0, "Loading Directory Entries");
 
     d->directoryWorker = QtConcurrent::run(QThreadPool::globalInstance(),
         [&]()
         {
             try
             {
-                QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDot);
+                QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
 
                 const int entriesToProcess = fileInfoList.size();
                 int entriesProcessed = 0;
@@ -294,7 +329,7 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
                     do
                     {
                         QFileInfo inf = fileInfoList.takeFirst();
-                        if (inf.isFile())
+                        if (0||inf.isFile())
                         {
                             auto decoder = DecoderFactory::globalInstance()->getDecoder(inf.absoluteFilePath());
                             if (decoder)
@@ -319,6 +354,7 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
                     emit directoryLoadingProgress(++entriesProcessed * 100. / entriesToProcess);
                 }
 
+                d->setStatusMessage(100, "Sorting entries");
                 d->sortEntries();
                 emit directoryLoaded();
             }
@@ -328,7 +364,7 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
             }
             catch (const std::exception& e)
             {
-                emit directoryLoadingFailed("Fatal error occurred while loading the directory.", e.what());
+                emit directoryLoadingFailed("Fatal error occurred while loading the directory", e.what());
             }
         });
 }
@@ -371,7 +407,7 @@ QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
                 switch (e->getDecoder()->decodingState())
                 {
                 case DecodingState::Ready:
-                    d->startImageDecoding(e->getDecoder(), DecodingState::Metadata);
+                    d->startImageDecoding(index, e->getDecoder(), DecodingState::Metadata);
                     break;
 
                 default:
@@ -387,7 +423,7 @@ QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
                     }
                     else
                     {
-                        d->startImageDecoding(e->getDecoder(), DecodingState::PreviewImage);
+                        d->startImageDecoding(index, e->getDecoder(), DecodingState::PreviewImage);
                         break;
                     }
                 }
@@ -461,4 +497,37 @@ QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
     }
     
     return QFileInfo();
+}
+
+
+
+void OrderedFileSystemModel::onBackgroundImageTaskFinished(ImageDecodeTask* t)
+{
+    auto result = std::find_if(d->entries.begin(),
+                               d->entries.end(),
+                            [&](Entry& other)
+                            { return other.getTask().get() == t;}
+                            );
+    if (result != d->entries.end())
+    {
+        result->setTask(nullptr);
+    }
+    else
+    {
+        qWarning() << "ImageDecodeTask '" << t << "' not found in OrderedFileSystemModel.";
+    }
+}
+
+void OrderedFileSystemModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32)
+{
+    for(size_t i = 0; i < d->entries.size(); i++)
+    {
+        if(d->entries.at(i).getDecoder().get() == dec)
+        {
+            QModelIndex left = this->index(i, Column::FirstValid);
+            QModelIndex right = this->index(i, Column::Count - 1);
+            emit this->dataChanged(left, right);
+            break;
+        }
+    }
 }

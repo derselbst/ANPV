@@ -1,12 +1,16 @@
 
 #pragma once
 
+#include "DecodingState.hpp"
+
 #include <QAbstractListModel>
 #include <QModelIndex>
 #include <QFileInfo>
 #include <memory>
 
 class QDir;
+class ImageDecodeTask;
+class SmartImageDecoder;
 
 class OrderedFileSystemModel : public QAbstractListModel
 {
@@ -31,7 +35,7 @@ public: // QAbstractItemModel
     QFileInfo fileInfo(const QModelIndex &index) const;
     
 signals:
-    void directoryLoadingStatusMessage(QString msg);
+    void directoryLoadingStatusMessage(int progress, QString msg);
     void directoryLoadingProgress(int progress);
     void directoryLoaded();
     void directoryLoadingFailed(QString msg, QString details);
@@ -39,4 +43,8 @@ signals:
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
+    
+private slots:
+    void onBackgroundImageTaskFinished(ImageDecodeTask* t);
+    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32);
 };
