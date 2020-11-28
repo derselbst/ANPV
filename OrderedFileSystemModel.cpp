@@ -107,11 +107,16 @@ struct OrderedFileSystemModel::Impl
     std::vector<Entry> entries;
     
     // The column which is currently sorted
-    Column currentSortedCol = Column::FileName;
+    Column currentSortedCol = Column::DateRecorded;
     Qt::SortOrder sortOrder;
 
     Impl(OrderedFileSystemModel* parent) : q(parent)
     {}
+    
+    ~Impl()
+    {
+        clear();
+    }
     
     // returns true if the column that is sorted against requires us to preload the image metadata
     // before we insert the items into the model
@@ -285,15 +290,16 @@ struct OrderedFileSystemModel::Impl
         q->endInsertRows();
     }
     
+    // stop processing, delete everything and wait until finished
     void clear()
     {
-        q->beginResetModel();
-
+        directoryLoadingCancelled = true;
+        directoryWorker.waitForFinished();
+        directoryLoadingCancelled = false;
+        
         currentDir = QDir();
         entries.clear();
         entries.shrink_to_fit();
-
-        q->endResetModel();
     }
 
     void startImageDecoding(const QModelIndex& index, std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState)
@@ -327,12 +333,11 @@ OrderedFileSystemModel::~OrderedFileSystemModel() = default;
 
 void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
 {
-    d->directoryLoadingCancelled = true;
     d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
-    d->directoryWorker.waitForFinished();
-    d->directoryLoadingCancelled = false;
-
+    this->beginResetModel();
     d->clear();
+    this->endResetModel();
+    
     d->currentDir = dir;
 
     d->setStatusMessage(0, "Loading Directory Entries");
