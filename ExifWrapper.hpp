@@ -33,12 +33,24 @@ public:
     QString comment();
     QImage thumbnail();
     std::unique_ptr<AfPointOverlay> autoFocusPoints();
+    
     QString aperture();
+    bool aperture(double& quot);
+    
     QString exposureTime();
+    bool exposureTime(double& quot);
+    bool exposureTime(long& num, long& den);
+    
     QString iso();
+    bool iso(long& num);
+    
     QString lens();
-    QString focalLength();
+    
+    bool focalLength(double& quot);
+    
     QDateTime dateRecorded();
+    
+    QString formatToString();
 
 private:
     struct Impl;

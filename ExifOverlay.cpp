@@ -19,7 +19,7 @@ ExifOverlay::ExifOverlay(QWidget* parent)
     this->hide();
     
     auto* feedbackEffect = new QGraphicsOpacityEffect(this);
-    feedbackEffect->setOpacity(0.5);
+    feedbackEffect->setOpacity(0.65);
     this->setGraphicsEffect(feedbackEffect);
 }
 
@@ -27,23 +27,19 @@ ExifOverlay::~ExifOverlay() = default;
 
 void ExifOverlay::setMetadata(ExifWrapper* exif)
 {
-    QString t = QString(
-        "Aperture: %1\n"
-        "Exposure: %2\n"
-        "ISO: %3\n"
-        "Lens: %4\n"
-        "Focal Length: %5\n")
-    .arg(exif->aperture())
-    .arg(exif->exposureTime())
-    .arg(exif->iso())
-    .arg(exif->lens())
-    .arg(exif->focalLength());
+    QString s = exif->formatToString();
     
-    
-    this->setText(t);
-    this->setMessageType(MessageWidget::MessageType::Positive);
-    this->adjustSize();
-    this->show();
+    if(s.isEmpty())
+    {
+        this->hide();
+    }
+    else
+    {
+        this->setText(s);
+        this->setMessageType(MessageWidget::MessageType::Positive);
+        this->adjustSize();
+        this->show();
+    }
 }
 
 // void ExifOverlay::unsetMetadata()

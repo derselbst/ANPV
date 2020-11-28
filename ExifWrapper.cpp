@@ -290,12 +290,26 @@ std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
     return nullptr;
 }
 
-QString ExifWrapper::aperture()
+bool ExifWrapper::aperture(double& quot)
 {
-    long num, den;
+    long num,den;
     if(d->mExivHandle.getExifTagRational("Exif.Photo.FNumber", num, den))
     {
-        return QString ((Formatter() << std::setprecision(2) << num * 1.0 / den).str().c_str());
+        quot = num * 1.0 / den;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+QString ExifWrapper::aperture()
+{
+    double num;
+    if(this->aperture(num))
+    {
+        return QString ((Formatter() << std::setprecision(2) << num).str().c_str());
     }
     else
     {
@@ -303,13 +317,28 @@ QString ExifWrapper::aperture()
     }
 }
 
+bool ExifWrapper::exposureTime(long& num, long& den)
+{
+    return d->mExivHandle.getExifTagRational("Exif.Photo.ExposureTime", num, den);
+}
+
+bool ExifWrapper::exposureTime(double& quot)
+{
+    long num, den;
+    bool res = this->exposureTime(num, den);
+    if(res)
+    {
+        quot = num * 1.0 / den;
+    }
+    return res;
+}
+
 QString ExifWrapper::exposureTime()
 {
     long num, den;
-    if(d->mExivHandle.getExifTagRational("Exif.Photo.ExposureTime", num, den))
+    if(this->exposureTime(num, den))
     {
-        double quot = num *1.0 / den;
-        
+        double quot = num * 1.0 / den;
         if(quot < 1)
         {
             return QString ((Formatter() << num << "/" << den).str().c_str());
@@ -325,17 +354,9 @@ QString ExifWrapper::exposureTime()
     }
 }
 
-QString ExifWrapper::iso()
+bool ExifWrapper::iso(long& num)
 {
-    long num;
-    if(d->mExivHandle.getExifTagLong("Exif.Photo.ISOSpeedRatings", num))
-    {
-        return QString ((Formatter() << num).str().c_str());
-    }
-    else
-    {
-        return QString();
-    }
+    return d->mExivHandle.getExifTagLong("Exif.Photo.ISOSpeedRatings", num);
 }
 
 QString ExifWrapper::lens()
@@ -343,21 +364,74 @@ QString ExifWrapper::lens()
     return d->mExivHandle.getExifTagString("Exif.Photo.LensModel");
 }
 
-QString ExifWrapper::focalLength()
+bool ExifWrapper::focalLength(double& quot)
 {
     long num, den;
     if(d->mExivHandle.getExifTagRational("Exif.Photo.FocalLength", num, den))
     {
-        double quot = num * 1.0 / den;
-        return QString ((Formatter() << quot).str().c_str());
+        quot = num * 1.0 / den;
+        return true;
     }
     else
     {
-        return QString();
+        return false;
     }
 }
 
 QDateTime ExifWrapper::dateRecorded()
 {
     return d->mExivHandle.getImageDateTime();
+}
+
+QString ExifWrapper::formatToString()
+{
+    Formatter f;
+    
+    long n, d;
+    double r;
+    QString s;
+    
+    QSize size = this->size();
+    if(!size.isNull())
+    {
+        f << "Resolution: " << size.width() << " x " << size.height() << " px\n\n";
+    }
+    
+    if(this->aperture(r))
+    {
+        f << "Aperture: " << std::fixed << std::setprecision(1) << r << "\n";
+    }
+    
+    s = this->exposureTime();
+    if(!s.isNull())
+    {
+        f << "Exposure: " << s.toStdString() << "\n";
+    }
+    
+    if(this->iso(n))
+    {
+        f << "ISO: " << n << "\n";
+    }
+    
+    s = this->lens();
+    if(!s.isNull())
+    {
+        f << "Lens: " << s.toStdString() << "\n";
+    }
+    
+    if(this->focalLength(r))
+    {
+        f << "Focal Length: " << std::fixed << std::setprecision(0) << r << "\n";
+    }
+    
+    QDateTime dt = this->dateRecorded();
+    if(dt.isValid())
+    {
+        f << "\nRecorded on:\n"
+          << dt.toString("yyyy-MM-dd (dddd)\n").toStdString()
+          << dt.toString("hh:mm:ss").toStdString()
+          << "\n";
+    }
+    
+    return QString(f.str().c_str());
 }
