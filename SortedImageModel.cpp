@@ -435,7 +435,7 @@ QFileInfo SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent
             return QFileInfo();
         }
         
-        if(result->hasImageDecoder())
+        if(result->hasImageDecoder() && result->getFileInfo().suffix() != "bak")
         {
             stepsFromCurrent -= step;
         }
