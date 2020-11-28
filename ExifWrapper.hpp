@@ -38,6 +38,7 @@ public:
     QString iso();
     QString lens();
     QString focalLength();
+    QDateTime dateRecorded();
 
 private:
     struct Impl;

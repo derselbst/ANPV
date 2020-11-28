@@ -356,3 +356,8 @@ QString ExifWrapper::focalLength()
         return QString();
     }
 }
+
+QDateTime ExifWrapper::dateRecorded()
+{
+    return d->mExivHandle.getImageDateTime();
+}

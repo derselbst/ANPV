@@ -126,6 +126,10 @@ ThumbnailView::ThumbnailView(QFileSystemModel* model, ANPV *anpv)
     d->thumbnailList->setViewMode(QListView::IconMode);
     d->thumbnailList->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->thumbnailList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    d->thumbnailList->setResizeMode(QListView::Adjust);
+    d->thumbnailList->setWordWrap(true);
+    d->thumbnailList->setWrapping(true);
+    d->thumbnailList->setSpacing(2);
     
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     

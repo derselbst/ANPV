@@ -17,6 +17,7 @@
 #include "DecoderFactory.hpp"
 #include "UserCancellation.hpp"
 #include "Formatter.hpp"
+#include "ExifWrapper.hpp"
 
 enum Column : int
 {
@@ -47,6 +48,7 @@ struct Entry
         if(task)
         {
             DecoderFactory::globalInstance()->cancelDecodeTask(task);
+            future.waitForFinished();
             task = nullptr;
         }
     }
@@ -153,6 +155,14 @@ struct OrderedFileSystemModel::Impl
             }
             else if constexpr (SortCol == Column::DateRecorded)
             {
+                QDateTime ltime = ldec->exif()->dateRecorded();
+                QDateTime rtime = rdec->exif()->dateRecorded();
+                
+                if (ltime != rtime)
+                {
+                    return ltime < rtime;
+                }
+
             }
             else if constexpr (SortCol == Column::Aperture)
             {
@@ -182,7 +192,7 @@ struct OrderedFileSystemModel::Impl
             }
             else
             {
-//                 static_assert("Unknown column to sort for", !sizeof(char));
+//                 static_assert("Unknown column to sort for");
             }
         }
         else if (ldec && !rdec)
@@ -212,8 +222,13 @@ struct OrderedFileSystemModel::Impl
         QFileInfo linfo = l.getFileInfo();
         QFileInfo rinfo = r.getFileInfo();
 
+        if(linfo.isDir() || rinfo.isDir())
+        {
+            qInfo() << "here";
+        }
+        
         bool leftIsBeforeRight =
-            (linfo.isDir() && (linfo.fileName() < rinfo.fileName())) ||
+            (linfo.isDir() && (!rinfo.isDir() || linfo.fileName() < rinfo.fileName())) ||
             (!rinfo.isDir() && sortColumnPredicateLeftBeforeRight<SortCol>(l, linfo, r, rinfo));
         
         return leftIsBeforeRight;
@@ -294,7 +309,7 @@ struct OrderedFileSystemModel::Impl
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
-        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){task->run();}));
+        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
     }
     
     void setStatusMessage(int prog, QString msg)
@@ -342,8 +357,6 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
                             auto decoder = DecoderFactory::globalInstance()->getDecoder(inf.absoluteFilePath());
                             if (decoder)
                             {
-                                decoder->setCancellationCallback(&OrderedFileSystemModel::Impl::throwIfDirectoryLoadingCancelled, d.get());
-
                                 if (d->sortedColumnNeedsPreloadingMetadata())
                                 {
                                     decoder->decode(DecodingState::Metadata);
@@ -368,7 +381,8 @@ void OrderedFileSystemModel::changeDirAsync(const QDir& dir)
             }
             catch (const UserCancellation&)
             {
-                qInfo() << "Directory loading cancelled";
+                // intentionally not failed()
+                emit directoryLoaded();
             }
             catch (const std::exception& e)
             {
@@ -462,7 +476,7 @@ QVariant OrderedFileSystemModel::data(const QModelIndex& index, int role) const
         case Qt::TextAlignmentRole:
             if (index.column() == Column::FileName)
             {
-                const Qt::Alignment alignment = Qt::AlignRight | Qt::AlignVCenter;
+                const Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
                 return int(alignment);
             }
             [[fallthrough]];
@@ -507,15 +521,25 @@ QFileInfo OrderedFileSystemModel::fileInfo(const QModelIndex &index) const
     return QFileInfo();
 }
 
-void OrderedFileSystemModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32)
+void OrderedFileSystemModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
 {
+    if(newState == DecodingState::Ready)
+    {
+        // ignore ready state
+        return;
+    }
+    
     for(size_t i = 0; i < d->entries.size(); i++)
     {
         if(d->entries.at(i).getDecoder().get() == dec)
         {
             QModelIndex left = this->index(i, Column::FirstValid);
             QModelIndex right = this->index(i, Column::Count - 1);
+            
+            // emit layout change to force view to update its flow layout
+            emit this->layoutAboutToBeChanged();
             emit this->dataChanged(left, right);
+            emit this->layoutChanged();
             break;
         }
     }
