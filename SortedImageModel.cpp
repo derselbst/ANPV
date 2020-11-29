@@ -10,6 +10,8 @@
 #include <QStyle>
 #include <QDir>
 #include <algorithm>
+#include <QGuiApplication>
+#include <QCursor>
 // #include <execution>
 
 #include "ImageDecodeTask.hpp"
@@ -19,22 +21,6 @@
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
 
-enum Column : int
-{
-    FirstValid = 0,
-    FileName = FirstValid,
-    FileSize,
-    DateModified,
-    Resolution,
-    DateRecorded,
-    Aperture,
-    Exposure,
-    Iso,
-    FocalLength,
-    Lens,
-    CameraModel,
-    Count // must be last!
-};
 
 struct Entry
 {
@@ -560,14 +546,34 @@ bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 
 void SortedImageModel::sort(int column, Qt::SortOrder order)
 {
-    if (order == Qt::DescendingOrder)
-    {
-        qWarning() << "Descending sort order not supported yet";
-    }
-
-    d->currentSortedCol = static_cast<Column>(column);
     d->sortOrder = order;
-    d->sortEntries();
+    this->sort(static_cast<Column>(column));
+}
+
+void SortedImageModel::sort(Column column)
+{
+    d->currentSortedCol = column;
+    
+    if(d->directoryWorker.isFinished())
+    {
+        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        d->sortEntries();
+        QGuiApplication::restoreOverrideCursor();
+    }
+}
+
+void SortedImageModel::sort(Qt::SortOrder order)
+{
+    if(d->directoryWorker.isFinished())
+    {
+        this->beginResetModel();
+        d->sortOrder = order;
+        this->endResetModel();
+    }
+    else
+    {
+        d->sortOrder = order;
+    }
 }
 
 QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const

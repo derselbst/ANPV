@@ -259,7 +259,6 @@ QSize SmartTiffDecoder::size()
 void SmartTiffDecoder::decodeHeader()
 {
     this->fileBuf(&d->buffer, &d->nbytes);
-    qInfo() << "IMAGE BUFFER " << d->buffer << " to " << d->buffer+d->nbytes << this;
     
     this->setDecodingMessage("Reading TIFF Header");
     

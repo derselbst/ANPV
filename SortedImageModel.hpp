@@ -17,6 +17,24 @@ class SortedImageModel : public QAbstractListModel
     Q_OBJECT
     
 public:
+    
+    enum Column : int
+    {
+        FirstValid = 0,
+        FileName = FirstValid,
+        FileSize,
+        DateModified,
+        Resolution,
+        DateRecorded,
+        Aperture,
+        Exposure,
+        Iso,
+        FocalLength,
+        Lens,
+        CameraModel,
+        Count // must be last!
+    };
+
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
     
@@ -25,6 +43,9 @@ public:
     QFileInfo goNext(const QString& currentUrl);
     QFileInfo goPrev(const QString& currentUrl);
     QFileInfo goTo(const QString& currentUrl, int stepsFromCurrent);
+
+    void sort(Column column);
+    void sort(Qt::SortOrder order);
 
 public: // QAbstractItemModel
     

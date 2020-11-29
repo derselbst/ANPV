@@ -22,6 +22,10 @@
 #include <QDir>
 #include <QFileSystemModel>
 #include <QListView>
+#include <QActionGroup>
+#include <QAction>
+#include <QMenuBar>
+#include <QMenu>
 
 #include "DocumentView.hpp"
 #include "ThumbnailView.hpp"
@@ -31,7 +35,7 @@
 
 struct ANPV::Impl
 {
-    ANPV* p;
+    ANPV* q;
     
     QProgressBar* progressBar;
     QStackedLayout* stackedLayout;
@@ -41,7 +45,14 @@ struct ANPV::Impl
     
     SortedImageModel* fileModel;
     
-    Impl(ANPV* parent) : p(parent)
+    QMenu* menuSort;
+    
+    QAction* actionSortFileName;
+    QAction* actionSortFileSize;
+    QActionGroup* actionGroupSortColumn;
+    QActionGroup* actionGroupSortOrder;
+    
+    Impl(ANPV* parent) : q(parent)
     {
     }
     
@@ -81,6 +92,110 @@ struct ANPV::Impl
             "margin: 0px;"
             "}").arg(colorStart).arg(colorEnd);
     }
+    
+    void addSlowHint(QAction* action)
+    {
+        action->setToolTip("This option requires to read EXIF metadata from the file. Therefore, performance greatly suffers when accessing directories that contain many files.");
+    }
+    
+    void createActions()
+    {
+        QAction* action;
+        
+        actionGroupSortOrder = new QActionGroup(q);
+        
+        action = new QAction("Sort Order", q);
+        action->setSeparator(true);
+        actionGroupSortOrder->addAction(action);
+        
+        action = new QAction("Ascending (small to big)", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(Qt::AscendingOrder); });
+        actionGroupSortOrder->addAction(action);
+        
+        action = new QAction("Descending (big to small)", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(Qt::DescendingOrder); });
+        actionGroupSortOrder->addAction(action);
+        
+        
+        
+        actionGroupSortColumn = new QActionGroup(q);
+        
+        action = new QAction("Sort according to", q);
+        action->setSeparator(true);
+        actionGroupSortColumn->addAction(action);
+        
+        action = new QAction("File Name", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::FileName); });
+        actionGroupSortColumn->addAction(action);
+        
+        action = new QAction("File Size", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::FileSize); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Modified Date", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::DateModified); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Image Resolution (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Resolution); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Original Record Date (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::DateRecorded); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Aperture (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Aperture); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Exposure (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Exposure); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("ISO (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Iso); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Camera Model (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::CameraModel); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Focal Length (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::FocalLength); });
+        actionGroupSortColumn->addAction(action);
+
+        action = new QAction("Lens Model (slow)", q);
+        action->setCheckable(true);
+        addSlowHint(action);
+        connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Lens); });
+        actionGroupSortColumn->addAction(action);
+    }
+    
+    void createMenus()
+    {
+        menuSort = q->menuBar()->addMenu("&Sort");
+        menuSort->addActions(actionGroupSortColumn->actions());
+        menuSort->addActions(actionGroupSortOrder->actions());
+    }
 };
 
 ANPV::ANPV(QSplashScreen *splash)
@@ -96,6 +211,9 @@ ANPV::ANPV(QSplashScreen *splash)
     this->setWindowTitle("ANPV");
     
     splash->showMessage("Creating UI Widgets");
+    
+    d->createActions();
+    d->createMenus();
     
     d->progressBar = new QProgressBar(this);
     d->progressBar->setMinimum(0);
