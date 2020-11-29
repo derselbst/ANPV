@@ -142,9 +142,20 @@ struct SortedImageModel::Impl
                 QSize lsize = ldec->size();
                 QSize rsize = rdec->size();
 
-                if (lsize.width() != rsize.width() && lsize.height() != rsize.height())
+                if (lsize.isValid() && rsize.isValid())
                 {
-                    return lsize.width() * lsize.height() < rsize.width() * rsize.height();
+                    if (lsize.width() != rsize.width() && lsize.height() != rsize.height())
+                    {
+                        return lsize.width() * lsize.height() < rsize.width() * rsize.height();
+                    }
+                }
+                else if (lsize.isValid())
+                {
+                    return true;
+                }
+                else if (rsize.isValid())
+                {
+                    return false;
                 }
             }
             else if constexpr (SortCol == Column::DateRecorded)
@@ -152,26 +163,93 @@ struct SortedImageModel::Impl
                 QDateTime ltime = ldec->exif()->dateRecorded();
                 QDateTime rtime = rdec->exif()->dateRecorded();
                 
-                if (ltime != rtime)
+                if (ltime.isValid() && rtime.isValid())
                 {
-                    return ltime < rtime;
+                    if (ltime != rtime)
+                    {
+                        return ltime < rtime;
+                    }
                 }
-
+                else if(ltime.isValid())
+                {
+                    return true;
+                }
+                else if(rtime.isValid())
+                {
+                    return false;
+                }
             }
             else if constexpr (SortCol == Column::Aperture)
             {
+                double lap,rap;
+                lap = rap = std::numeric_limits<double>::max();
+                
+                ldec->exif()->aperture(lap);
+                rdec->exif()->aperture(rap);
+                
+                if(lap != rap)
+                {
+                    return lap < rap;
+                }
             }
             else if constexpr (SortCol == Column::Exposure)
             {
+                double lex,rex;
+                lex = rex = std::numeric_limits<double>::max();
+                
+                ldec->exif()->exposureTime(lex);
+                rdec->exif()->exposureTime(rex);
+                
+                if(lex != rex)
+                {
+                    return lex < rex;
+                }
             }
             else if constexpr (SortCol == Column::Iso)
             {
+                long liso,riso;
+                liso = riso = std::numeric_limits<long>::max();
+                
+                ldec->exif()->iso(liso);
+                rdec->exif()->iso(riso);
+                
+                if(liso != riso)
+                {
+                    return liso < riso;
+                }
             }
             else if constexpr (SortCol == Column::FocalLength)
             {
+                double ll,rl;
+                ll = rl = std::numeric_limits<double>::max();
+                
+                ldec->exif()->focalLength(ll);
+                rdec->exif()->focalLength(rl);
+                
+                if(ll != rl)
+                {
+                    return ll < rl;
+                }
             }
             else if constexpr (SortCol == Column::Lens)
             {
+                QString ll,rl;
+                
+                ll = ldec->exif()->lens();
+                rl = rdec->exif()->lens();
+                
+                if(!ll.isEmpty() && !rl.isEmpty())
+                {
+                    return ll < rl;
+                }
+                else if (!ll.isEmpty())
+                {
+                    return true;
+                }
+                else if (!rl.isEmpty())
+                {
+                    return false;
+                }
             }
             else if constexpr (SortCol == Column::CameraModel)
             {
