@@ -44,6 +44,8 @@ struct ThumbnailView::Impl
     QTreeView* fileSystemTree;
     QDockWidget* fileSystemTreeDockContainer;
     
+    QFileInfo selectedIndexBackup;
+    
     Impl(ThumbnailView* parent) : p(parent)
     {}
 
@@ -105,6 +107,28 @@ struct ThumbnailView::Impl
         anpv->notifyProgress(100, "Directory content successfully loaded");
         QGuiApplication::restoreOverrideCursor();
     }
+    
+    void onModelAboutToBeReset()
+    {
+        QModelIndex cur = thumbnailList->currentIndex();
+        if(cur.isValid())
+        {
+            selectedIndexBackup = fileModel->fileInfo(cur);
+        }
+    }
+    
+    void onModelReset()
+    {
+        if(!selectedIndexBackup.filePath().isEmpty())
+        {
+            QModelIndex newCurrentIndex = fileModel->index(selectedIndexBackup);
+            if(newCurrentIndex.isValid())
+            {
+                thumbnailList->setCurrentIndex(newCurrentIndex);
+            }
+            selectedIndexBackup = QFileInfo();
+        }
+    }
 };
 
 ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
@@ -134,6 +158,10 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     d->thumbnailList->setSpacing(2);
     
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
+    
+    // connect to model reset signals after setModel()!
+    connect(d->fileModel, &SortedImageModel::modelAboutToBeReset, this, [&](){ d->onModelAboutToBeReset(); });
+    connect(d->fileModel, &SortedImageModel::modelReset, this, [&](){ d->onModelReset(); });
     
     this->setCentralWidget(d->thumbnailList);
     

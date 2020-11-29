@@ -40,6 +40,9 @@ public:
     
     void changeDirAsync(const QDir& dir);
     
+    using QAbstractListModel::index; // don't hide base member
+    QModelIndex index(const QFileInfo& info);
+    QFileInfo fileInfo(const QModelIndex& idx) const;
     QModelIndex goTo(const QString& currentUrl, int stepsFromCurrent, QFileInfo& found);
 
     void sort(Column column);
@@ -54,8 +57,6 @@ public: // QAbstractItemModel
     bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
-
-    QFileInfo fileInfo(const QModelIndex &index) const;
     
 signals:
     void directoryLoadingStatusMessage(int progress, QString msg);

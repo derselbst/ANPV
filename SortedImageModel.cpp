@@ -633,7 +633,11 @@ void SortedImageModel::sort(Column column)
     if(d->directoryWorker.isFinished())
     {
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        
+        this->beginResetModel();
         d->sortEntries();
+        this->endResetModel();
+        
         QGuiApplication::restoreOverrideCursor();
     }
 }
@@ -650,6 +654,22 @@ void SortedImageModel::sort(Qt::SortOrder order)
     {
         d->sortOrder = order;
     }
+}
+
+QModelIndex SortedImageModel::index(const QFileInfo& info)
+{
+    auto result = std::find_if(d->entries.begin(),
+                               d->entries.end(),
+                            [&](Entry& other)
+                            { return other.getFileInfo() == info; });
+    
+    if(result == d->entries.end())
+    {
+        return QModelIndex();
+    }
+    
+    int idx = std::distance(d->entries.begin(), result);
+    return this->index(idx, 0);
 }
 
 QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const

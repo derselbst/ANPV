@@ -119,7 +119,6 @@ struct ANPV::Impl
         actionGroupSortOrder->addAction(action);
         
         
-        
         actionGroupSortColumn = new QActionGroup(q);
         
         action = new QAction("Sort according to", q);
