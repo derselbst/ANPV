@@ -392,7 +392,7 @@ QString ExifWrapper::formatToString()
     QString s;
     
     QSize size = this->size();
-    if(!size.isNull())
+    if(size.isValid())
     {
         f << "Resolution: " << size.width() << " x " << size.height() << " px\n\n";
     }
@@ -403,7 +403,7 @@ QString ExifWrapper::formatToString()
     }
     
     s = this->exposureTime();
-    if(!s.isNull())
+    if(!s.isEmpty())
     {
         f << "Exposure: " << s.toStdString() << "\n";
     }
@@ -414,7 +414,7 @@ QString ExifWrapper::formatToString()
     }
     
     s = this->lens();
-    if(!s.isNull())
+    if(!s.isEmpty())
     {
         f << "Lens: " << s.toStdString() << "\n";
     }
