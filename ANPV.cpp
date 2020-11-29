@@ -196,6 +196,22 @@ struct ANPV::Impl
         menuSort->addActions(actionGroupSortColumn->actions());
         menuSort->addActions(actionGroupSortOrder->actions());
     }
+    
+    void onImageNavigate(const QString& url, int stepsForward)
+    {
+        QFileInfo i;
+        QModelIndex idx = fileModel->goTo(url, stepsForward, i);
+        if(idx.isValid())
+        {
+            q->loadImage(i);
+            q->setThumbnailDir(i.absoluteDir().absolutePath());
+            thumbnailViewer->selectThumbnail(idx);
+        }
+        else
+        {
+            q->showThumbnailView();
+        }
+    }
 };
 
 ANPV::ANPV(QSplashScreen *splash)
@@ -225,19 +241,9 @@ ANPV::ANPV(QSplashScreen *splash)
     
     d->imageViewer = new DocumentView(this);
     connect(d->imageViewer, &DocumentView::requestNext, this,
-            [&](QString current)
-            {
-                QFileInfo i = d->fileModel->goNext(current);
-                this->loadImage(i);
-                this->setThumbnailDir(i.absoluteDir().absolutePath());
-            });
+            [&](QString current) { d->onImageNavigate(current, 1); });
     connect(d->imageViewer, &DocumentView::requestPrev, this,
-            [&](QString current)
-            {
-                QFileInfo i = d->fileModel->goPrev(current);
-                this->loadImage(i);
-                this->setThumbnailDir(i.absoluteDir().absolutePath());
-            });
+            [&](QString current) { d->onImageNavigate(current, -1); });
 
     d->stackedLayout = new QStackedLayout(this);
     d->stackedLayout->addWidget(d->thumbnailViewer);

@@ -24,6 +24,7 @@ public:
     
 public slots:
     void changeDir(const QString& dir);
+    void selectThumbnail(const QModelIndex& idx);
 
 private:
     struct Impl;

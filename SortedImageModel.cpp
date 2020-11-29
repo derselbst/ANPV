@@ -465,17 +465,7 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
         });
 }
 
-QFileInfo SortedImageModel::goNext(const QString& currentUrl)
-{
-    return this->goTo(currentUrl, 1);
-}
-
-QFileInfo SortedImageModel::goPrev(const QString& currentUrl)
-{
-    return this->goTo(currentUrl, -1);
-}
-
-QFileInfo SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent)
+QModelIndex SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QFileInfo& infoOut)
 {
     stepsFromCurrent = (d->sortOrder == Qt::DescendingOrder) ? -stepsFromCurrent : stepsFromCurrent;
     int step = (stepsFromCurrent < 0) ? -1 : 1;
@@ -488,18 +478,25 @@ QFileInfo SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent
     if(result == d->entries.end())
     {
         qCritical() << "This should not happen: currentUrl not found.";
-        return QFileInfo();
+        return QModelIndex();
     }
-
+    
+    int size = d->entries.size();
+    int idx = std::distance(d->entries.begin(), result);
+    QFileInfo eInfo;
     do
     {
-        result += step;
-        if(result == d->entries.end())
+        if(idx >= size - step || // idx + step >= size
+            idx < -step) // idx + step < 0
         {
-            return QFileInfo();
+            return QModelIndex();
         }
         
-        if(result->hasImageDecoder() && result->getFileInfo().suffix() != "bak")
+        idx += step;
+        
+        const Entry* e = &d->entries[idx];
+        eInfo = e->getFileInfo();
+        if(e->hasImageDecoder() && eInfo.suffix() != "bak")
         {
             stepsFromCurrent -= step;
         }
@@ -510,7 +507,8 @@ QFileInfo SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent
         
     } while(stepsFromCurrent);
     
-    return result->getFileInfo();
+    infoOut = eInfo;
+    return this->index(idx, 0);
 }
 
 

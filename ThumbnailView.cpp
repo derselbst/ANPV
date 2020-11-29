@@ -167,9 +167,18 @@ void ThumbnailView::changeDir(const QString& dir)
     {
         d->currentDir = dir;
         QModelIndex mo = d->dirModel->index(dir);
+        d->fileSystemTree->setCurrentIndex(mo);
         d->fileSystemTree->setExpanded(mo, true);
         d->anpv->notifyDecodingState(DecodingState::Ready);
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         d->fileModel->changeDirAsync(dir);
+    }
+}
+
+void ThumbnailView::selectThumbnail(const QModelIndex& idx)
+{
+    if(idx.isValid())
+    {
+        d->thumbnailList->setCurrentIndex(idx);
     }
 }

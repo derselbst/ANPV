@@ -40,9 +40,7 @@ public:
     
     void changeDirAsync(const QDir& dir);
     
-    QFileInfo goNext(const QString& currentUrl);
-    QFileInfo goPrev(const QString& currentUrl);
-    QFileInfo goTo(const QString& currentUrl, int stepsFromCurrent);
+    QModelIndex goTo(const QString& currentUrl, int stepsFromCurrent, QFileInfo& found);
 
     void sort(Column column);
     void sort(Qt::SortOrder order);
