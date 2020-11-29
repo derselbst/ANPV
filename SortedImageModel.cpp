@@ -634,9 +634,11 @@ void SortedImageModel::sort(Column column)
     {
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         
+        d->setStatusMessage(0, "Sorting entries");
         this->beginResetModel();
         d->sortEntries();
         this->endResetModel();
+        d->setStatusMessage(100, "Sorting complete");
         
         QGuiApplication::restoreOverrideCursor();
     }
