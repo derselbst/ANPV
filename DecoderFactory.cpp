@@ -16,21 +16,18 @@
 struct DecoderFactory::Impl
 {
     // a container were we store all tasks that need to be processed
-    std::vector<std::shared_ptr<ImageDecodeTask>> taskContainer;
+    //
+    // This is used when shutting down the application to cancel any pending tasks
+    std::vector<QSharedPointer<ImageDecodeTask>> taskContainer;
      
     void onAboutToQuit()
     {
         for(size_t i=0; i < taskContainer.size(); i++)
         {
-            QThreadPool::globalInstance()->tryTake(taskContainer[i].get());
+            (void)QThreadPool::globalInstance()->tryTake(taskContainer[i].data());
             // disconnect all signals
             taskContainer[i]->disconnect();
             taskContainer[i]->shutdown();
-        }
-        
-        if(!QThreadPool::globalInstance()->waitForDone(5000))
-        {
-            qWarning() << "Waited over 5 seconds for the thread pool to finish, giving up. I will probably crash now...";
         }
         
         taskContainer.clear();
@@ -40,8 +37,8 @@ struct DecoderFactory::Impl
     {
         auto result = std::find_if(taskContainer.begin(),
                                    taskContainer.end(),
-                                [&](std::shared_ptr<ImageDecodeTask>& other)
-                                { return other.get() == t;}
+                                [&](const QSharedPointer<ImageDecodeTask>& other)
+                                { return other.data() == t;}
                                 );
         if (result != taskContainer.end())
         {
@@ -67,18 +64,18 @@ DecoderFactory* DecoderFactory::globalInstance()
     return &fac;
 }
 
-std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QString url)
+QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QString url)
 {
     QImageReader r(url);
     
-    std::unique_ptr<SmartImageDecoder> sid;
+    QSharedPointer<SmartImageDecoder> sid(nullptr, &QObject::deleteLater);
     if(r.format() == "tiff")
     {
-        sid = std::make_unique<SmartTiffDecoder>(std::move(url));
+        sid.reset(new SmartTiffDecoder(std::move(url)));
     }
     else if(r.format() == "jpeg")
     {
-        sid = std::make_unique<SmartJpegDecoder>(std::move(url));
+        sid.reset(new SmartJpegDecoder(std::move(url)));
     }
     
     return std::move(sid);
@@ -91,24 +88,24 @@ void DecoderFactory::configureDecoder(SmartImageDecoder* dec, DocumentView* dc)
     QObject::connect(dec, &SmartImageDecoder::imageRefined, dc, &DocumentView::onImageRefinement);
 }
 
-std::shared_ptr<ImageDecodeTask> DecoderFactory::createDecodeTask(std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState)
+QSharedPointer<ImageDecodeTask> DecoderFactory::createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
 {
-    d->taskContainer.emplace_back(std::make_shared<ImageDecodeTask>(dec, targetState));
+    d->taskContainer.emplace_back(new ImageDecodeTask(std::move(dec), targetState), &QObject::deleteLater);
     
     auto task = d->taskContainer.back();
     
-    QObject::connect(task.get(), &ImageDecodeTask::finished,
+    QObject::connect(task.data(), &ImageDecodeTask::finished,
                      this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
     
     return task;
 }
 
-void DecoderFactory::cancelDecodeTask(std::shared_ptr<ImageDecodeTask> task)
+void DecoderFactory::cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task)
 {
-    if(QThreadPool::globalInstance()->tryTake(task.get()))
+    if(QThreadPool::globalInstance()->tryTake(task.data()))
     {
         // task not started yet, manually emit finished signal
-        emit task->finished(task.get());
+        emit task->finished(task.data());
     }
     else
     {

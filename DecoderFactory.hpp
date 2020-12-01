@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QSharedPointer>
 #include <memory>
 #include "DecodingState.hpp"
 
@@ -17,10 +18,10 @@ Q_OBJECT
 public:
     static DecoderFactory* globalInstance();
 
-    std::unique_ptr<SmartImageDecoder> getDecoder(QString url);
+    QSharedPointer<SmartImageDecoder> getDecoder(QString url);
     void configureDecoder(SmartImageDecoder* dec, DocumentView* dc);
-    std::shared_ptr<ImageDecodeTask> createDecodeTask(std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState);
-    void cancelDecodeTask(std::shared_ptr<ImageDecodeTask> task);
+    QSharedPointer<ImageDecodeTask> createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState);
+    void cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task);
 
 private:
     DecoderFactory();

@@ -3,6 +3,7 @@
 
 #include <QRunnable>
 #include <QObject>
+#include <QSharedPointer>
 #include <memory>
 #include "DecodingState.hpp"
 
@@ -13,7 +14,7 @@ class ImageDecodeTask : public QObject, public QRunnable
     Q_OBJECT
 
 public:
-    ImageDecodeTask(std::shared_ptr<SmartImageDecoder> d, DecodingState targetState);
+    ImageDecodeTask(QSharedPointer<SmartImageDecoder>&& d, DecodingState targetState);
     ~ImageDecodeTask();
     void run() override;
     void cancel() noexcept;

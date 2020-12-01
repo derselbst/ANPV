@@ -24,10 +24,13 @@
 
 struct Entry
 {
+    Entry() : info(QFileInfo())
+    {}
+    
     Entry(QFileInfo&& info) : info(std::move(info))
     {}
     
-    Entry(std::unique_ptr<SmartImageDecoder>&& d) : dec(std::move(d))
+    Entry(QSharedPointer<SmartImageDecoder>&& d) : dec(std::move(d))
     {}
     
     ~Entry()
@@ -38,6 +41,7 @@ struct Entry
             future.waitForFinished();
             task = nullptr;
         }
+        dec = nullptr;
     }
     
     QFileInfo getFileInfo() const
@@ -45,9 +49,9 @@ struct Entry
         return this->hasImageDecoder() ? this->dec->fileInfo() : this->info;
     }
 
-    std::shared_ptr<SmartImageDecoder> getDecoder() const
+    const QSharedPointer<SmartImageDecoder>& getDecoder() const
     {
-        return this->hasImageDecoder() ? this->dec : nullptr;
+        return this->dec;
     }
     
     bool hasImageDecoder() const
@@ -55,12 +59,12 @@ struct Entry
         return dec != nullptr;
     }
     
-    void setTask(std::shared_ptr<ImageDecodeTask> t)
+    void setTask(QSharedPointer<ImageDecodeTask> t)
     {
         this->task = std::move(t);
     }
     
-    std::shared_ptr<ImageDecodeTask> getTask()
+    QSharedPointer<ImageDecodeTask> getTask()
     {
         return task;
     }
@@ -76,8 +80,8 @@ struct Entry
     }
     
 private:
-    std::shared_ptr<SmartImageDecoder> dec;
-    std::shared_ptr<ImageDecodeTask> task;
+    QSharedPointer<SmartImageDecoder> dec;
+    QSharedPointer<ImageDecodeTask> task;
     QFuture<void> future;
     QFileInfo info;
 };
@@ -371,7 +375,7 @@ struct SortedImageModel::Impl
         entries.shrink_to_fit();
     }
 
-    void startImageDecoding(const QModelIndex& index, std::shared_ptr<SmartImageDecoder> dec, DecodingState targetState)
+    void startImageDecoding(const QModelIndex& index, QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
     {
         Entry& e = entries.at(index.row());
         
@@ -379,8 +383,6 @@ struct SortedImageModel::Impl
         {
             return;
         }
-        
-        QObject::connect(dec.get(), &SmartImageDecoder::decodingStateChanged, q, &SortedImageModel::onBackgroundImageTaskStateChanged);
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
@@ -436,12 +438,13 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
                                     decoder->decode(DecodingState::Metadata);
                                 }
 
-                                d->entries.emplace_back(Entry(std::move(decoder)));
+                                connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, &SortedImageModel::onBackgroundImageTaskStateChanged);
+                                d->entries.emplace_back(std::move(decoder));
                                 break;
                             }
                         }
 
-                        d->entries.emplace_back(Entry(std::move(inf)));
+                        d->entries.emplace_back(std::move(inf));
 
                     } while (false);
 
@@ -694,7 +697,7 @@ void SortedImageModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec,
     
     for(size_t i = 0; i < d->entries.size(); i++)
     {
-        if(d->entries.at(i).getDecoder().get() == dec)
+        if(d->entries.at(i).getDecoder().data() == dec)
         {
             QModelIndex left = this->index(i, Column::FirstValid);
             QModelIndex right = this->index(i, Column::Count - 1);

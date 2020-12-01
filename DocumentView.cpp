@@ -51,12 +51,12 @@ struct DocumentView::Impl
     QFuture<void> taskFuture;
     
     // a shortcut to the most recent task queued
-    std::shared_ptr<ImageDecodeTask> currentDecodeTask;
+    QSharedPointer<ImageDecodeTask> currentDecodeTask;
 
     // the latest image decoder, the same that displays the current image
     // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
     // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
-    std::shared_ptr<SmartImageDecoder> currentImageDecoder;
+    QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
     // the full resolution image currently displayed in the scene
     QPixmap currentDocumentPixmap;
@@ -72,6 +72,8 @@ struct DocumentView::Impl
             taskFuture.waitForFinished();
             currentDecodeTask = nullptr;
         }
+        
+        currentImageDecoder = nullptr;
     }
     
     void clearScene()
@@ -94,6 +96,7 @@ struct DocumentView::Impl
             taskFuture.waitForFinished();
             currentDecodeTask = nullptr;
         }
+        
         currentImageDecoder = nullptr;
         afPointOverlay = nullptr;
         
@@ -329,7 +332,7 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
 
 void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
 {
-    if(dec != this->d->currentImageDecoder.get())
+    if(dec != this->d->currentImageDecoder.data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
@@ -340,7 +343,7 @@ void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QStr
 
 void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
 {
-    if(dec != this->d->currentImageDecoder.get())
+    if(dec != this->d->currentImageDecoder.data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
@@ -354,7 +357,7 @@ void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
 
 void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newState, quint32 oldState)
 {
-    if(dec != this->d->currentImageDecoder.get())
+    if(dec != this->d->currentImageDecoder.data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
@@ -379,7 +382,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
         break;
     case DecodingState::FullImage:
-        this->onImageRefinement(this->d->currentImageDecoder.get(), dec->image());
+        this->onImageRefinement(this->d->currentImageDecoder.data(), dec->image());
         d->createSmoothPixmap();
         break;
     case DecodingState::Error:
@@ -411,15 +414,15 @@ void DocumentView::loadImage(QString url)
     
     d->anpv->notifyProgress(0, QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
     
-    DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.get(), this);
+    DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.data(), this);
     d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
     
     auto task = d->currentDecodeTask;
-    connect(task.get(), &ImageDecodeTask::finished,
+    connect(task.data(), &ImageDecodeTask::finished,
             this, [&](ImageDecodeTask* t)
             {
                 QGuiApplication::restoreOverrideCursor();
-                if(d->currentDecodeTask.get() == t)
+                if(d->currentDecodeTask.data() == t)
                 {
                     d->currentDecodeTask = nullptr;
                 }
