@@ -5,10 +5,12 @@
 #include <QMainWindow>
 #include <QString>
 #include <QFileInfo>
+#include <QSharedPointer>
 
 #include "DecodingState.hpp"
 
 class QSplashScreen;
+class SmartImageDecoder;
 
 class ANPV : public QMainWindow
 {
@@ -26,6 +28,7 @@ public slots:
     void showImageView();
     void showThumbnailView();
     void loadImage(QFileInfo str);
+    void loadImage(QSharedPointer<SmartImageDecoder> dec);
     void setThumbnailDir(QString str);
     
 private:

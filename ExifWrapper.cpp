@@ -99,6 +99,31 @@ ExifWrapper::ExifWrapper()
 
 ExifWrapper::~ExifWrapper() = default;
 
+ExifWrapper::ExifWrapper(const ExifWrapper& other) : d(nullptr)
+{
+    if(other.d)
+    {
+        d = std::make_unique<Impl>(*other.d);
+    }
+}
+
+ExifWrapper& ExifWrapper::operator=(const ExifWrapper& other)
+{
+    if(!other.d)
+    {
+        d.reset();
+    }
+    else if(!d)
+    {
+        d = std::make_unique<Impl>(*other.d);
+    }
+    else
+    {
+        *d = *other.d;
+    }
+    
+    return *this;
+}
 
 // NOTE: Exiv2 takes ownership of data, so the caller must keep a reference to it to avoid use-after-free!
 bool ExifWrapper::loadFromData(const QByteArray& data)

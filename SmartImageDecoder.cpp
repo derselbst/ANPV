@@ -19,9 +19,7 @@ struct SmartImageDecoder::Impl
     
     QString errorMessage;
     
-    QFile file;
-    const unsigned char* fileMapped;
-    QByteArray byteArray;
+    QFileInfo fileInfo;
     
     // a low resolution preview image of the original full image
     QImage thumbnail;
@@ -31,13 +29,11 @@ struct SmartImageDecoder::Impl
     
     ExifWrapper exifWrapper;
     
-    Impl(QString&& url) : file(std::move(url))
+    Impl(const QFileInfo& url) : fileInfo(url)
     {}
     
-    void open()
+    void open(QFile& file)
     {
-        QFileInfo info(file);
-        
         if(file.isOpen())
         {
             return;
@@ -45,29 +41,13 @@ struct SmartImageDecoder::Impl
         
         if (!file.open(QIODevice::ReadOnly))
         {
-            throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
+            throw std::runtime_error(Formatter() << "Unable to open file '" << fileInfo.absoluteFilePath().toStdString() << "'");
         }
-        
-        fileMapped = file.map(0, file.size(), QFileDevice::MapPrivateOption);
-        if(fileMapped == nullptr)
-        {
-            throw std::runtime_error(Formatter() << "Could not mmap() file '" << info.absoluteFilePath().toStdString() << "'");
-        }
-        
-        byteArray = QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), file.size());
-    }
-    
-    void close()
-    {
-        byteArray.clear();
-        fileMapped = nullptr;
-        file.close();
     }
 };
 
-SmartImageDecoder::SmartImageDecoder(QString&& url) : d(std::make_unique<Impl>(std::move(url)))
-{
-}
+SmartImageDecoder::SmartImageDecoder(const QFileInfo& url) : d(std::make_unique<Impl>(url))
+{}
 
 SmartImageDecoder::~SmartImageDecoder() = default;
 
@@ -119,14 +99,22 @@ void SmartImageDecoder::decode(DecodingState targetState)
     {
         do
         {
-            d->open();
+            QSharedPointer<QFile> file(new QFile(d->fileInfo.absoluteFilePath()), [&](QFile* f){ this->close(); delete f; });
+            d->open(*file.data());
+            
+            const qint64 mapSize = file->size();
+            const unsigned char* fileMapped = file->map(0, mapSize, QFileDevice::MapPrivateOption);
+            if(fileMapped == nullptr)
+            {
+                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "'");
+            }
             
             this->cancelCallback();
             
             this->setDecodingState(DecodingState::Ready);
             
-            this->decodeHeader();
-            d->exifWrapper.loadFromData(d->byteArray);
+            this->decodeHeader(fileMapped, mapSize);
+            d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
             this->setThumbnail(d->exifWrapper.thumbnail());
             
             this->setDecodingState(DecodingState::Metadata);
@@ -149,19 +137,20 @@ void SmartImageDecoder::decode(DecodingState targetState)
         d->errorMessage = e.what();
         this->setDecodingState(DecodingState::Error);
     }
-    
-    d->close();
 }
 
-void SmartImageDecoder::fileBuf(const unsigned char** buf, qint64* size)
+void SmartImageDecoder::close()
+{}
+
+void SmartImageDecoder::releaseFullImage()
 {
-    *buf = d->fileMapped;
-    *size = d->file.size();
+    this->setImage(QImage());
+    this->setDecodingState(DecodingState::Metadata);
 }
 
-QFileInfo SmartImageDecoder::fileInfo()
+const QFileInfo& SmartImageDecoder::fileInfo()
 {
-    return QFileInfo(d->file);
+    return d->fileInfo;
 }
 
 QString SmartImageDecoder::latestMessage()

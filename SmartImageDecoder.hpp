@@ -17,12 +17,16 @@ class SmartImageDecoder : public QObject
 Q_OBJECT
 
 public:
-    SmartImageDecoder(QString&&);
+    SmartImageDecoder(const QFileInfo&);
     virtual ~SmartImageDecoder();
-
-    virtual QSize size() = 0;
     
-    QFileInfo fileInfo();
+    SmartImageDecoder(const SmartImageDecoder&) = delete;
+    SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
+    
+    virtual QSize size() = 0;
+    virtual void releaseFullImage();
+    
+    const QFileInfo& fileInfo();
     // Returns a thumbnail preview image if available
     QImage thumbnail();
     QImage image();
@@ -36,10 +40,10 @@ public:
     void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
     
 protected:
-    virtual void decodeHeader() = 0;
+    virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
     virtual void decodingLoop(DecodingState state) = 0;
+    virtual void close();
     
-    void fileBuf(const unsigned char** buf, qint64* size);
     void cancelCallback();
     void setDecodingState(DecodingState state);
     void setImage(QImage&& img);

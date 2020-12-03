@@ -23,6 +23,8 @@ class ExifWrapper
 public:
     ExifWrapper();
     ~ExifWrapper();
+    ExifWrapper(const ExifWrapper&);
+    ExifWrapper& operator=(const ExifWrapper&);
 
     bool loadFromData(const QByteArray& data);
     QString errorMessage();

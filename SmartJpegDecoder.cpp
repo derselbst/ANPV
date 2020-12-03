@@ -35,11 +35,7 @@ struct SmartJpegDecoder::Impl
         cinfo.err = jpeg_std_error(&jerr.pub);
         jerr.pub.error_exit = &my_error_exit;
         jerr.pub.output_message = &my_output_message;
-        
-        jpeg_create_decompress(&cinfo);
-        cinfo.progress = &progMgr;
-        cinfo.client_data = this;
-        progMgr.progress_monitor = &Impl::libjpegProgressCallback;
+        progMgr.progress_monitor = &libjpegProgressCallback;
     }
     
     static void libjpegProgressCallback(j_common_ptr cinfo) noexcept
@@ -74,18 +70,13 @@ struct SmartJpegDecoder::Impl
 
         self->q->setDecodingMessage(buffer);
     }
-    
-    ~Impl()
-    {
-        jpeg_destroy_decompress(&cinfo);
-    }
 };
 
-SmartJpegDecoder::SmartJpegDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>(this))
-{
-}
+SmartJpegDecoder::SmartJpegDecoder(const QFileInfo& file) : SmartImageDecoder(file), d(std::make_unique<Impl>(this))
+{}
 
 SmartJpegDecoder::~SmartJpegDecoder() = default;
+
 
 QSize SmartJpegDecoder::size()
 {
@@ -93,13 +84,19 @@ QSize SmartJpegDecoder::size()
     return QSize(d->cinfo.output_width, d->cinfo.output_height);
 }
 
-void SmartJpegDecoder::decodeHeader()
+void SmartJpegDecoder::releaseFullImage()
+{
+    SmartImageDecoder::releaseFullImage();
+    d->decodedImg.clear();
+    d->decodedImg.shrink_to_fit();
+}
+
+void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
     auto& cinfo = d->cinfo;
-    
-    const unsigned char* buffer;
-    qint64 nbytes;
-    this->fileBuf(&buffer, &nbytes);
+    jpeg_create_decompress(&cinfo);
+    cinfo.progress = &d->progMgr;
+    cinfo.client_data = d.get();
     
     jpeg_mem_src(&cinfo, buffer, nbytes);
 
@@ -228,6 +225,8 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
     }
     
     jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
+    
     this->setImage(QImage(d->decodedImg.data(),
                           cinfo.output_width,
                           cinfo.output_height,

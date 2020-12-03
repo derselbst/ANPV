@@ -22,7 +22,10 @@ public:
     DocumentView(ANPV *parent);
     ~DocumentView() override;
 
+    void loadImage();
     void loadImage(QString url);
+    void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
+    void loadImage(QSharedPointer<SmartImageDecoder>&& dec);
     
 public slots:
     void zoomIn();

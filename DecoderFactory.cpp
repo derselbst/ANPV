@@ -64,21 +64,21 @@ DecoderFactory* DecoderFactory::globalInstance()
     return &fac;
 }
 
-QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QString url)
+QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& url)
 {
-    QImageReader r(url);
+    QImageReader r(url.absoluteFilePath());
     
     QSharedPointer<SmartImageDecoder> sid(nullptr, &QObject::deleteLater);
     if(r.format() == "tiff")
     {
-        sid.reset(new SmartTiffDecoder(std::move(url)));
+        sid.reset(new SmartTiffDecoder(url));
     }
     else if(r.format() == "jpeg")
     {
-        sid.reset(new SmartJpegDecoder(std::move(url)));
+        sid.reset(new SmartJpegDecoder(url));
     }
     
-    return std::move(sid);
+    return sid;
 }
 
 void DecoderFactory::configureDecoder(SmartImageDecoder* dec, DocumentView* dc)

@@ -97,6 +97,11 @@ struct DocumentView::Impl
             currentDecodeTask = nullptr;
         }
         
+        if(currentImageDecoder)
+        {
+            currentImageDecoder->disconnect(p);
+            currentImageDecoder->releaseFullImage();
+        }
         currentImageDecoder = nullptr;
         afPointOverlay = nullptr;
         
@@ -307,9 +312,11 @@ void DocumentView::resizeEvent(QResizeEvent *event)
 
 void DocumentView::keyPressEvent(QKeyEvent *event)
 {
+    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     switch(event->key())
     {
         case Qt::Key_Escape:
+            d->clearScene();
             d->anpv->showThumbnailView();
             break;
         case Qt::Key_Space:
@@ -328,6 +335,7 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             QGraphicsView::keyPressEvent(event);
             break;
     }
+    QGuiApplication::restoreOverrideCursor();
 }
 
 void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
@@ -402,17 +410,65 @@ void DocumentView::loadImage(QString url)
 {
     d->clearScene();
     
-    d->currentImageDecoder = DecoderFactory::globalInstance()->getDecoder(url);
-    if(!d->currentImageDecoder)
+    QFileInfo info(url);
+    
+    if(!info.exists())
     {
-        QString name = QFileInfo(url).fileName();
+        d->anpv->notifyProgress(100, QString("Failed to open ") + info.fileName());
+        d->setDocumentError(QString("No such file %1").arg(info.absoluteFilePath()));
+        d->anpv->notifyDecodingState(DecodingState::Error);
+        return;
+    }
+    
+    if(!info.isReadable())
+    {
+        QString name = info.fileName();
+        d->anpv->notifyProgress(100, QString("Failed to open ") + name);
+        d->setDocumentError(QString("No permission to read file %1").arg(name));
+        d->anpv->notifyDecodingState(DecodingState::Error);
+        return;
+    }
+    
+    QSharedPointer<SmartImageDecoder> dec = DecoderFactory::globalInstance()->getDecoder(info);
+    if(!dec)
+    {
+        QString name = info.fileName();
         d->anpv->notifyProgress(100, QString("Failed to open ") + name);
         d->setDocumentError(QString("Could not find a decoder for file %1").arg(name));
         d->anpv->notifyDecodingState(DecodingState::Error);
         return;
     }
     
+    this->loadImage(std::move(dec));
+}
+
+void DocumentView::loadImage(QSharedPointer<SmartImageDecoder>&& dec)
+{
+    d->clearScene();
+    d->currentImageDecoder = std::move(dec);
+    this->loadImage();
+}
+
+void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
+{
+    d->clearScene();
+    d->currentImageDecoder = dec;
+    
+    DecodingState curState = dec->decodingState();
+    if(curState == DecodingState::Metadata ||
+       curState == DecodingState::PreviewImage ||
+       curState == DecodingState::FullImage)
+    {
+       d->addThumbnailPreview(dec->thumbnail(), dec->size());
+    }
+    
+    this->loadImage();
+}
+
+void DocumentView::loadImage()
+{
     d->anpv->notifyProgress(0, QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
+    
     
     DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.data(), this);
     d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
@@ -432,3 +488,4 @@ void DocumentView::loadImage(QString url)
     d->taskFuture = QtConcurrent::run(QThreadPool::globalInstance(), [&](){if(d->currentDecodeTask) d->currentDecodeTask->run();});
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 }
+

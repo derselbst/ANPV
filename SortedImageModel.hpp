@@ -43,7 +43,7 @@ public:
     using QAbstractListModel::index; // don't hide base member
     QModelIndex index(const QFileInfo& info);
     QFileInfo fileInfo(const QModelIndex& idx) const;
-    QModelIndex goTo(const QString& currentUrl, int stepsFromCurrent, QFileInfo& found);
+    QSharedPointer<SmartImageDecoder> goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idx);
 
     void sort(Column column);
     void sort(Qt::SortOrder order);

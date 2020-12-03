@@ -31,6 +31,7 @@
 #include "ThumbnailView.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
+#include "SmartImageDecoder.hpp"
 
 
 struct ANPV::Impl
@@ -198,12 +199,11 @@ struct ANPV::Impl
     
     void onImageNavigate(const QString& url, int stepsForward)
     {
-        QFileInfo i;
-        QModelIndex idx = fileModel->goTo(url, stepsForward, i);
-        if(idx.isValid())
+        QModelIndex idx;
+        QSharedPointer<SmartImageDecoder> dec = fileModel->goTo(url, stepsForward, idx);
+        if(dec && idx.isValid())
         {
-            q->loadImage(i);
-            q->setThumbnailDir(i.absoluteDir().absolutePath());
+            q->loadImage(dec);
             thumbnailViewer->selectThumbnail(idx);
         }
         else
@@ -272,6 +272,13 @@ void ANPV::loadImage(QFileInfo inf)
 {
     this->setWindowTitle(inf.fileName());
     d->imageViewer->loadImage(inf.absoluteFilePath());
+    this->setThumbnailDir(inf.absoluteDir().absolutePath());
+}
+
+void ANPV::loadImage(QSharedPointer<SmartImageDecoder> dec)
+{
+    this->setWindowTitle(dec->fileInfo().fileName());
+    d->imageViewer->loadImage(dec);
 }
 
 void ANPV::setThumbnailDir(QString str)

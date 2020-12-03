@@ -66,7 +66,7 @@ struct ThumbnailView::Impl
     
     void onThumbnailActivated(const QModelIndex& idx)
     {
-        QFileInfo info = fileModel->fileInfo(idx);
+        const QFileInfo& info = fileModel->fileInfo(idx);
         
         if(info.isDir())
         {
@@ -75,7 +75,7 @@ struct ThumbnailView::Impl
         else if(info.isFile())
         {
             anpv->showImageView();
-            anpv->loadImage(info.absoluteFilePath());
+            anpv->loadImage(info);
         }
     }
     

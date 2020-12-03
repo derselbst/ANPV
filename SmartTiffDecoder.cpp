@@ -49,15 +49,6 @@ struct SmartTiffDecoder::Impl
         TIFFSetWarningHandlerExt(myWarningHandler);
     }
     
-    ~Impl()
-    {
-        if (tiff)
-        {
-            TIFFClose(tiff);
-        }
-        tiff = nullptr;
-    }
-    
     static void myErrorHandler(thandle_t self, const char* module, const char* fmt, va_list ap)
     {
         auto impl = static_cast<Impl*>(self);
@@ -244,11 +235,27 @@ struct SmartTiffDecoder::Impl
     }
 };
 
-SmartTiffDecoder::SmartTiffDecoder(QString&& file) : SmartImageDecoder(std::move(file)), d(std::make_unique<Impl>(this))
-{
-}
+SmartTiffDecoder::SmartTiffDecoder(const QFileInfo& file) : SmartImageDecoder(file), d(std::make_unique<Impl>(this))
+{}
 
 SmartTiffDecoder::~SmartTiffDecoder() = default;
+
+void SmartTiffDecoder::close()
+{
+    if (d->tiff)
+    {
+        TIFFClose(d->tiff);
+    }
+    d->tiff = nullptr;
+    d->buffer = nullptr;
+}
+
+void SmartTiffDecoder::releaseFullImage()
+{
+    SmartImageDecoder::releaseFullImage();
+    d->decodedImg.clear();
+    d->decodedImg.shrink_to_fit();
+}
 
 QSize SmartTiffDecoder::size()
 {
@@ -256,9 +263,11 @@ QSize SmartTiffDecoder::size()
     return QSize(d->imageInfo.width, d->imageInfo.height);
 }
 
-void SmartTiffDecoder::decodeHeader()
+void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
-    this->fileBuf(&d->buffer, &d->nbytes);
+    d->buffer = buffer;
+    d->nbytes = nbytes;
+    d->offset = 0;
     
     this->setDecodingMessage("Reading TIFF Header");
     

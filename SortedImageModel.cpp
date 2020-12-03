@@ -44,7 +44,7 @@ struct Entry
         dec = nullptr;
     }
     
-    QFileInfo getFileInfo() const
+    const QFileInfo& getFileInfo() const
     {
         return this->hasImageDecoder() ? this->dec->fileInfo() : this->info;
     }
@@ -134,7 +134,7 @@ struct SortedImageModel::Impl
     }
 
     template<Column SortCol>
-    static bool sortColumnPredicateLeftBeforeRight(const Entry& l, QFileInfo& linfo, const Entry& r, QFileInfo& rinfo)
+    static bool sortColumnPredicateLeftBeforeRight(const Entry& l, const QFileInfo& linfo, const Entry& r, const QFileInfo& rinfo)
     {
         auto ldec = l.getDecoder();
         auto rdec = r.getDecoder();
@@ -299,8 +299,8 @@ struct SortedImageModel::Impl
     template<Column SortCol>
     static bool topLevelSortFunction(const Entry& l, const Entry& r)
     {
-        QFileInfo linfo = l.getFileInfo();
-        QFileInfo rinfo = r.getFileInfo();
+        const QFileInfo& linfo = l.getFileInfo();
+        const QFileInfo& rinfo = r.getFileInfo();
 
         bool leftIsBeforeRight =
             (linfo.isDir() && (!rinfo.isDir() || linfo.fileName() < rinfo.fileName())) ||
@@ -430,7 +430,7 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
                         QFileInfo inf = fileInfoList.takeFirst();
                         if (inf.isFile())
                         {
-                            auto decoder = DecoderFactory::globalInstance()->getDecoder(inf.absoluteFilePath());
+                            auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
                             if (decoder)
                             {
                                 if (d->sortedColumnNeedsPreloadingMetadata())
@@ -468,7 +468,7 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
         });
 }
 
-QModelIndex SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QFileInfo& infoOut)
+QSharedPointer<SmartImageDecoder> SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idxOut)
 {
     stepsFromCurrent = (d->sortOrder == Qt::DescendingOrder) ? -stepsFromCurrent : stepsFromCurrent;
     int step = (stepsFromCurrent < 0) ? -1 : 1;
@@ -481,24 +481,24 @@ QModelIndex SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurre
     if(result == d->entries.end())
     {
         qCritical() << "This should not happen: currentUrl not found.";
-        return QModelIndex();
+        return nullptr;
     }
     
     int size = d->entries.size();
     int idx = std::distance(d->entries.begin(), result);
-    QFileInfo eInfo;
+    const Entry* e;
     do
     {
         if(idx >= size - step || // idx + step >= size
             idx < -step) // idx + step < 0
         {
-            return QModelIndex();
+            return nullptr;
         }
         
         idx += step;
         
-        const Entry* e = &d->entries[idx];
-        eInfo = e->getFileInfo();
+        e = &d->entries[idx];
+        QFileInfo eInfo = e->getFileInfo();
         if(e->hasImageDecoder() && eInfo.suffix() != "bak")
         {
             stepsFromCurrent -= step;
@@ -510,8 +510,8 @@ QModelIndex SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurre
         
     } while(stepsFromCurrent);
     
-    infoOut = eInfo;
-    return this->index(idx, 0);
+    idxOut = this->index(idx, 0);
+    return e->getDecoder();
 }
 
 
@@ -548,7 +548,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
         case Qt::DecorationRole:
             if (e->hasImageDecoder())
             {
-                switch (e->getDecoder()->decodingState())
+                auto state = e->getDecoder()->decodingState();
+                switch (state)
                 {
                 case DecodingState::Ready:
                     d->startImageDecoding(index, e->getDecoder(), DecodingState::Metadata);
@@ -559,6 +560,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     return QIcon::fromTheme("dialog-error");
 
                 case DecodingState::Metadata:
+                case DecodingState::PreviewImage:
+                case DecodingState::FullImage:
                 {
                     QImage thumbnail = e->getDecoder()->thumbnail();
                     if (!thumbnail.isNull())
@@ -567,15 +570,17 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     }
                     else
                     {
-                        d->startImageDecoding(index, e->getDecoder(), DecodingState::PreviewImage);
-                        break;
+                        if(state == DecodingState::Metadata)
+                        {
+                            d->startImageDecoding(index, e->getDecoder(), DecodingState::PreviewImage);
+                            break;
+                        }
+                        else
+                        {
+                            QImage deepCopyImage = e->getDecoder()->image().scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            return deepCopyImage;
+                        }
                     }
-                }
-                case DecodingState::PreviewImage:
-                case DecodingState::FullImage:
-                {
-                    QImage deepCopyImage = e->getDecoder()->image().scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                    return deepCopyImage;
                 }
                 }
             }
