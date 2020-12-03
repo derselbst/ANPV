@@ -128,6 +128,7 @@ struct ANPV::Impl
         
         action = new QAction("File Name", q);
         action->setCheckable(true);
+        action->setChecked(true);
         connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::FileName); });
         actionGroupSortColumn->addAction(action);
         

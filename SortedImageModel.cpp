@@ -98,7 +98,7 @@ struct SortedImageModel::Impl
     std::vector<Entry> entries;
     
     // The column which is currently sorted
-    Column currentSortedCol = Column::DateRecorded;
+    Column currentSortedCol = Column::FileName;
     Qt::SortOrder sortOrder;
 
     Impl(SortedImageModel* parent) : q(parent)
