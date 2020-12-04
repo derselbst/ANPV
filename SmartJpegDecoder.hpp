@@ -21,12 +21,10 @@ public:
     SmartJpegDecoder(const SmartJpegDecoder&) = delete;
     SmartJpegDecoder& operator=(const SmartJpegDecoder&) = delete;
     
-    void releaseFullImage() override;
-    
 protected:
     QSize size() override;
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override;
-    void decodingLoop(DecodingState state) override;
+    QImage decodingLoop(DecodingState state) override;
     
 private:
     struct Impl;

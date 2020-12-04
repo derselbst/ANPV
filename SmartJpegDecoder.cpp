@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <QDebug>
 #include <csetjmp>
+#include "libkexiv2/src/kexiv2previews.h"
 
 extern "C"
 {
@@ -26,8 +27,6 @@ struct SmartJpegDecoder::Impl
     struct jpeg_decompress_struct cinfo; 
     struct my_error_mgr jerr;
     struct jpeg_progress_mgr progMgr;
-    
-    std::vector<JSAMPLE> decodedImg;
     
     Impl(SmartJpegDecoder* parent) : q(parent)
     {
@@ -84,13 +83,6 @@ QSize SmartJpegDecoder::size()
     return QSize(d->cinfo.output_width, d->cinfo.output_height);
 }
 
-void SmartJpegDecoder::releaseFullImage()
-{
-    SmartImageDecoder::releaseFullImage();
-    d->decodedImg.clear();
-    d->decodedImg.shrink_to_fit();
-}
-
 void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
     auto& cinfo = d->cinfo;
@@ -117,7 +109,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
 }
 
-void SmartJpegDecoder::decodingLoop(DecodingState targetState)
+QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
 {
     // vector has a nontrivial destructor, be careful with setjmp/longjmp
     std::vector<JSAMPLE*> bufferSetup;
@@ -140,26 +132,15 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
         // Used to set up image size so arrays can be allocated
         jpeg_calc_output_dimensions(&cinfo);
         
-        this->setDecodingMessage("Allocating memory for decoded image");
-        
         static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
-        size_t rowStride = cinfo.output_width * sizeof(uint32_t);
-        size_t needed = rowStride * cinfo.output_height;
-        try
+        const size_t rowStride = cinfo.output_width * sizeof(uint32_t);
+        
+        std::unique_ptr<uint32_t> mem = this->allocateImgBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
+
+        bufferSetup.resize(cinfo.output_height);
+        for(JDIMENSION i=0; i < cinfo.output_height; i++)
         {
-            d->decodedImg.reserve(needed);
-            
-            bufferSetup.resize(cinfo.output_height);
-            for(JDIMENSION i=0; i < cinfo.output_height; i++)
-            {
-                bufferSetup[i] = &d->decodedImg[i * rowStride];
-            }
-            
-            this->setDecodingState(DecodingState::PreviewImage);
-        }
-        catch(const std::bad_alloc&)
-        {
-            throw std::runtime_error(Formatter() << "Unable to allocate " << needed /1024. /1024. << " MiB for the decoded image with dimensions " << cinfo.output_width << "x" << cinfo.output_height << " px");
+            bufferSetup[i] = &mem.get()[i * rowStride];
         }
         
         // set parameters for decompression
@@ -207,7 +188,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
         this->setDecodingMessage("Consuming and decoding JPEG input file");
         
         auto totalLinesRead = cinfo.output_scanline;
-        while (!jpeg_input_complete(&cinfo) && this->decodingState() <= targetState)
+        while (!jpeg_input_complete(&cinfo))
         {
             /* start a new output pass */
             jpeg_start_output(&cinfo, cinfo.input_scan_number);
@@ -217,7 +198,7 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
                 totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
                 this->cancelCallback();
                 
-                this->updatePreviewImage(QImage(d->decodedImg.data(),
+                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
                                         cinfo.output_width,
                                         std::min(totalLinesRead, cinfo.output_height),
                                         rowStride,
@@ -226,15 +207,19 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
             
             /* terminate output pass */
             jpeg_finish_output(&cinfo);
+
+            if(targetState == DecodingState::PreviewImage)
+            {
+                // only a preview image was requested, which we have finished with this first pass
+                break;
+            }
         }
         
         jpeg_finish_decompress(&cinfo);
         
-        this->setImage(QImage(d->decodedImg.data(),
-                            cinfo.output_width,
-                            cinfo.output_height,
-                            rowStride,
-                            QImage::Format_RGB32));
+        QImage image(reinterpret_cast<uint8_t*>(mem.get()), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32,
+            [](void* buf) { delete [] static_cast<uint8_t*>(buf); }, mem.get());
+        mem.release();
         
         // call the progress monitor for a last time to report 100% to GUI
         d->progMgr.completed_passes = d->progMgr.total_passes;
@@ -242,6 +227,8 @@ void SmartJpegDecoder::decodingLoop(DecodingState targetState)
         this->setDecodingMessage("JPEG decoding completed successfully.");
         
         jpeg_destroy_decompress(&cinfo);
+
+        return image;
     }
     catch(...)
     {

@@ -5,16 +5,21 @@
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
 #include <QtDebug>
+#include <QMetaMethod>
 #include <chrono>
+#include <atomic>
+#include <mutex>
 
 struct SmartImageDecoder::Impl
 {
     std::function<void(void*)> cancelCallbackInternal;
     void* cancelCallbackObject = nullptr;
-    DecodingState state = DecodingState::Ready;
+    std::atomic<DecodingState> state{ DecodingState::Ready };
     QString decodingMessage;
     int decodingProgress=0;
-    
+
+    std::mutex m;
+
     std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
     QString errorMessage;
@@ -43,6 +48,11 @@ struct SmartImageDecoder::Impl
         {
             throw std::runtime_error(Formatter() << "Unable to open file '" << fileInfo.absoluteFilePath().toStdString() << "'");
         }
+    }
+
+    void setImage(QImage&& img)
+    {
+        image = img;
     }
 };
 
@@ -95,6 +105,16 @@ void SmartImageDecoder::setDecodingState(DecodingState state)
 
 void SmartImageDecoder::decode(DecodingState targetState)
 {
+    std::lock_guard<std::mutex> lck(d->m);
+
+    if(decodingState() != DecodingState::Error &&
+       decodingState() != DecodingState::Cancelled &&
+       decodingState() >= targetState)
+    {
+        // we already have more decoded than requested, do nothing
+        return;
+    }
+
     try
     {
         do
@@ -111,21 +131,24 @@ void SmartImageDecoder::decode(DecodingState targetState)
             
             this->cancelCallback();
             
-            this->setDecodingState(DecodingState::Ready);
-            
             this->decodeHeader(fileMapped, mapSize);
             d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
-            this->setThumbnail(d->exifWrapper.thumbnail());
-            
+            if (this->thumbnail().isNull)
+            {
+                this->setThumbnail(d->exifWrapper.thumbnail());
+            }
+
             this->setDecodingState(DecodingState::Metadata);
                         
-            if(d->state >= targetState)
+            if(decodingState() >= targetState)
             {
                 break;
             }
             
-            this->decodingLoop(targetState);
-            this->setDecodingState(DecodingState::FullImage);
+            QImage decodedImg = this->decodingLoop(targetState);
+            d->setImage(std::move(decodedImg));
+
+            this->setDecodingState(targetState);
         } while(false);
     }
     catch(const UserCancellation&)
@@ -142,10 +165,30 @@ void SmartImageDecoder::decode(DecodingState targetState)
 void SmartImageDecoder::close()
 {}
 
+void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
+{
+    if (signal == QMetaMethod::fromSignal(&SmartImageDecoder::decodingStateChanged))
+    {
+        DecodingState cur = decodingState();
+        emit this->decodingStateChanged(this, cur, cur);
+    }
+
+    QObject::connectNotify(signal);
+}
+
 void SmartImageDecoder::releaseFullImage()
 {
-    this->setImage(QImage());
-    this->setDecodingState(DecodingState::Metadata);
+    std::unique_lock<std::mutex> lck(d->m, std::defer_lock);
+
+    if(lck.try_lock())
+    {
+        d->setImage(QImage());
+        this->setDecodingState(DecodingState::Metadata);
+    }
+    else
+    {
+	    // another thread is currently decoding, ignore releasing the image
+    }
 }
 
 const QFileInfo& SmartImageDecoder::fileInfo()
