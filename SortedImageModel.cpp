@@ -588,6 +588,13 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     return QString("<b>%1</b><br><br>Latest Message was:<br>%2")
                     .arg(e->getDecoder()->errorMessage())
                     .arg(e->getDecoder()->latestMessage());
+                    
+                case DecodingState::Metadata:
+                case DecodingState::PreviewImage:
+                case DecodingState::FullImage:
+                    return e->getDecoder()->exif()->formatToString();
+                    break;
+    
                 default:
                     break;
                 }
