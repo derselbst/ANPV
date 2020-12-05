@@ -111,6 +111,7 @@ struct ANPV::Impl
         
         action = new QAction("Ascending (small to big)", q);
         action->setCheckable(true);
+        action->setChecked(true);
         connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(Qt::AscendingOrder); });
         actionGroupSortOrder->addAction(action);
         

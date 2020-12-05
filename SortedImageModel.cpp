@@ -356,6 +356,30 @@ struct SortedImageModel::Impl
         auto sortFunction = getSortFunction();
         std::sort(/*std::execution::par_unseq, */std::begin(entries), std::end(entries), sortFunction);
     }
+    
+    void reverseEntries()
+    {
+        // only reverse entries that have an image decoder
+        
+        // find the beginning to revert
+        auto itBegin = std::begin(entries);
+        while(itBegin != std::end(entries) && !itBegin->hasImageDecoder())
+        {
+            ++itBegin;
+        }
+        
+        // find end to revert
+        auto itEnd = std::end(entries) - 1;
+        while(itEnd != std::begin(entries) && !itEnd->hasImageDecoder())
+        {
+            --itEnd;
+        }
+        
+        if(std::distance(itBegin, itEnd) > 1)
+        {
+            std::reverse(itBegin, itEnd);
+        }
+    }
 
     void onDirectoryLoaded()
     {
@@ -459,6 +483,10 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
 
                 d->setStatusMessage(99, "Sorting entries");
                 d->sortEntries();
+                if(d->sortOrder == Qt::DescendingOrder)
+                {
+                    d->reverseEntries();
+                }
                 emit directoryLoaded();
             }
             catch (const UserCancellation&)
@@ -475,7 +503,6 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
 
 QSharedPointer<SmartImageDecoder> SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idxOut)
 {
-    stepsFromCurrent = (d->sortOrder == Qt::DescendingOrder) ? -stepsFromCurrent : stepsFromCurrent;
     int step = (stepsFromCurrent < 0) ? -1 : 1;
     
     auto result = std::find_if(d->entries.begin(),
@@ -629,13 +656,11 @@ bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 
 void SortedImageModel::sort(int column, Qt::SortOrder order)
 {
+    bool sortColChanged = d->currentSortedCol != column;
+    bool sortOrderChanged = d->sortOrder != order;
+    
+    d->currentSortedCol = static_cast<Column>(column);
     d->sortOrder = order;
-    this->sort(static_cast<Column>(column));
-}
-
-void SortedImageModel::sort(Column column)
-{
-    d->currentSortedCol = column;
     
     if(d->directoryWorker.isFinished())
     {
@@ -643,7 +668,20 @@ void SortedImageModel::sort(Column column)
         
         d->setStatusMessage(0, "Sorting entries");
         this->beginResetModel();
-        d->sortEntries();
+        
+        if(sortColChanged)
+        {
+            d->sortEntries();
+            if(order == Qt::DescendingOrder)
+            {
+                d->reverseEntries();
+            }
+        }
+        else if(sortOrderChanged)
+        {
+            d->reverseEntries();
+        }
+        
         this->endResetModel();
         d->setStatusMessage(100, "Sorting complete");
         
@@ -651,18 +689,14 @@ void SortedImageModel::sort(Column column)
     }
 }
 
+void SortedImageModel::sort(Column column)
+{
+    this->sort(column, d->sortOrder);
+}
+
 void SortedImageModel::sort(Qt::SortOrder order)
 {
-    if(d->directoryWorker.isFinished())
-    {
-        this->beginResetModel();
-        d->sortOrder = order;
-        this->endResetModel();
-    }
-    else
-    {
-        d->sortOrder = order;
-    }
+    this->sort(d->currentSortedCol, order);
 }
 
 QModelIndex SortedImageModel::index(const QFileInfo& info)
