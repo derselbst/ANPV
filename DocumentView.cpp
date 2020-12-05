@@ -453,15 +453,6 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
     d->currentImageDecoder = dec;
-    
-    DecodingState curState = dec->decodingState();
-    if(curState == DecodingState::Metadata ||
-       curState == DecodingState::PreviewImage ||
-       curState == DecodingState::FullImage)
-    {
-       d->addThumbnailPreview(dec->thumbnail(), dec->size());
-    }
-    
     this->loadImage();
 }
 

@@ -20,13 +20,10 @@ public:
 
     SmartTiffDecoder(const SmartTiffDecoder&) = delete;
     SmartTiffDecoder& operator=(const SmartTiffDecoder&) = delete;
-    
-    void releaseFullImage() override;
 
 protected:
-    QSize size() override;
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override;
-    void decodingLoop(DecodingState state) override;
+    QImage decodingLoop(DecodingState state) override;
     void close() override;
     
 private:

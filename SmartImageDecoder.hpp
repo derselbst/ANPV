@@ -9,8 +9,11 @@
 #include <QFileInfo>
 #include <functional>
 #include <memory>
+#include <stdexcept>
+#include <cstdint>
 
 class ExifWrapper;
+class QMetaMethod;
 
 class SmartImageDecoder : public QObject
 {
@@ -23,10 +26,8 @@ public:
     SmartImageDecoder(const SmartImageDecoder&) = delete;
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
     
-    virtual QSize size() = 0;
-    virtual void releaseFullImage();
-    
     const QFileInfo& fileInfo();
+    QSize size();
     // Returns a thumbnail preview image if available
     QImage thumbnail();
     QImage image();
@@ -34,6 +35,7 @@ public:
     QString latestMessage();
     void decode(DecodingState targetState);
     DecodingState decodingState();
+    void releaseFullImage();
     
     ExifWrapper* exif();
     
@@ -41,18 +43,23 @@ public:
     
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
-    virtual void decodingLoop(DecodingState state) = 0;
+    virtual QImage decodingLoop(DecodingState state) = 0;
     virtual void close();
+
+    void connectNotify(const QMetaMethod& signal) override;
     
     void cancelCallback();
     void setDecodingState(DecodingState state);
-    void setImage(QImage&& img);
     void setThumbnail(QImage&& thumb);
+    void setSize(QSize s);
     
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);
     void updatePreviewImage(QImage&& img);
 
+    template<typename T>
+    std::unique_ptr<T[]> allocateImageBuffer(uint32_t width, uint32_t height);
+    
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
