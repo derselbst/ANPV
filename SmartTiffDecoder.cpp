@@ -122,7 +122,7 @@ struct SmartTiffDecoder::Impl
         return size;
     }
 
-    static tsize_t qtiffWriteProc(thandle_t fd, tdata_t buf, tsize_t size)
+    static tsize_t qtiffWriteProc(thandle_t, tdata_t, tsize_t)
     {
         return 0;
     }
@@ -247,12 +247,8 @@ void SmartTiffDecoder::close()
     }
     d->tiff = nullptr;
     d->buffer = nullptr;
-}
-
-QSize SmartTiffDecoder::size()
-{
-    qWarning() << "TODO APPLY EXIF TRNASOFMRTA";
-    return QSize(d->imageInfo.width, d->imageInfo.height);
+    
+    SmartImageDecoder::close();
 }
 
 void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
@@ -286,6 +282,8 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     d->imagePageToDecode = d->findHighestResolution(pageInfos);
     d->imageInfo = pageInfos[d->imagePageToDecode];
     d->format = QImage::Format_ARGB32;
+ 
+    this->setSize(QSize(d->imageInfo.width, d->imageInfo.height));
     
     auto thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
     if(thumbnailPageToDecode >= 0)
@@ -297,12 +295,12 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
 }
 
-QImage SmartTiffDecoder::decodingLoop(DecodingState targetState)
+QImage SmartTiffDecoder::decodingLoop(DecodingState)
 {
     const size_t width = d->imageInfo.width;
     const size_t height = d->imageInfo.height;
 
-    std::unique_ptr<uint32_t> mem = this->allocateImgBuffer<uint32_t>(width, height);
+    std::unique_ptr<uint32_t[]> mem = this->allocateImageBuffer<uint32_t>(width, height);
     
     TIFFSetDirectory(d->tiff, d->imagePageToDecode);
 

@@ -22,7 +22,6 @@ public:
     SmartTiffDecoder& operator=(const SmartTiffDecoder&) = delete;
 
 protected:
-    QSize size() override;
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override;
     QImage decodingLoop(DecodingState state) override;
     void close() override;

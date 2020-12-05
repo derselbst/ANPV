@@ -26,9 +26,8 @@ public:
     SmartImageDecoder(const SmartImageDecoder&) = delete;
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
     
-    virtual QSize size() = 0;
-    
     const QFileInfo& fileInfo();
+    QSize size();
     // Returns a thumbnail preview image if available
     QImage thumbnail();
     QImage image();
@@ -52,30 +51,15 @@ protected:
     void cancelCallback();
     void setDecodingState(DecodingState state);
     void setThumbnail(QImage&& thumb);
+    void setSize(QSize s);
     
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);
     void updatePreviewImage(QImage&& img);
 
     template<typename T>
-    std::unique_ptr<T> allocateImageBuffer<T>(uint32_t width, uint32_t height)
-    {
-        size_t needed = width * height;
-        try
-        {
-            this->setDecodingMessage("Allocating image output buffer");
-
-            std::unique_ptr<T> mem(new T[needed]);
-
-            this->setDecodingState(DecodingState::PreviewImage);
-            return mem;
-        }
-        catch (const std::bad_alloc&)
-        {
-            throw std::runtime_error(Formatter() << "Unable to allocate " << needed / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
-        }
-    }
-
+    std::unique_ptr<T[]> allocateImageBuffer(uint32_t width, uint32_t height);
+    
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

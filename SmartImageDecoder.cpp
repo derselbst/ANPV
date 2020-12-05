@@ -32,6 +32,9 @@ struct SmartImageDecoder::Impl
     // the fully decoded image - might be incomplete if the state is PreviewImage
     QImage image;
     
+    // size of the fully decoded image, already available in DecodingState::Metadata
+    QSize size;
+    
     ExifWrapper exifWrapper;
     
     Impl(const QFileInfo& url) : fileInfo(url)
@@ -52,6 +55,7 @@ struct SmartImageDecoder::Impl
 
     void setImage(QImage&& img)
     {
+    qWarning() << "need to apply exif transformation!";
         image = img;
     }
 };
@@ -65,12 +69,6 @@ void SmartImageDecoder::setCancellationCallback(std::function<void(void*)>&& cc,
 {
     d->cancelCallbackInternal = std::move(cc);
     d->cancelCallbackObject = obj;
-}
-
-void SmartImageDecoder::setImage(QImage&& img)
-{
-    qWarning() << "need to apply exif transformation!";
-    d->image = std::move(img);
 }
 
 void SmartImageDecoder::setThumbnail(QImage&& thumb)
@@ -103,6 +101,11 @@ void SmartImageDecoder::setDecodingState(DecodingState state)
     }
 }
 
+void SmartImageDecoder::setSize(QSize size)
+{
+    d->size = size;
+}
+
 void SmartImageDecoder::decode(DecodingState targetState)
 {
     std::lock_guard<std::mutex> lck(d->m);
@@ -133,7 +136,7 @@ void SmartImageDecoder::decode(DecodingState targetState)
             
             this->decodeHeader(fileMapped, mapSize);
             d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
-            if (this->thumbnail().isNull)
+            if (this->thumbnail().isNull())
             {
                 this->setThumbnail(d->exifWrapper.thumbnail());
             }
@@ -187,7 +190,7 @@ void SmartImageDecoder::releaseFullImage()
     }
     else
     {
-	    // another thread is currently decoding, ignore releasing the image
+	    qInfo() << "another thread is currently decoding, ignore releasing the image";
     }
 }
 
@@ -214,6 +217,11 @@ QImage SmartImageDecoder::image()
 QImage SmartImageDecoder::thumbnail()
 {
     return d->thumbnail;
+}
+
+QSize SmartImageDecoder::size()
+{
+    return d->size;
 }
 
 ExifWrapper* SmartImageDecoder::exif()
@@ -251,3 +259,25 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
         d->lastPreviewImageUpdate = now;
     }
 }
+
+
+template<typename T>
+std::unique_ptr<T[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
+{
+    size_t needed = width * height;
+    try
+    {
+        this->setDecodingMessage("Allocating image output buffer");
+
+        std::unique_ptr<T[]> mem(new T[needed]);
+
+        this->setDecodingState(DecodingState::PreviewImage);
+        return mem;
+    }
+    catch (const std::bad_alloc&)
+    {
+        throw std::runtime_error(Formatter() << "Unable to allocate " << needed / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
+    }
+}
+
+template std::unique_ptr<uint32_t[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);

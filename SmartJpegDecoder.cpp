@@ -77,12 +77,6 @@ SmartJpegDecoder::SmartJpegDecoder(const QFileInfo& file) : SmartImageDecoder(fi
 SmartJpegDecoder::~SmartJpegDecoder() = default;
 
 
-QSize SmartJpegDecoder::size()
-{
-    qWarning() << "TODO APPLY EXIF TRNASOFMRTA";
-    return QSize(d->cinfo.output_width, d->cinfo.output_height);
-}
-
 void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
     auto& cinfo = d->cinfo;
@@ -96,7 +90,6 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
-        jpeg_destroy_decompress(&cinfo);
         // If we get here, the JPEG code has signaled an error.
         throw std::runtime_error("Error while decoding the JPEG header");
     }
@@ -104,136 +97,137 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     int ret = jpeg_read_header(&cinfo, true);
     if(ret != JPEG_HEADER_OK)
     {
-        jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error(Formatter() << "jpeg_read_header() failed with code " << ret << ", excpeted: " << JPEG_HEADER_OK);
     }
+    
+    // set overall decompression parameters
+    cinfo.buffered_image = true; /* select buffered-image mode */
+    cinfo.out_color_space = JCS_EXT_BGRX;
+    
+    this->setDecodingMessage("Calculating output dimensions");
+    // Used to set up image size so arrays can be allocated
+    jpeg_calc_output_dimensions(&cinfo);
+    
+    this->setSize(QSize(d->cinfo.output_width, d->cinfo.output_height));
 }
 
 QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
 {
-    // vector has a nontrivial destructor, be careful with setjmp/longjmp
+    // the entire jpeg() section below is clobbered by setjmp/longjmp
+    // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
+    std::unique_ptr<uint32_t[]> mem;
+    QImage image;
+    
     auto& cinfo = d->cinfo;
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
-        jpeg_destroy_decompress(&cinfo);
         // If we get here, the JPEG code has signaled an error.
         throw std::runtime_error("Error while decoding the JPEG image");
     }
+
+    static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
     
-    try
+    mem = this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
+
+    bufferSetup.resize(cinfo.output_height);
+    for(JDIMENSION i=0; i < cinfo.output_height; i++)
     {
-        // set overall decompression parameters
-        cinfo.buffered_image = true; /* select buffered-image mode */
-        cinfo.out_color_space = JCS_EXT_BGRX;
-        
-        this->setDecodingMessage("Calculating output dimensions");
-        // Used to set up image size so arrays can be allocated
-        jpeg_calc_output_dimensions(&cinfo);
-        
-        static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
-        const size_t rowStride = cinfo.output_width * sizeof(uint32_t);
-        
-        std::unique_ptr<uint32_t> mem = this->allocateImgBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
-
-        bufferSetup.resize(cinfo.output_height);
-        for(JDIMENSION i=0; i < cinfo.output_height; i++)
-        {
-            bufferSetup[i] = &mem.get()[i * rowStride];
-        }
-        
-        // set parameters for decompression
-        cinfo.dct_method = JDCT_ISLOW;
-        cinfo.dither_mode = JDITHER_FS;
-        cinfo.do_fancy_upsampling = true;
-        cinfo.enable_2pass_quant = false;
-        cinfo.do_block_smoothing = false;
-        
-        this->cancelCallback();
-
-        // Start decompressor
-        this->setDecodingMessage("Starting the JPEG decompressor");
-        
-        if (jpeg_start_decompress(&cinfo) == false)
-        {
-            qWarning() << "I/O suspension after jpeg_start_decompress()";
-        }
-        
-        // The library's output processing will automatically call jpeg_consume_input()
-        // whenever the output processing overtakes the input; thus, simple lockstep
-        // display requires no direct calls to jpeg_consume_input().  But by adding
-        // calls to jpeg_consume_input(), you can absorb data in advance of what is
-        // being displayed.  This has two benefits:
-        //   * You can limit buildup of unprocessed data in your input buffer.
-        //   * You can eliminate extra display passes by paying attention to the
-        //     state of the library's input processing.
-    //     int status;
-    //     do
-    //     {
-    //         status = jpeg_consume_input(&cinfo);
-    //     } while ((status != JPEG_SUSPENDED) && (status != JPEG_REACHED_EOI));
-
-
-        switch(cinfo.output_components)
-        {
-            case 1:
-            case 3:
-            case 4:
-                break;
-            default:
-                throw std::runtime_error(Formatter() << "Unsupported number of pixel color components: " << cinfo.output_components);
-        }
-        
-        this->setDecodingMessage("Consuming and decoding JPEG input file");
-        
-        auto totalLinesRead = cinfo.output_scanline;
-        while (!jpeg_input_complete(&cinfo))
-        {
-            /* start a new output pass */
-            jpeg_start_output(&cinfo, cinfo.input_scan_number);
-            
-            while (cinfo.output_scanline < cinfo.output_height)
-            {
-                totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
-                this->cancelCallback();
-                
-                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
-                                        cinfo.output_width,
-                                        std::min(totalLinesRead, cinfo.output_height),
-                                        rowStride,
-                                        QImage::Format_RGB32));
-            }
-            
-            /* terminate output pass */
-            jpeg_finish_output(&cinfo);
-
-            if(targetState == DecodingState::PreviewImage)
-            {
-                // only a preview image was requested, which we have finished with this first pass
-                break;
-            }
-        }
-        
-        jpeg_finish_decompress(&cinfo);
-        
-        QImage image(reinterpret_cast<uint8_t*>(mem.get()), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32,
-            [](void* buf) { delete [] static_cast<uint8_t*>(buf); }, mem.get());
-        mem.release();
-        
-        // call the progress monitor for a last time to report 100% to GUI
-        d->progMgr.completed_passes = d->progMgr.total_passes;
-        d->progMgr.progress_monitor((j_common_ptr)&cinfo);
-        this->setDecodingMessage("JPEG decoding completed successfully.");
-        
-        jpeg_destroy_decompress(&cinfo);
-
-        return image;
+        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem.get() + i * cinfo.output_width);
     }
-    catch(...)
+    
+    // set parameters for decompression
+    cinfo.dct_method = JDCT_ISLOW;
+    cinfo.dither_mode = JDITHER_FS;
+    cinfo.do_fancy_upsampling = true;
+    cinfo.enable_2pass_quant = false;
+    cinfo.do_block_smoothing = false;
+    
+    this->cancelCallback();
+
+    // Start decompressor
+    this->setDecodingMessage("Starting the JPEG decompressor");
+    
+    if (jpeg_start_decompress(&cinfo) == false)
     {
-        jpeg_abort_decompress(&cinfo);
-        jpeg_destroy_decompress(&cinfo);
-        throw;
+        qWarning() << "I/O suspension after jpeg_start_decompress()";
     }
+    
+    // The library's output processing will automatically call jpeg_consume_input()
+    // whenever the output processing overtakes the input; thus, simple lockstep
+    // display requires no direct calls to jpeg_consume_input().  But by adding
+    // calls to jpeg_consume_input(), you can absorb data in advance of what is
+    // being displayed.  This has two benefits:
+    //   * You can limit buildup of unprocessed data in your input buffer.
+    //   * You can eliminate extra display passes by paying attention to the
+    //     state of the library's input processing.
+//     int status;
+//     do
+//     {
+//         status = jpeg_consume_input(&cinfo);
+//     } while ((status != JPEG_SUSPENDED) && (status != JPEG_REACHED_EOI));
+
+
+    switch(cinfo.output_components)
+    {
+        case 1:
+        case 3:
+        case 4:
+            break;
+        default:
+            throw std::runtime_error(Formatter() << "Unsupported number of pixel color components: " << cinfo.output_components);
+    }
+    
+    this->setDecodingMessage("Consuming and decoding JPEG input file");
+    
+    const size_t rowStride = cinfo.output_width * sizeof(uint32_t);
+    auto totalLinesRead = cinfo.output_scanline;
+    while (!jpeg_input_complete(&cinfo))
+    {
+        /* start a new output pass */
+        jpeg_start_output(&cinfo, cinfo.input_scan_number);
+        
+        while (cinfo.output_scanline < cinfo.output_height)
+        {
+            totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
+            this->cancelCallback();
+            
+            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
+                                    cinfo.output_width,
+                                    std::min(totalLinesRead, cinfo.output_height),
+                                    rowStride,
+                                    QImage::Format_RGB32));
+        }
+        
+        /* terminate output pass */
+        jpeg_finish_output(&cinfo);
+
+        if(targetState == DecodingState::PreviewImage)
+        {
+            // only a preview image was requested, which we have finished with this first pass
+            break;
+        }
+    }
+    
+    jpeg_finish_decompress(&cinfo);
+    
+    image = QImage(reinterpret_cast<uint8_t*>(mem.get()), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32,
+        [](void* buf) { delete [] static_cast<uint8_t*>(buf); }, mem.get());
+    mem.release();
+    
+    // call the progress monitor for a last time to report 100% to GUI
+    d->progMgr.completed_passes = d->progMgr.total_passes;
+    d->progMgr.progress_monitor((j_common_ptr)&cinfo);
+    this->setDecodingMessage("JPEG decoding completed successfully.");
+    
+    return image;
 }
+
+void SmartJpegDecoder::close()
+{
+    jpeg_destroy_decompress(&d->cinfo);
+    
+    SmartImageDecoder::close();
+}
+
