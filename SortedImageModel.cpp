@@ -411,8 +411,6 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
     
     d->currentDir = dir;
 
-    d->setStatusMessage(0, "Loading Directory Entries");
-
     d->directoryWorker = QtConcurrent::run(QThreadPool::globalInstance(),
         [&]()
         {
@@ -422,6 +420,13 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
 
                 const int entriesToProcess = fileInfoList.size();
                 int entriesProcessed = 0;
+
+                QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
+                if (d->sortedColumnNeedsPreloadingMetadata())
+                {
+                    msg += " and reading EXIF data (making it quite slow)";
+                }
+                d->setStatusMessage(0, msg);
                 d->entries.reserve(entriesToProcess);
                 while (!fileInfoList.isEmpty())
                 {
