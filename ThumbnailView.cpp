@@ -34,6 +34,7 @@ struct ThumbnailView::Impl
 {
     ThumbnailView* p;
     ANPV* anpv;
+    bool isInitialized{false};
     
     QFileSystemModel* dirModel;
     
@@ -192,8 +193,9 @@ ThumbnailView::~ThumbnailView() = default;
 
 void ThumbnailView::changeDir(const QString& dir)
 {
-    if(d->currentDir != dir)
+    if(!d->isInitialized || d->currentDir != dir)
     {
+        d->isInitialized = true;
         d->currentDir = dir;
         QModelIndex mo = d->dirModel->index(dir);
         d->fileSystemTree->setCurrentIndex(mo);

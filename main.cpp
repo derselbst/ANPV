@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        qInfo() << "No directory given, assuming " << QDir::currentPath();
         m.showThumbnailView();
         m.setThumbnailDir(QDir::currentPath());
     }
