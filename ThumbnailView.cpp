@@ -125,6 +125,7 @@ struct ThumbnailView::Impl
             if(newCurrentIndex.isValid())
             {
                 thumbnailList->setCurrentIndex(newCurrentIndex);
+                thumbnailList->scrollTo(newCurrentIndex, QAbstractItemView::PositionAtCenter);
             }
             selectedIndexBackup = QFileInfo();
         }
@@ -197,6 +198,7 @@ void ThumbnailView::changeDir(const QString& dir)
         QModelIndex mo = d->dirModel->index(dir);
         d->fileSystemTree->setCurrentIndex(mo);
         d->fileSystemTree->setExpanded(mo, true);
+        d->fileSystemTree->scrollTo(mo, QAbstractItemView::PositionAtCenter);
         d->anpv->notifyDecodingState(DecodingState::Ready);
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         d->fileModel->changeDirAsync(dir);
@@ -208,5 +210,6 @@ void ThumbnailView::selectThumbnail(const QModelIndex& idx)
     if(idx.isValid())
     {
         d->thumbnailList->setCurrentIndex(idx);
+        d->thumbnailList->scrollTo(idx, QAbstractItemView::PositionAtCenter);
     }
 }
