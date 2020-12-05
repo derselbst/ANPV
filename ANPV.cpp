@@ -26,6 +26,7 @@
 #include <QAction>
 #include <QMenuBar>
 #include <QMenu>
+#include <QUndoStack>
 
 #include "DocumentView.hpp"
 #include "ThumbnailView.hpp"
@@ -38,6 +39,7 @@ struct ANPV::Impl
 {
     ANPV* q;
     
+    QUndoStack* undoStack;
     QProgressBar* progressBar;
     QStackedLayout* stackedLayout;
     QWidget *stackedLayoutWidget;
@@ -46,12 +48,18 @@ struct ANPV::Impl
     
     SortedImageModel* fileModel;
     
+    QMenu* menuFile;
+    QMenu* menuEdit;
     QMenu* menuSort;
     
     QAction* actionSortFileName;
     QAction* actionSortFileSize;
     QActionGroup* actionGroupSortColumn;
     QActionGroup* actionGroupSortOrder;
+    
+    QAction *actionUndo;
+    QAction *actionRedo;
+    QAction *actionExit;
     
     Impl(ANPV* parent) : q(parent)
     {
@@ -190,10 +198,28 @@ struct ANPV::Impl
         addSlowHint(action);
         connect(action, &QAction::triggered, q, [&](bool){ q->d->fileModel->sort(SortedImageModel::Column::Lens); });
         actionGroupSortColumn->addAction(action);
+        
+        actionUndo = undoStack->createUndoAction(q, "&Undo");
+        actionUndo->setShortcuts(QKeySequence::Undo);
+
+        actionRedo = undoStack->createRedoAction(q, "&Redo");
+        actionRedo->setShortcuts(QKeySequence::Redo);
+
+        actionExit = new QAction("E&xit", q);
+        actionExit->setShortcuts(QKeySequence::Quit);
+        connect(actionExit, &QAction::triggered, q, &ANPV::close);
+
     }
     
     void createMenus()
     {
+        menuFile = q->menuBar()->addMenu("&File");
+        menuFile->addAction(actionExit);
+
+        menuEdit = q->menuBar()->addMenu("&Edit");
+        menuEdit->addAction(actionUndo);
+        menuEdit->addAction(actionRedo);
+        
         menuSort = q->menuBar()->addMenu("&Sort");
         menuSort->addActions(actionGroupSortColumn->actions());
         menuSort->addActions(actionGroupSortOrder->actions());
@@ -229,9 +255,6 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     
-    d->createActions();
-    d->createMenus();
-    
     d->progressBar = new QProgressBar(this);
     d->progressBar->setMinimum(0);
     d->progressBar->setMaximum(100);
@@ -253,6 +276,11 @@ ANPV::ANPV(QSplashScreen *splash)
     d->stackedLayoutWidget = new QWidget(this);
     d->stackedLayoutWidget->setLayout(d->stackedLayout);
     this->setCentralWidget(d->stackedLayoutWidget);
+    
+    d->undoStack = new QUndoStack(this);
+    
+    d->createActions();
+    d->createMenus();
     
     this->notifyDecodingState(DecodingState::Ready);
 }
