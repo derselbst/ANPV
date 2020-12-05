@@ -568,19 +568,6 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     {
                         return thumbnail;
                     }
-                    else
-                    {
-                        if(state == DecodingState::Metadata)
-                        {
-                            d->startImageDecoding(index, e->getDecoder(), DecodingState::PreviewImage);
-                            break;
-                        }
-                        else
-                        {
-                            QImage deepCopyImage = e->getDecoder()->image().scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                            return deepCopyImage;
-                        }
-                    }
                 }
                 }
             }
