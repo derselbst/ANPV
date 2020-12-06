@@ -460,7 +460,6 @@ void DocumentView::loadImage()
 {
     d->anpv->notifyProgress(0, QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
     
-    
     DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.data(), this);
     d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
     
@@ -480,3 +479,11 @@ void DocumentView::loadImage()
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 }
 
+QFileInfo DocumentView::currentFile()
+{
+    if(d->currentImageDecoder)
+    {
+        return d->currentImageDecoder->fileInfo();
+    }
+    return QFileInfo();
+}

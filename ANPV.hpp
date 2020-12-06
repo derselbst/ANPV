@@ -26,7 +26,8 @@ public:
     void notifyProgress(int progress);
     void notifyDecodingState(DecodingState state);
     
-    void executeMoveCommand(MoveFileCommand*);
+    void moveFilesSlot(const QString& targetDir);
+    void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
     
 public slots:
     void showImageView();

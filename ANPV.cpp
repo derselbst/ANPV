@@ -36,6 +36,7 @@
 #include "SortedImageModel.hpp"
 #include "SmartImageDecoder.hpp"
 #include "MoveFileCommand.hpp"
+#include "FileOperationConfig.hpp"
 
 
 struct ANPV::Impl
@@ -59,9 +60,11 @@ struct ANPV::Impl
     QAction* actionSortFileSize;
     QActionGroup* actionGroupSortColumn;
     QActionGroup* actionGroupSortOrder;
+    QActionGroup* actionGroupFileOperation;
     
     QAction *actionUndo;
     QAction *actionRedo;
+    QAction *actionFileOperationConfigDialog;
     QAction *actionExit;
     
     Impl(ANPV* parent) : q(parent)
@@ -113,6 +116,13 @@ struct ANPV::Impl
     void createActions()
     {
         QAction* action;
+        
+        actionGroupFileOperation = new QActionGroup(q);
+        connect(actionGroupFileOperation, &QActionGroup::triggered, [&](QAction* act)
+        {
+            QString targetDir = act->data().toString();
+            q->moveFilesSlot(targetDir);
+        });
         
         actionGroupSortOrder = new QActionGroup(q);
         
@@ -207,6 +217,18 @@ struct ANPV::Impl
 
         actionRedo = undoStack->createRedoAction(q, "&Redo");
         actionRedo->setShortcuts(QKeySequence::Redo);
+        
+        actionFileOperationConfigDialog = new QAction("File Copy/Move Configuration", q);
+        connect(actionFileOperationConfigDialog, &QAction::triggered, [&](bool)
+        {
+            FileOperationConfig* dia = new FileOperationConfig(actionGroupFileOperation, q);
+            connect(dia, &QDialog::accepted, [&]()
+            {
+                menuEdit->addActions(actionGroupFileOperation->actions());
+            });
+            
+            dia->open();
+        });
 
         actionExit = new QAction("E&xit", q);
         actionExit->setShortcuts(QKeySequence::Quit);
@@ -222,6 +244,8 @@ struct ANPV::Impl
         menuEdit = q->menuBar()->addMenu("&Edit");
         menuEdit->addAction(actionUndo);
         menuEdit->addAction(actionRedo);
+        menuEdit->addSeparator();
+        menuEdit->addAction(actionFileOperationConfigDialog);
         menuEdit->addSeparator();
         
         menuSort = q->menuBar()->addMenu("&Sort");
@@ -336,8 +360,37 @@ void ANPV::notifyDecodingState(DecodingState state)
     d->progressBar->setStyleSheet(d->getProgressStyle(state));
 }
 
-void ANPV::executeMoveCommand(MoveFileCommand* cmd)
+void ANPV::moveFilesSlot(const QString& targetDir)
 {
+    if(targetDir.isEmpty())
+    {
+        return;
+    }
+    
+    if(d->stackedLayout->currentWidget() == d->thumbnailViewer)
+    {
+        QList<QString> selectedFileNames;
+        QString curDir;
+        d->thumbnailViewer->getSelectedFiles(selectedFileNames, curDir);
+        
+        this->moveFilesSlot(selectedFileNames, curDir, targetDir);
+    }
+    else if(d->stackedLayout->currentWidget() == d->imageViewer)
+    {
+        QFileInfo info = d->imageViewer->currentFile();
+        if(!info.filePath().isEmpty())
+        {
+            QList<QString> files;
+            files.append(info.fileName());
+            this->moveFilesSlot(files, info.absoluteDir().absolutePath(), targetDir);
+        }
+    }
+}
+
+void ANPV::moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir)
+{
+    MoveFileCommand* cmd = new MoveFileCommand(files, sourceDir, targetDir);
+    
     connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
     {
         QMessageBox box(QMessageBox::Critical,
@@ -362,7 +415,6 @@ void ANPV::executeMoveCommand(MoveFileCommand* cmd)
         box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
         box.exec();
     });
-//     connect(cmd, &MoveFileCommand::moveSucceeded, [&](QList<QString> filesSucceeded) {});
     
     d->undoStack->push(cmd);
 }

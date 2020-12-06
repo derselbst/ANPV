@@ -159,21 +159,14 @@ struct ThumbnailView::Impl
             return;
         }
         
-        QModelIndexList selectedIdx = thumbnailList->selectionModel()->selectedRows();
         QList<QString> selectedFileNames;
+        QString curDir;
+        p->getSelectedFiles(selectedFileNames, curDir);
         
-        for(int i=0; i<selectedIdx.size(); i++)
-        {
-            QString name = selectedIdx[i].data().toString();
-            selectedFileNames.append(std::move(name));
-        }
-        
-        MoveFileCommand* cmd;
         switch(op)
         {
             case Move:
-                cmd = new MoveFileCommand(selectedFileNames, currentDir.absolutePath(), dir);
-                anpv->executeMoveCommand(cmd);
+                anpv->moveFilesSlot(selectedFileNames, currentDir.absolutePath(), dir);
                 break;
             case Copy:
             case Delete:
@@ -282,4 +275,17 @@ void ThumbnailView::selectThumbnail(const QModelIndex& idx)
         d->thumbnailList->setCurrentIndex(idx);
         d->thumbnailList->scrollTo(idx, QAbstractItemView::PositionAtCenter);
     }
+}
+
+void ThumbnailView::getSelectedFiles(QList<QString>& selectedFiles, QString& sourceDir)
+{
+    QModelIndexList selectedIdx = d->thumbnailList->selectionModel()->selectedRows();
+    
+    for(int i=0; i<selectedIdx.size(); i++)
+    {
+        QString name = selectedIdx[i].data().toString();
+        selectedFiles.append(std::move(name));
+    }
+    
+    sourceDir = d->currentDir.absolutePath();
 }

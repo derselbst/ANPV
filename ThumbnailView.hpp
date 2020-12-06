@@ -4,6 +4,7 @@
 #include <memory>
 #include <QMainWindow>
 #include <QImage>
+#include <QList>
 
 class ANPV;
 class QGraphicsScene;
@@ -22,6 +23,8 @@ public:
     ThumbnailView(SortedImageModel* model, ANPV *parent);
     ~ThumbnailView() override;
     
+    void getSelectedFiles(QList<QString>& selectedFiles, QString& sourceDir);
+
 public slots:
     void changeDir(const QString& dir);
     void selectThumbnail(const QModelIndex& idx);

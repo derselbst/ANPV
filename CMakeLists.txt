@@ -127,6 +127,8 @@ ExifOverlay.cpp
 ExifOverlay.hpp
 ExifWrapper.cpp
 ExifWrapper.hpp
+FileOperationConfig.cpp
+FileOperationConfig.hpp
 Formatter.hpp
 ImageDecodeTask.cpp
 ImageDecodeTask.hpp

@@ -5,6 +5,7 @@
 #include <QGraphicsView>
 #include <QImage>
 #include <QString>
+#include <QFileInfo>
 
 class ANPV;
 class QGraphicsScene;
@@ -22,6 +23,7 @@ public:
     DocumentView(ANPV *parent);
     ~DocumentView() override;
 
+    QFileInfo currentFile();
     void loadImage();
     void loadImage(QString url);
     void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
