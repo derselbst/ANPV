@@ -17,6 +17,9 @@
 #include <QString>
 #include <QTreeView>
 #include <QDockWidget>
+#include <QAction>
+#include <QFileDialog>
+#include <QMessageBox>
 
 #include <vector>
 #include <algorithm>
@@ -29,6 +32,7 @@
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
 #include "SortedImageModel.hpp"
+#include "MoveFileCommand.hpp"
 
 struct ThumbnailView::Impl
 {
@@ -46,6 +50,10 @@ struct ThumbnailView::Impl
     QDockWidget* fileSystemTreeDockContainer;
     
     QFileInfo selectedIndexBackup;
+    
+    QAction* actionCut;
+    QAction* actionCopy;
+    QAction* actionDelete;
     
     Impl(ThumbnailView* parent) : p(parent)
     {}
@@ -131,6 +139,50 @@ struct ThumbnailView::Impl
             selectedIndexBackup = QFileInfo();
         }
     }
+    
+    enum Operation { Move, Copy, Delete };
+    QString lastTargetDirectory;
+    void onFileOperation(Operation op)
+    {
+        QString dirToOpen = lastTargetDirectory.isNull() ? currentDir.absolutePath() : lastTargetDirectory;
+        QString dir = QFileDialog::getExistingDirectory(p, "Select Target Directory",
+                                                dirToOpen,
+                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        
+        if(dir.isEmpty())
+        {
+            return;
+        }
+        if(QDir(dir) == currentDir)
+        {
+            QMessageBox::information(p, "That doesn't work", "Destination folder cannot be equal with source folder!");
+            return;
+        }
+        
+        QModelIndexList selectedIdx = thumbnailList->selectionModel()->selectedRows();
+        QList<QString> selectedFileNames;
+        
+        for(int i=0; i<selectedIdx.size(); i++)
+        {
+            QString name = selectedIdx[i].data().toString();
+            selectedFileNames.append(std::move(name));
+        }
+        
+        MoveFileCommand* cmd;
+        switch(op)
+        {
+            case Move:
+                cmd = new MoveFileCommand(selectedFileNames, currentDir.absolutePath(), dir);
+                anpv->executeMoveCommand(cmd);
+                break;
+            case Copy:
+            case Delete:
+                 QMessageBox::information(p, "Not yet implemented", "not yet impl");
+                break;
+        }
+        
+        lastTargetDirectory = dir;
+    }
 };
 
 ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
@@ -149,6 +201,18 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     connect(d->fileModel, &SortedImageModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
     connect(d->fileModel, &SortedImageModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
     
+    d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
+    d->actionCut->setShortcuts(QKeySequence::Cut);
+    connect(d->actionCut, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Move); });
+    
+    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
+    d->actionCopy->setShortcuts(QKeySequence::Copy);
+    connect(d->actionCopy, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Copy); });
+    
+    d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
+    d->actionDelete->setShortcuts(QKeySequence::Delete);
+    connect(d->actionDelete, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Delete); });
+    
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);
     d->thumbnailList->setViewMode(QListView::IconMode);
@@ -158,6 +222,10 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     d->thumbnailList->setWordWrap(true);
     d->thumbnailList->setWrapping(true);
     d->thumbnailList->setSpacing(2);
+    d->thumbnailList->setContextMenuPolicy(Qt::ActionsContextMenu);
+    d->thumbnailList->addAction(d->actionCut);
+    d->thumbnailList->addAction(d->actionCopy);
+    d->thumbnailList->addAction(d->actionDelete);
     
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     

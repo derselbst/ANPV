@@ -9,6 +9,8 @@
 
 #include "DecodingState.hpp"
 
+class QUndoCommand;
+class MoveFileCommand;
 class QSplashScreen;
 class SmartImageDecoder;
 
@@ -23,6 +25,8 @@ public:
     void notifyProgress(int progress, QString message);
     void notifyProgress(int progress);
     void notifyDecodingState(DecodingState state);
+    
+    void executeMoveCommand(MoveFileCommand*);
     
 public slots:
     void showImageView();

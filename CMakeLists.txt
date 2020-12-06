@@ -162,6 +162,10 @@ SortedImageModel.cpp
 SortedImageModel.hpp
 MessageWidget.cpp
 MessageWidget.hpp
+MoveFileCommand.cpp
+MoveFileCommand.hpp
+Settings.cpp
+Settings.hpp
 SmartImageDecoder.cpp
 SmartImageDecoder.hpp
 SmartJpegDecoder.cpp
@@ -174,5 +178,5 @@ UserCancellation.hpp
 )
 
 add_executable(anpv ${SRC})
-target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2)
+target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 stdc++fs)
 target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})

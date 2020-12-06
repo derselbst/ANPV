@@ -27,12 +27,15 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QUndoStack>
+#include <QMessageBox>
+#include <QPair>
 
 #include "DocumentView.hpp"
 #include "ThumbnailView.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
 #include "SmartImageDecoder.hpp"
+#include "MoveFileCommand.hpp"
 
 
 struct ANPV::Impl
@@ -219,6 +222,7 @@ struct ANPV::Impl
         menuEdit = q->menuBar()->addMenu("&Edit");
         menuEdit->addAction(actionUndo);
         menuEdit->addAction(actionRedo);
+        menuEdit->addSeparator();
         
         menuSort = q->menuBar()->addMenu("&Sort");
         menuSort->addActions(actionGroupSortColumn->actions());
@@ -330,4 +334,35 @@ void ANPV::notifyProgress(int progress)
 void ANPV::notifyDecodingState(DecodingState state)
 {
     d->progressBar->setStyleSheet(d->getProgressStyle(state));
+}
+
+void ANPV::executeMoveCommand(MoveFileCommand* cmd)
+{
+    connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
+    {
+        QMessageBox box(QMessageBox::Critical,
+                    "Move operation failed",
+                    "Some files could not be moved to the destination folder. See details below.",
+                    QMessageBox::Ok,
+                    this);
+        
+        QString details;
+        for(int i=0; i<failedFilesWithReason.size(); i++)
+        {
+            QPair<QString, QString>& p = failedFilesWithReason[i];
+            details += p.first;
+            
+            if(!p.second.isEmpty())
+            {
+                details += QString(": ") + p.second;
+                details += "\n";
+            }
+        }
+        box.setDetailedText(details);
+        box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+        box.exec();
+    });
+//     connect(cmd, &MoveFileCommand::moveSucceeded, [&](QList<QString> filesSucceeded) {});
+    
+    d->undoStack->push(cmd);
 }
