@@ -100,34 +100,6 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
 endif()
 
 find_package(Qt5 COMPONENTS Widgets Concurrent REQUIRED)
-#     
-#     HANDLE_FOUND(Qt5Widgets)
-#     
-#     if(${Qt5Widgets_FOUND} AND ${Qt5DBus_FOUND})
-#         set(USE_GUI TRUE)
-#         add_definitions(-DUSE_GUI)
-#         
-#         # We need add -DQT_WIDGETS_LIB when using QtWidgets in Qt 5.
-#         add_definitions(${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS})
-#         
-#         MY_PRINT(QT5CORE)
-# 
-#     endif(${Qt5Widgets_FOUND} AND ${Qt5DBus_FOUND})
-#     
-#     summary_add("QT GUI support" USE_GUI)
-#     
-#     find_package(Qt5OpenGL)
-#     HANDLE_FOUND(Qt5OpenGL)
-# 
-#     # OpenGL & GLEW library
-#     find_package(OpenGL)
-#     HANDLE_FOUND(OPENGL)
-#     
-#     if(Qt5OpenGL_FOUND AND OPENGL_FOUND)
-#         set(USE_VISUALIZER TRUE)
-#         add_definitions(-DUSE_VISUALIZER)
-#     endif(Qt5OpenGL_FOUND AND OPENGL_FOUND)
-
 
 find_package(JPEG REQUIRED)
 
@@ -177,6 +149,9 @@ ThumbnailView.hpp
 UserCancellation.hpp
 )
 
-add_executable(anpv ${SRC})
+qt5_wrap_ui(UI_HEADERS
+    FileOperationConfig.ui)
+
+add_executable(anpv ${SRC} ${UI_HEADERS})
 target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 stdc++fs)
 target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
