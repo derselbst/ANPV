@@ -196,15 +196,15 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     
     d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
     d->actionCut->setShortcuts(QKeySequence::Cut);
-    connect(d->actionCut, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Move); });
+    connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
     
     d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
     d->actionCopy->setShortcuts(QKeySequence::Copy);
-    connect(d->actionCopy, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Copy); });
+    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Copy); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
-    connect(d->actionDelete, &QAction::triggered, [&](){ d->onFileOperation(Impl::Operation::Delete); });
+    connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
     
     d->thumbnailList = new QListView(this);
     d->thumbnailList->setModel(d->fileModel);

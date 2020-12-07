@@ -95,7 +95,7 @@ QSharedPointer<ImageDecodeTask> DecoderFactory::createDecodeTask(QSharedPointer<
     auto task = d->taskContainer.back();
     
     QObject::connect(task.data(), &ImageDecodeTask::finished,
-                     [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
+                     this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
     
     return task;
 }

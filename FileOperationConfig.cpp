@@ -19,10 +19,10 @@ FileOperationConfig::FileOperationConfig(QActionGroup* fileOperationActionGroup,
     connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &FileOperationConfig::accept);
     connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &FileOperationConfig::reject);
     
-    connect(ui->pushButton, &QPushButton::clicked, [&](){ this->onBrowseClicked(ui->lineEdit); });
-    connect(ui->pushButton_2, &QPushButton::clicked, [&](){ this->onBrowseClicked(ui->lineEdit_2); });
-    connect(ui->pushButton_3, &QPushButton::clicked, [&](){ this->onBrowseClicked(ui->lineEdit_3); });
-    connect(ui->pushButton_4, &QPushButton::clicked, [&](){ this->onBrowseClicked(ui->lineEdit_4); });
+    connect(ui->pushButton, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit); });
+    connect(ui->pushButton_2, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_2); });
+    connect(ui->pushButton_3, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_3); });
+    connect(ui->pushButton_4, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_4); });
     
     this->fillDiag();
 }

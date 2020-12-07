@@ -118,7 +118,7 @@ struct ANPV::Impl
         QAction* action;
         
         actionGroupFileOperation = new QActionGroup(q);
-        connect(actionGroupFileOperation, &QActionGroup::triggered, [&](QAction* act)
+        connect(actionGroupFileOperation, &QActionGroup::triggered, q, [&](QAction* act)
         {
             QString targetDir = act->data().toString();
             q->moveFilesSlot(targetDir);
@@ -219,10 +219,10 @@ struct ANPV::Impl
         actionRedo->setShortcuts(QKeySequence::Redo);
         
         actionFileOperationConfigDialog = new QAction("File Copy/Move Configuration", q);
-        connect(actionFileOperationConfigDialog, &QAction::triggered, [&](bool)
+        connect(actionFileOperationConfigDialog, &QAction::triggered, q, [&](bool)
         {
             FileOperationConfig* dia = new FileOperationConfig(actionGroupFileOperation, q);
-            connect(dia, &QDialog::accepted, [&]()
+            connect(dia, &QDialog::accepted, q, [&]()
             {
                 menuEdit->addActions(actionGroupFileOperation->actions());
             });
