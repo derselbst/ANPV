@@ -44,7 +44,12 @@ void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destina
         fs::path dest(targetFolder);
         dest /= it->toStdString();
         
-        if(fs::exists(dest))
+        if(!fs::exists(src))
+        {
+            failedMoves.append(QPair(*it, QString("Source vanished.")));
+            it = filesToMove.erase(it);
+        }
+        else if(fs::exists(dest))
         {
             failedMoves.append(QPair(*it, QString("Destination already exists.")));
             it = filesToMove.erase(it);
