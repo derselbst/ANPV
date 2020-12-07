@@ -15,7 +15,7 @@ struct ImageDecodeTask::Impl
     
     std::atomic<bool> isCancelled{false};
     
-    Impl(QSharedPointer<SmartImageDecoder>&& dec, DecodingState t) : decoder(std::move(dec)), targetState(t)
+    Impl(QSharedPointer<SmartImageDecoder> dec, DecodingState t) : decoder(dec), targetState(t)
     {}
     
     static void throwIfCancelled(void* self)
@@ -27,7 +27,7 @@ struct ImageDecodeTask::Impl
     }
 };
 
-ImageDecodeTask::ImageDecodeTask(QSharedPointer<SmartImageDecoder>&& dec, DecodingState targetState) : d(std::make_unique<Impl>(std::move(dec), targetState))
+ImageDecodeTask::ImageDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState) : d(std::make_unique<Impl>(dec, targetState))
 {
     this->setAutoDelete(false);
     d->decoder->setCancellationCallback(&ImageDecodeTask::Impl::throwIfCancelled, d.get());

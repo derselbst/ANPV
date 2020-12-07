@@ -14,7 +14,7 @@ class ImageDecodeTask : public QObject, public QRunnable
     Q_OBJECT
 
 public:
-    ImageDecodeTask(QSharedPointer<SmartImageDecoder>&& d, DecodingState targetState);
+    ImageDecodeTask(QSharedPointer<SmartImageDecoder> d, DecodingState targetState);
     ~ImageDecodeTask();
     void run() override;
     void cancel() noexcept;

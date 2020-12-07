@@ -90,12 +90,12 @@ void DecoderFactory::configureDecoder(SmartImageDecoder* dec, DocumentView* dc)
 
 QSharedPointer<ImageDecodeTask> DecoderFactory::createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
 {
-    d->taskContainer.emplace_back(new ImageDecodeTask(std::move(dec), targetState), &QObject::deleteLater);
+    d->taskContainer.emplace_back(new ImageDecodeTask(dec, targetState), &QObject::deleteLater);
     
     auto task = d->taskContainer.back();
     
     QObject::connect(task.data(), &ImageDecodeTask::finished,
-                     this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
+                     [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
     
     return task;
 }

@@ -30,7 +30,7 @@ struct Entry
     Entry(QFileInfo&& info) : info(std::move(info))
     {}
     
-    Entry(QSharedPointer<SmartImageDecoder>&& d) : dec(std::move(d))
+    Entry(QSharedPointer<SmartImageDecoder> d) : dec(d)
     {}
     
     ~Entry()
