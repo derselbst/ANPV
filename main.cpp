@@ -30,11 +30,6 @@ int main(int argc, char *argv[])
     splash.show();
     
     ANPV m(&splash);
-    /*
-    splash.showMessage("Initializing objects...");
-    QMainWindow m;
-    DocumentController dc(&m);
-    */
     m.show();
     splash.finish(&m);
     
@@ -59,6 +54,7 @@ int main(int argc, char *argv[])
         else
         {
             qCritical() << "Path '" << argv[1] << "' not found";
+            return -1;
         }
     }
     else
