@@ -91,7 +91,7 @@ struct ThumbnailView::Impl
     void onTreeClicked(const QModelIndex& idx)
     {
         QFileInfo info = dirModel->fileInfo(idx);
-        p->changeDir(info.absoluteFilePath());
+        p->changeDir(info.absoluteFilePath(), true);
     }
     
     void onDirectoryLoadingProgress(int prog)
@@ -252,7 +252,7 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
 
 ThumbnailView::~ThumbnailView() = default;
 
-void ThumbnailView::changeDir(const QString& dir)
+void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
 {
     if(!d->isInitialized || d->currentDir != dir)
     {
@@ -261,7 +261,10 @@ void ThumbnailView::changeDir(const QString& dir)
         QModelIndex mo = d->dirModel->index(dir);
         d->fileSystemTree->setCurrentIndex(mo);
         d->fileSystemTree->setExpanded(mo, true);
-        d->fileSystemTree->scrollTo(mo, QAbstractItemView::PositionAtCenter);
+        if(!skipScrollTo)
+        {
+            d->fileSystemTree->scrollTo(mo, QAbstractItemView::PositionAtCenter);
+        }
         d->anpv->notifyDecodingState(DecodingState::Ready);
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         d->fileModel->changeDirAsync(dir);

@@ -26,7 +26,7 @@ public:
     void getSelectedFiles(QList<QString>& selectedFiles, QString& sourceDir);
 
 public slots:
-    void changeDir(const QString& dir);
+    void changeDir(const QString& dir, bool skipScrollTo=false);
     void selectThumbnail(const QModelIndex& idx);
 
 private:
