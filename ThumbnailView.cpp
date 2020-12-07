@@ -276,7 +276,15 @@ void ThumbnailView::selectThumbnail(const QModelIndex& idx)
     if(idx.isValid())
     {
         d->thumbnailList->setCurrentIndex(idx);
-        d->thumbnailList->scrollTo(idx, QAbstractItemView::PositionAtCenter);
+    }
+}
+
+void ThumbnailView::scrollToCurrentImage()
+{
+    QModelIndex cur = d->thumbnailList->currentIndex();
+    if(cur.isValid())
+    {
+        d->thumbnailList->scrollTo(cur, QAbstractItemView::PositionAtCenter);
     }
 }
 

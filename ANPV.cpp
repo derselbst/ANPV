@@ -323,6 +323,7 @@ void ANPV::showImageView()
 
 void ANPV::showThumbnailView()
 {
+    d->thumbnailViewer->scrollToCurrentImage();
     d->stackedLayout->setCurrentWidget(d->thumbnailViewer);
 }
 

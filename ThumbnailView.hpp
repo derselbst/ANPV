@@ -27,6 +27,7 @@ public:
 
 public slots:
     void changeDir(const QString& dir, bool skipScrollTo=false);
+    void scrollToCurrentImage();
     void selectThumbnail(const QModelIndex& idx);
 
 private:
