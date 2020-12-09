@@ -88,7 +88,7 @@ struct ThumbnailView::Impl
         }
     }
     
-    void onTreeClicked(const QModelIndex& idx)
+    void onTreeActivated(const QModelIndex& idx)
     {
         QFileInfo info = dirModel->fileInfo(idx);
         p->changeDir(info.absoluteFilePath(), true);
@@ -239,7 +239,7 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     d->fileSystemTree->setSelectionMode(QAbstractItemView::SingleSelection);
     d->fileSystemTree->setRootIndex(d->dirModel->index(d->dirModel->rootPath()));
     
-    connect(d->fileSystemTree, &QTreeView::clicked, this,  [&](const QModelIndex &idx){d->onTreeClicked(idx);});
+    connect(d->fileSystemTree, &QTreeView::activated, this,  [&](const QModelIndex &idx){d->onTreeActivated(idx);});
     connect(d->fileSystemTree, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(d->fileSystemTree, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     
@@ -260,7 +260,6 @@ void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
         d->currentDir = dir;
         QModelIndex mo = d->dirModel->index(dir);
         d->fileSystemTree->setCurrentIndex(mo);
-        d->fileSystemTree->setExpanded(mo, true);
         if(!skipScrollTo)
         {
             d->fileSystemTree->scrollTo(mo, QAbstractItemView::PositionAtCenter);
