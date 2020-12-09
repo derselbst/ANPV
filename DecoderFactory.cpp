@@ -12,6 +12,7 @@
 #include <QThreadPool>
 #include <QDebug>
 #include <vector>
+#include <mutex>
 
 struct DecoderFactory::Impl
 {
@@ -19,9 +20,13 @@ struct DecoderFactory::Impl
     //
     // This is used when shutting down the application to cancel any pending tasks
     std::vector<QSharedPointer<ImageDecodeTask>> taskContainer;
-     
+    
+    std::mutex m;
+    
     void onAboutToQuit()
     {
+        std::lock_guard<std::mutex> l(this->m);
+        
         for(size_t i=0; i < taskContainer.size(); i++)
         {
             (void)QThreadPool::globalInstance()->tryTake(taskContainer[i].data());
@@ -35,6 +40,8 @@ struct DecoderFactory::Impl
     
     void onDecodingTaskFinished(ImageDecodeTask* t)
     {
+        std::lock_guard<std::mutex> l(this->m);
+        
         auto result = std::find_if(taskContainer.begin(),
                                    taskContainer.end(),
                                 [&](const QSharedPointer<ImageDecodeTask>& other)
@@ -90,12 +97,19 @@ void DecoderFactory::configureDecoder(SmartImageDecoder* dec, DocumentView* dc)
 
 QSharedPointer<ImageDecodeTask> DecoderFactory::createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
 {
-    d->taskContainer.emplace_back(new ImageDecodeTask(dec, targetState), &QObject::deleteLater);
+    QSharedPointer<ImageDecodeTask> task;
     
-    auto task = d->taskContainer.back();
+    {
+        std::lock_guard<std::mutex> l(d->m);
+        
+        d->taskContainer.emplace_back(new ImageDecodeTask(dec, targetState), &QObject::deleteLater);
+        task = d->taskContainer.back();
+    }
     
     QObject::connect(task.data(), &ImageDecodeTask::finished,
-                     this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); });
+                     this, [&](ImageDecodeTask* t){ d->onDecodingTaskFinished(t); },
+                     Qt::DirectConnection // directly call the slot, we have a mutex for sync
+                    );
     
     return task;
 }
