@@ -33,6 +33,32 @@ struct Entry
     Entry(QSharedPointer<SmartImageDecoder> d) : dec(d)
     {}
     
+    Entry(const Entry& e) = delete;
+    Entry& operator=(const Entry& e) = delete;
+    
+    Entry(Entry&& other)
+    {
+        *this = std::move(other);
+    }
+    
+    Entry& operator=(Entry&& other)
+    {
+        if(other.hasImageDecoder())
+        {
+            this->dec = other.dec;
+            this->task = other.task;
+            this->future = other.future;
+            other.task = nullptr;
+            other.dec = nullptr;
+        }
+        else
+        {
+            this->info = other.info;
+        }
+        
+        return *this;
+    }
+    
     ~Entry()
     {
         if(task)
