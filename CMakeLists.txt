@@ -136,6 +136,8 @@ SortedImageModel.cpp
 SortedImageModel.hpp
 MessageWidget.cpp
 MessageWidget.hpp
+MoonPhase.cpp
+MoonPhase.hpp
 MoveFileCommand.cpp
 MoveFileCommand.hpp
 Settings.cpp

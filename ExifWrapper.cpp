@@ -3,6 +3,7 @@
 
 #include "AfPointOverlay.hpp"
 #include "Formatter.hpp"
+#include "MoonPhase.hpp"
 
 #include <QByteArray>
 #include <QImage>
@@ -452,10 +453,11 @@ QString ExifWrapper::formatToString()
     QDateTime dt = this->dateRecorded();
     if(dt.isValid())
     {
+        int phase = MoonPhase::fromDateTime(dt);
         f << "\nRecorded on:\n"
           << dt.toString("yyyy-MM-dd (dddd)\n").toStdString()
           << dt.toString("hh:mm:ss").toStdString()
-          << "\n";
+          << "\n" << MoonPhase::formatToString(phase).toStdString() << " (" << phase << "%)\n";
     }
     
     return QString(f.str().c_str());
