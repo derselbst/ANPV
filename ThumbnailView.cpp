@@ -20,9 +20,11 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QWheelEvent>
 
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 #include "AfPointOverlay.hpp"
 #include "SmartImageDecoder.hpp"
@@ -298,4 +300,29 @@ void ThumbnailView::getSelectedFiles(QList<QString>& selectedFiles, QString& sou
     }
     
     sourceDir = d->currentDir.absolutePath();
+}
+
+void ThumbnailView::wheelEvent(QWheelEvent *event)
+{
+    auto angleDelta = event->angleDelta();
+
+    if (event->modifiers() & Qt::ControlModifier)
+    {
+        double s = d->fileModel->iconHeight();
+        // zoom
+        if(angleDelta.y() > 0)
+        {
+            d->fileModel->setIconHeight(static_cast<int>(std::ceil(s * 1.2)));
+            event->accept();
+            return;
+        }
+        else if(angleDelta.y() < 0)
+        {
+            d->fileModel->setIconHeight(static_cast<int>(std::floor(s / 1.2)));
+            event->accept();
+            return;
+        }
+    }
+
+    QMainWindow::wheelEvent(event);
 }

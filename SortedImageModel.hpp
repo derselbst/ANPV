@@ -47,6 +47,9 @@ public:
 
     void sort(Column column);
     void sort(Qt::SortOrder order);
+    
+    int iconHeight() const;
+    void setIconHeight(int);
 
 public: // QAbstractItemModel
     

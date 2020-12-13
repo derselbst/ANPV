@@ -126,6 +126,8 @@ struct SortedImageModel::Impl
     // The column which is currently sorted
     Column currentSortedCol = Column::FileName;
     Qt::SortOrder sortOrder;
+    
+    int iconHeight = 150;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}
@@ -624,13 +626,12 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     QImage thumbnail = e->getDecoder()->thumbnail();
                     if (!thumbnail.isNull())
                     {
-                        return thumbnail;
+                        return thumbnail.scaledToHeight(iconHeight());
                     }
                 }
                 }
             }
-            return iconProvider.icon(fileInfo);
-
+            return iconProvider.icon(fileInfo).pixmap(iconHeight(),iconHeight()).scaledToHeight(iconHeight());
 
         case Qt::ToolTipRole:
             if (e->hasImageDecoder())
@@ -724,6 +725,19 @@ void SortedImageModel::sort(Qt::SortOrder order)
 {
     this->sort(d->currentSortedCol, order);
 }
+
+int SortedImageModel::iconHeight() const
+{
+    return d->iconHeight;
+}
+
+void SortedImageModel::setIconHeight(int iconHeight)
+{
+    emit this->layoutAboutToBeChanged();
+    d->iconHeight = std::max(iconHeight, 1);
+    emit this->layoutChanged();
+}
+
 
 QModelIndex SortedImageModel::index(const QFileInfo& info)
 {
