@@ -35,6 +35,7 @@
 #include "MessageWidget.hpp"
 #include "SortedImageModel.hpp"
 #include "MoveFileCommand.hpp"
+#include "ThumbnailImageView.hpp"
 
 struct ThumbnailView::Impl
 {
@@ -47,7 +48,7 @@ struct ThumbnailView::Impl
     SortedImageModel* fileModel;
     QDir currentDir;
     
-    QListView* thumbnailList;
+    ThumbnailImageView* thumbnailList;
     QTreeView* fileSystemTree;
     QDockWidget* fileSystemTreeDockContainer;
     
@@ -208,20 +209,11 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     d->actionDelete->setShortcuts(QKeySequence::Delete);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
     
-    d->thumbnailList = new QListView(this);
+    d->thumbnailList = new ThumbnailImageView(this);
     d->thumbnailList->setModel(d->fileModel);
-    d->thumbnailList->setViewMode(QListView::IconMode);
-    d->thumbnailList->setSelectionBehavior(QAbstractItemView::SelectRows);
-    d->thumbnailList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    d->thumbnailList->setResizeMode(QListView::Adjust);
-    d->thumbnailList->setWordWrap(true);
-    d->thumbnailList->setWrapping(true);
-    d->thumbnailList->setSpacing(2);
-    d->thumbnailList->setContextMenuPolicy(Qt::ActionsContextMenu);
     d->thumbnailList->addAction(d->actionCut);
     d->thumbnailList->addAction(d->actionCopy);
     d->thumbnailList->addAction(d->actionDelete);
-    
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     
     // connect to model reset signals after setModel()!
@@ -302,27 +294,3 @@ void ThumbnailView::getSelectedFiles(QList<QString>& selectedFiles, QString& sou
     sourceDir = d->currentDir.absolutePath();
 }
 
-void ThumbnailView::wheelEvent(QWheelEvent *event)
-{
-    auto angleDelta = event->angleDelta();
-
-    if (event->modifiers() & Qt::ControlModifier)
-    {
-        double s = d->fileModel->iconHeight();
-        // zoom
-        if(angleDelta.y() > 0)
-        {
-            d->fileModel->setIconHeight(static_cast<int>(std::ceil(s * 1.2)));
-            event->accept();
-            return;
-        }
-        else if(angleDelta.y() < 0)
-        {
-            d->fileModel->setIconHeight(static_cast<int>(std::floor(s / 1.2)));
-            event->accept();
-            return;
-        }
-    }
-
-    QMainWindow::wheelEvent(event);
-}

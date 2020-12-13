@@ -151,6 +151,8 @@ SmartTiffDecoder.cpp
 SmartTiffDecoder.hpp
 ThumbnailView.cpp
 ThumbnailView.hpp
+ThumbnailImageView.cpp
+ThumbnailImageView.hpp
 UserCancellation.hpp
 )
 

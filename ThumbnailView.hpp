@@ -30,9 +30,6 @@ public slots:
     void scrollToCurrentImage();
     void selectThumbnail(const QModelIndex& idx);
 
-protected:
-    void wheelEvent(QWheelEvent *event) override;
-
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
