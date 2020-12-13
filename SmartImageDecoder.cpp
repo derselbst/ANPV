@@ -24,7 +24,12 @@ struct SmartImageDecoder::Impl
     
     QString errorMessage;
     
+    // file path to the decoded input file
     QFileInfo fileInfo;
+    
+    // May or may not contain (a part of) the encoded input file
+    // It does for embedded JPEG preview in CR2
+    QByteArray encodedInputFile;
     
     // a low resolution preview image of the original full image
     QImage thumbnail;
@@ -37,7 +42,7 @@ struct SmartImageDecoder::Impl
     
     ExifWrapper exifWrapper;
     
-    Impl(const QFileInfo& url) : fileInfo(url)
+    Impl(const QFileInfo& url, QByteArray& arr) : fileInfo(url), encodedInputFile(arr)
     {}
     
     void open(QFile& file)
@@ -60,7 +65,7 @@ struct SmartImageDecoder::Impl
     }
 };
 
-SmartImageDecoder::SmartImageDecoder(const QFileInfo& url) : d(std::make_unique<Impl>(url))
+SmartImageDecoder::SmartImageDecoder(const QFileInfo& url, QByteArray arr) : d(std::make_unique<Impl>(url, arr))
 {}
 
 SmartImageDecoder::~SmartImageDecoder() = default;
@@ -125,16 +130,29 @@ void SmartImageDecoder::decode(DecodingState targetState)
             QSharedPointer<QFile> file(new QFile(d->fileInfo.absoluteFilePath()), [&](QFile* f){ this->close(); delete f; });
             d->open(*file.data());
             
-            const qint64 mapSize = file->size();
+            qint64 mapSize = file->size();
             const unsigned char* fileMapped = file->map(0, mapSize, QFileDevice::MapPrivateOption);
-            if(fileMapped == nullptr)
+            
+            qint64 encodedInputBufferSize = mapSize;
+            const unsigned char* encodedInputBufferPtr = fileMapped;
+            if(d->encodedInputFile.isEmpty())
             {
-                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "'");
+                if(fileMapped == nullptr)
+                {
+                    throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "'");
+                }
+            }
+            else
+            {
+                encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
+                encodedInputBufferSize = d->encodedInputFile.size();
             }
             
             this->cancelCallback();
             
-            this->decodeHeader(fileMapped, mapSize);
+            this->decodeHeader(encodedInputBufferPtr, encodedInputBufferSize);
+            
+            // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
             d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
             if (this->thumbnail().isNull())
             {

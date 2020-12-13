@@ -1,3 +1,6 @@
 [submodule "libkexiv2"]
 	path = libkexiv2
 	url = https://invent.kde.org/tommo/libkexiv2.git
+[submodule "libkdcraw"]
+	path = libkdcraw
+	url = https://invent.kde.org/graphics/libkdcraw.git

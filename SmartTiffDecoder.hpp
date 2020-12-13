@@ -15,7 +15,7 @@ class SmartTiffDecoder : public SmartImageDecoder
 Q_OBJECT
 
 public:
-    SmartTiffDecoder(const QFileInfo&);
+    SmartTiffDecoder(const QFileInfo&, QByteArray arr=QByteArray());
     ~SmartTiffDecoder() override;
 
     SmartTiffDecoder(const SmartTiffDecoder&) = delete;

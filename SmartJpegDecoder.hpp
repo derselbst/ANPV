@@ -15,7 +15,7 @@ class SmartJpegDecoder : public SmartImageDecoder
 Q_OBJECT
 
 public:
-    SmartJpegDecoder(const QFileInfo&);
+    SmartJpegDecoder(const QFileInfo&, QByteArray arr=QByteArray());
     ~SmartJpegDecoder() override;
 
     SmartJpegDecoder(const SmartJpegDecoder&) = delete;

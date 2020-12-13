@@ -71,7 +71,7 @@ struct SmartJpegDecoder::Impl
     }
 };
 
-SmartJpegDecoder::SmartJpegDecoder(const QFileInfo& file) : SmartImageDecoder(file), d(std::make_unique<Impl>(this))
+SmartJpegDecoder::SmartJpegDecoder(const QFileInfo& file, QByteArray arr) : SmartImageDecoder(file, arr), d(std::make_unique<Impl>(this))
 {}
 
 SmartJpegDecoder::~SmartJpegDecoder() = default;

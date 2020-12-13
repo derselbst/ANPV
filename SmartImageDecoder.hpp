@@ -20,7 +20,7 @@ class SmartImageDecoder : public QObject
 Q_OBJECT
 
 public:
-    SmartImageDecoder(const QFileInfo&);
+    SmartImageDecoder(const QFileInfo&, QByteArray arr = QByteArray());
     virtual ~SmartImageDecoder();
     
     SmartImageDecoder(const SmartImageDecoder&) = delete;
