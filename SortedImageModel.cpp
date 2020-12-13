@@ -119,7 +119,8 @@ struct SortedImageModel::Impl
     std::atomic<bool> directoryLoadingCancelled{ false };
 
     QFuture<void> directoryWorker;
-
+    QMetaObject::Connection connectionNoMoreTasksLeft;
+    
     QDir currentDir;
     std::vector<Entry> entries;
     
@@ -425,6 +426,11 @@ struct SortedImageModel::Impl
         currentDir = QDir();
         entries.clear();
         entries.shrink_to_fit();
+        
+        if(connectionNoMoreTasksLeft)
+        {
+            q->disconnect(connectionNoMoreTasksLeft);
+        }
     }
 
     void startImageDecoding(const QModelIndex& index, QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
@@ -445,6 +451,17 @@ struct SortedImageModel::Impl
     {
         emit q->directoryLoadingStatusMessage(prog, msg);
     }
+    
+    void onBackgroundImageTasksFinished()
+    {
+        emit q->layoutAboutToBeChanged();
+        setStatusMessage(100, "All background tasks done");
+        if(connectionNoMoreTasksLeft)
+        {
+            q->disconnect(connectionNoMoreTasksLeft);
+        }
+        emit q->layoutChanged();
+    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -457,9 +474,10 @@ SortedImageModel::~SortedImageModel() = default;
 void SortedImageModel::changeDirAsync(const QDir& dir)
 {
     d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
+    
     this->beginResetModel();
     d->clear();
-    this->endResetModel();
+    d->connectionNoMoreTasksLeft = connect(DecoderFactory::globalInstance(), &DecoderFactory::noMoreTasksLeft, this, [&](){ d->onBackgroundImageTasksFinished(); });
     
     d->currentDir = dir;
 
@@ -779,11 +797,8 @@ void SortedImageModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec,
         {
             QModelIndex left = this->index(i, Column::FirstValid);
             QModelIndex right = this->index(i, Column::Count - 1);
-            
-            // emit layout change to force view to update its flow layout
-            emit this->layoutAboutToBeChanged();
+
             emit this->dataChanged(left, right);
-            emit this->layoutChanged();
             break;
         }
     }

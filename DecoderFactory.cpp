@@ -17,12 +17,17 @@
 
 struct DecoderFactory::Impl
 {
+    DecoderFactory* q;
+    
     // a container were we store all tasks that need to be processed
     //
     // This is used when shutting down the application to cancel any pending tasks
     std::vector<QSharedPointer<ImageDecodeTask>> taskContainer;
     
     std::mutex m;
+    
+    Impl(DecoderFactory* q) : q(q)
+    {}
     
     void onAboutToQuit()
     {
@@ -41,7 +46,7 @@ struct DecoderFactory::Impl
     
     void onDecodingTaskFinished(ImageDecodeTask* t)
     {
-        std::lock_guard<std::mutex> l(this->m);
+        std::unique_lock<std::mutex> l(this->m);
         
         auto result = std::find_if(taskContainer.begin(),
                                    taskContainer.end(),
@@ -51,6 +56,12 @@ struct DecoderFactory::Impl
         if (result != taskContainer.end())
         {
             taskContainer.erase(result);
+
+            if(taskContainer.empty())
+            {
+                l.unlock();
+                emit q->noMoreTasksLeft();
+            }
         }
         else
         {
@@ -59,7 +70,7 @@ struct DecoderFactory::Impl
     }
 };
 
-DecoderFactory::DecoderFactory() : QObject(nullptr), d(std::make_unique<Impl>())
+DecoderFactory::DecoderFactory() : QObject(nullptr), d(std::make_unique<Impl>(this))
 {
     QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [&](){ d->onAboutToQuit(); });
 }

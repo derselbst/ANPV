@@ -23,6 +23,9 @@ public:
     QSharedPointer<ImageDecodeTask> createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState);
     void cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task);
 
+signals:
+    void noMoreTasksLeft();
+    
 private:
     DecoderFactory();
     ~DecoderFactory();
