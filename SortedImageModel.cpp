@@ -478,6 +478,7 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
     this->beginResetModel();
     d->clear();
     d->connectionNoMoreTasksLeft = connect(DecoderFactory::globalInstance(), &DecoderFactory::noMoreTasksLeft, this, [&](){ d->onBackgroundImageTasksFinished(); });
+    this->endResetModel();
     
     d->currentDir = dir;
 
