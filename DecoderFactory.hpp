@@ -21,7 +21,7 @@ public:
     QSharedPointer<SmartImageDecoder> getDecoder(const QFileInfo& url);
     void configureDecoder(SmartImageDecoder* dec, DocumentView* dc);
     QSharedPointer<ImageDecodeTask> createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState);
-    void cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task);
+    bool cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task);
 
 signals:
     void noMoreTasksLeft();

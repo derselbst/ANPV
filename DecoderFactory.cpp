@@ -149,15 +149,18 @@ QSharedPointer<ImageDecodeTask> DecoderFactory::createDecodeTask(QSharedPointer<
     return task;
 }
 
-void DecoderFactory::cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task)
+bool DecoderFactory::cancelDecodeTask(QSharedPointer<ImageDecodeTask>& task)
 {
     // cancel the task in any case, because QFuture::waitForFinished might start to running tasks
     // if they haven't been started yet...
     task->cancel();
     
-    if(QThreadPool::globalInstance()->tryTake(task.data()))
+    bool taken = QThreadPool::globalInstance()->tryTake(task.data());
+    if(taken)
     {
         // task not started yet, manually emit finished signal
         emit task->finished(task.data());
     }
+    
+    return taken;
 }

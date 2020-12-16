@@ -63,8 +63,11 @@ struct Entry
     {
         if(task)
         {
-            DecoderFactory::globalInstance()->cancelDecodeTask(task);
-            future.waitForFinished();
+            if(!DecoderFactory::globalInstance()->cancelDecodeTask(task))
+            {
+                future.waitForFinished();
+            }
+            future = QFuture<void>();
             task = nullptr;
         }
         dec = nullptr;
@@ -444,7 +447,7 @@ struct SortedImageModel::Impl
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
-        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
+//         e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
     }
     
     void setStatusMessage(int prog, QString msg)

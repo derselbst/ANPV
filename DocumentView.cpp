@@ -68,8 +68,11 @@ struct DocumentView::Impl
     {
         if(currentDecodeTask)
         {
-            DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
-            taskFuture.waitForFinished();
+            if(!DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask))
+            {
+                taskFuture.waitForFinished();
+            }
+            taskFuture = QFuture<void>();
             currentDecodeTask = nullptr;
         }
         
@@ -92,8 +95,11 @@ struct DocumentView::Impl
         
         if(currentDecodeTask)
         {
-            DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask);
-            taskFuture.waitForFinished();
+            if(!DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask))
+            {
+                taskFuture.waitForFinished();
+            }
+            taskFuture = QFuture<void>();
             currentDecodeTask = nullptr;
         }
         
