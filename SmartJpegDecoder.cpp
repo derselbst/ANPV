@@ -24,7 +24,7 @@ struct SmartJpegDecoder::Impl
 {
     SmartJpegDecoder* q;
     
-    struct jpeg_decompress_struct cinfo; 
+    struct jpeg_decompress_struct cinfo = {0};
     struct my_error_mgr jerr;
     struct jpeg_progress_mgr progMgr;
     
