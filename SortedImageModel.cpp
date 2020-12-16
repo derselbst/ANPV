@@ -90,10 +90,10 @@ struct Entry
     
     void setTask(QSharedPointer<ImageDecodeTask> t)
     {
-        this->task = std::move(t);
+        this->task = t;
     }
     
-    QSharedPointer<ImageDecodeTask> getTask()
+    QSharedPointer<ImageDecodeTask>& getTask()
     {
         return task;
     }
@@ -168,8 +168,8 @@ struct SortedImageModel::Impl
     template<Column SortCol>
     static bool sortColumnPredicateLeftBeforeRight(const Entry& l, const QFileInfo& linfo, const Entry& r, const QFileInfo& rinfo)
     {
-        auto ldec = l.getDecoder();
-        auto rdec = r.getDecoder();
+        auto& ldec = l.getDecoder();
+        auto& rdec = r.getDecoder();
 
         if (ldec && rdec)
         {
@@ -440,14 +440,27 @@ struct SortedImageModel::Impl
     {
         Entry& e = entries.at(index.row());
         
-        if(e.getFuture().isRunning())
+        if(!e.getTask().isNull())
         {
             return;
         }
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
-//         e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
+        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
+    }
+    
+    void onDecodingTaskFinished(ImageDecodeTask* t)
+    {
+        auto result = std::find_if(entries.begin(),
+                                   entries.end(),
+                                [=](Entry& other)
+                                { return other.getTask().data() == t;}
+                                );
+        if (result != entries.end())
+        {
+            result->setTask(nullptr);
+        }
     }
     
     void setStatusMessage(int prog, QString msg)
@@ -518,7 +531,7 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
                                 }
 
                                 connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, &SortedImageModel::onBackgroundImageTaskStateChanged);
-                                d->entries.emplace_back(std::move(decoder));
+                                d->entries.push_back(decoder);
                                 break;
                             }
                         }
