@@ -18,6 +18,7 @@ Q_OBJECT
 public:
     static DecoderFactory* globalInstance();
 
+    ~DecoderFactory() override;
     QSharedPointer<SmartImageDecoder> getDecoder(const QFileInfo& url);
     void configureDecoder(SmartImageDecoder* dec, DocumentView* dc);
     QSharedPointer<ImageDecodeTask> createDecodeTask(QSharedPointer<SmartImageDecoder> dec, DecodingState targetState);
@@ -28,7 +29,6 @@ signals:
     
 private:
     DecoderFactory();
-    ~DecoderFactory();
     
     struct Impl;
     std::unique_ptr<Impl> d;

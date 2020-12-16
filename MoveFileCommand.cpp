@@ -19,7 +19,9 @@ MoveFileCommand::MoveFileCommand(const QList<QString>& filesToMove, const QStrin
             setText(QString("Move %1 files to %2").arg(filesToMove.size()).arg(destinationFolder));
         }
     }
-    
+
+MoveFileCommand::~MoveFileCommand() = default;
+
 void MoveFileCommand::undo()
 {
     this->doMove(this->destinationFolder, this->sourceFolder);

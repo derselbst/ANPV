@@ -21,7 +21,7 @@ Q_OBJECT
 
 public:
     SmartImageDecoder(const QFileInfo&, QByteArray arr = QByteArray());
-    virtual ~SmartImageDecoder();
+    ~SmartImageDecoder() override;
     
     SmartImageDecoder(const SmartImageDecoder&) = delete;
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;

@@ -18,7 +18,7 @@ class FileOperationConfig : public QDialog
 
     public:
     explicit FileOperationConfig(QActionGroup* fileOperationActionGroup, ANPV *parent = nullptr);
-    ~FileOperationConfig();
+    ~FileOperationConfig() override;
 
     void accept() override;
     

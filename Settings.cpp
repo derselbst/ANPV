@@ -5,6 +5,8 @@ Settings::Settings() :  QSettings (QSettings::IniFormat, QSettings::UserScope, "
 {
 }
 
+Settings::~Settings() = default;
+
 QString Settings::fileOperationTargetDir(int entry)
 {
     switch(entry)

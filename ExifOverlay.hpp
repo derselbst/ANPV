@@ -10,7 +10,7 @@ class ExifOverlay : public MessageWidget
 {
 public:
     ExifOverlay(QWidget* parent = nullptr);
-    ~ExifOverlay();
+    ~ExifOverlay() override;
 
     void setMetadata(ExifWrapper*);
 

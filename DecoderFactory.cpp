@@ -29,6 +29,11 @@ struct DecoderFactory::Impl
     Impl(DecoderFactory* q) : q(q)
     {}
     
+    ~Impl()
+    {
+        this->onAboutToQuit();
+    }
+    
     void onAboutToQuit()
     {
         std::lock_guard<std::mutex> l(this->m);
@@ -95,10 +100,10 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
         QByteArray previewData;
 
         // use KDcraw for getting the embedded preview
-        // KDcraw functionality cloned locally (temp. solution)
         bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(previewData, url.absoluteFilePath());
 
-        if (!ret) {
+        if (!ret)
+        {
             // if the embedded preview loading failed, load half preview instead.
             // That's slower but it works even for images containing
             // small (160x120px) or none embedded preview.

@@ -5,8 +5,9 @@
 
 class Settings : public QSettings
 {
-    public:
+public:
     Settings();
+    ~Settings() override;
 
     QString fileOperationTargetDir(int entry=0);
     void setFileOperationTargetDir(int entry, const QString& dir);

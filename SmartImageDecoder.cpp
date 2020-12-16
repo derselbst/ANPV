@@ -42,7 +42,7 @@ struct SmartImageDecoder::Impl
     
     ExifWrapper exifWrapper;
     
-    Impl(const QFileInfo& url, QByteArray& arr) : fileInfo(url), encodedInputFile(arr)
+    Impl(const QFileInfo& url, QByteArray arr) : fileInfo(url), encodedInputFile(arr)
     {}
     
     void open(QFile& file)
