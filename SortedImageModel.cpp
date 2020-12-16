@@ -447,6 +447,7 @@ struct SortedImageModel::Impl
         
         auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
         e.setTask(task);
+        QObject::connect(task.data(), &ImageDecodeTask::finished, q, [&](ImageDecodeTask* t){ this->onDecodingTaskFinished(t); });
         e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
     }
     
