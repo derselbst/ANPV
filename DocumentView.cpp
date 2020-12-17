@@ -25,6 +25,7 @@
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
+#include "xThreadGuard.hpp"
 
 struct DocumentView::Impl
 {
@@ -138,6 +139,7 @@ struct DocumentView::Impl
     
     void createSmoothPixmap()
     {
+        xThreadGuard g(p);
         if (currentDocumentPixmap.isNull())
         {
             return;

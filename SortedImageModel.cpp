@@ -20,6 +20,7 @@
 #include "UserCancellation.hpp"
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
+#include "xThreadGuard.hpp"
 
 
 struct Entry
@@ -424,6 +425,7 @@ struct SortedImageModel::Impl
 
     void onDirectoryLoaded()
     {
+        xThreadGuard g(q);
         q->beginInsertRows(QModelIndex(), 0, entries.size());
         q->endInsertRows();
     }
@@ -459,6 +461,7 @@ struct SortedImageModel::Impl
 
     void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
     {
+        xThreadGuard g(q);
         if(newState == DecodingState::Ready)
         {
             // ignore ready state
@@ -480,6 +483,8 @@ struct SortedImageModel::Impl
 
     void onDecodingTaskFinished(ImageDecodeTask* t)
     {
+        xThreadGuard g(q);
+
         auto result = std::find_if(entries.begin(),
                                    entries.end(),
                                 [=](Entry& other)

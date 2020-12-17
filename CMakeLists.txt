@@ -154,6 +154,7 @@ ThumbnailView.hpp
 ThumbnailImageView.cpp
 ThumbnailImageView.hpp
 UserCancellation.hpp
+xThreadGuard.hpp
 )
 
 qt5_wrap_ui(UI_HEADERS
