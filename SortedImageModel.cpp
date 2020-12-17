@@ -24,13 +24,13 @@
 
 struct Entry
 {
-    Entry() : info(QFileInfo())
+    Entry()
     {}
     
-    Entry(QFileInfo&& info) : info(std::move(info))
+    Entry(SortedImageModel* q, QFileInfo&& info) : q(q), info(std::move(info))
     {}
     
-    Entry(QSharedPointer<SmartImageDecoder> d) : dec(d)
+    Entry(SortedImageModel* q, QSharedPointer<SmartImageDecoder> d) : q(q), dec(d)
     {}
     
     Entry(const Entry& e) = delete;
@@ -63,6 +63,7 @@ struct Entry
     {
         if(task)
         {
+            task->disconnect(q);
             if(!DecoderFactory::globalInstance()->cancelDecodeTask(task))
             {
                 future.waitForFinished();
@@ -70,7 +71,14 @@ struct Entry
             future = QFuture<void>();
             task = nullptr;
         }
-        dec = nullptr;
+
+        if(dec)
+        {
+            // explicitly disconnect our signals
+            // most decoder will be destroyed after set to null, but some may survive because e.g. their image is still opened in DocumentView
+            dec->disconnect(q);
+            dec = nullptr;
+        }
     }
     
     const QFileInfo& getFileInfo() const
@@ -109,6 +117,7 @@ struct Entry
     }
     
 private:
+    SortedImageModel* q = nullptr;
     QSharedPointer<SmartImageDecoder> dec;
     QSharedPointer<ImageDecodeTask> task;
     QFuture<void> future;
@@ -122,7 +131,7 @@ struct SortedImageModel::Impl
     std::atomic<bool> directoryLoadingCancelled{ false };
 
     QFuture<void> directoryWorker;
-    QMetaObject::Connection connectionNoMoreTasksLeft;
+    std::atomic<int> runningBackgroundTasks{0};
     
     QDir currentDir;
     std::vector<Entry> entries;
@@ -429,11 +438,7 @@ struct SortedImageModel::Impl
         currentDir = QDir();
         entries.clear();
         entries.shrink_to_fit();
-        
-        if(connectionNoMoreTasksLeft)
-        {
-            q->disconnect(connectionNoMoreTasksLeft);
-        }
+        runningBackgroundTasks = 0;
     }
 
     void startImageDecoding(const QModelIndex& index, QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
@@ -449,8 +454,30 @@ struct SortedImageModel::Impl
         e.setTask(task);
         QObject::connect(task.data(), &ImageDecodeTask::finished, q, [&](ImageDecodeTask* t){ this->onDecodingTaskFinished(t); });
         e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
+        ++runningBackgroundTasks;
     }
-    
+
+    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
+    {
+        if(newState == DecodingState::Ready)
+        {
+            // ignore ready state
+            return;
+        }
+        
+        for(size_t i = 0; i < entries.size(); i++)
+        {
+            if(entries.at(i).getDecoder().data() == dec)
+            {
+                QModelIndex left = q->index(i, Column::FirstValid);
+                QModelIndex right = q->index(i, Column::Count - 1);
+
+                emit q->dataChanged(left, right);
+                break;
+            }
+        }
+    }
+
     void onDecodingTaskFinished(ImageDecodeTask* t)
     {
         auto result = std::find_if(entries.begin(),
@@ -461,6 +488,11 @@ struct SortedImageModel::Impl
         if (result != entries.end())
         {
             result->setTask(nullptr);
+            result->setFuture(QFuture<void>());
+            if(!--runningBackgroundTasks)
+            {
+                onBackgroundImageTasksFinished();
+            }
         }
     }
     
@@ -473,10 +505,6 @@ struct SortedImageModel::Impl
     {
         emit q->layoutAboutToBeChanged();
         setStatusMessage(100, "All background tasks done");
-        if(connectionNoMoreTasksLeft)
-        {
-            q->disconnect(connectionNoMoreTasksLeft);
-        }
         emit q->layoutChanged();
     }
 };
@@ -494,7 +522,6 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
     
     this->beginResetModel();
     d->clear();
-    d->connectionNoMoreTasksLeft = connect(DecoderFactory::globalInstance(), &DecoderFactory::noMoreTasksLeft, this, [&](){ d->onBackgroundImageTasksFinished(); });
     this->endResetModel();
     
     d->currentDir = dir;
@@ -531,13 +558,13 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
                                     decoder->decode(DecodingState::Metadata);
                                 }
 
-                                connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, &SortedImageModel::onBackgroundImageTaskStateChanged);
-                                d->entries.push_back(decoder);
+                                connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, [&](SmartImageDecoder* dec, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(dec, newState, old); });
+                                d->entries.push_back(Entry(this, decoder));
                                 break;
                             }
                         }
 
-                        d->entries.emplace_back(std::move(inf));
+                        d->entries.emplace_back(this, std::move(inf));
 
                     } while (false);
 
@@ -799,25 +826,4 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
     }
     
     return QFileInfo();
-}
-
-void SortedImageModel::onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
-{
-    if(newState == DecodingState::Ready)
-    {
-        // ignore ready state
-        return;
-    }
-    
-    for(size_t i = 0; i < d->entries.size(); i++)
-    {
-        if(d->entries.at(i).getDecoder().data() == dec)
-        {
-            QModelIndex left = this->index(i, Column::FirstValid);
-            QModelIndex right = this->index(i, Column::Count - 1);
-
-            emit this->dataChanged(left, right);
-            break;
-        }
-    }
 }

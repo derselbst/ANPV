@@ -70,7 +70,4 @@ signals:
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
-    
-private slots:
-    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32, quint32);
 };
