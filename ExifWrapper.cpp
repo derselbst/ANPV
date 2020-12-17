@@ -50,7 +50,7 @@ struct ExifWrapper::Impl
         return 0;
     }
     
-    QTransform transformMatrix(OR orientation)
+    static QTransform transformMatrix(OR orientation)
     {
         QTransform matrix;
         switch (orientation) {
@@ -142,6 +142,11 @@ KExiv2Iface::KExiv2::ImageOrientation ExifWrapper::orientation()
     return d->mExivHandle.getImageOrientation();
 }
 
+QTransform ExifWrapper::transformMatrix()
+{
+    return d->transformMatrix(this->orientation());
+}
+
 int ExifWrapper::dotsPerMeterX()
 {
     return d->dotsPerMeter(QStringLiteral("XResolution"));
@@ -154,8 +159,11 @@ int ExifWrapper::dotsPerMeterY()
 
 QSize ExifWrapper::size()
 {
-    QSize size = d->mExivHandle.getImageDimensions();
+    return this->sizeTransposed(d->mExivHandle.getImageDimensions());
+}
 
+QSize ExifWrapper::sizeTransposed(QSize size)
+{
     // Adjust the size according to the orientation
     switch (orientation())
     {
@@ -221,12 +229,6 @@ QImage ExifWrapper::thumbnail()
                 const QRect validArea(QPoint(0, offsetFromTop), QSize(image.width(), validThumbAreaHeight));
                 image = image.copy(validArea);
             }
-        }
-        
-        auto o = orientation();
-        if (o != OR::ORIENTATION_NORMAL && o != OR::ORIENTATION_UNSPECIFIED)
-        {
-            image = image.transformed(d->transformMatrix(o));
         }
     }
     return image;

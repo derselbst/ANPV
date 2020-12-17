@@ -29,7 +29,7 @@ public:
     const QFileInfo& fileInfo();
     QSize size();
     // Returns a thumbnail preview image if available
-    QImage thumbnail();
+    QImage thumbnail(bool applyExifTrans);
     QImage image();
     QString errorMessage();
     QString latestMessage();
@@ -50,7 +50,7 @@ protected:
     
     void cancelCallback();
     void setDecodingState(DecodingState state);
-    void setThumbnail(QImage&& thumb);
+    void setThumbnail(QImage thumb);
     void setSize(QSize s);
     
     void setDecodingMessage(QString&& msg);

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <QString>
+#include <QTransform>
 #include <KExiv2/KExiv2>
 
 
@@ -29,9 +30,11 @@ public:
     bool loadFromData(const QByteArray& data);
     QString errorMessage();
     KExiv2Iface::KExiv2::ImageOrientation orientation();
+    QTransform transformMatrix();
     int dotsPerMeterX();
     int dotsPerMeterY();
     QSize size();
+    QSize sizeTransposed(QSize size);
     QString comment();
     QImage thumbnail();
     std::unique_ptr<AfPointOverlay> autoFocusPoints();

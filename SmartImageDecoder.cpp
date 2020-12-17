@@ -34,6 +34,9 @@ struct SmartImageDecoder::Impl
     // a low resolution preview image of the original full image
     QImage thumbnail;
     
+    // same as thumbnail, but rotated according to EXIF orientation
+    QImage thumbnailTransformed;
+    
     // the fully decoded image - might be incomplete if the state is PreviewImage
     QImage image;
     
@@ -60,7 +63,6 @@ struct SmartImageDecoder::Impl
 
     void setImage(QImage&& img)
     {
-    qWarning() << "need to apply exif transformation!";
         image = img;
     }
 };
@@ -76,10 +78,10 @@ void SmartImageDecoder::setCancellationCallback(std::function<void(void*)>&& cc,
     d->cancelCallbackObject = obj;
 }
 
-void SmartImageDecoder::setThumbnail(QImage&& thumb)
+void SmartImageDecoder::setThumbnail(QImage thumb)
 {
-    qWarning() << "need to apply exif transformation!";
-    d->thumbnail = std::move(thumb);
+    d->thumbnail = thumb;
+    d->thumbnailTransformed = thumb.transformed(d->exifWrapper.transformMatrix());
 }
     
 void SmartImageDecoder::cancelCallback()
@@ -154,7 +156,7 @@ void SmartImageDecoder::decode(DecodingState targetState)
             
             // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
             d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
-            if (this->thumbnail().isNull())
+            if (d->thumbnail.isNull())
             {
                 this->setThumbnail(d->exifWrapper.thumbnail());
             }
@@ -232,9 +234,16 @@ QImage SmartImageDecoder::image()
     return d->image;
 }
 
-QImage SmartImageDecoder::thumbnail()
+QImage SmartImageDecoder::thumbnail(bool applyExifTransform)
 {
-    return d->thumbnail;
+    if(applyExifTransform)
+    {
+        return d->thumbnailTransformed;
+    }
+    else
+    {
+        return d->thumbnail;
+    }
 }
 
 QSize SmartImageDecoder::size()

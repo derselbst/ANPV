@@ -386,8 +386,9 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::Metadata:
         this->setSceneRect(QRectF(QPointF(0,0), dec->size()));
         this->resetTransform();
+        this->setTransform(dec->exif()->transformMatrix(), true);
         this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
-        d->addThumbnailPreview(dec->thumbnail(), dec->size());
+        d->addThumbnailPreview(dec->thumbnail(false), dec->size());
         d->exifOverlay->setMetadata(dec->exif());
         break;
     case DecodingState::PreviewImage:
