@@ -78,16 +78,24 @@ struct ThumbnailView::Impl
     
     void onThumbnailActivated(const QModelIndex& idx)
     {
-        const QFileInfo& info = fileModel->fileInfo(idx);
-        
-        if(info.isDir())
-        {
-            p->changeDir(info.absoluteFilePath());
-        }
-        else if(info.isFile())
+        QSharedPointer<SmartImageDecoder> dec = fileModel->decoder(idx);
+        if(dec)
         {
             anpv->showImageView();
-            anpv->loadImage(info);
+            anpv->loadImage(dec);
+        }
+        else
+        {
+            QFileInfo info = fileModel->fileInfo(idx);
+            if(info.isDir())
+            {
+                p->changeDir(info.absoluteFilePath());
+            }
+            else if(info.isFile())
+            {
+                anpv->showImageView();
+                anpv->loadImage(info);
+            }
         }
     }
     
