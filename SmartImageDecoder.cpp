@@ -61,7 +61,7 @@ struct SmartImageDecoder::Impl
         }
     }
 
-    void setImage(QImage&& img)
+    void setImage(QImage img)
     {
         image = img;
     }
@@ -169,7 +169,13 @@ void SmartImageDecoder::decode(DecodingState targetState)
             }
             
             QImage decodedImg = this->decodingLoop(targetState);
-            d->setImage(std::move(decodedImg));
+            d->setImage(decodedImg);
+            
+            // if thumbnail is still null, set it
+            if (d->thumbnail.isNull())
+            {
+                this->setThumbnail(decodedImg.scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            }
 
             this->setDecodingState(targetState);
         } while(false);

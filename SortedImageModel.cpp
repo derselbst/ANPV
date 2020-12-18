@@ -142,6 +142,8 @@ struct SortedImageModel::Impl
     Qt::SortOrder sortOrder;
     
     int iconHeight = 150;
+    
+    QTimer layoutChangedTimer;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}
@@ -476,6 +478,12 @@ struct SortedImageModel::Impl
                 QModelIndex right = q->index(i, Column::Count - 1);
 
                 emit q->dataChanged(left, right);
+                if(newState == DecodingState::PreviewImage || newState == DecodingState::FullImage)
+                {
+                    // A thumbnail may be inserted into the list.
+                    // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
+                    updateLayout();
+                }
                 break;
             }
         }
@@ -496,7 +504,13 @@ struct SortedImageModel::Impl
             result->setFuture(QFuture<void>());
             if(!--runningBackgroundTasks)
             {
-                onBackgroundImageTasksFinished();
+                setStatusMessage(100, "All background tasks done");
+                layoutChangedTimer.stop();
+                forceUpdateLayout();
+            }
+            else
+            {
+                updateLayout();
             }
         }
     }
@@ -506,10 +520,17 @@ struct SortedImageModel::Impl
         emit q->directoryLoadingStatusMessage(prog, msg);
     }
     
-    void onBackgroundImageTasksFinished()
+    void updateLayout()
+    {
+        if(!layoutChangedTimer.isActive())
+        {
+            layoutChangedTimer.start();
+        }
+    }
+    
+    void forceUpdateLayout()
     {
         emit q->layoutAboutToBeChanged();
-        setStatusMessage(100, "All background tasks done");
         emit q->layoutChanged();
     }
 };
@@ -517,6 +538,10 @@ struct SortedImageModel::Impl
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
 {
     connect(this, &SortedImageModel::directoryLoaded, this, [&](){ d->onDirectoryLoaded(); });
+    
+    d->layoutChangedTimer.setInterval(500);
+    d->layoutChangedTimer.setSingleShot(true);
+    connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ emit d->forceUpdateLayout();});
 }
 
 SortedImageModel::~SortedImageModel() = default;
@@ -831,4 +856,14 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
     }
     
     return QFileInfo();
+}
+
+QSharedPointer<SmartImageDecoder> SortedImageModel::decoder(const QModelIndex &index)
+{
+    if(index.isValid())
+    {
+        return d->entries.at(index.row()).getDecoder();
+    }
+    
+    return nullptr;
 }
