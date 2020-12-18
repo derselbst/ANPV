@@ -550,9 +550,9 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
 {
     d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
     
-    this->beginResetModel();
+    this->beginRemoveRows(QModelIndex(), 0, rowCount());
     d->clear();
-    this->endResetModel();
+    this->endRemoveRows();
     
     d->currentDir = dir;
 
@@ -719,7 +719,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                     QImage thumbnail = e->getDecoder()->thumbnail(true);
                     if (!thumbnail.isNull())
                     {
-                        return thumbnail.scaledToHeight(iconHeight());
+                        QImage thumbScaled = thumbnail.scaledToHeight(iconHeight());
+                        return thumbScaled;
                     }
                 }
                 }
