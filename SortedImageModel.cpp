@@ -447,6 +447,7 @@ struct SortedImageModel::Impl
 
     void startImageDecoding(const QModelIndex& index, QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
     {
+        xThreadGuard g(q);
         Entry& e = entries.at(index.row());
         
         if(!e.getTask().isNull())
@@ -587,8 +588,9 @@ void SortedImageModel::changeDirAsync(const QDir& dir)
                                 {
                                     decoder->decode(DecodingState::Metadata);
                                 }
-
                                 connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, [&](SmartImageDecoder* dec, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(dec, newState, old); });
+
+                                decoder->moveToThread(QGuiApplication::instance()->thread());
                                 d->entries.push_back(Entry(this, decoder));
                                 break;
                             }

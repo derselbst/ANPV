@@ -4,6 +4,8 @@
 #include "UserCancellation.hpp"
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
+#include "xThreadGuard.hpp"
+
 #include <QtDebug>
 #include <QMetaMethod>
 #include <chrono>
@@ -70,10 +72,15 @@ struct SmartImageDecoder::Impl
 SmartImageDecoder::SmartImageDecoder(const QFileInfo& url, QByteArray arr) : d(std::make_unique<Impl>(url, arr))
 {}
 
-SmartImageDecoder::~SmartImageDecoder() = default;
+SmartImageDecoder::~SmartImageDecoder()
+{
+    xThreadGuard g(this);
+}
 
 void SmartImageDecoder::setCancellationCallback(std::function<void(void*)>&& cc, void* obj)
 {
+    xThreadGuard g(this);
+
     d->cancelCallbackInternal = std::move(cc);
     d->cancelCallbackObject = obj;
 }
@@ -92,7 +99,7 @@ void SmartImageDecoder::cancelCallback()
     }
 }
 
-DecodingState SmartImageDecoder::decodingState()
+DecodingState SmartImageDecoder::decodingState() const
 {
     return d->state;
 }
@@ -220,28 +227,36 @@ void SmartImageDecoder::releaseFullImage()
     }
 }
 
-const QFileInfo& SmartImageDecoder::fileInfo()
+const QFileInfo& SmartImageDecoder::fileInfo() const
 {
     return d->fileInfo;
 }
 
 QString SmartImageDecoder::latestMessage()
 {
+    xThreadGuard g(this);
+
     return d->decodingMessage;
 }
 
 QString SmartImageDecoder::errorMessage()
 {
+    xThreadGuard g(this);
+
     return d->errorMessage;
 }
 
 QImage SmartImageDecoder::image()
 {
+    xThreadGuard g(this);
+
     return d->image;
 }
 
 QImage SmartImageDecoder::thumbnail(bool applyExifTransform)
 {
+    xThreadGuard g(this);
+
     if(applyExifTransform)
     {
         return d->thumbnailTransformed;
@@ -254,6 +269,8 @@ QImage SmartImageDecoder::thumbnail(bool applyExifTransform)
 
 QSize SmartImageDecoder::size()
 {
+    xThreadGuard g(this);
+
     return d->size;
 }
 

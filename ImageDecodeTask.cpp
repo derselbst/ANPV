@@ -2,6 +2,7 @@
 #include "ImageDecodeTask.hpp"
 #include "UserCancellation.hpp"
 #include "SmartImageDecoder.hpp"
+#include "xThreadGuard.hpp"
 
 #include <atomic>
 #include <QDebug>
@@ -33,7 +34,10 @@ ImageDecodeTask::ImageDecodeTask(QSharedPointer<SmartImageDecoder> dec, Decoding
     d->decoder->setCancellationCallback(&ImageDecodeTask::Impl::throwIfCancelled, d.get());
 }
 
-ImageDecodeTask::~ImageDecodeTask() = default;
+ImageDecodeTask::~ImageDecodeTask()
+{
+    xThreadGuard g(this);
+}
 
 void ImageDecodeTask::run()
 {

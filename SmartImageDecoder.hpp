@@ -26,7 +26,7 @@ public:
     SmartImageDecoder(const SmartImageDecoder&) = delete;
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
     
-    const QFileInfo& fileInfo();
+    const QFileInfo& fileInfo() const;
     QSize size();
     // Returns a thumbnail preview image if available
     QImage thumbnail(bool applyExifTrans);
@@ -34,7 +34,7 @@ public:
     QString errorMessage();
     QString latestMessage();
     void decode(DecodingState targetState);
-    DecodingState decodingState();
+    DecodingState decodingState() const;
     void releaseFullImage();
     
     ExifWrapper* exif();
