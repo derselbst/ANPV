@@ -34,10 +34,10 @@ struct SmartImageDecoder::Impl
     QByteArray encodedInputFile;
     
     // a low resolution preview image of the original full image
-    QImage thumbnail;
+    QPixmap thumbnail;
     
     // same as thumbnail, but rotated according to EXIF orientation
-    QImage thumbnailTransformed;
+    QPixmap thumbnailTransformed;
     
     // the fully decoded image - might be incomplete if the state is PreviewImage
     QImage image;
@@ -87,8 +87,8 @@ void SmartImageDecoder::setCancellationCallback(std::function<void(void*)>&& cc,
 
 void SmartImageDecoder::setThumbnail(QImage thumb)
 {
-    d->thumbnail = thumb;
-    d->thumbnailTransformed = thumb.transformed(d->exifWrapper.transformMatrix());
+    d->thumbnail = QPixmap::fromImage(thumb);
+    d->thumbnailTransformed = d->thumbnail.transformed(d->exifWrapper.transformMatrix());
 }
     
 void SmartImageDecoder::cancelCallback()
@@ -235,36 +235,31 @@ const QFileInfo& SmartImageDecoder::fileInfo() const
 QString SmartImageDecoder::latestMessage()
 {
     xThreadGuard g(this);
-
     return d->decodingMessage;
 }
 
 QString SmartImageDecoder::errorMessage()
 {
     xThreadGuard g(this);
-
     return d->errorMessage;
 }
 
 QImage SmartImageDecoder::image()
 {
     xThreadGuard g(this);
-
     return d->image;
 }
 
-QImage SmartImageDecoder::thumbnail(bool applyExifTransform)
+QPixmap SmartImageDecoder::thumbnail()
 {
     xThreadGuard g(this);
+    return d->thumbnail;
+}
 
-    if(applyExifTransform)
-    {
-        return d->thumbnailTransformed;
-    }
-    else
-    {
-        return d->thumbnail;
-    }
+QPixmap SmartImageDecoder::icon()
+{
+    xThreadGuard g(this);
+    return d->thumbnailTransformed;
 }
 
 QSize SmartImageDecoder::size()

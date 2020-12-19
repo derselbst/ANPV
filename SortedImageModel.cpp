@@ -718,10 +718,10 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                 case DecodingState::PreviewImage:
                 case DecodingState::FullImage:
                 {
-                    QImage thumbnail = e->getDecoder()->thumbnail(true);
+                    QPixmap thumbnail = e->getDecoder()->icon();
                     if (!thumbnail.isNull())
                     {
-                        QImage thumbScaled = thumbnail.scaledToHeight(iconHeight());
+                        QPixmap thumbScaled = thumbnail.scaledToHeight(iconHeight());
                         return thumbScaled;
                     }
                 }

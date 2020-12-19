@@ -193,13 +193,13 @@ struct DocumentView::Impl
         QGuiApplication::restoreOverrideCursor();
     }
     
-    void addThumbnailPreview(QImage thumb, QSize fullImageSize)
+    void addThumbnailPreview(QPixmap thumb, QSize fullImageSize)
     {
         if(!thumb.isNull())
         {
             auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
 
-            thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb));
+            thumbnailPreviewOverlay->setPixmap(thumb);
             thumbnailPreviewOverlay->setScale(newScale);
             
             scene->addItem(thumbnailPreviewOverlay.get());
@@ -388,7 +388,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         this->resetTransform();
         this->setTransform(dec->exif()->transformMatrix(), true);
         this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
-        d->addThumbnailPreview(dec->thumbnail(false), dec->size());
+        d->addThumbnailPreview(dec->thumbnail(), dec->size());
         d->exifOverlay->setMetadata(dec->exif());
         break;
     case DecodingState::PreviewImage:

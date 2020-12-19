@@ -5,7 +5,9 @@
 
 #include <QObject>
 #include <QSize>
+#include <QPixmap>
 #include <QImage>
+#include <QString>
 #include <QFileInfo>
 #include <functional>
 #include <memory>
@@ -28,8 +30,8 @@ public:
     
     const QFileInfo& fileInfo() const;
     QSize size();
-    // Returns a thumbnail preview image if available
-    QImage thumbnail(bool applyExifTrans);
+    QPixmap thumbnail();
+    QPixmap icon();
     QImage image();
     QString errorMessage();
     QString latestMessage();
