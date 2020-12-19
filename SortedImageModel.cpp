@@ -139,7 +139,7 @@ struct SortedImageModel::Impl
     
     // The column which is currently sorted
     Column currentSortedCol = Column::FileName;
-    Qt::SortOrder sortOrder;
+    Qt::SortOrder sortOrder = Qt::AscendingOrder;
     
     int iconHeight = 150;
     
