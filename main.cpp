@@ -1,6 +1,7 @@
 
 #include "DocumentView.hpp"
 #include "ANPV.hpp"
+#include "DecoderFactory.hpp"
 
 
 #include <QApplication>
@@ -28,6 +29,9 @@ int main(int argc, char *argv[])
     
     QSplashScreen splash(QPixmap("/home/tom/EigeneProgramme/ANPV/splash.jpg"));
     splash.show();
+    
+    // create and init DecoderFactory in main thread
+    (void)DecoderFactory::globalInstance();
     
     ANPV m(&splash);
     m.show();
