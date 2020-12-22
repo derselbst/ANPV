@@ -79,7 +79,7 @@ SmartImageDecoder::~SmartImageDecoder()
 
 void SmartImageDecoder::setCancellationCallback(std::function<void(void*)>&& cc, void* obj)
 {
-    xThreadGuard g(this);
+    std::lock_guard<std::mutex> lck(d->m);
 
     d->cancelCallbackInternal = std::move(cc);
     d->cancelCallbackObject = obj;
@@ -93,15 +93,10 @@ void SmartImageDecoder::setThumbnail(QImage thumb)
     
 void SmartImageDecoder::cancelCallback()
 {
-    if(d->cancelCallbackInternal)
+    if(d->cancelCallbackInternal && d->cancelCallbackObject != nullptr)
     {
         d->cancelCallbackInternal(d->cancelCallbackObject);
     }
-}
-
-DecodingState SmartImageDecoder::decodingState() const
-{
-    return d->state;
 }
 
 void SmartImageDecoder::setDecodingState(DecodingState state)
@@ -227,6 +222,11 @@ void SmartImageDecoder::releaseFullImage()
     }
 }
 
+DecodingState SmartImageDecoder::decodingState() const
+{
+    return d->state;
+}
+
 const QFileInfo& SmartImageDecoder::fileInfo() const
 {
     return d->fileInfo;
@@ -309,7 +309,7 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
 template<typename T>
 std::unique_ptr<T[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
 {
-    size_t needed = width * height;
+    size_t needed = size_t(width) * height;
     try
     {
         this->setDecodingMessage("Allocating image output buffer");
