@@ -264,7 +264,10 @@ void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
         d->fileSystemTree->setCurrentIndex(mo);
         if(!skipScrollTo)
         {
+            // vertically scroll to center
             d->fileSystemTree->scrollTo(mo, QAbstractItemView::PositionAtCenter);
+            // and make sure we do not scroll to center horizontally
+            d->fileSystemTree->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
         d->anpv->notifyDecodingState(DecodingState::Ready);
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
