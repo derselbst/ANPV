@@ -55,7 +55,11 @@ struct Entry
         else
         {
             this->info = other.info;
+            other.info = QFileInfo();
         }
+        
+        this->q = other.q;
+        other.q = nullptr;
         
         return *this;
     }
@@ -174,6 +178,21 @@ struct SortedImageModel::Impl
         if (static_cast<Impl*>(self)->directoryLoadingCancelled)
         {
             throw UserCancellation();
+        }
+    }
+    
+    static bool compareFileName(const QFileInfo& linfo, const QFileInfo& rinfo)
+    {
+        QString lfile = linfo.fileName().toCaseFolded();
+        QString rfile = rinfo.fileName().toCaseFolded();
+        
+        if(lfile.length() == rfile.length())
+        {
+            return lfile < rfile;
+        }
+        else
+        {
+            return lfile.length() < rfile.length();
         }
     }
 
@@ -328,7 +347,7 @@ struct SortedImageModel::Impl
             return false; // l behind r
         }
 
-        return linfo.fileName() < rinfo.fileName();
+        return compareFileName(linfo, rinfo);
     }
 
     // This is the entry point for sorting. It sorts all Directories first.
@@ -347,7 +366,7 @@ struct SortedImageModel::Impl
         const QFileInfo& rinfo = r.getFileInfo();
 
         bool leftIsBeforeRight =
-            (linfo.isDir() && (!rinfo.isDir() || linfo.fileName() < rinfo.fileName())) ||
+            (linfo.isDir() && (!rinfo.isDir() || compareFileName(linfo, rinfo))) ||
             (!rinfo.isDir() && sortColumnPredicateLeftBeforeRight<SortCol>(l, linfo, r, rinfo));
         
         return leftIsBeforeRight;
