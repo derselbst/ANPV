@@ -7,7 +7,7 @@
 #include "DocumentView.hpp"
 #include "ImageDecodeTask.hpp"
 
-#include <kdcraw/kdcraw.h>
+#include <KDCRAW/KDcraw>
 #include <QFile>
 #include <QImageReader>
 #include <QThreadPool>

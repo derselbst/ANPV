@@ -3,9 +3,8 @@ project (ANPV)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
 
+option ( BUILD_SHARED_LIBS "Build a shared object or DLL" off )
 
 ### Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -108,7 +107,8 @@ find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
 
-add_subdirectory(libkdcraw)
+find_package(KF5KDcraw REQUIRED)
+
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 
@@ -164,5 +164,5 @@ qt5_wrap_ui(UI_HEADERS
     FileOperationConfig.ui)
 
 add_executable(anpv ${SRC} ${UI_HEADERS})
-target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5KDcraw stdc++fs)
-target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
+target_link_libraries(anpv ${Qt5Widgets_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
+target_include_directories(anpv SYSTEM PRIVATE ${Qt5Widgets_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
