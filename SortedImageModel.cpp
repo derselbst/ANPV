@@ -9,10 +9,13 @@
 #include <QFileIconProvider>
 #include <QStyle>
 #include <QDir>
-#include <algorithm>
 #include <QGuiApplication>
 #include <QCursor>
+
 // #include <execution>
+#include <algorithm>
+#define _GNU_SOURCE
+#include <cstring>
 
 #include "ImageDecodeTask.hpp"
 #include "SmartImageDecoder.hpp"
@@ -183,17 +186,10 @@ struct SortedImageModel::Impl
     
     static bool compareFileName(const QFileInfo& linfo, const QFileInfo& rinfo)
     {
-        QString lfile = linfo.fileName().toCaseFolded();
-        QString rfile = rinfo.fileName().toCaseFolded();
+        QByteArray lfile = linfo.fileName().toCaseFolded().toLatin1();
+        QByteArray rfile = rinfo.fileName().toCaseFolded().toLatin1();
         
-        if(lfile.length() == rfile.length())
-        {
-            return lfile < rfile;
-        }
-        else
-        {
-            return lfile.length() < rfile.length();
-        }
+        return strverscmp(lfile.constData(), rfile.constData());
     }
 
     template<Column SortCol>
