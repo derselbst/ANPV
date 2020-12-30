@@ -11,7 +11,8 @@
 #include <QColorSpace>
 #endif
 
-#include "tiffio.hxx"
+#include "tiff.h"
+#include "tiffio.h"
 
 struct PageInfo
 {
