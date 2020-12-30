@@ -50,6 +50,8 @@ void ImageDecodeTask::run()
         qCritical() << "Exception caught in ImageDecodeTask::run()";
     }
     
+    d->decoder->setCancellationCallback(std::function<void(void*)>(), nullptr);
+    d->decoder = nullptr;
     emit finished(this);
 }
 

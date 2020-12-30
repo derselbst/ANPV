@@ -108,6 +108,7 @@ struct DocumentView::Impl
         {
             currentImageDecoder->disconnect(p);
             currentImageDecoder->releaseFullImage();
+            currentImageDecoder = nullptr;
         }
         
         afPointOverlay = nullptr;
