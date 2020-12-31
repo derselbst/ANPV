@@ -14,7 +14,9 @@
 
 // #include <execution>
 #include <algorithm>
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <cstring>
 
 #include "ImageDecodeTask.hpp"
@@ -189,7 +191,7 @@ struct SortedImageModel::Impl
         QByteArray lfile = linfo.fileName().toCaseFolded().toLatin1();
         QByteArray rfile = rinfo.fileName().toCaseFolded().toLatin1();
         
-        return strverscmp(lfile.constData(), rfile.constData());
+        return strverscmp(lfile.constData(), rfile.constData()) < 0;
     }
 
     template<Column SortCol>
