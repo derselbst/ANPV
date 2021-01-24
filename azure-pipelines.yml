@@ -7,6 +7,10 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: 'sudo apt-get install -y qt5-default qtbase5-dev libtiff-dev libjpeg-dev'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
