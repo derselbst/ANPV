@@ -25,9 +25,10 @@ using namespace std::chrono_literals;
 
 int main(int argc, char *argv[])
 {
+    Q_INIT_RESOURCE(ANPV);
     QApplication a(argc, argv);
     
-    QSplashScreen splash(QPixmap("/home/tom/EigeneProgramme/ANPV/splash.jpg"));
+    QSplashScreen splash(QPixmap(":/images/splash.jpg"));
     splash.show();
     
     // create and init DecoderFactory in main thread
