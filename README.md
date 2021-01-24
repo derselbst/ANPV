@@ -2,6 +2,8 @@
 
 **A**nother **N**ameless **P**icture **V**iewer
 
+[![Build Status](https://dev.azure.com/tommbrt/tommbrt/_apis/build/status/derselbst.ANPV?branchName=azure-pipelines)](https://dev.azure.com/tommbrt/tommbrt/_build/latest?definitionId=7&branchName=azure-pipelines)
+
 # Features
 
 ANPV is my attempt to write a fast, responsive and smart image viewer. The primary goal is using it to sort my image collection.
