@@ -8,6 +8,14 @@ pool:
 
 steps:
 - task: CMake@1
+  displayName: 'CMake configure'
   inputs:
-    cmakeArgs: 
+    cmakeArgs: -S . -B build
+
+- task: CMake@1
+  displayName: 'CMake Build'
+  inputs:
+    cmakeArgs: --build build --parallel
+
+
 
