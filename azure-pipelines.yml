@@ -28,7 +28,8 @@ steps:
 - task: CMake@1
   displayName: 'CMake Build'
   inputs:
-    cmakeArgs: --build build --parallel
+    cmakeArgs: --build . --parallel
+    workingDirectory: 'build'
 
 
 
