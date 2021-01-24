@@ -8,9 +8,15 @@ pool:
 
 steps:
 - task: Bash@3
+  displayName: 'apt-get update'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get install -y qt5-default qtbase5-dev libtiff-dev libjpeg-dev'
+    script: 'sudo apt-get update'
+- task: Bash@3
+  displayName: 'apt-get install'
+  inputs:
+    targetType: 'inline'
+    script: 'sudo apt-get install -y qt5-default qtbase5-dev libtiff-dev libjpeg-dev extra-cmake-modules libkdcraw-dev libexiv2-dev'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
