@@ -122,6 +122,9 @@ AfPointOverlay.cpp
 AfPointOverlay.hpp
 ANPV.hpp
 ANPV.cpp
+CancellableProgressDialog.hpp
+CancellableProgressWidget.cpp
+CancellableProgressWidget.hpp
 DecoderFactory.hpp
 DecoderFactory.cpp
 DecodingState.hpp
@@ -161,6 +164,7 @@ xThreadGuard.hpp
 )
 
 qt5_wrap_ui(UI_HEADERS
+    CancellableProgressWidget.ui
     FileOperationConfig.ui)
 
 add_executable(anpv ${SRC} ${UI_HEADERS} ANPV.qrc)
