@@ -52,7 +52,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 ### set compile flags
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Warray-bounds -Wstack-protector")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0 -Wextra -fno-inline-functions ") #  -D_GLIBCXX_DEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0 -Wextra -fno-inline-functions -fsanitize=address ") #  -D_GLIBCXX_DEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fstack-check -fstack-protector-all")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-check -fstack-protector-all")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -137,8 +137,6 @@ ExifWrapper.hpp
 FileOperationConfig.cpp
 FileOperationConfig.hpp
 Formatter.hpp
-ImageDecodeTask.cpp
-ImageDecodeTask.hpp
 SortedImageModel.cpp
 SortedImageModel.hpp
 MessageWidget.cpp

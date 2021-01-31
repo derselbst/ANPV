@@ -19,7 +19,6 @@
 #endif
 #include <cstring>
 
-#include "ImageDecodeTask.hpp"
 #include "SmartImageDecoder.hpp"
 #include "DecoderFactory.hpp"
 #include "UserCancellation.hpp"
@@ -52,9 +51,7 @@ struct Entry
         if(other.hasImageDecoder())
         {
             this->dec = other.dec;
-            this->task = other.task;
-            this->future = other.future;
-            other.task = nullptr;
+            this->future.setFuture(other.future.future());
             other.dec = nullptr;
         }
         else
@@ -71,16 +68,9 @@ struct Entry
     
     ~Entry()
     {
-        if(task)
-        {
-            task->disconnect(q);
-            if(!DecoderFactory::globalInstance()->cancelDecodeTask(task))
-            {
-                future.waitForFinished();
-            }
-            future = QFuture<void>();
-            task = nullptr;
-        }
+        future.cancel();
+        future.waitForFinished();
+        future.setFuture(QFuture<DecodingState>());
 
         if(dec)
         {
@@ -106,31 +96,20 @@ struct Entry
         return dec != nullptr;
     }
     
-    void setTask(QSharedPointer<ImageDecodeTask> t)
-    {
-        this->task = t;
-    }
-    
-    QSharedPointer<ImageDecodeTask>& getTask()
-    {
-        return task;
-    }
-    
-    const QFuture<void>& getFuture()
+    const QFutureWatcher<DecodingState>& getFutureWatcher()
     {
         return future;
     }
     
-    void setFuture(QFuture<void>&& fut)
+    void setFuture(const QFuture<DecodingState>& fut)
     {
-        future = std::move(fut);
+        future.setFuture(fut);
     }
     
 private:
     SortedImageModel* q = nullptr;
     QSharedPointer<SmartImageDecoder> dec;
-    QSharedPointer<ImageDecodeTask> task;
-    QFuture<void> future;
+    QFutureWatcher<DecodingState> future;
     QFileInfo info;
 };
 
@@ -467,16 +446,9 @@ struct SortedImageModel::Impl
         xThreadGuard g(q);
         Entry& e = entries.at(index.row());
         
-        if(!e.getTask().isNull())
-        {
-            return;
-        }
-        
-        auto task = DecoderFactory::globalInstance()->createDecodeTask(dec, targetState);
-        e.setTask(task);
-        QObject::connect(task.data(), &ImageDecodeTask::finished, q, [&](ImageDecodeTask* t){ this->onDecodingTaskFinished(t); });
-        e.setFuture(QtConcurrent::run(QThreadPool::globalInstance(), [=](){if(task) task->run();}));
         ++runningBackgroundTasks;
+        QObject::connect(&e.getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, q, [&](){ this->onDecodingTaskFinished(dec.data()); });
+        e.setFuture(dec->decodeAsync(targetState));
     }
 
     void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
@@ -507,19 +479,18 @@ struct SortedImageModel::Impl
         }
     }
 
-    void onDecodingTaskFinished(ImageDecodeTask* t)
+    void onDecodingTaskFinished(SmartImageDecoder* dec)
     {
         xThreadGuard g(q);
 
         auto result = std::find_if(entries.begin(),
                                    entries.end(),
                                 [=](Entry& other)
-                                { return other.getTask().data() == t;}
+                                { return other.getDecoder().data() == dec;}
                                 );
         if (result != entries.end())
         {
-            result->setTask(nullptr);
-            result->setFuture(QFuture<void>());
+            result->setFuture(QFuture<DecodingState>());
             if(!--runningBackgroundTasks)
             {
                 setStatusMessage(100, "All background tasks done");

@@ -34,7 +34,6 @@ public slots:
     void zoomOut();
     void onImageRefinement(SmartImageDecoder* self, QImage img);
     void onDecodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
-    void onDecodingProgress(SmartImageDecoder* self, int progress, QString message);
     
 protected:
     void wheelEvent(QWheelEvent *event) override;

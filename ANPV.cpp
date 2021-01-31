@@ -5,7 +5,6 @@
 #include <QStackedLayout>
 #include <QWidget>
 #include <QSplashScreen>
-#include <QStatusBar>
 #include <QGuiApplication>
 #include <QApplication>
 #include <QGraphicsScene>
@@ -37,6 +36,8 @@
 #include "SmartImageDecoder.hpp"
 #include "MoveFileCommand.hpp"
 #include "FileOperationConfig.hpp"
+#include "CancellableProgressWidget.hpp"
+#include "xThreadGuard.hpp"
 
 
 struct ANPV::Impl
@@ -44,7 +45,8 @@ struct ANPV::Impl
     ANPV* q;
     
     QUndoStack* undoStack;
-    QProgressBar* progressBar;
+    QVBoxLayout* progressWidgetLayout;
+    QWidget* progressWidgetContainer;
     QStackedLayout* stackedLayout;
     QWidget *stackedLayoutWidget;
     DocumentView* imageViewer;
@@ -283,10 +285,11 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     
-    d->progressBar = new QProgressBar(this);
-    d->progressBar->setMinimum(0);
-    d->progressBar->setMaximum(100);
-    this->statusBar()->addPermanentWidget(d->progressBar);
+    d->progressWidgetLayout = new QVBoxLayout(this);
+    d->progressWidgetContainer = new QWidget(this);
+    d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
+    this->statusBar()->showMessage(tr("Ready"));
+    this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
     
     d->fileModel = new SortedImageModel(this);
     d->thumbnailViewer = new ThumbnailView(d->fileModel, this);
@@ -309,8 +312,6 @@ ANPV::ANPV(QSplashScreen *splash)
     
     d->createActions();
     d->createMenus();
-    
-    this->notifyDecodingState(DecodingState::Ready);
 }
 
 ANPV::~ANPV() = default;
@@ -345,20 +346,11 @@ void ANPV::setThumbnailDir(QString str)
     d->thumbnailViewer->changeDir(str);
 }
 
-void ANPV::notifyProgress(int progress, QString message)
+void ANPV::addBackgroundTask(const QFuture<DecodingState>& fut)
 {
-    this->statusBar()->showMessage(message, 0);
-    this->notifyProgress(progress);
-}
-
-void ANPV::notifyProgress(int progress)
-{
-    d->progressBar->setValue(progress);
-}
-
-void ANPV::notifyDecodingState(DecodingState state)
-{
-    d->progressBar->setStyleSheet(d->getProgressStyle(state));
+    xThreadGuard(this);
+    auto w = new CancellableProgressWidget(fut, d->progressWidgetContainer);
+    d->progressWidgetLayout->addWidget(w);
 }
 
 void ANPV::moveFilesSlot(const QString& targetDir)

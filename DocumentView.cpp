@@ -12,6 +12,7 @@
 #include <QThreadPool>
 #include <QDebug>
 #include <QFuture>
+#include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrent>
 
 #include <vector>
@@ -20,7 +21,6 @@
 #include "AfPointOverlay.hpp"
 #include "ExifOverlay.hpp"
 #include "SmartImageDecoder.hpp"
-#include "ImageDecodeTask.hpp"
 #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
@@ -49,11 +49,8 @@ struct DocumentView::Impl
     
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
-    QFuture<void> taskFuture;
+    QFutureWatcher<DecodingState> taskFuture;
     
-    // a shortcut to the most recent task queued
-    QSharedPointer<ImageDecodeTask> currentDecodeTask;
-
     // the latest image decoder, the same that displays the current image
     // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
     // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
@@ -67,16 +64,6 @@ struct DocumentView::Impl
     
     ~Impl()
     {
-        if(currentDecodeTask)
-        {
-            if(!DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask))
-            {
-                taskFuture.waitForFinished();
-            }
-            taskFuture = QFuture<void>();
-            currentDecodeTask = nullptr;
-        }
-        
         currentImageDecoder = nullptr;
     }
     
@@ -94,15 +81,8 @@ struct DocumentView::Impl
         currentDocumentPixmap = QPixmap();
         currentPixmapOverlay->setPixmap(currentDocumentPixmap);
         
-        if(currentDecodeTask)
-        {
-            if(!DecoderFactory::globalInstance()->cancelDecodeTask(currentDecodeTask))
-            {
-                taskFuture.waitForFinished();
-            }
-            taskFuture = QFuture<void>();
-            currentDecodeTask = nullptr;
-        }
+        taskFuture.cancel();
+        taskFuture.waitForFinished();
         
         if(currentImageDecoder)
         {
@@ -262,6 +242,12 @@ DocumentView::DocumentView(ANPV *parent)
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ emit d->createSmoothPixmap();});
+    
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this,
+    [&]()
+    {
+        QGuiApplication::restoreOverrideCursor();
+    });
 }
 
 DocumentView::~DocumentView() = default;
@@ -347,17 +333,6 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     QGuiApplication::restoreOverrideCursor();
 }
 
-void DocumentView::onDecodingProgress(SmartImageDecoder* dec, int progress, QString message)
-{
-    if(dec != this->d->currentImageDecoder.data())
-    {
-        // ignore events from a previous decoder that might still be running in the background
-        return;
-    }
-    
-    d->anpv->notifyProgress(progress, message);
-}
-
 void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
 {
     if(dec != this->d->currentImageDecoder.data())
@@ -412,8 +387,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     default:
         break;
     }
-    
-    d->anpv->notifyDecodingState(static_cast<DecodingState>(newState));
 }
 
 void DocumentView::loadImage(QString url)
@@ -424,18 +397,14 @@ void DocumentView::loadImage(QString url)
     
     if(!info.exists())
     {
-        d->anpv->notifyProgress(100, QString("Failed to open ") + info.fileName());
         d->setDocumentError(QString("No such file %1").arg(info.absoluteFilePath()));
-        d->anpv->notifyDecodingState(DecodingState::Error);
         return;
     }
     
     if(!info.isReadable())
     {
         QString name = info.fileName();
-        d->anpv->notifyProgress(100, QString("Failed to open ") + name);
         d->setDocumentError(QString("No permission to read file %1").arg(name));
-        d->anpv->notifyDecodingState(DecodingState::Error);
         return;
     }
     
@@ -443,9 +412,7 @@ void DocumentView::loadImage(QString url)
     if(!dec)
     {
         QString name = info.fileName();
-        d->anpv->notifyProgress(100, QString("Failed to open ") + name);
         d->setDocumentError(QString("Could not find a decoder for file %1").arg(name));
-        d->anpv->notifyDecodingState(DecodingState::Error);
         return;
     }
     
@@ -468,25 +435,13 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 
 void DocumentView::loadImage()
 {
-    d->anpv->notifyProgress(0, QString("Opening ") + d->currentImageDecoder->fileInfo().fileName());
-    
-    DecoderFactory::globalInstance()->configureDecoder(d->currentImageDecoder.data(), this);
-    d->currentDecodeTask = DecoderFactory::globalInstance()->createDecodeTask(d->currentImageDecoder, DecodingState::FullImage);
-    
-    auto task = d->currentDecodeTask;
-    connect(task.data(), &ImageDecodeTask::finished,
-            this, [&](ImageDecodeTask* t)
-            {
-                QGuiApplication::restoreOverrideCursor();
-                if(d->currentDecodeTask.data() == t)
-                {
-                    d->currentDecodeTask = nullptr;
-                }
-            }
-           );
-    
-    d->taskFuture = QtConcurrent::run(QThreadPool::globalInstance(), [&](){if(d->currentDecodeTask) d->currentDecodeTask->run();});
+    QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::imageRefined, this, &DocumentView::onImageRefinement);
+    QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
+   
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage);
+    d->taskFuture.setFuture(fut);
+    d->anpv->addBackgroundTask(fut);
 }
 
 QFileInfo DocumentView::currentFile()

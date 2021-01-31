@@ -14,6 +14,9 @@ class MoveFileCommand;
 class QSplashScreen;
 class SmartImageDecoder;
 
+template<typename T>
+class QFuture;
+
 class ANPV : public QMainWindow
 {
 Q_OBJECT
@@ -22,9 +25,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void notifyProgress(int progress, QString message);
-    void notifyProgress(int progress);
-    void notifyDecodingState(DecodingState state);
+    void addBackgroundTask(const QFuture<DecodingState>& fut);
     
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);

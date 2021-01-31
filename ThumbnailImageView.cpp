@@ -28,7 +28,6 @@
 
 #include "AfPointOverlay.hpp"
 #include "SmartImageDecoder.hpp"
-#include "ImageDecodeTask.hpp"
 #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"

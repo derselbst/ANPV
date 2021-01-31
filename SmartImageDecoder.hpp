@@ -4,11 +4,13 @@
 #include "DecodingState.hpp"
 
 #include <QObject>
+#include <QRunnable>
 #include <QSize>
 #include <QPixmap>
 #include <QImage>
 #include <QString>
 #include <QFileInfo>
+#include <QFuture>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -17,7 +19,7 @@
 class ExifWrapper;
 class QMetaMethod;
 
-class SmartImageDecoder : public QObject
+class SmartImageDecoder : public QObject, public QRunnable
 {
 Q_OBJECT
 
@@ -36,12 +38,13 @@ public:
     QString errorMessage();
     QString latestMessage();
     void decode(DecodingState targetState);
+    QFuture<DecodingState> decodeAsync(DecodingState targetState);
     DecodingState decodingState() const;
     void releaseFullImage();
     
     ExifWrapper* exif();
     
-    void setCancellationCallback(std::function<void(void*)>&& cc, void* obj);
+    void run() override;
     
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
@@ -68,6 +71,5 @@ private:
 
 signals:
     void decodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
-    void decodingProgress(SmartImageDecoder* self, int progress, QString message);
     void imageRefined(SmartImageDecoder* self, QImage img);
 };
