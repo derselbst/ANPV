@@ -116,7 +116,7 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
-    std::unique_ptr<uint32_t[]> mem;
+    uint32_t* mem;
     QImage image;
     
     auto& cinfo = d->cinfo;
@@ -134,7 +134,7 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
     bufferSetup.resize(cinfo.output_height);
     for(JDIMENSION i=0; i < cinfo.output_height; i++)
     {
-        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem.get() + i * cinfo.output_width);
+        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem + i * cinfo.output_width);
     }
     
     // set parameters for decompression
@@ -193,7 +193,7 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
             totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
             
-            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
+            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
                                     cinfo.output_width,
                                     std::min(totalLinesRead, cinfo.output_height),
                                     rowStride,
@@ -212,9 +212,7 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
     
     jpeg_finish_decompress(&cinfo);
     
-    image = QImage(reinterpret_cast<uint8_t*>(mem.get()), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32,
-        [](void* buf) { delete [] static_cast<uint8_t*>(buf); }, mem.get());
-    mem.release();
+    image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
     
     // call the progress monitor for a last time to report 100% to GUI
     d->progMgr.completed_passes = d->progMgr.total_passes;

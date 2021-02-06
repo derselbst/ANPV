@@ -45,6 +45,9 @@ struct SmartImageDecoder::Impl
     // the fully decoded image - might be incomplete if the state is PreviewImage
     QImage image;
     
+    // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
+    std::unique_ptr<unsigned char[]> fullImageBuffer;
+    
     // size of the fully decoded image, already available in DecodingState::Metadata
     QSize size;
     
@@ -69,6 +72,12 @@ struct SmartImageDecoder::Impl
     void setImage(QImage img)
     {
         image = img;
+    }
+    
+    void releaseFullImage()
+    {
+        setImage(QImage());
+        fullImageBuffer.reset();
     }
 };
 
@@ -246,7 +255,7 @@ void SmartImageDecoder::releaseFullImage()
 
     if(lck.try_lock())
     {
-        d->setImage(QImage());
+        d->releaseFullImage();
         this->setDecodingState(DecodingState::Metadata);
     }
     else
@@ -339,17 +348,22 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
 
 
 template<typename T>
-std::unique_ptr<T[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
+T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
 {
-    size_t needed = size_t(width) * height;
+    d->releaseFullImage();
+
+    size_t needed = size_t(width) * height * sizeof(T);
     try
     {
         this->setDecodingMessage("Allocating image output buffer");
 
-        std::unique_ptr<T[]> mem(new T[needed]);
+        std::unique_ptr<unsigned char[]> mem(new unsigned char[needed]);
 
+        // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
-        return mem;
+        
+        d->fullImageBuffer = std::move(mem);
+        return reinterpret_cast<T*>(d->fullImageBuffer.get());
     }
     catch (const std::bad_alloc&)
     {
@@ -357,4 +371,4 @@ std::unique_ptr<T[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint
     }
 }
 
-template std::unique_ptr<uint32_t[]> SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);
+template uint32_t* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);

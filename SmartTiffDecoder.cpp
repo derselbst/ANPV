@@ -301,7 +301,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
     const size_t width = d->imageInfo.width;
     const size_t height = d->imageInfo.height;
 
-    std::unique_ptr<uint32_t[]> mem = this->allocateImageBuffer<uint32_t>(width, height);
+    uint32_t* mem = this->allocateImageBuffer<uint32_t>(width, height);
     
     TIFFSetDirectory(d->tiff, d->imagePageToDecode);
 
@@ -322,7 +322,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
         
         std::vector<uint32_t> stripBuf(width * rowsperstrip);
 
-        auto* buf = mem.get();
+        auto* buf = mem;
         const auto stripCount = TIFFNumberOfStrips(d->tiff);
         for (tstrip_t strip = 0; strip < stripCount; strip++)
         {
@@ -335,7 +335,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
             else
             {
                 d->convert32BitOrder(buf, stripBuf.data(), rowsDecoded, width);
-                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
+                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
                                         width,
                                         std::min<size_t>(strip * rowsperstrip, height),
                                         rowStride,
@@ -350,8 +350,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
         }
     }
 
-    QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, d->format, [](void* buf) { delete [] static_cast<uint32_t*>(buf); }, mem.get());
-    mem.release();
+    QImage image(reinterpret_cast<uint8_t*>(mem), width, height, d->format);
 
     float resX = 0;
     float resY = 0;

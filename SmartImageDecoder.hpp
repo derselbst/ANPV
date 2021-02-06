@@ -63,7 +63,7 @@ protected:
     void updatePreviewImage(QImage&& img);
 
     template<typename T>
-    std::unique_ptr<T[]> allocateImageBuffer(uint32_t width, uint32_t height);
+    T* allocateImageBuffer(uint32_t width, uint32_t height);
     
 private:
     struct Impl;
