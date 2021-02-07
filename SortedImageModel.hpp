@@ -4,15 +4,17 @@
 #include "DecodingState.hpp"
 
 #include <QAbstractListModel>
+#include <QRunnable>
 #include <QModelIndex>
 #include <QFileInfo>
+#include <QFuture>
 #include <memory>
 
 class QDir;
 class ImageDecodeTask;
 class SmartImageDecoder;
 
-class SortedImageModel : public QAbstractListModel
+class SortedImageModel : public QAbstractListModel, public QRunnable
 {
     Q_OBJECT
     
@@ -38,7 +40,8 @@ public:
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
     
-    void changeDirAsync(const QDir& dir);
+    QFuture<DecodingState> changeDirAsync(const QDir& dir);
+    void run() override;
     
     using QAbstractListModel::index; // don't hide base member
     QModelIndex index(const QFileInfo& info);
@@ -61,12 +64,6 @@ public: // QAbstractItemModel
     bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
-    
-signals:
-    void directoryLoadingStatusMessage(int progress, QString msg);
-    void directoryLoadingProgress(int progress);
-    void directoryLoaded();
-    void directoryLoadingFailed(QString msg, QString details);
     
 private:
     struct Impl;

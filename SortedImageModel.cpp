@@ -1,7 +1,7 @@
 
 #include "SortedImageModel.hpp"
 
-#include <QFuture>
+#include <QFutureInterface>
 #include <QFileInfo>
 #include <QSize>
 #include <QtConcurrent/QtConcurrent>
@@ -96,9 +96,9 @@ struct Entry
         return dec != nullptr;
     }
     
-    const QFutureWatcher<DecodingState>& getFutureWatcher()
+    QFutureWatcher<DecodingState>* getFutureWatcher()
     {
-        return future;
+        return &future;
     }
     
     void setFuture(const QFuture<DecodingState>& fut)
@@ -117,10 +117,8 @@ struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
-    std::atomic<bool> directoryLoadingCancelled{ false };
-
-    QFuture<void> directoryWorker;
     std::atomic<int> runningBackgroundTasks{0};
+    std::unique_ptr<QFutureInterface<DecodingState>> directoryWorker;
     
     QDir currentDir;
     std::vector<Entry> entries;
@@ -157,9 +155,9 @@ struct SortedImageModel::Impl
         }
     }
 
-    static void throwIfDirectoryLoadingCancelled(void* self)
+    void throwIfDirectoryLoadingCancelled()
     {
-        if (static_cast<Impl*>(self)->directoryLoadingCancelled)
+        if(directoryWorker->isCanceled())
         {
             throw UserCancellation();
         }
@@ -431,14 +429,16 @@ struct SortedImageModel::Impl
     // stop processing, delete everything and wait until finished
     void clear()
     {
-        directoryLoadingCancelled = true;
-        directoryWorker.waitForFinished();
-        directoryLoadingCancelled = false;
-        
+        if(directoryWorker != nullptr && directoryWorker->isRunning())
+        {
+            directoryWorker->cancel();
+            directoryWorker->waitForFinished();
+        }
+
+        directoryWorker = std::make_unique<QFutureInterface<DecodingState>>();
         currentDir = QDir();
         entries.clear();
         entries.shrink_to_fit();
-        runningBackgroundTasks = 0;
     }
 
     void startImageDecoding(const QModelIndex& index, QSharedPointer<SmartImageDecoder> dec, DecodingState targetState)
@@ -447,7 +447,7 @@ struct SortedImageModel::Impl
         Entry& e = entries.at(index.row());
         
         ++runningBackgroundTasks;
-        QObject::connect(&e.getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, q, [&](){ this->onDecodingTaskFinished(dec.data()); });
+        QObject::connect(e.getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, q, [&](){ this->onDecodingTaskFinished(dec.data()); });
         e.setFuture(dec->decodeAsync(targetState));
     }
 
@@ -493,7 +493,6 @@ struct SortedImageModel::Impl
             result->setFuture(QFuture<DecodingState>());
             if(!--runningBackgroundTasks)
             {
-                setStatusMessage(100, "All background tasks done");
                 layoutChangedTimer.stop();
                 forceUpdateLayout();
             }
@@ -504,9 +503,9 @@ struct SortedImageModel::Impl
         }
     }
     
-    void setStatusMessage(int prog, QString msg)
+    void setStatusMessage(int prog, const QString& msg)
     {
-        emit q->directoryLoadingStatusMessage(prog, msg);
+        directoryWorker->setProgressValueAndText(prog , msg);
     }
     
     void updateLayout()
@@ -526,90 +525,111 @@ struct SortedImageModel::Impl
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
 {
-    connect(this, &SortedImageModel::directoryLoaded, this, [&](){ d->onDirectoryLoaded(); });
+    this->setAutoDelete(false);
     
     d->layoutChangedTimer.setInterval(500);
     d->layoutChangedTimer.setSingleShot(true);
     connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ emit d->forceUpdateLayout();});
 }
 
-SortedImageModel::~SortedImageModel() = default;
-
-void SortedImageModel::changeDirAsync(const QDir& dir)
+SortedImageModel::~SortedImageModel()
 {
-    d->setStatusMessage(0, "Waiting for previous directory parsing to finish...");
-    
+    xThreadGuard(this);
+}
+
+QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
+{
     this->beginRemoveRows(QModelIndex(), 0, rowCount());
     d->clear();
     this->endRemoveRows();
     
     d->currentDir = dir;
 
-    d->directoryWorker = QtConcurrent::run(QThreadPool::globalInstance(),
-        [&]()
+    d->directoryWorker->reportStarted();
+    QThreadPool::globalInstance()->start(this);
+
+    return d->directoryWorker->future();
+}
+
+void SortedImageModel::run()
+{
+    int entriesProcessed = 0;
+    try
+    {
+        QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+
+        const int entriesToProcess = fileInfoList.size();
+        
+        d->directoryWorker->setProgressRange(0, entriesToProcess);
+
+        QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
+        if (d->sortedColumnNeedsPreloadingMetadata())
         {
-            try
+            msg += " and reading EXIF data (making it quite slow)";
+        }
+        
+        d->setStatusMessage(0, msg);
+        d->entries.reserve(entriesToProcess);
+        while (!fileInfoList.isEmpty())
+        {
+            do
             {
-                QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-
-                const int entriesToProcess = fileInfoList.size();
-                int entriesProcessed = 0;
-
-                QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
-                if (d->sortedColumnNeedsPreloadingMetadata())
+                QFileInfo inf = fileInfoList.takeFirst();
+                if (inf.isFile())
                 {
-                    msg += " and reading EXIF data (making it quite slow)";
-                }
-                d->setStatusMessage(0, msg);
-                d->entries.reserve(entriesToProcess);
-                while (!fileInfoList.isEmpty())
-                {
-                    do
+                    auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
+                    if (decoder)
                     {
-                        QFileInfo inf = fileInfoList.takeFirst();
-                        if (inf.isFile())
+                        if (d->sortedColumnNeedsPreloadingMetadata())
                         {
-                            auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
-                            if (decoder)
-                            {
-                                if (d->sortedColumnNeedsPreloadingMetadata())
-                                {
-                                    decoder->decode(DecodingState::Metadata);
-                                }
-                                connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, [&](SmartImageDecoder* dec, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(dec, newState, old); });
-
-                                decoder->moveToThread(QGuiApplication::instance()->thread());
-                                d->entries.push_back(Entry(this, decoder));
-                                break;
-                            }
+                            decoder->decode(DecodingState::Metadata);
                         }
+                        connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, this, [&](SmartImageDecoder* dec, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(dec, newState, old); });
 
-                        d->entries.emplace_back(this, std::move(inf));
-
-                    } while (false);
-
-                    d->throwIfDirectoryLoadingCancelled(d.get());
-                    emit directoryLoadingProgress(entriesProcessed++ * 100. / entriesToProcess);
+                        decoder->moveToThread(QGuiApplication::instance()->thread());
+                        d->entries.push_back(Entry(this, decoder));
+                        break;
+                    }
                 }
 
-                d->setStatusMessage(99, "Sorting entries");
-                d->sortEntries();
-                if(d->sortOrder == Qt::DescendingOrder)
-                {
-                    d->reverseEntries();
-                }
-                emit directoryLoaded();
-            }
-            catch (const UserCancellation&)
-            {
-                // intentionally not failed()
-                emit directoryLoaded();
-            }
-            catch (const std::exception& e)
-            {
-                emit directoryLoadingFailed("Fatal error occurred while loading the directory", e.what());
-            }
-        });
+                d->entries.emplace_back(this, std::move(inf));
+
+            } while (false);
+
+            d->throwIfDirectoryLoadingCancelled();
+            d->setStatusMessage(entriesProcessed++, msg);
+        }
+
+        d->setStatusMessage(entriesProcessed, "Almost done: Sorting entries, please wait...");
+        d->sortEntries();
+        if(d->sortOrder == Qt::DescendingOrder)
+        {
+            d->reverseEntries();
+        }
+        
+        QMetaObject::invokeMethod(this, [&](){ d->onDirectoryLoaded(); }, Qt::QueuedConnection);
+        
+        d->setStatusMessage(entriesProcessed, "Directory successfully loaded.");
+        DecodingState result = DecodingState::FullImage;
+        d->directoryWorker->reportFinished(&result);
+    }
+    catch (const UserCancellation&)
+    {
+        DecodingState result = DecodingState::Cancelled;
+        d->directoryWorker->reportFinished(&result);
+    }
+    catch (const std::exception& e)
+    {
+        d->setStatusMessage(entriesProcessed, QString("Exception occurred while loading the directory: %1").arg(e.what()));
+        DecodingState result = DecodingState::Error;
+        d->directoryWorker->reportFinished(&result);
+    }
+    catch (...)
+    {
+        d->setStatusMessage(entriesProcessed, "Fatal error occurred while loading the directory");
+        DecodingState result = DecodingState::Error;
+        d->directoryWorker->reportFinished(&result);
+    }
 }
 
 QSharedPointer<SmartImageDecoder> SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idxOut)
@@ -665,7 +685,7 @@ int SortedImageModel::columnCount(const QModelIndex &) const
 
 int SortedImageModel::rowCount(const QModelIndex&) const
 {
-    if (d->directoryWorker.isFinished())
+    if (d->directoryWorker && d->directoryWorker->isFinished())
     {
         return d->entries.size();
     }
@@ -773,7 +793,7 @@ void SortedImageModel::sort(int column, Qt::SortOrder order)
     d->currentSortedCol = static_cast<Column>(column);
     d->sortOrder = order;
     
-    if(d->directoryWorker.isFinished())
+    if(d->directoryWorker && d->directoryWorker->isFinished())
     {
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         

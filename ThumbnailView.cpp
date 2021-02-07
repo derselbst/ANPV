@@ -21,6 +21,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QWheelEvent>
+#include <QFutureWatcher>
 
 #include <vector>
 #include <algorithm>
@@ -45,6 +46,7 @@ struct ThumbnailView::Impl
     QFileSystemModel* dirModel;
     
     SortedImageModel* fileModel;
+    QFutureWatcher<DecodingState> changeDirFuture;
     QDir currentDir;
     
     ThumbnailImageView* thumbnailList;
@@ -103,30 +105,7 @@ struct ThumbnailView::Impl
         QFileInfo info = dirModel->fileInfo(idx);
         p->changeDir(info.absoluteFilePath(), true);
     }
-    
-    void onDirectoryLoadingProgress(int prog)
-    {
-//         anpv->notifyProgress(prog);
-    }
-    
-    void onDirectoryLoadingStatusMessage(int prog, QString& msg)
-    {
-//         anpv->notifyProgress(prog, msg);
-    }
-    
-    void onDirectoryLoadingFailed(QString& msg, QString& details)
-    {
-//         anpv->notifyDecodingState(DecodingState::Error);
-//         anpv->notifyProgress(100, msg + ": " + details);
-        QGuiApplication::restoreOverrideCursor();
-    }
-    
-    void onDirectoryLoaded()
-    {
-//         anpv->notifyProgress(100, "Directory content successfully loaded");
-        QGuiApplication::restoreOverrideCursor();
-    }
-    
+
     void onModelAboutToBeReset()
     {
         QModelIndex cur = thumbnailList->currentIndex();
@@ -199,11 +178,12 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
     d->fileModel = model;
-//     connect(d->fileModel, &SortedImageModel::directoryLoadingProgress, this, [&](int prog){d->onDirectoryLoadingProgress(prog);});
-//     connect(d->fileModel, &SortedImageModel::directoryLoadingStatusMessage, this, [&](int prog, QString msg){d->onDirectoryLoadingStatusMessage(prog, msg);});
-//     connect(d->fileModel, &SortedImageModel::directoryLoadingFailed, this, [&](QString msg, QString x){d->onDirectoryLoadingFailed(msg, x);});
-//     connect(d->fileModel, &SortedImageModel::directoryLoaded, this, [&](){d->onDirectoryLoaded();});
-//     
+    connect(&d->changeDirFuture, &QFutureWatcher<DecodingState>::finished, this,
+    [&]()
+    {
+        QGuiApplication::restoreOverrideCursor();
+    });
+
     d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
     d->actionCut->setShortcuts(QKeySequence::Cut);
     connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
@@ -269,7 +249,9 @@ void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
             d->fileSystemTree->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-        d->fileModel->changeDirAsync(dir);
+        auto fut = d->fileModel->changeDirAsync(dir);
+        d->changeDirFuture.setFuture(fut);
+        d->anpv->addBackgroundTask(fut);
     }
 }
 

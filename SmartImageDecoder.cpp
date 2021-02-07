@@ -230,9 +230,12 @@ void SmartImageDecoder::decode(DecodingState targetState)
         this->setDecodingState(DecodingState::Error);
     }
     
-    // this will not store the result if the future has been canceled already!
-    DecodingState state = d->state.load();
-    d->futInt->reportFinished(&state);
+    if(d->futInt)
+    {
+        // this will not store the result if the future has been canceled already!
+        DecodingState state = d->state.load();
+        d->futInt->reportFinished(&state);
+    }
 }
 
 void SmartImageDecoder::close()
