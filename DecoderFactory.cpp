@@ -6,7 +6,7 @@
 #include "SmartTiffDecoder.hpp"
 #include "DocumentView.hpp"
 
-#include <KDCRAW/KDcraw>
+// #include <KDCRAW/KDcraw>
 #include <QFile>
 #include <QImageReader>
 #include <QDebug>
@@ -29,7 +29,7 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
     QSharedPointer<SmartImageDecoder> sid(nullptr, &QObject::deleteLater);
     QImageReader r(url.absoluteFilePath());
     
-    if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
+    /*if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
     {
         QByteArray previewData;
 
@@ -50,7 +50,7 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
         
         sid.reset(new SmartJpegDecoder(url, previewData));
     }
-    else if(r.format() == "tiff")
+    else */if(r.format() == "tiff")
     {
         sid.reset(new SmartTiffDecoder(url));
     }
