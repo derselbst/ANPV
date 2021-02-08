@@ -48,12 +48,12 @@ void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destina
         
         if(!fs::exists(src))
         {
-            failedMoves.append(QPair(*it, QString("Source vanished.")));
+            failedMoves.append(QPair<QString,QString>(*it, QString("Source vanished.")));
             it = filesToMove.erase(it);
         }
         else if(fs::exists(dest))
         {
-            failedMoves.append(QPair(*it, QString("Destination already exists.")));
+            failedMoves.append(QPair<QString,QString>(*it, QString("Destination already exists.")));
             it = filesToMove.erase(it);
         }
         else
@@ -65,7 +65,7 @@ void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destina
             }
             catch(const fs::filesystem_error& e)
             {
-                failedMoves.append(QPair(*it, e.what()));
+                failedMoves.append(QPair<QString,QString>(*it, e.what()));
                 it = filesToMove.erase(it);
             }
         }
