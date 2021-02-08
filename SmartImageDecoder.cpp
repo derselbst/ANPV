@@ -7,7 +7,7 @@
 #include "xThreadGuard.hpp"
 
 #include <QtDebug>
-#include <QFutureInterface>
+#include <QPromise>
 #include <QMetaMethod>
 #include <QThreadPool>
 #include <chrono>
@@ -16,7 +16,7 @@
 
 struct SmartImageDecoder::Impl
 {
-    std::unique_ptr<QFutureInterface<DecodingState>> futInt;
+    std::unique_ptr<QPromise<DecodingState>> promise;
     void* cancelCallbackObject = nullptr;
     std::atomic<DecodingState> state{ DecodingState::Ready };
     DecodingState targetState;
@@ -93,10 +93,10 @@ SmartImageDecoder::~SmartImageDecoder()
     bool taken = QThreadPool::globalInstance()->tryTake(this);
     if(!taken)
     {
-        if(d->futInt && !d->futInt->isFinished())
+        if(d->promise && !d->promise->future().isFinished())
         {
-            d->futInt->cancel();
-            d->futInt->waitForFinished();
+            d->promise->future().cancel();
+            d->promise->future().waitForFinished();
         }
     }
 }
@@ -125,7 +125,7 @@ void SmartImageDecoder::setSize(QSize size)
 
 void SmartImageDecoder::cancelCallback()
 {
-    if(d->futInt->isCanceled())
+    if(d->promise->isCanceled())
     {
         throw UserCancellation();
     }
@@ -133,18 +133,20 @@ void SmartImageDecoder::cancelCallback()
 
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState)
 {
-    if(d->futInt != nullptr && d->futInt->isRunning())
+    xThreadGuard g(this);
+    if(d->promise != nullptr && d->promise->future().isRunning())
     {
-        return d->futInt->future();
+        return d->promise->future();
     }
+
+    std::lock_guard<std::mutex> lck(d->m);
     
     d->targetState = targetState;
-    d->futInt = std::make_unique<QFutureInterface<DecodingState>>();
-    d->futInt->setProgressRange(0, 100);
-    d->futInt->reportStarted();
+    d->promise = std::make_unique<QPromise<DecodingState>>();
+    d->promise->setProgressRange(0, 100);
     QThreadPool::globalInstance()->start(this);
 
-    return d->futInt->future();
+    return d->promise->future();
 }
 
 void SmartImageDecoder::run()
@@ -158,6 +160,10 @@ void SmartImageDecoder::decode(DecodingState targetState)
 
     try
     {
+        if(d->promise)
+        {
+            d->promise->start();
+        }
         this->cancelCallback();
         do
         {
@@ -230,11 +236,11 @@ void SmartImageDecoder::decode(DecodingState targetState)
         this->setDecodingState(DecodingState::Error);
     }
     
-    if(d->futInt)
+    if(d->promise)
     {
         // this will not store the result if the future has been canceled already!
-        DecodingState state = d->state.load();
-        d->futInt->reportFinished(&state);
+        d->promise->addResult(d->state.load());
+        d->promise->finish();
     }
 }
 
@@ -324,7 +330,7 @@ void SmartImageDecoder::setDecodingMessage(QString&& msg)
     if(d->decodingMessage != msg)
     {
         d->decodingMessage = std::move(msg);
-        d->futInt->setProgressValueAndText(d->decodingProgress, d->decodingMessage);
+        d->promise->setProgressValueAndText(d->decodingProgress, d->decodingMessage);
     }
 }
 
@@ -332,7 +338,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 {
     if(d->decodingProgress != prog)
     {
-        d->futInt->setProgressValueAndText(prog , d->decodingMessage);
+        d->promise->setProgressValueAndText(prog , d->decodingMessage);
     }
 }
 
