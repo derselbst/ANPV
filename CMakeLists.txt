@@ -101,7 +101,6 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt6 COMPONENTS Widgets Concurrent REQUIRED)
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
 
 find_package(JPEG REQUIRED)
