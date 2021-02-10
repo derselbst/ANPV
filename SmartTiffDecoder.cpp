@@ -45,6 +45,8 @@ struct SmartTiffDecoder::Impl
     
     Impl(SmartTiffDecoder* q) : q(q)
     {
+        TIFFSetErrorHandler(nullptr);
+        TIFFSetWarningHandler(nullptr);
         TIFFSetErrorHandlerExt(myErrorHandler);
         TIFFSetWarningHandlerExt(myWarningHandler);
     }
