@@ -46,7 +46,6 @@ struct ThumbnailView::Impl
     QFileSystemModel* dirModel;
     
     SortedImageModel* fileModel;
-    QFutureWatcher<DecodingState> changeDirFuture;
     QDir currentDir;
     
     ThumbnailImageView* thumbnailList;
@@ -178,11 +177,6 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     connect(d->dirModel, &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->scrollLater(s);});
     
     d->fileModel = model;
-    connect(&d->changeDirFuture, &QFutureWatcher<DecodingState>::finished, this,
-    [&]()
-    {
-        QGuiApplication::restoreOverrideCursor();
-    });
 
     d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
     d->actionCut->setShortcuts(QKeySequence::Cut);
@@ -248,9 +242,7 @@ void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
             // and make sure we do not scroll to center horizontally
             d->fileSystemTree->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
-        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         auto fut = d->fileModel->changeDirAsync(dir);
-        d->changeDirFuture.setFuture(fut);
         d->anpv->addBackgroundTask(fut);
     }
 }

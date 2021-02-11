@@ -23,7 +23,7 @@ struct SmartImageDecoder::Impl
     QString decodingMessage;
     int decodingProgress=0;
 
-    std::mutex m;
+    std::recursive_mutex m;
 
     std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
@@ -104,7 +104,7 @@ SmartImageDecoder::~SmartImageDecoder()
 void SmartImageDecoder::setThumbnail(QImage thumb)
 {
     d->thumbnail = QPixmap::fromImage(thumb);
-    d->thumbnailTransformed = d->thumbnail.transformed(d->exifWrapper.transformMatrix());
+    d->thumbnailTransformed = QPixmap();
 }
 
 void SmartImageDecoder::setDecodingState(DecodingState state)
@@ -139,7 +139,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState)
         return d->promise->future();
     }
 
-    std::lock_guard<std::mutex> lck(d->m);
+    std::lock_guard<std::recursive_mutex> lck(d->m);
     
     d->targetState = targetState;
     d->promise = std::make_unique<QPromise<DecodingState>>();
@@ -156,7 +156,7 @@ void SmartImageDecoder::run()
 
 void SmartImageDecoder::decode(DecodingState targetState)
 {
-    std::lock_guard<std::mutex> lck(d->m);
+    std::lock_guard<std::recursive_mutex> lck(d->m);
 
     try
     {
@@ -260,7 +260,7 @@ void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
 
 void SmartImageDecoder::releaseFullImage()
 {
-    std::unique_lock<std::mutex> lck(d->m, std::defer_lock);
+    std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);
 
     if(lck.try_lock())
     {
@@ -307,9 +307,13 @@ QPixmap SmartImageDecoder::thumbnail()
     return d->thumbnail;
 }
 
-QPixmap SmartImageDecoder::icon()
+QPixmap SmartImageDecoder::icon(int height)
 {
-    xThreadGuard g(this);
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    if(!d->thumbnail.isNull() && (d->thumbnailTransformed.isNull() || d->thumbnailTransformed.height() != height))
+    {
+        d->thumbnailTransformed = d->thumbnail.transformed(d->exifWrapper.transformMatrix()).scaledToHeight(height);
+    }
     return d->thumbnailTransformed;
 }
 

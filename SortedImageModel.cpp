@@ -35,7 +35,7 @@ struct Entry
     Entry(SortedImageModel* q, QFileInfo&& info) : q(q), info(std::move(info))
     {}
     
-    Entry(SortedImageModel* q, QSharedPointer<SmartImageDecoder> d) : q(q), dec(d)
+    Entry(SortedImageModel* q, QSharedPointer<SmartImageDecoder> d) : q(q), dec(d), future(new QFutureWatcher<DecodingState>, &QObject::deleteLater)
     {}
     
     Entry(const Entry& e) = delete;
@@ -46,10 +46,15 @@ struct Entry
     
     ~Entry()
     {
-        if(future.isRunning())
+        if(future && future->isRunning())
         {
-            future.cancel();
-            future.waitForFinished();
+            future->cancel();
+            future->waitForFinished();
+            // We must emit finished() manually here, because the next setFuture() call would prevent finished() signal to be emitted for this current future.
+            emit future->finished();
+            // Prevent emitting the finished signal twice...
+            future->setFuture(QFuture<DecodingState>());
+            future = nullptr;
         }
         if(dec)
         {
@@ -77,13 +82,13 @@ struct Entry
     
     QFutureWatcher<DecodingState>* getFutureWatcher()
     {
-        return &future;
+        return future.data();
     }
     
 private:
     SortedImageModel* q = nullptr;
     QSharedPointer<SmartImageDecoder> dec;
-    QFutureWatcher<DecodingState> future;
+    QSharedPointer<QFutureWatcher<DecodingState>> future;
     QFileInfo info;
 };
 
@@ -104,6 +109,7 @@ struct SortedImageModel::Impl
     int iconHeight = 150;
     
     QTimer layoutChangedTimer;
+    QFileIconProvider iconProvider;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}
@@ -411,18 +417,31 @@ struct SortedImageModel::Impl
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
         currentDir = QDir();
-        entries.clear();
-        entries.shrink_to_fit();
     }
 
     void startImageDecoding(Entry& e, DecodingState targetState)
     {
         xThreadGuard g(q);
-        ++runningBackgroundTasks;
-        e.getFutureWatcher()->setFuture(e.getDecoder()->decodeAsync(targetState));
+        
+        auto* watch = e.getFutureWatcher();
+        if(watch->isFinished()) // check whether the future has finished and whether the finished signal has been emitted
+        {
+            if(runningBackgroundTasks++ == 0)
+            {
+                qInfo() << "OVERRIDE";
+                QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+            }
+            watch->setFuture(e.getDecoder()->decodeAsync(targetState).then(
+                [&](DecodingState s)
+                {
+                    e.getDecoder()->icon(q->iconHeight());
+                    return s;
+                }
+            ));
+        }
     }
 
-    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
+    void onBackgroundImageTaskStateChanged(size_t idx, quint32 newState, quint32)
     {
         xThreadGuard g(q);
         if(newState == DecodingState::Ready)
@@ -430,45 +449,24 @@ struct SortedImageModel::Impl
             // ignore ready state
             return;
         }
-        
-        for(size_t i = 0; i < entries.size(); i++)
-        {
-            if(entries.at(i)->getDecoder().data() == dec)
-            {
-                QModelIndex left = q->index(i, Column::FirstValid);
-                QModelIndex right = q->index(i, Column::Count - 1);
-
-                emit q->dataChanged(left, right);
-                if(newState == DecodingState::PreviewImage || newState == DecodingState::FullImage)
-                {
-                    // A thumbnail may be inserted into the list.
-                    // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
-                    updateLayout();
-                }
-                break;
-            }
-        }
+        // A thumbnail may be inserted into the list.
+        // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
+        updateLayout();
     }
 
-    void onDecodingTaskFinished(SmartImageDecoder* dec)
+    void onDecodingTaskFinished()
     {
         xThreadGuard g(q);
-        auto result = std::find_if(entries.begin(),
-                                   entries.end(),
-                                [=](std::unique_ptr<Entry>& other)
-                                { return other->getDecoder().data() == dec;}
-                                );
-        if (result != entries.end())
+        if(!--runningBackgroundTasks)
         {
-            if(!--runningBackgroundTasks)
-            {
-                layoutChangedTimer.stop();
-                forceUpdateLayout();
-            }
-            else
-            {
-                updateLayout();
-            }
+            layoutChangedTimer.stop();
+            forceUpdateLayout();
+            QGuiApplication::restoreOverrideCursor();
+            qInfo() << "RESTORE";
+        }
+        else
+        {
+            updateLayout();
         }
     }
     
@@ -479,14 +477,12 @@ struct SortedImageModel::Impl
     
     void updateLayout()
     {
-        if(!layoutChangedTimer.isActive())
-        {
-            layoutChangedTimer.start();
-        }
+        layoutChangedTimer.start();
     }
     
     void forceUpdateLayout()
     {
+        qInfo() << "forceUpdateLayout()";
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
     }
@@ -496,9 +492,9 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
 {
     this->setAutoDelete(false);
     
-    d->layoutChangedTimer.setInterval(500);
+    d->layoutChangedTimer.setInterval(1000);
     d->layoutChangedTimer.setSingleShot(true);
-    connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ emit d->forceUpdateLayout();});
+    connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
 }
 
 SortedImageModel::~SortedImageModel()
@@ -510,7 +506,6 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
 {
     this->beginRemoveRows(QModelIndex(), 0, rowCount());
     d->clear();
-    this->endRemoveRows();
     
     d->currentDir = dir;
 
@@ -525,12 +520,14 @@ void SortedImageModel::run()
     try
     {
         d->directoryWorker->start();
-        QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-
-        const int entriesToProcess = fileInfoList.size();
+        d->setStatusMessage(0, "Clearing old entries");
+        d->entries.clear();
         
+        d->setStatusMessage(0, "Looking up directory");
+        QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+        const int entriesToProcess = fileInfoList.size();
         d->directoryWorker->setProgressRange(0, entriesToProcess);
-
+        
         QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
         if (d->sortedColumnNeedsPreloadingMetadata())
         {
@@ -539,6 +536,7 @@ void SortedImageModel::run()
         
         d->setStatusMessage(0, msg);
         d->entries.reserve(entriesToProcess);
+        d->entries.shrink_to_fit();
         while (!fileInfoList.isEmpty())
         {
             do
@@ -558,8 +556,9 @@ void SortedImageModel::run()
                         e->getDecoder()->moveToThread(QGuiApplication::instance()->thread());
                         e->getFutureWatcher()->moveToThread(QGuiApplication::instance()->thread());
                         
-                        connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, this, [&](SmartImageDecoder* dec, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(dec, newState, old); });
-                        connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [=](){ d->onDecodingTaskFinished(decoder.data()); });
+                        auto idx = d->entries.size();
+                        connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, this, [=](SmartImageDecoder*, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(idx, newState, old); });
+                        connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onDecodingTaskFinished(); });
                         
                         d->entries.push_back(std::move(e));
                         
@@ -601,6 +600,7 @@ void SortedImageModel::run()
         d->setStatusMessage(entriesProcessed, "Fatal error occurred while loading the directory");
         d->directoryWorker->addResult(DecodingState::Error);
     }
+    this->endRemoveRows();
     d->directoryWorker->finish();
 }
 
@@ -671,7 +671,6 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
     if (index.isValid())
     {
-        QFileIconProvider iconProvider;
         const std::unique_ptr<Entry>& e = d->entries.at(index.row());
         QFileInfo fileInfo = e->getFileInfo();
 
@@ -698,16 +697,15 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                 case DecodingState::PreviewImage:
                 case DecodingState::FullImage:
                 {
-                    QPixmap thumbnail = e->getDecoder()->icon();
+                    QPixmap thumbnail = e->getDecoder()->icon(iconHeight());
                     if (!thumbnail.isNull())
                     {
-                        QPixmap thumbScaled = thumbnail.scaledToHeight(iconHeight());
-                        return thumbScaled;
+                        return thumbnail;
                     }
                 }
                 }
             }
-            return iconProvider.icon(fileInfo).pixmap(iconHeight(),iconHeight()).scaledToHeight(iconHeight());
+            return d->iconProvider.icon(fileInfo).pixmap(iconHeight(),iconHeight()).scaledToHeight(iconHeight());
 
         case Qt::ToolTipRole:
             if (e->hasImageDecoder())

@@ -52,11 +52,11 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
     }
     else */if(r.format() == "tiff")
     {
-        sid.reset(new SmartTiffDecoder(url));
+        return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(url), &QObject::deleteLater);
     }
     else if(r.format() == "jpeg")
     {
-        sid.reset(new SmartJpegDecoder(url));
+        return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(url), &QObject::deleteLater);
     }
     
     return sid;

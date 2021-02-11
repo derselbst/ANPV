@@ -33,7 +33,7 @@ public:
     const QFileInfo& fileInfo() const;
     QSize size();
     QPixmap thumbnail();
-    QPixmap icon();
+    QPixmap icon(int height);
     QImage image();
     QString errorMessage();
     QString latestMessage();

@@ -49,6 +49,11 @@ struct CancellableProgressWidget::Impl
             "margin: 0px;"
             "}").arg(colorStart).arg(colorEnd);
     }
+    
+    void onStarted()
+    {
+        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    }
 
     void onFinished()
     {
@@ -69,6 +74,7 @@ struct CancellableProgressWidget::Impl
         }
         this->ui->progressBar->setStyleSheet(getProgressStyle(result));
         this->ui->cancelButton->setEnabled(false);
+        QGuiApplication::restoreOverrideCursor();
     }
 };
 
@@ -81,6 +87,7 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressTextChanged, d->ui->label, &QLabel::setToolTip);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressRangeChanged, d->ui->progressBar, &QProgressBar::setRange);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressValueChanged, d->ui->progressBar, &QProgressBar::setValue);
+    QObject::connect(&d->future, &QFutureWatcher<DecodingState>::started, this, [&](){ d->onStarted(); });
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::finished, this,
     [&]()
     {
