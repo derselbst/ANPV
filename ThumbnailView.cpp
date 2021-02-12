@@ -243,7 +243,7 @@ void ThumbnailView::changeDir(const QString& dir, bool skipScrollTo)
             d->fileSystemTree->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
         auto fut = d->fileModel->changeDirAsync(dir);
-        d->anpv->addBackgroundTask(fut);
+        d->anpv->addBackgroundTask(ProgressGroup::Directory, fut);
     }
 }
 

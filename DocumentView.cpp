@@ -448,7 +448,7 @@ void DocumentView::loadImage()
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage);
     d->taskFuture.setFuture(fut);
-    d->anpv->addBackgroundTask(fut);
+    d->anpv->addBackgroundTask(ProgressGroup::Image, fut);
 }
 
 QFileInfo DocumentView::currentFile()

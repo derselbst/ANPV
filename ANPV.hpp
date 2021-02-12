@@ -17,6 +17,12 @@ class SmartImageDecoder;
 template<typename T>
 class QFuture;
 
+enum ProgressGroup
+{
+    Directory,
+    Image,
+};
+
 class ANPV : public QMainWindow
 {
 Q_OBJECT
@@ -25,7 +31,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void addBackgroundTask(const QFuture<DecodingState>& fut);
+    void addBackgroundTask(int idx, const QFuture<DecodingState>& fut);
     
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);

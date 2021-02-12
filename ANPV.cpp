@@ -28,6 +28,7 @@
 #include <QUndoStack>
 #include <QMessageBox>
 #include <QPair>
+#include <QPointer>
 
 #include "DocumentView.hpp"
 #include "ThumbnailView.hpp"
@@ -45,6 +46,7 @@ struct ANPV::Impl
     ANPV* q;
     
     QUndoStack* undoStack;
+    std::map<int, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
     QVBoxLayout* progressWidgetLayout;
     QWidget* progressWidgetContainer;
     QStackedLayout* stackedLayout;
@@ -346,11 +348,24 @@ void ANPV::setThumbnailDir(QString str)
     d->thumbnailViewer->changeDir(str);
 }
 
-void ANPV::addBackgroundTask(const QFuture<DecodingState>& fut)
+void ANPV::addBackgroundTask(int idx, const QFuture<DecodingState>& fut)
 {
     xThreadGuard(this);
-    auto w = new CancellableProgressWidget(fut, d->progressWidgetContainer);
-    d->progressWidgetLayout->addWidget(w);
+    QPointer w = new CancellableProgressWidget(fut, d->progressWidgetContainer);
+    
+    auto* old = d->progressWidgetGroupMap[idx].data();
+    if(old != nullptr)
+    {
+        auto* oldLayout = d->progressWidgetLayout->replaceWidget(old, w.data());
+        old->deleteLater();
+        delete oldLayout;
+    }
+    else
+    {
+        d->progressWidgetLayout->addWidget(w.data());
+    }
+    
+    d->progressWidgetGroupMap[idx] = w;
 }
 
 void ANPV::moveFilesSlot(const QString& targetDir)
