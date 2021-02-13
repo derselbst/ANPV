@@ -379,45 +379,40 @@ void ANPV::setThumbnailDir(QString str)
     d->thumbnailViewer->changeDir(str);
 }
 
-void ANPV::addBackgroundTask(int idx, const QFuture<DecodingState>& fut)
+void ANPV::addBackgroundTask(int group, const QFuture<DecodingState>& fut)
 {
     xThreadGuard(this);
-    QPointer w = new CancellableProgressWidget(fut, this, d->progressWidgetContainer);
-    
+
+    CancellableProgressWidget* w;
+    try
+    {
+        w = d->progressWidgetGroupMap.at(group);
+        w->setFuture(fut);
+    }
+    catch(std::out_of_range& e)
+    {
+        w = new CancellableProgressWidget(fut, this, d->progressWidgetContainer);
+        d->progressWidgetGroupMap[group] = w;
+    }
+    d->progressWidgetLayout->addWidget(w);
+    w->show();
+
     for (const auto& [key, value] : d->progressWidgetGroupMap)
     {
         if(!value.isNull() && value->isFinished())
         {
-            value->hide();
+            this->hideProgressWidget(value);
         }
     }
-    
-    auto* old = d->progressWidgetGroupMap[idx].data();
-    if(old != nullptr)
-    {
-        auto* oldLayout = d->progressWidgetLayout->replaceWidget(old, w.data());
-        old->deleteLater();
-        delete oldLayout;
-    }
-    else
-    {
-        d->progressWidgetLayout->addWidget(w.data());
-    }
-    
-    d->progressWidgetGroupMap[idx] = w;
 }
 
-bool ANPV::shouldHideProgressWidget()
+void ANPV::hideProgressWidget(CancellableProgressWidget* w)
 {
-    int vis = 0;
-    for (const auto& [key, value] : d->progressWidgetGroupMap)
+    if(d->progressWidgetLayout->count() >= 2)
     {
-        if(!value.isNull() && value->isVisible())
-        {
-            vis++;
-        }
+        d->progressWidgetLayout->removeWidget(w);
+        w->hide();
     }
-    return vis > 1;
 }
 
 void ANPV::moveFilesSlot(const QString& targetDir)

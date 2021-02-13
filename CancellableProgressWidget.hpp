@@ -17,4 +17,5 @@ public:
     CancellableProgressWidget(const QFuture<DecodingState>& future, ANPV* anpv, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
     ~CancellableProgressWidget();
     bool isFinished();
+    void setFuture(const QFuture<DecodingState>& future);
 };

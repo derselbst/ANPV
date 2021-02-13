@@ -14,6 +14,7 @@ struct CancellableProgressWidget::Impl
     ANPV* anpv;
     std::unique_ptr<Ui::CancellableProgressWidget> ui = std::make_unique<Ui::CancellableProgressWidget>();
     QFutureWatcher<DecodingState> future;
+    QTimer* hideTimer = nullptr;
 
     static QString getProgressStyle(DecodingState state)
     {
@@ -54,6 +55,8 @@ struct CancellableProgressWidget::Impl
     
     void onStarted()
     {
+        this->ui->progressBar->setStyleSheet(getProgressStyle(DecodingState::Ready));
+        this->ui->cancelButton->setEnabled(true);
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     }
 
@@ -77,6 +80,8 @@ struct CancellableProgressWidget::Impl
         this->ui->progressBar->setStyleSheet(getProgressStyle(result));
         this->ui->cancelButton->setEnabled(false);
         QGuiApplication::restoreOverrideCursor();
+        
+        hideTimer->start();
     }
 };
 
@@ -84,6 +89,13 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
 {
     d->ui->setupUi(this);
     d->anpv = anpv;
+    d->hideTimer = new QTimer(this);
+    d->hideTimer->setSingleShot(true);
+    d->hideTimer->setInterval(2000);
+    QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
+    {
+        d->anpv->hideProgressWidget(this);
+    });
 
     QObject::connect(d->ui->cancelButton, &QPushButton::clicked, &d->future, &QFutureWatcher<DecodingState>::cancel);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressTextChanged, d->ui->label, &QLabel::setText);
@@ -91,18 +103,7 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressRangeChanged, d->ui->progressBar, &QProgressBar::setRange);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressValueChanged, d->ui->progressBar, &QProgressBar::setValue);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::started, this, [&](){ d->onStarted(); });
-    QObject::connect(&d->future, &QFutureWatcher<DecodingState>::finished, this,
-    [&]()
-    {
-        d->onFinished();
-        QTimer::singleShot(2000, this, [&]()
-        {
-            if(d->anpv->shouldHideProgressWidget())
-            {
-                this->hide();
-            }
-        });
-    });
+    QObject::connect(&d->future, &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onFinished(); });
     d->future.setFuture(future);
 }
 
@@ -114,4 +115,18 @@ CancellableProgressWidget::~CancellableProgressWidget()
 bool CancellableProgressWidget::isFinished()
 {
     return d->future.isFinished();
+}
+
+void CancellableProgressWidget::setFuture(const QFuture<DecodingState>& future)
+{
+    if(!d->future.isFinished()) // finished event already emitted?
+    {
+        d->future.cancel();
+        if(d->future.isStarted()) // should always be true
+        {
+            QGuiApplication::restoreOverrideCursor(); // finished event won't be emitted after setFuture below
+        }
+    }
+    d->hideTimer->stop();
+    d->future.setFuture(future);
 }
