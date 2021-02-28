@@ -6,16 +6,17 @@
 #include <QRect>
 #include <QRectF>
 #include <memory>
+#include <tuple>
+
+enum class AfType { Disabled, Selected, HasFocus, Normal };
+
+using AfPoint = std::tuple<AfType, QRect>;
 
 class AfPointOverlay : public QAbstractGraphicsShapeItem
 {
 public:
-    AfPointOverlay(long totalAfPoints, QSize size);
+    AfPointOverlay(const std::vector<AfPoint>& afPoints, QSize size);
     ~AfPointOverlay() override;
-    
-    enum class AfType { Disabled, Selected, HasFocus, Normal };
-    
-    void addAfArea(QRect, AfType);
     
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;

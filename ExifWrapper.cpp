@@ -234,7 +234,7 @@ QImage ExifWrapper::thumbnail()
     return image;
 }
 
-std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
+bool ExifWrapper::autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& sizeOut)
 {
     long afValidPoints, imageWidth, imageHeight;
     if (d->mExivHandle.getExifTagLong("Exif.Canon.AFValidPoints",      afValidPoints) &&
@@ -255,11 +255,12 @@ std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
             }
             else
             {
-                qInfo() << "Canon image contains AF point information, but camera model is unknown.";
-                return nullptr;
+                qInfo() << "Canon image contains AF point information, but camera model '" << model << "' is unknown.";
+                return false;
             }
             
-            auto apo = std::make_unique<AfPointOverlay>(afValidPoints, QSize(imageWidth, imageHeight));
+            std::vector<AfPoint> points;
+            points.reserve(afValidPoints);
             
             for(long i=0; i<afValidPoints; i++)
             {
@@ -274,48 +275,50 @@ std::unique_ptr<AfPointOverlay> ExifWrapper::autoFocusPoints()
                     d->mExivHandle.getExifTagLong("Exif.Canon.AFYPositions",    y,          i) &&
                     d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsInFocus", foc,        i/16) &&
                     d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsSelected",sel,        i/16) &&
-                    d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsUnusable",dis,       i/16))
+                    d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsUnusable",dis,        i/16))
                 {
                     long rectPosX = x + imageWidth/2 - rectWidth/2;
                     long rectPosY = flipY * y + imageHeight/2 - rectHeight/2;
                     
                     QRect rectAF(rectPosX, rectPosY, rectWidth, rectHeight);
                     
-                    AfPointOverlay::AfType type;
+                    AfType type;
                     if(dis & (1<<(i%16)))
                     {
-                        type = AfPointOverlay::AfType::Disabled;
+                        type = AfType::Disabled;
                     }
                     else
                     {
                         if(foc & (1<<(i%16)))
                         {
-                            type = AfPointOverlay::AfType::HasFocus;
+                            type = AfType::HasFocus;
                         }
                         else if(sel & (1<<(i%16)))
                         {
-                            type = AfPointOverlay::AfType::Selected;
+                            type = AfType::Selected;
                         }
                         else
                         {
-                            type = AfPointOverlay::AfType::Normal;
+                            type = AfType::Normal;
                         }
                     }
                     
-                    apo->addAfArea(rectAF, type);
+                    points.push_back(std::make_tuple(type, rectAF));
                 }
                 else
                 {
                     qWarning() << "Error while parsing Canon AF";
-                    return nullptr;
+                    return false;
                 }
             }
             
-            return apo;
+            sizeOut = QSize(imageWidth, imageHeight);
+            afPointsOut = points;
+            return true;
         }
     }
     
-    return nullptr;
+    return false;
 }
 
 bool ExifWrapper::aperture(double& quot)

@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "AfPointOverlay.hpp"
+
 #include <memory>
 #include <QString>
 #include <QTransform>
@@ -37,7 +39,7 @@ public:
     QSize sizeTransposed(QSize size);
     QString comment();
     QImage thumbnail();
-    std::unique_ptr<AfPointOverlay> autoFocusPoints();
+    bool autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& sizeOut);
     
     QString aperture();
     bool aperture(double& quot);

@@ -199,12 +199,9 @@ struct DocumentView::Impl
 
     void addAfPoints(std::unique_ptr<AfPointOverlay>&& afpoint)
     {
-        if(afpoint)
-        {
-            afPointOverlay = std::move(afpoint);
-            afPointOverlay->setZValue(1);
-            scene->addItem(afPointOverlay.get());
-        }
+        afPointOverlay = std::move(afpoint);
+        afPointOverlay->setZValue(1);
+        scene->addItem(afPointOverlay.get());
     }
     
     void setDocumentError(SmartImageDecoder* sid)
@@ -370,21 +367,53 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::Ready:
         break;
     case DecodingState::Metadata:
+    {
         this->setSceneRect(QRectF(QPointF(0,0), dec->size()));
-        if(d->anpv->viewMode() == ViewMode::Fit)
+        auto viewMode = d->anpv->viewMode();
+        if(viewMode == ViewMode::Fit)
         {
             this->resetTransform();
             this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
+        }
+        else if(viewMode == ViewMode::CenterAf)
+        {
+            std::vector<AfPoint> afPoints;
+            QSize size;
+            if(dec->exif()->autoFocusPoints(afPoints,size))
+            {
+                QRect inFocusBoundingRect;
+                for(size_t i=0; i < afPoints.size(); i++)
+                {
+                    auto& af = afPoints[i];
+                    auto type = std::get<0>(af);
+                    auto rect = std::get<1>(af);
+                    if(type == AfType::HasFocus)
+                    {
+                        inFocusBoundingRect = inFocusBoundingRect.united(rect);
+                    }
+                }
+                if(inFocusBoundingRect.isValid())
+                {
+                    this->centerOn(inFocusBoundingRect.center());
+                }
+            }
         }
         this->setTransform(dec->exif()->transformMatrix(), true);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
         d->exifOverlay->setMetadata(dec->exif());
         break;
+    }
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
         {
             d->scene->addItem(d->currentPixmapOverlay.get());
-            d->addAfPoints(dec->exif()->autoFocusPoints());
+            
+            std::vector<AfPoint> p;
+            QSize s;
+            if(dec->exif()->autoFocusPoints(p,s))
+            {
+                d->addAfPoints(std::make_unique<AfPointOverlay>(p,s));
+            }
         }
         break;
     case DecodingState::FullImage:

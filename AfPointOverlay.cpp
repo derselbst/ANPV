@@ -6,30 +6,18 @@
 
 struct AfPointOverlay::Impl
 {
+    std::vector<AfPoint> afPoints;
     QSize imageSize;
-    
-    struct AfContainer
-    {
-        AfType type;
-        QRect rect;
-    };
-    
-    std::vector<AfContainer> afPoints;
 };
 
-AfPointOverlay::AfPointOverlay(long totalAfPoints, QSize size) : d(std::make_unique<Impl>())
+AfPointOverlay::AfPointOverlay(const std::vector<AfPoint>& afPoints, QSize size) : d(std::make_unique<Impl>())
 {
+    d->afPoints = afPoints;
     d->imageSize = size;
-    d->afPoints.reserve(totalAfPoints);
 }
 
 AfPointOverlay::~AfPointOverlay() = default;
 
-void AfPointOverlay::addAfArea(QRect af, AfType type)
-{
-    d->afPoints.push_back({type,af});
-}
-    
 QRectF AfPointOverlay::boundingRect() const
 {
     return QRectF(QPointF(0, 0), d->imageSize);
@@ -42,7 +30,9 @@ void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     for(size_t i=0; i < d->afPoints.size(); i++)
     {
         auto& af = d->afPoints[i];
-        switch(af.type)
+        auto type = std::get<0>(af);
+        auto rect = std::get<1>(af);
+        switch(type)
         {
         case AfType::Disabled:
             pen.setColor(Qt::gray);
@@ -70,6 +60,6 @@ void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
         }
         
         painter->setPen(pen);
-        painter->drawRect(af.rect);
+        painter->drawRect(rect);
     }
 }
