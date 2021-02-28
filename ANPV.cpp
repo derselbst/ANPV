@@ -57,6 +57,7 @@ struct ANPV::Impl
     SortedImageModel* fileModel;
     
     QMenu* menuFile;
+    QMenu* menuView;
     QMenu* menuEdit;
     QMenu* menuSort;
     
@@ -65,6 +66,9 @@ struct ANPV::Impl
     QActionGroup* actionGroupSortColumn;
     QActionGroup* actionGroupSortOrder;
     QActionGroup* actionGroupFileOperation;
+    QActionGroup* actionGroupViewMode;
+    
+    ViewMode viewMode = ViewMode::Fit;
     
     QAction *actionUndo;
     QAction *actionRedo;
@@ -127,6 +131,30 @@ struct ANPV::Impl
             QString targetDir = act->data().toString();
             q->moveFilesSlot(targetDir);
         });
+        
+        
+        actionGroupViewMode = new QActionGroup(q);
+        
+        action = new QAction("View Mode", q);
+        action->setSeparator(true);
+        actionGroupViewMode->addAction(action);
+        
+        action = new QAction("No Change", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ this->viewMode = ViewMode::None; });
+        actionGroupViewMode->addAction(action);
+        
+        action = new QAction("Fit in FOV", q);
+        action->setCheckable(true);
+        action->setChecked(true);
+        connect(action, &QAction::triggered, q, [&](bool){ this->viewMode = ViewMode::Fit; });
+        actionGroupViewMode->addAction(action);
+        
+        action = new QAction("Center AF focus point", q);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, q, [&](bool){ this->viewMode = ViewMode::CenterAf; });
+        actionGroupViewMode->addAction(action);
+        
         
         actionGroupSortOrder = new QActionGroup(q);
         
@@ -244,6 +272,9 @@ struct ANPV::Impl
     {
         menuFile = q->menuBar()->addMenu("&File");
         menuFile->addAction(actionExit);
+        
+        menuView = q->menuBar()->addMenu("&View");
+        menuView->addActions(actionGroupViewMode->actions());
 
         menuEdit = q->menuBar()->addMenu("&Edit");
         menuEdit->addAction(actionUndo);
@@ -446,4 +477,9 @@ void ANPV::moveFilesSlot(const QList<QString>& files, const QString& sourceDir, 
     });
     
     d->undoStack->push(cmd);
+}
+
+ViewMode ANPV::viewMode()
+{
+    return d->viewMode;
 }

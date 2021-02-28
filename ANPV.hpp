@@ -23,6 +23,13 @@ enum ProgressGroup
     Image,
 };
 
+enum ViewMode
+{
+    None,
+    Fit,
+    CenterAf,
+};
+
 class ANPV : public QMainWindow
 {
 Q_OBJECT
@@ -37,6 +44,7 @@ public:
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
     
     bool shouldHideProgressWidget();
+    ViewMode viewMode();
     
 public slots:
     void showImageView();
