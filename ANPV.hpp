@@ -36,6 +36,8 @@ public:
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
     
+    bool shouldHideProgressWidget();
+    
 public slots:
     void showImageView();
     void showThumbnailView();

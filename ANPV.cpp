@@ -351,7 +351,15 @@ void ANPV::setThumbnailDir(QString str)
 void ANPV::addBackgroundTask(int idx, const QFuture<DecodingState>& fut)
 {
     xThreadGuard(this);
-    QPointer w = new CancellableProgressWidget(fut, d->progressWidgetContainer);
+    QPointer w = new CancellableProgressWidget(fut, this, d->progressWidgetContainer);
+    
+    for (const auto& [key, value] : d->progressWidgetGroupMap)
+    {
+        if(!value.isNull() && value->isFinished())
+        {
+            value->hide();
+        }
+    }
     
     auto* old = d->progressWidgetGroupMap[idx].data();
     if(old != nullptr)
@@ -366,6 +374,19 @@ void ANPV::addBackgroundTask(int idx, const QFuture<DecodingState>& fut)
     }
     
     d->progressWidgetGroupMap[idx] = w;
+}
+
+bool ANPV::shouldHideProgressWidget()
+{
+    int vis = 0;
+    for (const auto& [key, value] : d->progressWidgetGroupMap)
+    {
+        if(!value.isNull() && value->isVisible())
+        {
+            vis++;
+        }
+    }
+    return vis > 1;
 }
 
 void ANPV::moveFilesSlot(const QString& targetDir)

@@ -1,6 +1,7 @@
 
 #include "CancellableProgressWidget.hpp"
 #include "ui_CancellableProgressWidget.h"
+#include "ANPV.hpp"
 
 #include <QFutureWatcher>
 #include <QFuture>
@@ -10,6 +11,7 @@
 
 struct CancellableProgressWidget::Impl
 {
+    ANPV* anpv;
     std::unique_ptr<Ui::CancellableProgressWidget> ui = std::make_unique<Ui::CancellableProgressWidget>();
     QFutureWatcher<DecodingState> future;
 
@@ -78,9 +80,10 @@ struct CancellableProgressWidget::Impl
     }
 };
 
-CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState>& future, QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
+CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState>& future, ANPV* anpv, QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
 {
     d->ui->setupUi(this);
+    d->anpv = anpv;
 
     QObject::connect(d->ui->cancelButton, &QPushButton::clicked, &d->future, &QFutureWatcher<DecodingState>::cancel);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressTextChanged, d->ui->label, &QLabel::setText);
@@ -92,7 +95,13 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     [&]()
     {
         d->onFinished();
-        QTimer::singleShot(2000, this, &CancellableProgressWidget::deleteLater);
+        QTimer::singleShot(2000, this, [&]()
+        {
+            if(d->anpv->shouldHideProgressWidget())
+            {
+                this->hide();
+            }
+        });
     });
     d->future.setFuture(future);
 }
@@ -100,4 +109,9 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
 CancellableProgressWidget::~CancellableProgressWidget()
 {
     qDebug() << "Destroy Prog Widget " << this;
+}
+
+bool CancellableProgressWidget::isFinished()
+{
+    return d->future.isFinished();
 }
