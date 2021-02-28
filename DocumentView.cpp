@@ -166,7 +166,10 @@ struct DocumentView::Impl
                 // crop the image to the visible part, so we don't need to scale the entire one
                 imgToScale = currentDocumentPixmap.copy(visPixRect.toAlignedRect());
             }
-            QPixmap scaled = imgToScale.scaled(viewportRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            // Optimization for huge gigapixel images: before applying the smooth transformation, first scale it down to double
+            // window resolution size with fast nearest neighbour transform.
+            QPixmap fastDownScaled = imgToScale.scaled(viewportRect.size() * 2, Qt::KeepAspectRatio, Qt::FastTransformation);
+            QPixmap scaled = fastDownScaled.scaled(viewportRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
             smoothPixmapOverlay = std::make_unique<QGraphicsPixmapItem>(std::move(scaled));
             smoothPixmapOverlay->setPos(visPixRect.topLeft());
