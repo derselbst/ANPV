@@ -425,44 +425,44 @@ QString ExifWrapper::formatToString()
     QSize size = this->size();
     if(size.isValid())
     {
-        f << "Resolution: " << size.width() << " x " << size.height() << " px\n\n";
+        f << "Resolution: " << size.width() << " x " << size.height() << " px<br><br>";
     }
     
     if(this->aperture(r))
     {
-        f << "Aperture: " << std::fixed << std::setprecision(1) << r << "\n";
+        f << "Aperture: " << std::fixed << std::setprecision(1) << r << "<br>";
     }
     
     s = this->exposureTime();
     if(!s.isEmpty())
     {
-        f << "Exposure: " << s.toStdString() << "\n";
+        f << "Exposure: " << s.toStdString() << "<br>";
     }
     
     if(this->iso(n))
     {
-        f << "ISO: " << n << "\n";
+        f << "ISO: " << n << "<br>";
     }
     
     s = this->lens();
     if(!s.isEmpty())
     {
-        f << "Lens: " << s.toStdString() << "\n";
+        f << "Lens: " << s.toStdString() << "<br>";
     }
     
     if(this->focalLength(r))
     {
-        f << "Focal Length: " << std::fixed << std::setprecision(0) << r << "\n";
+        f << "Focal Length: " << std::fixed << std::setprecision(0) << r << "<br>";
     }
     
     QDateTime dt = this->dateRecorded();
     if(dt.isValid())
     {
         int phase = MoonPhase::fromDateTime(dt);
-        f << "\nRecorded on:\n"
-          << dt.toString("yyyy-MM-dd (dddd)\n").toStdString()
-          << dt.toString("hh:mm:ss").toStdString()
-          << "\n" << MoonPhase::formatToString(phase).toStdString() << " (" << phase << "%)\n";
+        f << "<br>Recorded on:<br>"
+          << dt.toString("yyyy-MM-dd (dddd)<br>").toStdString()
+          << dt.toString("hh:mm:ss<br>").toStdString()
+          << MoonPhase::formatToString(phase).toStdString() << " (" << phase << "%)";
     }
     
     return QString(f.str().c_str());

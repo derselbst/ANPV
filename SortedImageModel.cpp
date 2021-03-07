@@ -486,6 +486,47 @@ struct SortedImageModel::Impl
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
     }
+
+    QString formatToolTipInfo(const QSharedPointer<SmartImageDecoder>& sid)
+    {
+        QString exifStr = sid->exif()->formatToString();
+        
+        if(!exifStr.isEmpty())
+        {
+            exifStr = QString("<b>===EXIF===</b><br><br>") + exifStr + "<br><br>";
+        }
+        
+        static const char *const sizeUnit[] = {" Bytes", " KiB", " MiB", " <b>GiB</b>"};
+        float fsize = sid->fileInfo().size();
+        int i;
+        for(i = 0; i<4 && fsize > 1024; i++)
+        {
+            fsize /= 1024.f;
+        }
+        
+        exifStr += QString("<b>===stat()===</b><br><br>");
+        exifStr += "File Size: ";
+        exifStr += QString::number(fsize, 'f', 2) + sizeUnit[i];
+        exifStr += "<br><br>";
+        
+        QDateTime t = sid->fileInfo().fileTime(QFileDevice::FileBirthTime);
+        if(t.isValid())
+        {
+            exifStr += "Created on:<br>";
+            exifStr += t.toString("  yyyy-MM-dd (dddd)<br>");
+            exifStr += t.toString("  hh:mm:ss<br><br>");
+        }
+        
+        t = sid->fileInfo().fileTime(QFileDevice::FileModificationTime);
+        if(t.isValid())
+        {
+            exifStr += "Modified on:<br>";
+            exifStr += t.toString("yyyy-MM-dd (dddd)<br>");
+            exifStr += t.toString("hh:mm:ss");
+        }
+        
+        return exifStr;
+    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -720,8 +761,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                 case DecodingState::Metadata:
                 case DecodingState::PreviewImage:
                 case DecodingState::FullImage:
-                    return e->getDecoder()->exif()->formatToString();
-                    break;
+                    return d->formatToolTipInfo(e->getDecoder());
     
                 default:
                     break;
