@@ -125,7 +125,7 @@ void SmartImageDecoder::setSize(QSize size)
 
 void SmartImageDecoder::cancelCallback()
 {
-    if(d->promise->isCanceled())
+    if(d->promise && d->promise->isCanceled())
     {
         throw UserCancellation();
     }
@@ -134,7 +134,7 @@ void SmartImageDecoder::cancelCallback()
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState)
 {
     xThreadGuard g(this);
-    if(d->promise != nullptr && d->promise->future().isRunning())
+    if(d->promise && !d->promise->future().isFinished())
     {
         return d->promise->future();
     }
@@ -331,7 +331,7 @@ ExifWrapper* SmartImageDecoder::exif()
 
 void SmartImageDecoder::setDecodingMessage(QString&& msg)
 {
-    if(d->decodingMessage != msg)
+    if(d->promise && d->decodingMessage != msg)
     {
         d->decodingMessage = std::move(msg);
         d->promise->setProgressValueAndText(d->decodingProgress, d->decodingMessage);
@@ -340,7 +340,7 @@ void SmartImageDecoder::setDecodingMessage(QString&& msg)
 
 void SmartImageDecoder::setDecodingProgress(int prog)
 {
-    if(d->decodingProgress != prog)
+    if(d->promise && d->decodingProgress != prog)
     {
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
     }
