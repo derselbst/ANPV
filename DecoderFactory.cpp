@@ -6,7 +6,7 @@
 #include "SmartTiffDecoder.hpp"
 #include "DocumentView.hpp"
 
-// #include <KDCRAW/KDcraw>
+#include <KDCRAW/KDcraw>
 #include <QFile>
 #include <QImageReader>
 #include <QDebug>
@@ -26,10 +26,9 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
 {
     const QByteArray formatHint = url.fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
     
-    QSharedPointer<SmartImageDecoder> sid(nullptr, &QObject::deleteLater);
     QImageReader r(url.absoluteFilePath());
     
-    /*if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
+    if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
     {
         QByteArray previewData;
 
@@ -48,9 +47,9 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
             }
         }
         
-        sid.reset(new SmartJpegDecoder(url, previewData));
+        return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(url, previewData), &QObject::deleteLater);
     }
-    else */if(r.format() == "tiff")
+    else if(r.format() == "tiff")
     {
         return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(url), &QObject::deleteLater);
     }
@@ -59,6 +58,6 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& ur
         return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(url), &QObject::deleteLater);
     }
     
-    return sid;
+    return nullptr;
 }
 

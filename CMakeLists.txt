@@ -107,10 +107,11 @@ find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
 
-find_package(KF5KDcraw REQUIRED)
-
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
+
+add_subdirectory(libkdcraw)
+include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
 message("")
 ### Show a summary of what we got
