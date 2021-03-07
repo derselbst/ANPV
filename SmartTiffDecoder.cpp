@@ -293,8 +293,10 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     {
         this->setDecodingMessage((Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str());
         qInfo() << (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
-        //TODO
-    //    d->decodeImage(thumbnailPageToDecode);
+        
+        QImage thumb(pageInfos[thumbnailPageToDecode].width, pageInfos[thumbnailPageToDecode].height, d->format);
+        this->decodeInternal(thumbnailPageToDecode, thumb, true);
+        this->setThumbnail(thumb);
     }
 }
 
@@ -304,10 +306,22 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
     const size_t height = d->imageInfo.height;
 
     uint32_t* mem = this->allocateImageBuffer<uint32_t>(width, height);
-    
-    TIFFSetDirectory(d->tiff, d->imagePageToDecode);
+    QImage image(reinterpret_cast<uint8_t*>(mem), width, height, d->format);
+    this->decodeInternal(d->imagePageToDecode, image, false);
+    return image;
+}
 
-    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << d->imagePageToDecode).str().c_str());
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool silent)
+{
+    const size_t width = image.width();
+    const size_t height = image.height();
+    
+    TIFFSetDirectory(d->tiff, imagePageToDecode);
+
+    if(!silent)
+    {
+        this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
+    }
     
     const size_t rowStride = width * sizeof(uint32_t);
     if(TIFFIsTiled(d->tiff))
@@ -324,6 +338,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
         
         std::vector<uint32_t> stripBuf(width * rowsperstrip);
 
+        uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
         auto* buf = mem;
         const auto stripCount = TIFFNumberOfStrips(d->tiff);
         for (tstrip_t strip = 0; strip < stripCount; strip++)
@@ -337,22 +352,27 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
             else
             {
                 d->convert32BitOrder(buf, stripBuf.data(), rowsDecoded, width);
-                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                        width,
-                                        std::min<size_t>(strip * rowsperstrip, height),
-                                        rowStride,
-                                        d->format));
+                
+                if(!silent)
+                {
+                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+                                            width,
+                                            std::min<size_t>(strip * rowsperstrip, height),
+                                            rowStride,
+                                            d->format));
+                }
             }
             
-            double progress = strip * 100.0 / stripCount;
-            this->setDecodingProgress(progress);
-
+            if(!silent)
+            {
+                double progress = strip * 100.0 / stripCount;
+                this->setDecodingProgress(progress);
+            }
+            
             buf += rowsDecoded * width;
             this->cancelCallback();
         }
     }
-
-    QImage image(reinterpret_cast<uint8_t*>(mem), width, height, d->format);
 
     float resX = 0;
     float resY = 0;
@@ -390,8 +410,9 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
     }
 #endif
     
-    this->setDecodingProgress(100);
-    this->setDecodingMessage("TIFF decoding completed successfully.");
-
-    return image;
+    if(!silent)
+    {
+        this->setDecodingProgress(100);
+        this->setDecodingMessage("TIFF decoding completed successfully.");
+    }
 }
