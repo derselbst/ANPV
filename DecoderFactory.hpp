@@ -17,6 +17,7 @@ public:
 
     ~DecoderFactory();
     QSharedPointer<SmartImageDecoder> getDecoder(const QFileInfo& url);
+    bool hasCR2Header(const QFileInfo& url);
 
 private:
     DecoderFactory();

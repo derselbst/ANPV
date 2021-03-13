@@ -22,6 +22,51 @@ DecoderFactory* DecoderFactory::globalInstance()
     return &fac;
 }
 
+bool DecoderFactory::hasCR2Header(const QFileInfo& url)
+{
+    QFile file(url.absoluteFilePath());
+    if(!file.open(QIODevice::ReadOnly))
+    {
+        return false;
+    }
+    
+    char b[12];
+    QDataStream istream(&file);
+    if(istream.readRawData(b, sizeof(b) / sizeof(*b)) == -1)
+    {
+        return false;
+    }
+    
+    // endian access switcher for 16bit words
+    int e16;
+    if(b[0] == 'I' && b[1] == b[0])
+    {
+        // Intel byte order (little endian)
+        e16 = 0;
+    }
+    else if(b[0] == 'M' && b[1] == b[0])
+    {
+        // Motorola byte order (big endian)
+        e16 = 1;
+    }
+    else
+    {
+        return false;
+    }
+    
+    if( b[2 ^ e16] == 0x2A &&
+        b[3 ^ e16] == 0x00 &&
+        b[8 ^ e16] == 'C' &&
+        b[9 ^ e16] == 'R' &&
+        b[10 ^ e16] == 0x02 &&
+        b[11 ^ e16] == 0x00)
+    {
+        return true;
+    }
+    
+    return false;
+}
+
 QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& url)
 {
     const QByteArray formatHint = url.fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
