@@ -319,8 +319,7 @@ QPixmap SmartImageDecoder::icon(int height)
 
 QSize SmartImageDecoder::size()
 {
-    xThreadGuard g(this);
-
+    std::lock_guard<std::recursive_mutex> lck(d->m);
     return d->size;
 }
 
