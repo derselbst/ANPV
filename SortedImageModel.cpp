@@ -569,7 +569,7 @@ void SortedImageModel::run()
         const int entriesToProcess = fileInfoList.size();
         if(entriesToProcess > 0)
         {
-            d->directoryWorker->setProgressRange(0, entriesToProcess);
+            d->directoryWorker->setProgressRange(0, entriesToProcess + 1 /* for sorting effort */);
             
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             if (d->sortedColumnNeedsPreloadingMetadata())
@@ -580,6 +580,7 @@ void SortedImageModel::run()
             d->setStatusMessage(0, msg);
             d->entries.reserve(entriesToProcess);
             d->entries.shrink_to_fit();
+            unsigned readableImages = 0;
             while (!fileInfoList.isEmpty())
             {
                 do
@@ -604,7 +605,7 @@ void SortedImageModel::run()
                             connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onDecodingTaskFinished(); });
                             
                             d->entries.push_back(std::move(e));
-                            
+                            ++readableImages;
                             break;
                         }
                     }
@@ -617,16 +618,15 @@ void SortedImageModel::run()
                 d->setStatusMessage(entriesProcessed++, msg);
             }
 
-            d->setStatusMessage(entriesProcessed, "Almost done: Sorting entries, please wait...");
+            d->setStatusMessage(entriesProcessed++, "Almost done: Sorting entries, please wait...");
             d->sortEntries();
             if(d->sortOrder == Qt::DescendingOrder)
             {
                 d->reverseEntries();
             }
             
+            d->setStatusMessage(entriesProcessed, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
             QMetaObject::invokeMethod(this, [&](){ d->onDirectoryLoaded(); }, Qt::QueuedConnection);
-            
-            d->setStatusMessage(entriesProcessed, "Directory successfully loaded.");
         }
         else
         {
