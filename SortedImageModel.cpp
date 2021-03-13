@@ -567,64 +567,73 @@ void SortedImageModel::run()
         d->setStatusMessage(0, "Looking up directory");
         QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
         const int entriesToProcess = fileInfoList.size();
-        d->directoryWorker->setProgressRange(0, entriesToProcess);
-        
-        QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
-        if (d->sortedColumnNeedsPreloadingMetadata())
+        if(entriesToProcess > 0)
         {
-            msg += " and reading EXIF data (making it quite slow)";
-        }
-        
-        d->setStatusMessage(0, msg);
-        d->entries.reserve(entriesToProcess);
-        d->entries.shrink_to_fit();
-        while (!fileInfoList.isEmpty())
-        {
-            do
+            d->directoryWorker->setProgressRange(0, entriesToProcess);
+            
+            QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
+            if (d->sortedColumnNeedsPreloadingMetadata())
             {
-                QFileInfo inf = fileInfoList.takeFirst();
-                if (inf.isFile())
+                msg += " and reading EXIF data (making it quite slow)";
+            }
+            
+            d->setStatusMessage(0, msg);
+            d->entries.reserve(entriesToProcess);
+            d->entries.shrink_to_fit();
+            while (!fileInfoList.isEmpty())
+            {
+                do
                 {
-                    auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
-                    if (decoder)
+                    QFileInfo inf = fileInfoList.takeFirst();
+                    if (inf.isFile())
                     {
-                        if (d->sortedColumnNeedsPreloadingMetadata())
+                        auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
+                        if (decoder)
                         {
-                            decoder->decode(DecodingState::Metadata);
+                            if (d->sortedColumnNeedsPreloadingMetadata())
+                            {
+                                decoder->decode(DecodingState::Metadata);
+                            }
+
+                            auto e = std::make_unique<Entry>(this, decoder);
+                            e->getDecoder()->moveToThread(QGuiApplication::instance()->thread());
+                            e->getFutureWatcher()->moveToThread(QGuiApplication::instance()->thread());
+                            
+                            auto idx = d->entries.size();
+                            connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, this, [=](SmartImageDecoder*, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(idx, newState, old); });
+                            connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onDecodingTaskFinished(); });
+                            
+                            d->entries.push_back(std::move(e));
+                            
+                            break;
                         }
-
-                        auto e = std::make_unique<Entry>(this, decoder);
-                        e->getDecoder()->moveToThread(QGuiApplication::instance()->thread());
-                        e->getFutureWatcher()->moveToThread(QGuiApplication::instance()->thread());
-                        
-                        auto idx = d->entries.size();
-                        connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, this, [=](SmartImageDecoder*, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(idx, newState, old); });
-                        connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onDecodingTaskFinished(); });
-                        
-                        d->entries.push_back(std::move(e));
-                        
-                        break;
                     }
-                }
 
-                d->entries.emplace_back(std::make_unique<Entry>(this, std::move(inf)));
+                    d->entries.emplace_back(std::make_unique<Entry>(this, std::move(inf)));
 
-            } while (false);
+                } while (false);
 
-            d->throwIfDirectoryLoadingCancelled();
-            d->setStatusMessage(entriesProcessed++, msg);
+                d->throwIfDirectoryLoadingCancelled();
+                d->setStatusMessage(entriesProcessed++, msg);
+            }
+
+            d->setStatusMessage(entriesProcessed, "Almost done: Sorting entries, please wait...");
+            d->sortEntries();
+            if(d->sortOrder == Qt::DescendingOrder)
+            {
+                d->reverseEntries();
+            }
+            
+            QMetaObject::invokeMethod(this, [&](){ d->onDirectoryLoaded(); }, Qt::QueuedConnection);
+            
+            d->setStatusMessage(entriesProcessed, "Directory successfully loaded.");
         }
-
-        d->setStatusMessage(entriesProcessed, "Almost done: Sorting entries, please wait...");
-        d->sortEntries();
-        if(d->sortOrder == Qt::DescendingOrder)
+        else
         {
-            d->reverseEntries();
+            d->directoryWorker->setProgressRange(0, 1);
+            d->setStatusMessage(1, "Directory is empty, nothing to see here.");
         }
-        
-        QMetaObject::invokeMethod(this, [&](){ d->onDirectoryLoaded(); }, Qt::QueuedConnection);
-        
-        d->setStatusMessage(entriesProcessed, "Directory successfully loaded.");
+            
         d->directoryWorker->addResult(DecodingState::FullImage);
     }
     catch (const UserCancellation&)
