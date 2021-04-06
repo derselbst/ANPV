@@ -105,10 +105,8 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     cinfo.out_color_space = JCS_EXT_BGRX;
     
     this->setDecodingMessage("Calculating output dimensions");
-    // Used to set up image size so arrays can be allocated
-    jpeg_calc_output_dimensions(&cinfo);
     
-    this->setSize(QSize(d->cinfo.output_width, d->cinfo.output_height));
+    this->setSize(QSize(cinfo.image_width, cinfo.image_height));
 }
 
 QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
@@ -129,6 +127,18 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
 
     static_assert(sizeof(JSAMPLE) == sizeof(uint8_t), "JSAMPLE is not 8bits, which is unsupported");
     
+    // set parameters for decompression
+    cinfo.dct_method = JDCT_ISLOW;
+    cinfo.dither_mode = JDITHER_FS;
+    cinfo.do_fancy_upsampling = true;
+    cinfo.enable_2pass_quant = false;
+    cinfo.do_block_smoothing = false;
+    
+    cinfo.scale_num = 1;
+    cinfo.scale_denom = 1;
+    // Used to set up image size so arrays can be allocated
+    jpeg_calc_output_dimensions(&cinfo);
+    
     mem = this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
 
     bufferSetup.resize(cinfo.output_height);
@@ -136,13 +146,6 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState)
     {
         bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem + i * cinfo.output_width);
     }
-    
-    // set parameters for decompression
-    cinfo.dct_method = JDCT_ISLOW;
-    cinfo.dither_mode = JDITHER_FS;
-    cinfo.do_fancy_upsampling = true;
-    cinfo.enable_2pass_quant = false;
-    cinfo.do_block_smoothing = false;
     
     this->cancelCallback();
 
