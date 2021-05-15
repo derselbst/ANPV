@@ -99,6 +99,7 @@ struct SortedImageModel::Impl
     std::atomic<int> runningBackgroundTasks{0};
     std::unique_ptr<QPromise<DecodingState>> directoryWorker;
     
+    QFileSystemWatcher* watcher = nullptr;
     QDir currentDir;
     std::vector<std::unique_ptr<Entry>> entries;
     
@@ -416,6 +417,7 @@ struct SortedImageModel::Impl
         }
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
+        watcher->removePath(currentDir.absolutePath());
         currentDir = QDir();
     }
 
@@ -527,6 +529,83 @@ struct SortedImageModel::Impl
         
         return exifStr;
     }
+    
+    bool addSingleFile(QFileInfo&& inf)
+    {
+        if (inf.isFile())
+        {
+            auto decoder = DecoderFactory::globalInstance()->getDecoder(std::move(inf));
+            if (decoder)
+            {
+                if (sortedColumnNeedsPreloadingMetadata())
+                {
+                    decoder->decode(DecodingState::Metadata);
+                }
+
+                auto e = std::make_unique<Entry>(q, decoder);
+                e->getDecoder()->moveToThread(QGuiApplication::instance()->thread());
+                e->getFutureWatcher()->moveToThread(QGuiApplication::instance()->thread());
+                
+                auto idx = entries.size();
+                connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, q, [=](SmartImageDecoder*, quint32 newState, quint32 old){ onBackgroundImageTaskStateChanged(idx, newState, old); });
+                connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, q, [&](){ onDecodingTaskFinished(); });
+                
+                entries.push_back(std::move(e));
+                return true;
+            }
+        }
+
+        entries.emplace_back(std::make_unique<Entry>(q, std::move(inf)));
+        return false;
+
+    }
+    
+    void onDirectoryChanged(const QString& path)
+    {
+        if(path != this->currentDir.absolutePath())
+        {
+            return;
+        }
+        
+        QFileInfoList fileInfoList = currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+        
+        q->beginResetModel();
+        for(auto it = entries.begin(); it != entries.end();)
+        {
+            QFileInfo eInfo = (*it)->getFileInfo();
+            auto result = std::find_if(fileInfoList.begin(),
+                                    fileInfoList.end(),
+                                    [=](QFileInfo& other)
+                                    { return eInfo == other; });
+            
+            if(result == fileInfoList.end())
+            {
+                // file e doesn't exist in the directory, probably deleted
+                it = entries.erase(it);
+                continue;
+            }
+            
+            // file e is still up to date
+            fileInfoList.erase(result);
+            ++it;
+        }
+
+        if(!fileInfoList.isEmpty())
+        {
+            // any file still in the list are new, we need to add them
+            for(QFileInfo i : fileInfoList)
+            {
+                addSingleFile(std::move(i));
+            }
+        }
+        
+        sortEntries();
+        if(sortOrder == Qt::DescendingOrder)
+        {
+            reverseEntries();
+        }
+        q->endResetModel();
+    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -536,6 +615,9 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
     d->layoutChangedTimer.setInterval(1000);
     d->layoutChangedTimer.setSingleShot(true);
     connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
+    
+    d->watcher = new QFileSystemWatcher(parent);
+    connect(d->watcher, &QFileSystemWatcher::directoryChanged, this, [&](const QString& p){ d->onDirectoryChanged(p);});
 }
 
 SortedImageModel::~SortedImageModel()
@@ -586,32 +668,10 @@ void SortedImageModel::run()
                 do
                 {
                     QFileInfo inf = fileInfoList.takeFirst();
-                    if (inf.isFile())
+                    if(d->addSingleFile(std::move(inf)))
                     {
-                        auto decoder = DecoderFactory::globalInstance()->getDecoder(inf);
-                        if (decoder)
-                        {
-                            if (d->sortedColumnNeedsPreloadingMetadata())
-                            {
-                                decoder->decode(DecodingState::Metadata);
-                            }
-
-                            auto e = std::make_unique<Entry>(this, decoder);
-                            e->getDecoder()->moveToThread(QGuiApplication::instance()->thread());
-                            e->getFutureWatcher()->moveToThread(QGuiApplication::instance()->thread());
-                            
-                            auto idx = d->entries.size();
-                            connect(e->getDecoder().data(), &SmartImageDecoder::decodingStateChanged, this, [=](SmartImageDecoder*, quint32 newState, quint32 old){ d->onBackgroundImageTaskStateChanged(idx, newState, old); });
-                            connect(e->getFutureWatcher(), &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onDecodingTaskFinished(); });
-                            
-                            d->entries.push_back(std::move(e));
-                            ++readableImages;
-                            break;
-                        }
+                        ++readableImages;
                     }
-
-                    d->entries.emplace_back(std::make_unique<Entry>(this, std::move(inf)));
-
                 } while (false);
 
                 d->throwIfDirectoryLoadingCancelled();
@@ -635,6 +695,7 @@ void SortedImageModel::run()
         }
             
         d->directoryWorker->addResult(DecodingState::FullImage);
+        d->watcher->addPath(d->currentDir.absolutePath());
     }
     catch (const UserCancellation&)
     {
