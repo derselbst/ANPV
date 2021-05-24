@@ -5,16 +5,15 @@
 #include <QMainWindow>
 #include <QImage>
 #include <QList>
+#include <QDir>
 
 class ANPV;
-class QGraphicsScene;
-class QWidget;
-class QPixmap;
-class QWheelEvent;
 class SortedImageModel;
-class QEvent;
-class SmartImageDecoder;
 
+/**
+ * Container class for a MainWindow, that contains a directory tree on the left, and the ThumbnailImageView in the 
+ * central part of the window
+ */
 class ThumbnailView : public QMainWindow
 {
 Q_OBJECT
@@ -23,7 +22,8 @@ public:
     ThumbnailView(SortedImageModel* model, ANPV *parent);
     ~ThumbnailView() override;
     
-    void getSelectedFiles(QList<QString>& selectedFiles, QString& sourceDir);
+    void selectedFiles(QList<QString>& selectedFiles);
+    QDir currentDir();
 
 public slots:
     void changeDir(const QString& dir, bool skipScrollTo=false);

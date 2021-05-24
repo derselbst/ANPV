@@ -425,10 +425,10 @@ void ANPV::moveFilesSlot(const QString& targetDir)
     if(d->stackedLayout->currentWidget() == d->thumbnailViewer)
     {
         QList<QString> selectedFileNames;
-        QString curDir;
-        d->thumbnailViewer->getSelectedFiles(selectedFileNames, curDir);
+        QDir curDir = d->thumbnailViewer->currentDir();
+        d->thumbnailViewer->selectedFiles(selectedFileNames);
         
-        this->moveFilesSlot(selectedFileNames, curDir, targetDir);
+        this->moveFilesSlot(selectedFileNames, curDir.absolutePath(), targetDir);
     }
     else if(d->stackedLayout->currentWidget() == d->imageViewer)
     {

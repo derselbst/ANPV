@@ -54,10 +54,6 @@ struct ThumbnailView::Impl
     
     QFileInfo selectedIndexBackup;
     
-    QAction* actionCut;
-    QAction* actionCopy;
-    QAction* actionDelete;
-    
     Impl(ThumbnailView* parent) : p(parent)
     {}
 
@@ -127,43 +123,6 @@ struct ThumbnailView::Impl
             selectedIndexBackup = QFileInfo();
         }
     }
-    
-    enum Operation { Move, Copy, Delete };
-    QString lastTargetDirectory;
-    void onFileOperation(Operation op)
-    {
-        QString dirToOpen = lastTargetDirectory.isNull() ? currentDir.absolutePath() : lastTargetDirectory;
-        QString dir = QFileDialog::getExistingDirectory(p, "Select Target Directory",
-                                                dirToOpen,
-                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-        
-        if(dir.isEmpty())
-        {
-            return;
-        }
-        if(QDir(dir) == currentDir)
-        {
-            QMessageBox::information(p, "That doesn't work", "Destination folder cannot be equal with source folder!");
-            return;
-        }
-        
-        QList<QString> selectedFileNames;
-        QString curDir;
-        p->getSelectedFiles(selectedFileNames, curDir);
-        
-        switch(op)
-        {
-            case Move:
-                anpv->moveFilesSlot(selectedFileNames, currentDir.absolutePath(), dir);
-                break;
-            case Copy:
-            case Delete:
-                 QMessageBox::information(p, "Not yet implemented", "not yet impl");
-                break;
-        }
-        
-        lastTargetDirectory = dir;
-    }
 };
 
 ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
@@ -178,23 +137,8 @@ ThumbnailView::ThumbnailView(SortedImageModel* model, ANPV *anpv)
     
     d->fileModel = model;
 
-    d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
-    d->actionCut->setShortcuts(QKeySequence::Cut);
-    connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
-    
-    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
-    d->actionCopy->setShortcuts(QKeySequence::Copy);
-    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Copy); });
-    
-    d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
-    d->actionDelete->setShortcuts(QKeySequence::Delete);
-    connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
-    
-    d->thumbnailList = new ThumbnailImageView(this);
+    d->thumbnailList = new ThumbnailImageView(anpv, this);
     d->thumbnailList->setModel(d->fileModel);
-    d->thumbnailList->addAction(d->actionCut);
-    d->thumbnailList->addAction(d->actionCopy);
-    d->thumbnailList->addAction(d->actionDelete);
     connect(d->thumbnailList, &QListView::activated, this, [&](const QModelIndex &idx){d->onThumbnailActivated(idx);});
     
     // connect to model reset signals after setModel()!
@@ -264,16 +208,12 @@ void ThumbnailView::scrollToCurrentImage()
     }
 }
 
-void ThumbnailView::getSelectedFiles(QList<QString>& selectedFiles, QString& sourceDir)
+void ThumbnailView::selectedFiles(QList<QString>& files)
 {
-    QModelIndexList selectedIdx = d->thumbnailList->selectionModel()->selectedRows();
-    
-    for(int i=0; i<selectedIdx.size(); i++)
-    {
-        QString name = selectedIdx[i].data().toString();
-        selectedFiles.append(std::move(name));
-    }
-    
-    sourceDir = d->currentDir.absolutePath();
+    d->thumbnailList->selectedFiles(files);
 }
 
+QDir ThumbnailView::currentDir()
+{
+    return d->currentDir;
+}
