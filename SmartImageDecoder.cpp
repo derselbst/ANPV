@@ -49,7 +49,7 @@ struct SmartImageDecoder::Impl
     std::unique_ptr<unsigned char[]> fullImageBuffer;
     
     // size of the fully decoded image, already available in DecodingState::Metadata
-    QSize size;
+    std::atomic<QSize> size;
     
     ExifWrapper exifWrapper;
     
@@ -319,7 +319,6 @@ QPixmap SmartImageDecoder::icon(int height)
 
 QSize SmartImageDecoder::size()
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
     return d->size;
 }
 
