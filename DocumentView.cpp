@@ -272,8 +272,14 @@ void DocumentView::zoomOut()
 void DocumentView::wheelEvent(QWheelEvent *event)
 {
     auto angleDelta = event->angleDelta();
+    auto modifiers = event->modifiers();
 
-    if (event->modifiers() & Qt::ControlModifier)
+    if (modifiers & Qt::ControlModifier && modifiers & Qt::ShiftModifier)
+    {
+        event->accept();
+        this->rotate(angleDelta.y() / 10.0);
+    }
+    else if (modifiers & Qt::ControlModifier)
     {
         // zoom
         if(angleDelta.y() > 0)
