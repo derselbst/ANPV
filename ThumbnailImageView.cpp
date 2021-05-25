@@ -21,6 +21,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QWheelEvent>
+#include <QDesktopServices>
 
 #include <vector>
 #include <algorithm>
@@ -44,6 +45,7 @@ struct ThumbnailImageView::Impl
     SortedImageModel* model=nullptr;
     
     QAction* actionCut=nullptr;
+    QAction* actionOpenFolder=nullptr;
     QAction* actionCopy=nullptr;
     QAction* actionDelete=nullptr;
     
@@ -83,6 +85,11 @@ struct ThumbnailImageView::Impl
         
         lastTargetDirectory = dir;
     }
+
+    void openContainingFolder()
+    {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(parentView->currentDir().absolutePath()));
+    }
 };
 
 ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
@@ -101,6 +108,9 @@ ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
     d->q = this;
     d->parentView = parent;
 
+    d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
+    connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
+    
     d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
     d->actionCut->setShortcuts(QKeySequence::Cut);
     connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
@@ -113,6 +123,11 @@ ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
     d->actionDelete->setShortcuts(QKeySequence::Delete);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
     
+    this->addAction(d->actionOpenFolder);
+    
+    QAction* sep = new QAction(this);
+    sep->setSeparator(true);
+    this->addAction(sep);
     this->addAction(d->actionCut);
     this->addAction(d->actionCopy);
     this->addAction(d->actionDelete);
