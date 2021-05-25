@@ -436,7 +436,9 @@ struct SortedImageModel::Impl
             watch->setFuture(e.getDecoder()->decodeAsync(targetState).then(
                 [&](DecodingState s)
                 {
+                    // generate a thumbnail with appropriate size
                     e.getDecoder()->icon(q->iconHeight());
+                    std::this_thread::yield();
                     return s;
                 }
             ));
