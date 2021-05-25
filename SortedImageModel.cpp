@@ -46,7 +46,7 @@ struct Entry
     
     ~Entry()
     {
-        if(future && future->isRunning())
+        if(future && !future->isFinished())
         {
             future->cancel();
             future->waitForFinished();
@@ -433,20 +433,14 @@ struct SortedImageModel::Impl
                 qInfo() << "OVERRIDE";
                 QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
             }
-            
-            QSharedPointer<SmartImageDecoder> dec = e.getDecoder();
-            watch->setFuture(
-                dec->decodeAsync(targetState)
-                .then(
-                    // This is so ugly: the futureWatcher first emits its finished signal and THEN starts the continuation!!
-                    // Capture the shared pointer "dec" by value to avoid a use-after-free when another thread destroys // all entries via d->clear()
-                    [=](DecodingState s)
-                    {
-                        // generate a thumbnail with appropriate size
-                        dec->icon(q->iconHeight());
-                        std::this_thread::yield();
-                        return s;
-                    }
+            watch->setFuture(e.getDecoder()->decodeAsync(targetState).then(
+                [&](DecodingState s)
+                {
+                    // generate a thumbnail with appropriate size
+                    e.getDecoder()->icon(q->iconHeight());
+                    std::this_thread::yield();
+                    return s;
+                }
             ));
         }
     }
