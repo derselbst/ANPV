@@ -380,14 +380,14 @@ struct SortedImageModel::Impl
     {
         // only reverse entries that have an image decoder
         
-        // find the beginning to revert
+        // find the beginning to reverse
         auto itBegin = std::begin(entries);
         while(itBegin != std::end(entries) && !(*itBegin)->hasImageDecoder())
         {
             ++itBegin;
         }
         
-        // find end to revert
+        // find end to reverse
         auto itEnd = std::end(entries) - 1;
         while(itEnd != std::begin(entries) && !(*itEnd)->hasImageDecoder())
         {
@@ -433,14 +433,20 @@ struct SortedImageModel::Impl
                 qInfo() << "OVERRIDE";
                 QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
             }
-            watch->setFuture(e.getDecoder()->decodeAsync(targetState).then(
-                [&](DecodingState s)
-                {
-                    // generate a thumbnail with appropriate size
-                    e.getDecoder()->icon(q->iconHeight());
-                    std::this_thread::yield();
-                    return s;
-                }
+            
+            QSharedPointer<SmartImageDecoder> dec = e.getDecoder();
+            watch->setFuture(
+                dec->decodeAsync(targetState)
+                .then(
+                    // This is so ugly: the futureWatcher first emits its finished signal and THEN starts the continuation!!
+                    // Capture the shared pointer "dec" by value to avoid a use-after-free when another thread destroys // all entries via d->clear()
+                    [=](DecodingState s)
+                    {
+                        // generate a thumbnail with appropriate size
+                        dec->icon(q->iconHeight());
+                        std::this_thread::yield();
+                        return s;
+                    }
             ));
         }
     }
