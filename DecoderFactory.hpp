@@ -10,6 +10,13 @@
 class SmartImageDecoder;
 class DocumentView;
 
+enum Priority : int
+{
+    Background = -1,
+    Normal = 0,
+    Important = 1,
+};
+
 class DecoderFactory
 {
 public:

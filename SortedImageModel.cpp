@@ -433,7 +433,7 @@ struct SortedImageModel::Impl
                 qInfo() << "OVERRIDE";
                 QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
             }
-            watch->setFuture(e.getDecoder()->decodeAsync(targetState).then(
+            watch->setFuture(e.getDecoder()->decodeAsync(targetState, Priority::Background).then(
                 [&](DecodingState s)
                 {
                     // generate a thumbnail with appropriate size
@@ -634,7 +634,7 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
     
     d->currentDir = dir;
 
-    QThreadPool::globalInstance()->start(this);
+    QThreadPool::globalInstance()->start(this, Priority::Normal);
 
     return d->directoryWorker->future();
 }

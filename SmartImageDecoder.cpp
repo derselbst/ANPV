@@ -131,7 +131,7 @@ void SmartImageDecoder::cancelCallback()
     }
 }
 
-QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState)
+QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, int prio)
 {
     xThreadGuard g(this);
     if(d->promise && !d->promise->future().isFinished())
@@ -144,7 +144,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState)
     d->targetState = targetState;
     d->promise = std::make_unique<QPromise<DecodingState>>();
     d->promise->setProgressRange(0, 100);
-    QThreadPool::globalInstance()->start(this);
+    QThreadPool::globalInstance()->start(this, prio);
 
     return d->promise->future();
 }

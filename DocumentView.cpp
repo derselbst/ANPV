@@ -9,7 +9,6 @@
 #include <QGraphicsPixmapItem>
 #include <QWindow>
 #include <QGuiApplication>
-#include <QThreadPool>
 #include <QDebug>
 #include <QFuture>
 #include <QFutureWatcher>
@@ -487,7 +486,7 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
    
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage);
+    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important);
     d->taskFuture.setFuture(fut);
     d->anpv->addBackgroundTask(ProgressGroup::Image, fut);
 }

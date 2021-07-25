@@ -9,7 +9,6 @@
 #include <QGraphicsPixmapItem>
 #include <QWindow>
 #include <QGuiApplication>
-#include <QThreadPool>
 #include <QDebug>
 #include <QListView>
 #include <QMainWindow>

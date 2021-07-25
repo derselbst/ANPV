@@ -38,7 +38,7 @@ public:
     QString errorMessage();
     QString latestMessage();
     void decode(DecodingState targetState);
-    QFuture<DecodingState> decodeAsync(DecodingState targetState);
+    QFuture<DecodingState> decodeAsync(DecodingState targetState, int prio);
     DecodingState decodingState() const;
     void releaseFullImage();
     
