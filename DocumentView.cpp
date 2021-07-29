@@ -159,11 +159,14 @@ struct DocumentView::Impl
                 // the user sees the entire image
                 imgToScale = currentDocumentPixmap;
             }
-            else
+            else // the user sees a part of the image
             {
-                // the user sees a part of the image
-                // crop the image to the visible part, so we don't need to scale the entire one
-                imgToScale = currentDocumentPixmap.copy(visPixRect.toAlignedRect());
+                // the pixmap overlay may have been scaled; we must translate the visible Pixmap Rectangle
+                // (which is in scene coordinates) into the overlay's coordinates
+                QRectF visPixRectMappedToItem = currentPixmapOverlay->mapFromScene(visPixRect).boundingRect();
+
+                // now, crop the image to the visible part, so we don't need to scale the entire one
+                imgToScale = currentDocumentPixmap.copy(visPixRectMappedToItem.toAlignedRect());
             }
             // Optimization for huge gigapixel images: before applying the smooth transformation, first scale it down to double
             // window resolution size with fast nearest neighbour transform.
@@ -356,6 +359,11 @@ void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
     d->removeSmoothPixmap();
     d->currentDocumentPixmap = QPixmap::fromImage(img, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
+
+    QSize fullImageSize = dec->size();
+    auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
+    d->currentPixmapOverlay->setScale(newScale);
+
     d->scene->invalidate();
 }
 
