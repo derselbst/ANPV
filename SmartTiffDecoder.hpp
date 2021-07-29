@@ -23,11 +23,11 @@ public:
 
 protected:
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override;
-    QImage decodingLoop(DecodingState state) override;
+    QImage decodingLoop(DecodingState state, QSize desiredResolution, QRect roiRect) override;
     void close() override;
     
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
-    void decodeInternal(int imagePageToDecode, QImage& image, bool);
+    void decodeInternal(int imagePageToDecode, QSize pageSize, QImage& image, double xStep, double yStep);
 };

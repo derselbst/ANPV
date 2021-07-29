@@ -20,6 +20,8 @@ struct SmartImageDecoder::Impl
     void* cancelCallbackObject = nullptr;
     std::atomic<DecodingState> state{ DecodingState::Ready };
     DecodingState targetState;
+    QSize desiredResolution;
+    QRect roiRect;
     QString decodingMessage;
     int decodingProgress=0;
 
@@ -131,7 +133,7 @@ void SmartImageDecoder::cancelCallback()
     }
 }
 
-QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, int prio)
+QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, int prio, QSize desiredResolution, QRect roiRect)
 {
     xThreadGuard g(this);
     if(d->promise && !d->promise->future().isFinished())
@@ -142,6 +144,8 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     d->targetState = targetState;
+    d->desiredResolution = desiredResolution;
+    d->roiRect = roiRect;
     d->promise = std::make_unique<QPromise<DecodingState>>();
     d->promise->setProgressRange(0, 100);
     QThreadPool::globalInstance()->start(this, prio);
@@ -151,10 +155,10 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
 
 void SmartImageDecoder::run()
 {
-    this->decode(d->targetState);
+    this->decode(d->targetState, d->desiredResolution, d->roiRect);
 }
 
-void SmartImageDecoder::decode(DecodingState targetState)
+void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolution, QRect roiRect)
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
 
@@ -214,7 +218,7 @@ void SmartImageDecoder::decode(DecodingState targetState)
                 break;
             }
             
-            QImage decodedImg = this->decodingLoop(targetState);
+            QImage decodedImg = this->decodingLoop(targetState, desiredResolution, roiRect);
             d->setImage(decodedImg);
             
             // if thumbnail is still null, set it
@@ -309,8 +313,8 @@ QPixmap SmartImageDecoder::thumbnail()
 
 QPixmap SmartImageDecoder::icon(int height)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
-    if(!d->thumbnail.isNull() && (d->thumbnailTransformed.isNull() || d->thumbnailTransformed.height() != height))
+    std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);
+    if(lck.try_lock() && !d->thumbnail.isNull() && (d->thumbnailTransformed.isNull() || d->thumbnailTransformed.height() != height))
     {
         d->thumbnailTransformed = d->thumbnail.transformed(d->exifWrapper.transformMatrix()).scaledToHeight(height);
     }
@@ -329,6 +333,11 @@ ExifWrapper* SmartImageDecoder::exif()
 
 void SmartImageDecoder::setDecodingMessage(QString&& msg)
 {
+    if(this->signalsBlocked())
+    {
+        return;
+    }
+
     if(d->promise && d->decodingMessage != msg)
     {
         d->decodingMessage = std::move(msg);
@@ -338,6 +347,11 @@ void SmartImageDecoder::setDecodingMessage(QString&& msg)
 
 void SmartImageDecoder::setDecodingProgress(int prog)
 {
+    if(this->signalsBlocked())
+    {
+        return;
+    }
+
     if(d->promise && d->decodingProgress != prog)
     {
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
@@ -346,6 +360,11 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 
 void SmartImageDecoder::updatePreviewImage(QImage&& img)
 {
+    if(this->signalsBlocked())
+    {
+        return;
+    }
+
     constexpr int DecodePreviewImageRefreshDuration = 100;
     
     auto now = std::chrono::steady_clock::now();

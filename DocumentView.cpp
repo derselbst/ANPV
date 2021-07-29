@@ -486,7 +486,7 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
    
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important);
+    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);
     d->anpv->addBackgroundTask(ProgressGroup::Image, fut);
 }

@@ -37,8 +37,8 @@ public:
     QImage image();
     QString errorMessage();
     QString latestMessage();
-    void decode(DecodingState targetState);
-    QFuture<DecodingState> decodeAsync(DecodingState targetState, int prio);
+    void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
+    QFuture<DecodingState> decodeAsync(DecodingState targetState, int prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     DecodingState decodingState() const;
     void releaseFullImage();
     
@@ -48,7 +48,7 @@ public:
     
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
-    virtual QImage decodingLoop(DecodingState state) = 0;
+    virtual QImage decodingLoop(DecodingState state, QSize desiredResolution, QRect roiRect) = 0;
     virtual void close();
 
     void connectNotify(const QMetaMethod& signal) override;

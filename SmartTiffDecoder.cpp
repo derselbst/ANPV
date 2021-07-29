@@ -83,22 +83,25 @@ struct SmartTiffDecoder::Impl
         impl->q->setDecodingMessage(QString(f.str().c_str()));
     }
     
-    static void convert32BitOrder(uint32_t *__restrict target, uint32_t *__restrict src, quint32 rows, quint32 width)
+    size_t convert32BitOrder(uint32_t *__restrict dst, const uint32_t *__restrict src, quint32 rows, quint32 width)
     {
         // swap rows from bottom to top
-        quint32 to = 0;
-        for (quint32 r = rows; r>0; r--)
+        size_t to = 0;
+        for (qint64 r = rows; r>0; r--)
         {
             for (quint32 c=0; c<width; c++)
             {
                 uint32_t p = src[(r-1)*width + c];
                 // convert between ARGB and ABGR
-                target[to++] = TIFFGetA(p) << 24 |
-                               TIFFGetR(p) << 16 |
-                               TIFFGetG(p) <<  8 |
-                               TIFFGetB(p);
+                dst[to++] = TIFFGetA(p) << 24 |
+                            TIFFGetR(p) << 16 |
+                            TIFFGetG(p) <<  8 |
+                            TIFFGetB(p);
             }
+            q->cancelCallback();
         }
+        
+        return to;
     }
     
     static tsize_t qtiffReadProc(thandle_t fd, tdata_t buf, tsize_t size)
@@ -294,36 +297,74 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         this->setDecodingMessage((Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str());
         qInfo() << (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
         
+//         QSignalBlocker blocker(this);
         QImage thumb(pageInfos[thumbnailPageToDecode].width, pageInfos[thumbnailPageToDecode].height, d->format);
-        this->decodeInternal(thumbnailPageToDecode, thumb, true);
+//         this->decodeInternal(thumbnailPageToDecode, thumb);
+//         blocker.unblock();
+
         this->setThumbnail(thumb);
     }
 }
 
-QImage SmartTiffDecoder::decodingLoop(DecodingState)
+QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QRect roiRect)
 {
-    const size_t width = d->imageInfo.width;
-    const size_t height = d->imageInfo.height;
+    QRect fullImageRect(QPoint(0,0), this->size());
+    
+    QRect targetImageRect = fullImageRect;
+    if(roiRect.isValid())
+    {
+        targetImageRect = targetImageRect.intersected(roiRect);
+    }
+    
+    if(!desiredResolution.isValid())
+    {
+        desiredResolution = targetImageRect.size();
+    }
+    
+    QSize preScaledResolution = targetImageRect.size().scaled(desiredResolution, Qt::KeepAspectRatio);
+    preScaledResolution *= 2;
+    // the preScaledResolution should not be bigger than the targetImageRect
+    preScaledResolution = preScaledResolution.boundedTo(targetImageRect.size());
+    
+    double yStep = targetImageRect.height() * 1.0f / preScaledResolution.height();
+    double xStep = targetImageRect.width() * 1.0f / preScaledResolution.width();
+    
+//     // calculate exact resolution
+//     preScaledResolution = QSize(targetImageRect.width() / xStep, targetImageRect.height() / yStep);
+    
+    uint32_t* mem = this->allocateImageBuffer<uint32_t>(preScaledResolution.width(), preScaledResolution.height());
+    QImage image(reinterpret_cast<uint8_t*>(mem), preScaledResolution.width(), preScaledResolution.height(), d->format);
+    this->decodeInternal(d->imagePageToDecode, this->size(), image, xStep, yStep);
 
-    uint32_t* mem = this->allocateImageBuffer<uint32_t>(width, height);
-    QImage image(reinterpret_cast<uint8_t*>(mem), width, height, d->format);
-    this->decodeInternal(d->imagePageToDecode, image, false);
-    return image;
+    return image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool silent)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QImage& image, double xStep, double yStep)
 {
-    const size_t width = image.width();
-    const size_t height = image.height();
+    const size_t width = pageSize.width();
+    const size_t height = pageSize.height();
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
-    if(!silent)
+//     uint16_t comp;
+//     TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
+//     if(comp == COMPRESSION_NONE)
+//     {
+//         qInfo() << "tiff none compression";
+//     }
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    uint32_t count;
+    void *profile;
+    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
     {
-        this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
+        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
+        image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
     }
+#endif
+
+    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
     
-    const size_t rowStride = width * sizeof(uint32_t);
     if(TIFFIsTiled(d->tiff))
     {
         throw std::runtime_error("Tiled TIFFs are not supported currently");
@@ -337,13 +378,14 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool
         }
         
         std::vector<uint32_t> stripBuf(width * rowsperstrip);
+        std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
 
         uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
         auto* buf = mem;
         const auto stripCount = TIFFNumberOfStrips(d->tiff);
         for (tstrip_t strip = 0; strip < stripCount; strip++)
         {
-            auto rowsDecoded = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+            uint32_t rowsDecoded = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
             auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
             if(ret == 0)
             {
@@ -351,26 +393,29 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool
             }
             else
             {
-                d->convert32BitOrder(buf, stripBuf.data(), rowsDecoded, width);
+                d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsDecoded, width);
+
+                QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
+                                width,
+                                rowsDecoded,
+                                width * sizeof(uint32_t),
+                                d->format);
+                stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
                 
-                if(!silent)
-                {
-                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                            width,
-                                            std::min<size_t>(strip * rowsperstrip, height),
-                                            rowStride,
-                                            d->format));
-                }
-            }
-            
-            if(!silent)
-            {
+                size_t pixelsToCpy = stripImg.width() * stripImg.height();
+                memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
+                
+                buf += pixelsToCpy;
+                
+                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+                                         image.width(),
+                                         std::min<size_t>(std::floor(strip * rowsperstrip / yStep), image.height()),
+                                         image.width() * sizeof(uint32_t),
+                                         d->format));
+                
                 double progress = strip * 100.0 / stripCount;
                 this->setDecodingProgress(progress);
             }
-            
-            buf += rowsDecoded * width;
-            this->cancelCallback();
         }
     }
 
@@ -399,20 +444,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool
             break;
         }
     }
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    uint32_t count;
-    void *profile;
-    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
-    {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-        image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
-    }
-#endif
     
-    if(!silent)
-    {
-        this->setDecodingProgress(100);
-        this->setDecodingMessage("TIFF decoding completed successfully.");
-    }
+    this->setDecodingProgress(100);
+    this->setDecodingMessage("TIFF decoding completed successfully.");
 }
