@@ -322,7 +322,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
     }
     
     QSize preScaledResolution = targetImageRect.size().scaled(desiredResolution, Qt::KeepAspectRatio);
-    preScaledResolution *= 2;
+    preScaledResolution *= 1.5;
     // the preScaledResolution should not be bigger than the targetImageRect
     preScaledResolution = preScaledResolution.boundedTo(targetImageRect.size());
     
@@ -346,13 +346,18 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
-//     uint16_t comp;
-//     TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
-//     if(comp == COMPRESSION_NONE)
-//     {
-//         qInfo() << "tiff none compression";
-//     }
+    uint16_t comp;
+    TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
+    
+    uint16_t samplesPerPixel;
+    TIFFGetField(d->tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
 
+    uint16_t planar;
+    TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &planar);
+    
+    uint16_t bitsPerSample;
+    TIFFGetField(d->tiff, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
+    
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     uint32_t count;
     void *profile;
@@ -363,7 +368,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
     }
 #endif
 
-    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
+    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());    
     
     if(TIFFIsTiled(d->tiff))
     {
@@ -377,44 +382,91 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
             throw std::runtime_error("Failed to read RowsPerStip. Not a TIFF file?");
         }
         
-        std::vector<uint32_t> stripBuf(width * rowsperstrip);
-        std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
-
-        uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
-        auto* buf = mem;
         const auto stripCount = TIFFNumberOfStrips(d->tiff);
-        for (tstrip_t strip = 0; strip < stripCount; strip++)
+        
+        if(comp == COMPRESSION_NONE &&
+            samplesPerPixel == 4 /* RGBA */ &&
+            planar == 1 &&
+            (bitsPerSample==8 || bitsPerSample==16))
         {
-            uint32_t rowsDecoded = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
-            auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
-            if(ret == 0)
+            // image is uncompressed, use a shortcut for quick displaying
+            
+            const auto stripCount = TIFFNumberOfStrips(d->tiff);
+            
+            uint64_t *stripOffset = nullptr;
+            TIFFGetField(d->tiff, TIFFTAG_STRIPOFFSETS, &stripOffset);
+            
+            if(stripCount == 0)
             {
-                throw std::runtime_error("Error while TIFFReadRGBAStrip");
+                throw std::runtime_error("This should never happen: TIFFNumberOfStrips() returned zero??");
             }
-            else
+            
+            auto initialOffset = stripOffset[0];
+            if(stripCount >= 2)
             {
-                d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsDecoded, width);
+                auto stripLen = stripOffset[1] - initialOffset;
+                size_t nOffsets = stripCount;
+                for(size_t s = 2; s< nOffsets;s++)
+                {
+                    if(stripOffset[s] != stripLen * s + initialOffset)
+                    {
+                        this->setDecodingMessage((Formatter() << "TIFF Strips are not contiguous. Cannot use fast decoding hack. Trying regular, slow decoding instead.").str().c_str());
+                        goto gehtnich;
+                    }
+                }
+            }
+            
+            const uint8_t* rawRgb = d->buffer + initialOffset;
+            
+            QImage rawImage(rawRgb,
+                            width,
+                            height,
+                            width * samplesPerPixel,
+                            d->format);
+            image = rawImage.scaled(image.size(), Qt::KeepAspectRatio, Qt::FastTransformation);
+            image = image.rgbSwapped();
+        }
+        else
+        {
+gehtnich:
+            uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
+            auto* buf = mem;
+            
+            std::vector<uint32_t> stripBuf(width * rowsperstrip);
+            std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
+            for (tstrip_t strip = 0; strip < stripCount; strip++)
+            {
+                uint32_t rowsDecoded = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
+                if(ret == 0)
+                {
+                    throw std::runtime_error("Error while TIFFReadRGBAStrip");
+                }
+                else
+                {
+                    d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsDecoded, width);
 
-                QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
-                                width,
-                                rowsDecoded,
-                                width * sizeof(uint32_t),
-                                d->format);
-                stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
-                
-                size_t pixelsToCpy = stripImg.width() * stripImg.height();
-                memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
-                
-                buf += pixelsToCpy;
-                
-                this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                         image.width(),
-                                         std::min<size_t>(std::floor(strip * rowsperstrip / yStep), image.height()),
-                                         image.width() * sizeof(uint32_t),
-                                         d->format));
-                
-                double progress = strip * 100.0 / stripCount;
-                this->setDecodingProgress(progress);
+                    QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
+                                    width,
+                                    rowsDecoded,
+                                    width * sizeof(uint32_t),
+                                    d->format);
+                    stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
+                    
+                    size_t pixelsToCpy = stripImg.width() * stripImg.height();
+                    memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
+                    
+                    buf += pixelsToCpy;
+                    
+                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+                                            image.width(),
+                                            std::min<size_t>(std::floor(strip * rowsperstrip / yStep), image.height()),
+                                            image.width() * sizeof(uint32_t),
+                                            d->format));
+                    
+                    double progress = strip * 100.0 / stripCount;
+                    this->setDecodingProgress(progress);
+                }
             }
         }
     }
