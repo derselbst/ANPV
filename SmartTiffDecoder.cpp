@@ -313,8 +313,8 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState)
 
 void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool silent)
 {
-    const size_t width = image.width();
-    const size_t height = image.height();
+    const unsigned width = image.width();
+    const unsigned height = image.height();
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
@@ -326,7 +326,45 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool
     const size_t rowStride = width * sizeof(uint32_t);
     if(TIFFIsTiled(d->tiff))
     {
-        throw std::runtime_error("Tiled TIFFs are not supported currently");
+        uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
+        auto* buf = mem;
+        
+        uint32_t tw,tl;
+        TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw);
+        TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl);
+    
+        std::vector<uint32_t> tileBuf(tw * tl);
+        
+        for (unsigned y = 0; y < height; y += tl)
+        {
+            for (unsigned x = 0; x < width; x += tw)
+            {
+                auto ret = TIFFReadRGBATile(d->tiff, x, y, tileBuf.data());
+                if(ret == 0)
+                {
+                    throw std::runtime_error("Error while TIFFReadRGBATile");
+                }
+                else
+                {
+                    unsigned linesToCopy = std::min(tl, height - y);
+                    unsigned widthToCopy = std::min(tw, width - x);
+                    for (unsigned i = 0; i < linesToCopy; i++)
+                    {
+                        // brainfuck ahead...
+                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(linesToCopy-i-1)*tw], 1, widthToCopy);
+                    }
+                    
+                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+                                            width,
+                                            height,
+                                            width * sizeof(uint32_t),
+                                            d->format));
+                    
+                    double progress = y * x * 100.0 / (height * width);
+                    this->setDecodingProgress(progress);
+                }
+            }
+        }
     }
     else
     {
