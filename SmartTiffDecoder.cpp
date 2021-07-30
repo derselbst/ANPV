@@ -321,6 +321,8 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
         desiredResolution = targetImageRect.size();
     }
     
+    QSize preScaledResolution = targetImageRect.size();
+#if 0
     QSize preScaledResolution = targetImageRect.size().scaled(desiredResolution, Qt::KeepAspectRatio);
     preScaledResolution *= 1.5;
     // the preScaledResolution should not be bigger than the targetImageRect
@@ -331,18 +333,18 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
     
 //     // calculate exact resolution
 //     preScaledResolution = QSize(targetImageRect.width() / xStep, targetImageRect.height() / yStep);
-    
+#endif
     uint32_t* mem = this->allocateImageBuffer<uint32_t>(preScaledResolution.width(), preScaledResolution.height());
     QImage image(reinterpret_cast<uint8_t*>(mem), preScaledResolution.width(), preScaledResolution.height(), d->format);
-    this->decodeInternal(d->imagePageToDecode, this->size(), image, xStep, yStep);
+    this->decodeInternal(d->imagePageToDecode, this->size(), image, 1, 1);
 
     return image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
 void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QImage& image, double xStep, double yStep)
 {
-    const size_t width = pageSize.width();
-    const size_t height = pageSize.height();
+    const unsigned width = pageSize.width();
+    const unsigned height = pageSize.height();
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
@@ -372,7 +374,45 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
     
     if(TIFFIsTiled(d->tiff))
     {
-        throw std::runtime_error("Tiled TIFFs are not supported currently");
+        uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
+        auto* buf = mem;
+        
+        uint32_t tw,tl;
+        TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw);
+        TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl);
+    
+        std::vector<uint32_t> tileBuf(tw * tl);
+        
+        for (unsigned y = 0; y < height; y += tl)
+        {
+            for (unsigned x = 0; x < width; x += tw)
+            {
+                auto ret = TIFFReadRGBATile(d->tiff, x, y, tileBuf.data());
+                if(ret == 0)
+                {
+                    throw std::runtime_error("Error while TIFFReadRGBATile");
+                }
+                else
+                {
+                    unsigned linesToCopy = std::min(tl, height - y);
+                    unsigned widthToCopy = std::min(tw, width - x);
+                    for (unsigned i = 0; i < linesToCopy; i++)
+                    {
+                        // brainfuck ahead...
+                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(linesToCopy-i-1)*tw], 1, widthToCopy);
+                    }
+                    
+                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+                                            width,
+                                            height,
+                                            width * sizeof(uint32_t),
+                                            d->format));
+                    
+                    double progress = y * x * 100.0 / (height * width);
+                    this->setDecodingProgress(progress);
+                }
+            }
+        }
     }
     else
     {
@@ -454,7 +494,7 @@ gehtnich:
                     stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
                     
                     size_t pixelsToCpy = stripImg.width() * stripImg.height();
-                    memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
+                    ::memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
                     
                     buf += pixelsToCpy;
                     
