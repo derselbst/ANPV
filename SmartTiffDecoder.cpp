@@ -37,12 +37,8 @@ struct SmartTiffDecoder::Impl
     qint64 offset = 0;
     qint64 nbytes = 0;
     
-    PageInfo imageInfo;
-    
-    QImage::Format format;
-    
-    int imagePageToDecode = 0;
-    
+    std::vector<PageInfo> pageInfos;
+
     Impl(SmartTiffDecoder* q) : q(q)
     {
         TIFFSetErrorHandler(nullptr);
@@ -202,9 +198,9 @@ struct SmartTiffDecoder::Impl
         return pageInfos;
     }
 
-    int findHighestResolution(std::vector<PageInfo>& pageInfo)
+    static int findHighestResolution(std::vector<PageInfo>& pageInfo)
     {
-        int ret = 0;
+        int ret = -1;
         uint64_t res = 0;
         for(size_t i=0; i<pageInfo.size(); i++)
         {
@@ -218,10 +214,10 @@ struct SmartTiffDecoder::Impl
         return ret;
     }
     
-    int findThumbnailResolution(std::vector<PageInfo>& pageInfo)
+    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, QSize size)
     {
         int ret = -1;
-        const auto fullImgAspect = this->imageInfo.width * 1.0 / this->imageInfo.height;
+        const auto fullImgAspect = size.width() * 1.0 / size.height();
         uint64_t res = pageInfo[0].width * pageInfo[0].height;
         for(size_t i=0; i<pageInfo.size(); i++)
         {
@@ -230,13 +226,18 @@ struct SmartTiffDecoder::Impl
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
                std::fabs(aspect - fullImgAspect) < 1e-4 && // aspect matches?
-               (pageInfo[i].width >= 50 || pageInfo[i].height >= 50)) // at least 50 px in one dimension
+               (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)) // at least 200 px in one dimension
             {
                 ret = i;
                 res = len;
             }
         }
         return ret;
+    }
+    
+    QImage::Format format(int page)
+    {
+        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB888;
     }
 };
 
@@ -283,24 +284,24 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     
     this->setDecodingMessage("Parsing TIFF Image Directories");
     
-    std::vector<PageInfo> pageInfos = d->readPageInfos();
+    d->pageInfos = d->readPageInfos();
+    auto highResPage = d->findHighestResolution(d->pageInfos);
+    if(highResPage < 0)
+    {
+        throw std::runtime_error("This TIFF doesn't contain any directories!");
+    }
     
-    d->imagePageToDecode = d->findHighestResolution(pageInfos);
-    d->imageInfo = pageInfos[d->imagePageToDecode];
-    d->format = QImage::Format_ARGB32;
- 
-    this->setSize(QSize(d->imageInfo.width, d->imageInfo.height));
+    this->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
+    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, this->size());
     
-    auto thumbnailPageToDecode = d->findThumbnailResolution(pageInfos);
     if(thumbnailPageToDecode >= 0)
     {
         this->setDecodingMessage((Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str());
-        qInfo() << (Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str();
         
-//         QSignalBlocker blocker(this);
-        QImage thumb(pageInfos[thumbnailPageToDecode].width, pageInfos[thumbnailPageToDecode].height, d->format);
-//         this->decodeInternal(thumbnailPageToDecode, thumb);
-//         blocker.unblock();
+        QSignalBlocker blocker(this);
+        QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
+        this->decodeInternal(thumbnailPageToDecode, thumb, QRect());
+        blocker.unblock();
 
         this->setThumbnail(thumb);
     }
@@ -334,33 +335,37 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
 //     // calculate exact resolution
 //     preScaledResolution = QSize(targetImageRect.width() / xStep, targetImageRect.height() / yStep);
 #endif
+
+    int imagePageToDecode = 0;
+
     uint32_t* mem = this->allocateImageBuffer<uint32_t>(preScaledResolution.width(), preScaledResolution.height());
-    QImage image(reinterpret_cast<uint8_t*>(mem), preScaledResolution.width(), preScaledResolution.height(), d->format);
-    this->decodeInternal(d->imagePageToDecode, this->size(), image, 1, 1);
+    QImage image(reinterpret_cast<uint8_t*>(mem), preScaledResolution.width(), preScaledResolution.height(), d->format(imagePageToDecode));
+    this->decodeInternal(imagePageToDecode, image, targetImageRect);
 
     return image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QImage& image, double xStep, double yStep)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi)
 {
-    const unsigned width = pageSize.width();
-    const unsigned height = pageSize.height();
+    const unsigned width = d->pageInfos[imagePageToDecode].width;
+    const unsigned height = d->pageInfos[imagePageToDecode].height;
+    
+    if(!roi.isValid())
+    {
+        roi = QRect(0, 0, width, height);
+    }
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
+    uint16_t samplesPerPixel = d->pageInfos[imagePageToDecode].spp;
+    uint16_t bitsPerSample = d->pageInfos[imagePageToDecode].bps;
+        
     uint16_t comp;
     TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
     
-    uint16_t samplesPerPixel;
-    TIFFGetField(d->tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
-
     uint16_t planar;
     TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &planar);
     
-    uint16_t bitsPerSample;
-    TIFFGetField(d->tiff, TIFFTAG_BITSPERSAMPLE, &bitsPerSample);
-    
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     uint32_t count;
     void *profile;
     if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
@@ -368,7 +373,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
         QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
         image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
     }
-#endif
 
     this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());    
     
@@ -387,6 +391,12 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
         {
             for (unsigned x = 0; x < width; x += tw)
             {
+                QRect tile(x,y,tw,tl);
+                if(!tile.intersects(roi))
+                {
+                    continue;
+                }
+            
                 auto ret = TIFFReadRGBATile(d->tiff, x, y, tileBuf.data());
                 if(ret == 0)
                 {
@@ -406,7 +416,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
                                             width,
                                             height,
                                             width * sizeof(uint32_t),
-                                            d->format));
+                                            d->format(imagePageToDecode)));
                     
                     double progress = y * x * 100.0 / (height * width);
                     this->setDecodingProgress(progress);
@@ -462,7 +472,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QSize pageSize, QIm
                             width,
                             height,
                             width * samplesPerPixel,
-                            d->format);
+                            d->format(imagePageToDecode));
             image = rawImage.scaled(image.size(), Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.rgbSwapped();
         }
@@ -490,7 +500,7 @@ gehtnich:
                                     width,
                                     rowsDecoded,
                                     width * sizeof(uint32_t),
-                                    d->format);
+                                    d->format(imagePageToDecode));
                     stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
                     
                     size_t pixelsToCpy = stripImg.width() * stripImg.height();
@@ -500,9 +510,9 @@ gehtnich:
                     
                     this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
                                             image.width(),
-                                            std::min<size_t>(std::floor(strip * rowsperstrip / yStep), image.height()),
+                                            image.height(),
                                             image.width() * sizeof(uint32_t),
-                                            d->format));
+                                            d->format(imagePageToDecode)));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);
