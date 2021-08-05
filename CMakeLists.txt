@@ -107,6 +107,13 @@ find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
 
+
+find_package ( PkgConfig REQUIRED )
+
+# Mandatory libraries: glib and gthread
+pkg_check_modules ( VIPS REQUIRED vips-cpp )
+
+
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 
@@ -167,5 +174,5 @@ qt6_wrap_ui(UI_HEADERS
     FileOperationConfig.ui)
 
 add_executable(anpv ${SRC} ${UI_HEADERS} ANPV.qrc)
-target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
-target_include_directories(anpv SYSTEM PRIVATE Qt6::Core Qt6::Widgets ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
+target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
+target_include_directories(anpv SYSTEM PRIVATE Qt6::Core Qt6::Widgets ${VIPS_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
