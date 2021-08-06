@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cmath>
+#include <cstring>
 #include <QDebug>
 #include <QtGlobal>
 
@@ -25,6 +26,8 @@ struct PageInfo
     uint16_t spp;
 };
 
+constexpr const char TiffModule[] = "SmartTiffDecoder";
+
 // Note: a lot of the code has been taken from: 
 // https://github.com/qt/qtimageformats/blob/c64f19516dd2467bf5746eb24afe883bdbc15b25/src/plugins/imageformats/tiff/qtiffhandler.cpp
 
@@ -41,6 +44,7 @@ struct SmartTiffDecoder::Impl
 
     Impl(SmartTiffDecoder* q) : q(q)
     {
+        // those are nasty global, non-thread-safe functions. setting custom handlers will also affect QT's internal QImage decoding.
         TIFFSetErrorHandler(nullptr);
         TIFFSetWarningHandler(nullptr);
         TIFFSetErrorHandlerExt(myErrorHandler);
@@ -49,6 +53,12 @@ struct SmartTiffDecoder::Impl
     
     static void myErrorHandler(thandle_t self, const char* module, const char* fmt, va_list ap)
     {
+        if(::strcmp(module, TiffModule) != 0)
+        {
+            // Seems like this call was made from QT's internal decoding. self points to something else. Return.
+            return;
+        }
+        
         auto impl = static_cast<Impl*>(self);
         char buf[4096];
         std::vsnprintf(buf, sizeof(buf)/sizeof(*buf), fmt, ap);
@@ -65,6 +75,12 @@ struct SmartTiffDecoder::Impl
     
     static void myWarningHandler(thandle_t self, const char* module, const char* fmt, va_list ap)
     {
+        if(::strcmp(module, TiffModule) != 0)
+        {
+            // Seems like this call was made from QT's internal decoding. self points to something else. Return.
+            return;
+        }
+        
         auto impl = static_cast<Impl*>(self);
         char buf[4096];
         std::vsnprintf(buf, sizeof(buf)/sizeof(*buf), fmt, ap);
@@ -218,14 +234,14 @@ struct SmartTiffDecoder::Impl
     {
         int ret = -1;
         const auto fullImgAspect = size.width() * 1.0 / size.height();
-        uint64_t res = pageInfo[0].width * pageInfo[0].height;
+        uint64_t res = size.width() * size.height();
         for(size_t i=0; i<pageInfo.size(); i++)
         {
             auto len = pageInfo[i].width * pageInfo[i].height;
             
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
-               std::fabs(aspect - fullImgAspect) < 1e-4 && // aspect matches?
+               std::fabs(aspect - fullImgAspect) < 0.1 && // aspect matches?
                (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)) // at least 200 px in one dimension
             {
                 ret = i;
@@ -237,7 +253,7 @@ struct SmartTiffDecoder::Impl
     
     QImage::Format format(int page)
     {
-        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB888;
+        return QImage::Format_ARGB32;
     }
 };
 
@@ -266,7 +282,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     
     this->setDecodingMessage("Reading TIFF Header");
     
-    d->tiff = TIFFClientOpen("foo",
+    d->tiff = TIFFClientOpen(TiffModule,
                             "rm",
                             d.get(),
                             d->qtiffReadProc,
