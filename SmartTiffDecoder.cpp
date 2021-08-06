@@ -452,7 +452,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                                             width * sizeof(uint32_t),
                                             d->format(imagePageToDecode)));
                     
-                    double progress = y * x * 100.0 / (height * width);
+                    double progress = (y * tw + x) * 100.0 / (height * width);
                     this->setDecodingProgress(progress);
                 }
             }
