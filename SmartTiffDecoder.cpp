@@ -255,6 +255,23 @@ struct SmartTiffDecoder::Impl
     {
         return QImage::Format_ARGB32;
     }
+    
+    static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
+    {
+        int ret = -1;
+        double prevScale = 1;
+        
+        for(size_t i=0; i<pageInfo.size(); i++)
+        {
+            double scale  = size.width() / pageInfo[i].width;
+            if(scale <= targetScale && scale >= prevScale)
+            {
+                ret = i;
+                prevScale = scale;
+            }
+        }
+        return ret;
+    }
 };
 
 SmartTiffDecoder::SmartTiffDecoder(const QFileInfo& file, QByteArray arr) : SmartImageDecoder(file, arr), d(std::make_unique<Impl>(this))
@@ -338,27 +355,27 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
         desiredResolution = targetImageRect.size();
     }
     
-    QSize preScaledResolution = targetImageRect.size();
-#if 0
-    QSize preScaledResolution = targetImageRect.size().scaled(desiredResolution, Qt::KeepAspectRatio);
-    preScaledResolution *= 1.5;
-    // the preScaledResolution should not be bigger than the targetImageRect
-    preScaledResolution = preScaledResolution.boundedTo(targetImageRect.size());
+    QSize desiredDecodeResolution = targetImageRect.size().scaled(desiredResolution, Qt::KeepAspectRatio);
+    desiredDecodeResolution *= 1.5;
+    // the desiredDecodeResolution should not be bigger than the targetImageRect
+    desiredDecodeResolution = desiredDecodeResolution.boundedTo(targetImageRect.size());
     
-    double yStep = targetImageRect.height() * 1.0f / preScaledResolution.height();
-    double xStep = targetImageRect.width() * 1.0f / preScaledResolution.width();
+    double desiredScaleX = targetImageRect.width() * 1.0f / desiredDecodeResolution.width();
+    double desiredScaleY = targetImageRect.height() * 1.0f / desiredDecodeResolution.height();
+
+    int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, this->size());
+
+    double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
+    double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();
     
-//     // calculate exact resolution
-//     preScaledResolution = QSize(targetImageRect.width() / xStep, targetImageRect.height() / yStep);
-#endif
+    QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
+    QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
+    
+    uint32_t* mem = this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height);
+    QImage image(reinterpret_cast<uint8_t*>(mem), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+    this->decodeInternal(imagePageToDecode, image, mappedRoi);
 
-    int imagePageToDecode = 0;
-
-    uint32_t* mem = this->allocateImageBuffer<uint32_t>(preScaledResolution.width(), preScaledResolution.height());
-    QImage image(reinterpret_cast<uint8_t*>(mem), preScaledResolution.width(), preScaledResolution.height(), d->format(imagePageToDecode));
-    this->decodeInternal(imagePageToDecode, image, targetImageRect);
-
-    return image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    return image;//.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
 void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi)
@@ -368,6 +385,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
     if(!roi.isValid())
     {
+        // roi's coordinates are native to imagePageToDecode
         roi = QRect(0, 0, width, height);
     }
     
