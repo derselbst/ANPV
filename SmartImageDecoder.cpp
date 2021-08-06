@@ -182,8 +182,9 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             QSharedPointer<QFile> file(new QFile(d->fileInfo.absoluteFilePath()), [&](QFile* f){ this->close(); delete f; });
             d->open(*file.data());
             
+            // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
             qint64 mapSize = file->size();
-            const unsigned char* fileMapped = file->map(0, mapSize, QFileDevice::MapPrivateOption);
+            const unsigned char* fileMapped = file->map(0, mapSize, QFileDevice::NoOptions);
             
             qint64 encodedInputBufferSize = mapSize;
             const unsigned char* encodedInputBufferPtr = fileMapped;
@@ -191,7 +192,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             {
                 if(fileMapped == nullptr)
                 {
-                    throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "'");
+                    throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "', error was: " << file->errorString().toStdString());
                 }
             }
             else
