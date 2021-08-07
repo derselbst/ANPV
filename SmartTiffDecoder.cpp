@@ -24,6 +24,11 @@ struct PageInfo
     uint16_t bps;
     // sample per pixel
     uint16_t spp;
+    
+    size_t nPix()
+    {
+        return static_cast<size_t>(this->width) * height;
+    }
 };
 
 constexpr const char TiffModule[] = "SmartTiffDecoder";
@@ -220,7 +225,7 @@ struct SmartTiffDecoder::Impl
         uint64_t res = 0;
         for(size_t i=0; i<pageInfo.size(); i++)
         {
-            auto len = pageInfo[i].width * pageInfo[i].height;
+            auto len = pageInfo[i].nPix();
             if(res < len)
             {
                 ret = i;
@@ -237,7 +242,7 @@ struct SmartTiffDecoder::Impl
         uint64_t res = size.width() * size.height();
         for(size_t i=0; i<pageInfo.size(); i++)
         {
-            auto len = pageInfo[i].width * pageInfo[i].height;
+            auto len = pageInfo[i].nPix();
             
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
@@ -452,7 +457,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                                             width * sizeof(uint32_t),
                                             d->format(imagePageToDecode)));
                     
-                    double progress = (y * tw + x) * 100.0 / (height * width);
+                    double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
                 }
             }

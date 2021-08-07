@@ -169,7 +169,7 @@ struct SortedImageModel::Impl
                 {
                     if (lsize.width() != rsize.width() && lsize.height() != rsize.height())
                     {
-                        return lsize.width() * lsize.height() < rsize.width() * rsize.height();
+                        return static_cast<size_t>(lsize.width()) * lsize.height() < static_cast<size_t>(rsize.width()) * rsize.height();
                     }
                 }
                 else if (lsize.isValid())
