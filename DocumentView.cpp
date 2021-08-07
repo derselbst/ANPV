@@ -280,7 +280,8 @@ void DocumentView::wheelEvent(QWheelEvent *event)
     if (modifiers & Qt::ControlModifier && modifiers & Qt::ShiftModifier)
     {
         event->accept();
-        this->rotate(angleDelta.y() / 10.0);
+        double sign = angleDelta.y() < 0 ? -1 : 1;
+        this->rotate(sign * (90.0 / 8));
     }
     else if (modifiers & Qt::ControlModifier)
     {
@@ -383,6 +384,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         if(viewMode == ViewMode::Fit)
         {
             this->resetTransform();
+            this->setTransform(dec->exif()->transformMatrix(), true);
             this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
         }
         else if(viewMode == ViewMode::CenterAf)
@@ -408,7 +410,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
                 }
             }
         }
-        this->setTransform(dec->exif()->transformMatrix(), true);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
         d->exifOverlay->setMetadata(dec);
         break;
