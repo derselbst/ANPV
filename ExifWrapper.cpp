@@ -422,12 +422,6 @@ QString ExifWrapper::formatToString()
     double r;
     QString s;
     
-    QSize size = this->size();
-    if(size.isValid())
-    {
-        f << "Resolution: " << size.width() << " x " << size.height() << " px<br><br>";
-    }
-    
     if(this->aperture(r))
     {
         f << "Aperture: " << std::fixed << std::setprecision(1) << r << "<br>";

@@ -4,7 +4,7 @@
 #include <memory>
 #include "MessageWidget.hpp"
 
-class ExifWrapper;
+class SmartImageDecoder;
 
 class ExifOverlay : public MessageWidget
 {
@@ -12,7 +12,7 @@ public:
     ExifOverlay(QWidget* parent = nullptr);
     ~ExifOverlay() override;
 
-    void setMetadata(ExifWrapper*);
+    void setMetadata(SmartImageDecoder*);
 
 private:
     struct Impl;

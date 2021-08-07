@@ -37,6 +37,7 @@ public:
     QImage image();
     QString errorMessage();
     QString latestMessage();
+    QString formatInfoString();
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, int prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     DecodingState decodingState() const;

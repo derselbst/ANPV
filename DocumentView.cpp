@@ -410,7 +410,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
         this->setTransform(dec->exif()->transformMatrix(), true);
         d->addThumbnailPreview(dec->thumbnail(), dec->size());
-        d->exifOverlay->setMetadata(dec->exif());
+        d->exifOverlay->setMetadata(dec);
         break;
     }
     case DecodingState::PreviewImage:

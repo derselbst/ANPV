@@ -377,6 +377,59 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
     }
 }
 
+QString SmartImageDecoder::formatInfoString()
+{
+    Formatter f;
+    
+    long n, d;
+    double r;
+    QString s, infoStr;
+    
+    QSize size = this->size();
+    if(size.isValid())
+    {
+        f << "Resolution: " << size.width() << " x " << size.height() << " px<br><br>";
+    }
+    
+    infoStr += f.str().c_str();
+    
+    s = this->exif()->formatToString();
+    if(!s.isEmpty())
+    {
+        infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
+    }
+    
+    static const char *const sizeUnit[] = {" Bytes", " KiB", " MiB", " <b>GiB</b>"};
+    float fsize = this->fileInfo().size();
+    int i;
+    for(i = 0; i<4 && fsize > 1024; i++)
+    {
+        fsize /= 1024.f;
+    }
+    
+    infoStr += QString("<b>===stat()===</b><br><br>");
+    infoStr += "File Size: ";
+    infoStr += QString::number(fsize, 'f', 2) + sizeUnit[i];
+    infoStr += "<br><br>";
+    
+    QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
+    if(t.isValid())
+    {
+        infoStr += "Created on:<br>";
+        infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
+        infoStr += t.toString("  hh:mm:ss<br><br>");
+    }
+    
+    t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
+    if(t.isValid())
+    {
+        infoStr += "Modified on:<br>";
+        infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
+        infoStr += t.toString("hh:mm:ss");
+    }
+    
+    return infoStr;
+}
 
 template<typename T>
 T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
