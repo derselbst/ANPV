@@ -29,5 +29,5 @@ protected:
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
-    void decodeInternal(int imagePageToDecode, QImage& image, QRect roi);
+    void decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution);
 };

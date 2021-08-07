@@ -333,7 +333,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         
         QSignalBlocker blocker(this);
         QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
-        this->decodeInternal(thumbnailPageToDecode, thumb, QRect());
+        this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
         blocker.unblock();
 
         this->setThumbnail(thumb);
@@ -373,12 +373,12 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
     
     uint32_t* mem = this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height);
     QImage image(reinterpret_cast<uint8_t*>(mem), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
-    this->decodeInternal(imagePageToDecode, image, mappedRoi);
+    this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
-    return image;//.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    return image;
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution)
 {
     const unsigned width = d->pageInfos[imagePageToDecode].width;
     const unsigned height = d->pageInfos[imagePageToDecode].height;
@@ -408,7 +408,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
     }
 
-    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());    
+    this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
     
     if(TIFFIsTiled(d->tiff))
     {
@@ -471,7 +471,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         if(comp == COMPRESSION_NONE &&
             samplesPerPixel == 4 /* RGBA */ &&
             planar == 1 &&
-            (bitsPerSample==8 || bitsPerSample==16))
+            bitsPerSample==8)
         {
             // image is uncompressed, use a shortcut for quick displaying
             
@@ -494,11 +494,13 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 {
                     if(stripOffset[s] != stripLen * s + initialOffset)
                     {
-                        this->setDecodingMessage((Formatter() << "TIFF Strips are not contiguous. Cannot use fast decoding hack. Trying regular, slow decoding instead.").str().c_str());
+                        this->setDecodingMessage("TIFF Strips are not contiguous. Cannot use fast decoding hack. Trying regular, slow decoding instead.");
                         goto gehtnich;
                     }
                 }
             }
+            
+            this->setDecodingMessage("Uh, it's an uncompressed 8-bit RGBA TIFF. Using fast decoding hack. This may take a few seconds and cannot be cancelled... ");
             
             const uint8_t* rawRgb = d->buffer + initialOffset;
             
@@ -506,9 +508,9 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                             width,
                             height,
                             width * samplesPerPixel,
-                            d->format(imagePageToDecode));
-            image = rawImage.scaled(image.size(), Qt::KeepAspectRatio, Qt::FastTransformation);
-            image = image.rgbSwapped();
+                            QImage::Format_RGBA8888);
+            image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
+            image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
         else
         {
@@ -581,6 +583,6 @@ gehtnich:
         }
     }
     
-    this->setDecodingProgress(100);
     this->setDecodingMessage("TIFF decoding completed successfully.");
+    this->setDecodingProgress(100);
 }
