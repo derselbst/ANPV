@@ -218,9 +218,9 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState, QSize desiredRe
     image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
     
     // call the progress monitor for a last time to report 100% to GUI
+    this->setDecodingMessage("JPEG decoding completed successfully.");
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
-    this->setDecodingMessage("JPEG decoding completed successfully.");
     
     return image;
 }
