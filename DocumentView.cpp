@@ -79,6 +79,7 @@ struct DocumentView::Impl
         
         currentDocumentPixmap = QPixmap();
         currentPixmapOverlay->setPixmap(currentDocumentPixmap);
+        currentPixmapOverlay->setScale(1);
         
         if(!taskFuture.isFinished())
         {
@@ -360,10 +361,6 @@ void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
     d->currentDocumentPixmap = QPixmap::fromImage(img, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
 
-    QSize fullImageSize = dec->size();
-    auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
-    d->currentPixmapOverlay->setScale(newScale);
-
     d->scene->invalidate();
 }
 
@@ -430,9 +427,16 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
         break;
     case DecodingState::FullImage:
+    {
         this->onImageRefinement(this->d->currentImageDecoder.data(), dec->image());
+
+        QSize fullImageSize = dec->size();
+        auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
+        d->currentPixmapOverlay->setScale(newScale);
+        
         d->createSmoothPixmap();
         break;
+    }
     case DecodingState::Error:
         d->currentDocumentPixmap = QPixmap();
         d->setDocumentError(dec);
