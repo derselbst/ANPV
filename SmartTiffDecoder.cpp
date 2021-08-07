@@ -545,9 +545,9 @@ gehtnich:
                     buf += pixelsToCpy;
                     
                     this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                            image.width(),
-                                            image.height(),
-                                            image.width() * sizeof(uint32_t),
+                                            width,
+                                            std::min(strip*rowsperstrip, height),
+                                            width * sizeof(uint32_t),
                                             d->format(imagePageToDecode)));
                     
                     double progress = strip * 100.0 / stripCount;
