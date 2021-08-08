@@ -106,7 +106,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     
     this->setDecodingMessage("Calculating output dimensions");
     
-    this->setSize(QSize(cinfo.image_width, cinfo.image_height));
+    this->image()->setSize(QSize(cinfo.image_width, cinfo.image_height));
 }
 
 QImage SmartJpegDecoder::decodingLoop(DecodingState targetState, QSize desiredResolution, QRect roiRect)

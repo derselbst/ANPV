@@ -5,6 +5,7 @@
 #include "SmartJpegDecoder.hpp"
 #include "SmartTiffDecoder.hpp"
 #include "DocumentView.hpp"
+#include "Image.hpp"
 
 #include <KDCRAW/KDcraw>
 #include <QFile>
@@ -67,40 +68,48 @@ bool DecoderFactory::hasCR2Header(const QFileInfo& url)
     return false;
 }
 
-QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(const QFileInfo& url)
+QSharedPointer<Image> DecoderFactory::makeImage(const QFileInfo& url)
 {
-    const QByteArray formatHint = url.fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
-    
-    QImageReader r(url.absoluteFilePath());
-    
-    if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
+    return QSharedPointer<Image> (new Image(url), &QObject::deleteLater);
+}
+
+QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Image> image)
+{
+    const QFileInfo& info = image->fileInfo();
+    if(info.isFile())
     {
-        QByteArray previewData;
-
-        // use KDcraw for getting the embedded preview
-        bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(previewData, url.absoluteFilePath());
-
-        if (!ret)
-        {
-            // if the embedded preview loading failed, load half preview instead.
-            // That's slower but it works even for images containing
-            // small (160x120px) or none embedded preview.
-            if (!KDcrawIface::KDcraw::loadHalfPreview(previewData, url.absoluteFilePath()))
-            {
-                qWarning() << "unable to get half preview for " << url.absoluteFilePath();
-                return nullptr;
-            }
-        }
+        const QByteArray formatHint = info.fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
+        QImageReader r(info.absoluteFilePath());
         
-        return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(url, previewData), &QObject::deleteLater);
-    }
-    else if(r.format() == "tiff")
-    {
-        return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(url), &QObject::deleteLater);
-    }
-    else if(r.format() == "jpeg")
-    {
-        return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(url), &QObject::deleteLater);
+        if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
+        {
+            QByteArray previewData;
+
+            // use KDcraw for getting the embedded preview
+            bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(previewData, info.absoluteFilePath());
+
+            if (!ret)
+            {
+                // if the embedded preview loading failed, load half preview instead.
+                // That's slower but it works even for images containing
+                // small (160x120px) or none embedded preview.
+                if (!KDcrawIface::KDcraw::loadHalfPreview(previewData, info.absoluteFilePath()))
+                {
+                    qWarning() << "unable to get half preview for " << info.absoluteFilePath();
+                    return nullptr;
+                }
+            }
+            
+            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image, previewData), &QObject::deleteLater);
+        }
+        else if(r.format() == "tiff")
+        {
+            return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(image), &QObject::deleteLater);
+        }
+        else if(r.format() == "jpeg")
+        {
+            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image), &QObject::deleteLater);
+        }
     }
     
     return nullptr;

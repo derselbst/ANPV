@@ -47,7 +47,6 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
 Image::~Image()
 {
     xThreadGuard g(this);
-
 }
 
 const QFileInfo& Image::fileInfo() const
@@ -102,12 +101,23 @@ QPixmap Image::thumbnail()
 
 void Image::setThumbnail(QImage thumb)
 {
+    if(thumb.isNull())
+    {
+        return;
+    }
+    
     QPixmap pix = QPixmap::fromImage(thumb, Qt::NoFormatConversion);
     this->setThumbnail(pix);
 }
 
 void Image::setThumbnail(QPixmap pix)
 {
+    if(pix.isNull())
+    {
+        // thumbnails should not be unset
+        return;
+    }
+    
     std::unique_lock<std::recursive_mutex> lck(d->m);
     if(pix.width() > d->thumbnail.width())
     {
@@ -121,7 +131,7 @@ void Image::setThumbnail(QPixmap pix)
         }
     }
 }
-    
+
 QPixmap Image::icon(int height)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);

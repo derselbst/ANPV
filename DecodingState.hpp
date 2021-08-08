@@ -13,14 +13,14 @@ enum DecodingState : quint32
     // a low resolution thumbnail may also be available
     Metadata,
     
-    // This state is selected when a preview image at full resolution can be obtained.
-    // Even if many parts are still missing (displayed in black).
+    // This state is selected when a preview image at potentially lower resolution is available.
+    // Even if many parts are still missing (displayed in black) or only a ROI has been decoded.
     // The preview might have a low degree of detail though.
     // Think of partly decoded progressive JPEGs, etc.
     // This state may be triggered more than once.
     PreviewImage,
     
-    // Decoding has finished successfully, the full resolution image is now available.
+    // Decoding has finished successfully, the full resolution image has been decoded and is now available.
     FullImage,
     
     // The decoding process has failed.

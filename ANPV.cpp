@@ -370,7 +370,7 @@ void ANPV::loadImage(QFileInfo inf)
 
 void ANPV::loadImage(QSharedPointer<SmartImageDecoder> dec)
 {
-    this->setWindowTitle(dec->fileInfo().fileName());
+    this->setWindowTitle(dec->image()->fileInfo().fileName());
     d->imageViewer->loadImage(dec);
 }
 

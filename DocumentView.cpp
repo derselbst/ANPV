@@ -468,7 +468,12 @@ void DocumentView::loadImage(QString url)
         return;
     }
     
-    QSharedPointer<SmartImageDecoder> dec = DecoderFactory::globalInstance()->getDecoder(info);
+    this->loadImage(DecoderFactory::globalInstance()->makeImage(url);
+}
+
+void DocumentView::loadImage(Image image)
+{
+    QSharedPointer<SmartImageDecoder> dec = DecoderFactory::globalInstance()->getDecoder(image);
     if(!dec)
     {
         QString name = info.fileName();

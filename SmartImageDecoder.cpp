@@ -17,7 +17,6 @@
 struct SmartImageDecoder::Impl
 {
     std::unique_ptr<QPromise<DecodingState>> promise;
-    void* cancelCallbackObject = nullptr;
     std::atomic<DecodingState> state{ DecodingState::Ready };
     DecodingState targetState;
     QSize desiredResolution;
@@ -25,65 +24,59 @@ struct SmartImageDecoder::Impl
     QString decodingMessage;
     int decodingProgress=0;
 
-    std::recursive_mutex m;
-
     std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
     QString errorMessage;
     
-    // file path to the decoded input file
-    QFileInfo fileInfo;
+    QSharedPointer<Image> image;
     
     // May or may not contain (a part of) the encoded input file
     // It does for embedded JPEG preview in CR2
     QByteArray encodedInputFile;
     
-    // a low resolution preview image of the original full image
-    QPixmap thumbnail;
-    
-    // same as thumbnail, but rotated according to EXIF orientation
-    QPixmap thumbnailTransformed;
-    
     // the fully decoded image - might be incomplete if the state is PreviewImage
-    QImage image;
+    QImage decodedImage;
     
     // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
-    std::unique_ptr<unsigned char[]> fullImageBuffer;
+    std::unique_ptr<unsigned char[]> backingImageBuffer;
     
-    // size of the fully decoded image, already available in DecodingState::Metadata
-    std::atomic<QSize> size;
+    SmartImageDecoder* q;
     
-    ExifWrapper exifWrapper;
+    QSharedPointer<QFile> file;
+    qint64 encodedInputBufferSize = 0;
+    const unsigned char* encodedInputBufferPtr = nullptr;
     
-    Impl(const QFileInfo& url, QByteArray arr) : fileInfo(url), encodedInputFile(arr)
+    Impl(SmartImageDecoder* q, QSharedPointer<Image> image, QByteArray arr) : q(q), image(image), encodedInputFile(arr)
     {}
     
-    void open(QFile& file)
+    void open(QFileInfo& info)
     {
-        if(file.isOpen())
+        if(this->file && this->file.isOpen())
         {
-            return;
+            throw std::logic_error("File is already open!");
         }
         
+        QSharedPointer<QFile> file(new QFile(info.absoluteFilePath()), &QObject::deleteLater);
         if (!file.open(QIODevice::ReadOnly))
         {
-            throw std::runtime_error(Formatter() << "Unable to open file '" << fileInfo.absoluteFilePath().toStdString() << "'");
+            throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
         }
+        this->file = file;
     }
 
     void setImage(QImage img)
     {
-        image = img;
+        decodedImage = img;
     }
     
     void releaseFullImage()
     {
         setImage(QImage());
-        fullImageBuffer.reset();
+        backingImageBuffer.reset();
     }
 };
 
-SmartImageDecoder::SmartImageDecoder(const QFileInfo& url, QByteArray arr) : d(std::make_unique<Impl>(url, arr))
+SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr) : d(std::make_unique<Impl>(this, image, arr))
 {
     this->setAutoDelete(false);
 }
@@ -101,12 +94,13 @@ SmartImageDecoder::~SmartImageDecoder()
             d->promise->future().waitForFinished();
         }
     }
+    
+    this->close();
 }
 
-void SmartImageDecoder::setThumbnail(QImage thumb)
+QSharedPointer<Image> SmartImageDecoder::image()
 {
-    d->thumbnail = QPixmap::fromImage(thumb);
-    d->thumbnailTransformed = QPixmap();
+    return d->image;
 }
 
 void SmartImageDecoder::setDecodingState(DecodingState state)
@@ -131,6 +125,42 @@ void SmartImageDecoder::cancelCallback()
     {
         throw UserCancellation();
     }
+}
+
+// initializes the decoder, by reading as much of the file as necessary to know about most important information
+void SmartImageDecoder::init()
+{
+        // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
+        qint64 mapSize = d->file->size();
+        const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
+        
+        d->encodedInputBufferSize = mapSize;
+        d->encodedInputBufferPtr = fileMapped;
+        if(d->encodedInputFile.isEmpty())
+        {
+            if(fileMapped == nullptr)
+            {
+                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "', error was: " << d->file->errorString().toStdString());
+            }
+        }
+        else
+        {
+            d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
+            d->encodedInputBufferSize = d->encodedInputFile.size();
+        }
+        
+        this->cancelCallback();
+        
+        this->decodeHeader(d->encodedInputBufferPtr, d->encodedInputBufferSize);
+        
+        QSharedPointer<ExifWrapper> exifWrapper(new ExifWrapper());
+        // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
+        exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
+        this->image()->setExif(exifWrapper);
+        this->image()->setDefaultTransform(transformMatrix());
+        this->image()->setThumbnail(exifWrapper.thumbnail());
+        
+        this->setDecodingState(DecodingState::Metadata);
 }
 
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, int prio, QSize desiredResolution, QRect roiRect)
@@ -171,61 +201,19 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
         this->cancelCallback();
         do
         {
-            if(decodingState() != DecodingState::Error &&
-            decodingState() != DecodingState::Cancelled &&
-            decodingState() >= targetState)
+            if(decodingState() != DecodingState::Metadata)
             {
-                // we already have more decoded than requested, do nothing
-                break;
-            }
-
-            QSharedPointer<QFile> file(new QFile(d->fileInfo.absoluteFilePath()), [&](QFile* f){ this->close(); delete f; });
-            d->open(*file.data());
-            
-            // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
-            qint64 mapSize = file->size();
-            const unsigned char* fileMapped = file->map(0, mapSize, QFileDevice::NoOptions);
-            
-            qint64 encodedInputBufferSize = mapSize;
-            const unsigned char* encodedInputBufferPtr = fileMapped;
-            if(d->encodedInputFile.isEmpty())
-            {
-                if(fileMapped == nullptr)
-                {
-                    throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "', error was: " << file->errorString().toStdString());
-                }
-            }
-            else
-            {
-                encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
-                encodedInputBufferSize = d->encodedInputFile.size();
-            }
-            
-            this->cancelCallback();
-            
-            this->decodeHeader(encodedInputBufferPtr, encodedInputBufferSize);
-            
-            // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
-            d->exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
-            if (d->thumbnail.isNull())
-            {
-                this->setThumbnail(d->exifWrapper.thumbnail());
-            }
-
-            this->setDecodingState(DecodingState::Metadata);
-                        
-            if(decodingState() >= targetState)
-            {
-                break;
+                // metadata has not been read yet or try to recover previous error
+                this->init();
             }
             
             QImage decodedImg = this->decodingLoop(targetState, desiredResolution, roiRect);
             d->setImage(decodedImg);
             
-            // if thumbnail is still null, set it
-            if (d->thumbnail.isNull())
+            // if thumbnail is still null and no roi has been given, set it
+            if (this->image()->thumbnail().isNull() && !roiRect.isValid())
             {
-                this->setThumbnail(decodedImg.scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                this->image()->setThumbnail(decodedImg.scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             }
 
             this->setDecodingState(targetState);
@@ -234,11 +222,13 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     catch(const UserCancellation&)
     {
         this->setDecodingState(DecodingState::Cancelled);
+        this->close();
     }
     catch(const std::exception& e)
     {
         d->errorMessage = e.what();
         this->setDecodingState(DecodingState::Error);
+        this->close();
     }
     
     if(d->promise)
@@ -250,7 +240,12 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
 }
 
 void SmartImageDecoder::close()
-{}
+{
+    d->encodedInputBufferSize = 0;
+    d->encodedInputBufferPtr = nullptr;
+    d->file.close();
+    d->file = nullptr;
+}
 
 void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
 {
@@ -283,11 +278,6 @@ DecodingState SmartImageDecoder::decodingState() const
     return d->state;
 }
 
-const QFileInfo& SmartImageDecoder::fileInfo() const
-{
-    return d->fileInfo;
-}
-
 QString SmartImageDecoder::latestMessage()
 {
     xThreadGuard g(this);
@@ -300,36 +290,10 @@ QString SmartImageDecoder::errorMessage()
     return d->errorMessage;
 }
 
-QImage SmartImageDecoder::image()
+QImage SmartImageDecoder::decodedImage()
 {
     xThreadGuard g(this);
-    return d->image;
-}
-
-QPixmap SmartImageDecoder::thumbnail()
-{
-    xThreadGuard g(this);
-    return d->thumbnail;
-}
-
-QPixmap SmartImageDecoder::icon(int height)
-{
-    std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);
-    if(lck.try_lock() && !d->thumbnail.isNull() && (d->thumbnailTransformed.isNull() || d->thumbnailTransformed.height() != height))
-    {
-        d->thumbnailTransformed = d->thumbnail.transformed(d->exifWrapper.transformMatrix()).scaledToHeight(height);
-    }
-    return d->thumbnailTransformed;
-}
-
-QSize SmartImageDecoder::size()
-{
-    return d->size;
-}
-
-ExifWrapper* SmartImageDecoder::exif()
-{
-    return &d->exifWrapper;
+    return d->decodedImage;
 }
 
 void SmartImageDecoder::setDecodingMessage(QString&& msg)
@@ -446,8 +410,8 @@ T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
         
-        d->fullImageBuffer = std::move(mem);
-        return reinterpret_cast<T*>(d->fullImageBuffer.get());
+        d->backingImageBuffer = std::move(mem);
+        return reinterpret_cast<T*>(d->backingImageBuffer.get());
     }
     catch (const std::bad_alloc&)
     {

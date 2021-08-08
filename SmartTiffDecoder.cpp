@@ -329,7 +329,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         throw std::runtime_error("This TIFF doesn't contain any directories!");
     }
     
-    this->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
+    this->image()->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
     auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, this->size());
     
     if(thumbnailPageToDecode >= 0)
@@ -341,7 +341,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
         blocker.unblock();
 
-        this->setThumbnail(thumb);
+        this->image()->setThumbnail(thumb);
     }
 }
 

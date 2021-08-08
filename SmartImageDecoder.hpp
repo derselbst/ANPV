@@ -18,6 +18,7 @@
 
 class ExifWrapper;
 class QMetaMethod;
+class Image;
 
 class SmartImageDecoder : public QObject, public QRunnable
 {
@@ -30,11 +31,8 @@ public:
     SmartImageDecoder(const SmartImageDecoder&) = delete;
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
     
-    const QFileInfo& fileInfo() const;
-    QSize size();
-    QPixmap thumbnail();
-    QPixmap icon(int height);
-    QImage image();
+    QSharedPointer<Image> image();
+    QImage decodedImage();
     QString errorMessage();
     QString latestMessage();
     QString formatInfoString();
@@ -45,6 +43,7 @@ public:
     
     ExifWrapper* exif();
     
+    void init();
     void run() override;
     
 protected:
@@ -56,8 +55,6 @@ protected:
     
     void cancelCallback();
     void setDecodingState(DecodingState state);
-    void setThumbnail(QImage thumb);
-    void setSize(QSize s);
     
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);

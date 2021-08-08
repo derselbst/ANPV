@@ -8,6 +8,7 @@
 #include "DecodingState.hpp"
 
 class SmartImageDecoder;
+class Image;
 class DocumentView;
 
 enum Priority : int
@@ -23,8 +24,9 @@ public:
     static DecoderFactory* globalInstance();
 
     ~DecoderFactory();
-    QSharedPointer<SmartImageDecoder> getDecoder(const QFileInfo& url);
     bool hasCR2Header(const QFileInfo& url);
+    QSharedPointer<class Image> makeImage(const QFileInfo& url);
+    QSharedPointer<SmartImageDecoder> getDecoder(QSharedPointer<class Image> image);
 
 private:
     DecoderFactory();
