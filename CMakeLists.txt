@@ -145,6 +145,8 @@ ExifWrapper.hpp
 FileOperationConfig.cpp
 FileOperationConfig.hpp
 Formatter.hpp
+Image.cpp
+Image.hpp
 SortedImageModel.cpp
 SortedImageModel.hpp
 MessageWidget.cpp
