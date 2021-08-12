@@ -445,6 +445,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, bool
     {
         QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
         image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
+        this->setDecodingMessage("Transforming colorspace...");
+        image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
     }
 #endif
     
