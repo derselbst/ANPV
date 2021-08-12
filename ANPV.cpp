@@ -31,6 +31,7 @@
 #include <QPointer>
 
 #include "DocumentView.hpp"
+#include "Image.hpp"
 #include "ThumbnailView.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
@@ -46,7 +47,7 @@ struct ANPV::Impl
     ANPV* q;
     
     QUndoStack* undoStack;
-    std::map<int, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
+    std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
     QVBoxLayout* progressWidgetLayout;
     QWidget* progressWidgetContainer;
     QStackedLayout* stackedLayout;
@@ -379,7 +380,7 @@ void ANPV::setThumbnailDir(QString str)
     d->thumbnailViewer->changeDir(str);
 }
 
-void ANPV::addBackgroundTask(int group, const QFuture<DecodingState>& fut)
+void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
 {
     xThreadGuard(this);
 

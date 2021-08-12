@@ -1,6 +1,7 @@
 
 #include "SmartJpegDecoder.hpp"
 #include "Formatter.hpp"
+#include "Image.hpp"
 
 #include <vector>
 #include <cstdio>
@@ -71,7 +72,7 @@ struct SmartJpegDecoder::Impl
     }
 };
 
-SmartJpegDecoder::SmartJpegDecoder(const QFileInfo& file, QByteArray arr) : SmartImageDecoder(file, arr), d(std::make_unique<Impl>(this))
+SmartJpegDecoder::SmartJpegDecoder(QSharedPointer<Image> image, QByteArray arr) : SmartImageDecoder(image, arr), d(std::make_unique<Impl>(this))
 {}
 
 SmartJpegDecoder::~SmartJpegDecoder() = default;

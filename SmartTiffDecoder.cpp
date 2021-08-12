@@ -1,6 +1,7 @@
 
 #include "SmartTiffDecoder.hpp"
 #include "Formatter.hpp"
+#include "Image.hpp"
 
 #include <cstdio>
 #include <cmath>
@@ -279,7 +280,7 @@ struct SmartTiffDecoder::Impl
     }
 };
 
-SmartTiffDecoder::SmartTiffDecoder(const QFileInfo& file, QByteArray arr) : SmartImageDecoder(file, arr), d(std::make_unique<Impl>(this))
+SmartTiffDecoder::SmartTiffDecoder(QSharedPointer<Image> image, QByteArray arr) : SmartImageDecoder(image, arr), d(std::make_unique<Impl>(this))
 {}
 
 SmartTiffDecoder::~SmartTiffDecoder() = default;
@@ -329,8 +330,9 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         throw std::runtime_error("This TIFF doesn't contain any directories!");
     }
     
-    this->image()->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
-    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, this->size());
+    QSize size(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height);
+    this->image()->setSize(size);
+    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, size);
     
     if(thumbnailPageToDecode >= 0)
     {
@@ -347,7 +349,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 
 QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QRect roiRect)
 {
-    QRect fullImageRect(QPoint(0,0), this->size());
+    const QRect fullImageRect(QPoint(0,0), this->image()->size());
     
     QRect targetImageRect = fullImageRect;
     if(roiRect.isValid())
@@ -368,7 +370,7 @@ QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QR
     double desiredScaleX = targetImageRect.width() * 1.0f / desiredDecodeResolution.width();
     double desiredScaleY = targetImageRect.height() * 1.0f / desiredDecodeResolution.height();
 
-    int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, this->size());
+    int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, fullImageRect.size());
 
     double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
     double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();

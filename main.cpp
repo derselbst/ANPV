@@ -9,11 +9,13 @@
 
 #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
-
+#include "Image.hpp"
+#include "UserCancellation.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QFutureWatcher>
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
 #include <QSplashScreen>
@@ -23,6 +25,7 @@
 #include <QMainWindow>
 #include <QStatusBar>
 #include <QProgressBar>
+#include <QPromise>
 #include <QDir>
 
 #include <chrono>
@@ -158,6 +161,108 @@ main (int argc, char **argv)
 
 #else
 
+class SortedImageModel : public QRunnable
+{
+    std::vector<std::unique_ptr<Image>> entries;
+public:
+    std::unique_ptr<QPromise<DecodingState>> directoryWorker = std::make_unique<QPromise<DecodingState>>();
+    
+    QDir currentDir;
+    
+    void throwIfDirectoryLoadingCancelled()
+    {
+        if(directoryWorker->isCanceled())
+        {
+            throw UserCancellation();
+        }
+    }
+    
+    bool addSingleFile(const QFileInfo& inf)
+    {
+        entries.emplace_back(std::make_unique<Image>(inf));
+        return true;
+    }
+    
+    void run() override
+    {
+        int entriesProcessed = 0;
+        try
+        {
+            this->directoryWorker->start();
+//             this->setStatusMessage(0, "Clearing old entries");
+            this->entries.clear();
+            
+//             this->setStatusMessage(0, "Looking up directory");
+            QFileInfoList fileInfoList = this->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+            const int entriesToProcess = fileInfoList.size();
+            if(entriesToProcess > 0)
+            {
+                this->directoryWorker->setProgressRange(0, entriesToProcess + 1 /* for sorting effort */);
+                
+//                 QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
+//                 if (this->sortedColumnNeedsPreloadingMetadata())
+//                 {
+//                     msg += " and reading EXIF data (making it quite slow)";
+//                 }
+                
+//                 this->setStatusMessage(0, msg);
+                this->entries.reserve(entriesToProcess);
+                this->entries.shrink_to_fit();
+                unsigned readableImages = 0;
+                while (!fileInfoList.isEmpty())
+                {
+                    do
+                    {
+                        QFileInfo inf = fileInfoList.takeFirst();
+                        if(this->addSingleFile(inf))
+                        {
+                            ++readableImages;
+                        }
+                    } while (false);
+
+                    this->throwIfDirectoryLoadingCancelled();
+//                     this->setStatusMessage(entriesProcessed++, msg);
+                }
+
+//                 this->setStatusMessage(entriesProcessed++, "Almost done: Sorting entries, please wait...");
+//                 this->sortEntries();
+//                 if(this->sortOrder == Qt::DescendingOrder)
+//                 {
+//                     this->reverseEntries();
+//                 }
+                
+//                 this->setStatusMessage(entriesProcessed, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
+//                 QMetaObject::invokeMethod(this, [&](){ this->onDirectoryLoaded(); }, Qt::QueuedConnection);
+            }
+            else
+            {
+                this->directoryWorker->setProgressRange(0, 1);
+//                 this->setStatusMessage(1, "Directory is empty, nothing to see here.");
+            }
+                
+            this->directoryWorker->addResult(DecodingState::FullImage);
+//             this->watcher->addPath(this->currentDir.absolutePath());
+        }
+        catch (const UserCancellation&)
+        {
+            this->directoryWorker->addResult(DecodingState::Cancelled);
+        }
+        catch (const std::exception& e)
+        {
+//             this->setStatusMessage(entriesProcessed, QString("Exception occurred while loading the directory: %1").arg(e.what()));
+            this->directoryWorker->addResult(DecodingState::Error);
+        }
+        catch (...)
+        {
+//             this->setStatusMessage(entriesProcessed, "Fatal error occurred while loading the directory");
+            this->directoryWorker->addResult(DecodingState::Error);
+        }
+//         this->endRemoveRows();
+        this->directoryWorker->finish();
+    }
+};
+
+
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
@@ -168,6 +273,32 @@ int main(int argc, char *argv[])
     
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
+    
+    
+    
+    QElapsedTimer tim;
+    
+    SortedImageModel dir;
+    dir.currentDir = QDir(argv[1]);
+    dir.setAutoDelete(false);
+    
+    QFutureWatcher<DecodingState> wat;
+    wat.setFuture(dir.directoryWorker->future());
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::started, [&](){ tim.start(); });
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::finished,  [&](){ qInfo() << tim.elapsed(); });
+    
+    QThreadPool::globalInstance()->start(&dir);
+    
+    int r = a.exec();
+    return r;
+    
+    
+    
+    
+    
+    
+    
+    
     
     ANPV m(&splash);
     m.show();

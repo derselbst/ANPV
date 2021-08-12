@@ -94,7 +94,7 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     d->hideTimer->setInterval(2000);
     QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
     {
-        d->anpv->hideProgressWidget(this);
+//         d->anpv->hideProgressWidget(this);
     });
 
     QObject::connect(d->ui->cancelButton, &QPushButton::clicked, &d->future, &QFutureWatcher<DecodingState>::cancel);

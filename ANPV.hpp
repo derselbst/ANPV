@@ -18,13 +18,13 @@ class CancellableProgressWidget;
 template<typename T>
 class QFuture;
 
-enum ProgressGroup
+enum class ProgressGroup : int
 {
     Directory,
     Image,
 };
 
-enum ViewMode
+enum class ViewMode : int
 {
     None,
     Fit,
@@ -39,7 +39,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void addBackgroundTask(int group, const QFuture<DecodingState>& fut);
+    void addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut);
     void hideProgressWidget(CancellableProgressWidget* w);
     
     void moveFilesSlot(const QString& targetDir);

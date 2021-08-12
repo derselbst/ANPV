@@ -11,13 +11,6 @@ class SmartImageDecoder;
 class Image;
 class DocumentView;
 
-enum Priority : int
-{
-    Background = -1,
-    Normal = 0,
-    Important = 1,
-};
-
 class DecoderFactory
 {
 public:
@@ -25,8 +18,8 @@ public:
 
     ~DecoderFactory();
     bool hasCR2Header(const QFileInfo& url);
-    QSharedPointer<class Image> makeImage(const QFileInfo& url);
-    QSharedPointer<SmartImageDecoder> getDecoder(QSharedPointer<class Image> image);
+    QSharedPointer<Image> makeImage(const QFileInfo& url);
+    QSharedPointer<SmartImageDecoder> getDecoder(QSharedPointer<Image> image);
 
 private:
     DecoderFactory();

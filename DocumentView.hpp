@@ -8,6 +8,7 @@
 #include <QFileInfo>
 
 class ANPV;
+class Image;
 class QGraphicsScene;
 class QWidget;
 class QPixmap;
@@ -24,7 +25,7 @@ public:
     ~DocumentView() override;
 
     QFileInfo currentFile();
-    void loadImage();
+    void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
     void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
     void loadImage(QSharedPointer<SmartImageDecoder>&& dec);
@@ -40,6 +41,8 @@ protected:
     bool viewportEvent(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+
+    void loadImage();
 
 signals:
     void requestNext(QString cur);

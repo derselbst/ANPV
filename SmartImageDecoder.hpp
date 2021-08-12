@@ -20,12 +20,19 @@ class ExifWrapper;
 class QMetaMethod;
 class Image;
 
+enum class Priority : int
+{
+    Background = -1,
+    Normal = 0,
+    Important = 1,
+};
+
 class SmartImageDecoder : public QObject, public QRunnable
 {
 Q_OBJECT
 
 public:
-    SmartImageDecoder(const QFileInfo&, QByteArray arr = QByteArray());
+    SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr = QByteArray());
     ~SmartImageDecoder() override;
     
     SmartImageDecoder(const SmartImageDecoder&) = delete;
@@ -35,9 +42,8 @@ public:
     QImage decodedImage();
     QString errorMessage();
     QString latestMessage();
-    QString formatInfoString();
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
-    QFuture<DecodingState> decodeAsync(DecodingState targetState, int prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
+    QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     DecodingState decodingState() const;
     void releaseFullImage();
     

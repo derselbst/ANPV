@@ -78,10 +78,9 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Imag
     const QFileInfo& info = image->fileInfo();
     if(info.isFile())
     {
-        const QByteArray formatHint = info.fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
         QImageReader r(info.absoluteFilePath());
         
-        if(KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint)))
+        if(image->isRaw())
         {
             QByteArray previewData;
 

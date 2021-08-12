@@ -16,7 +16,6 @@
 
 class ExifWrapper;
 class QMetaMethod;
-class SmartImageDecoder;
 
 /**
  * Thread-safe container for most of once-decoded-never-changing information of an image.
@@ -29,7 +28,9 @@ class Image : public QObject
 {
 Q_OBJECT
 
-friend SmartImageDecoder;
+friend class SmartImageDecoder;
+friend class SmartJpegDecoder;
+friend class SmartTiffDecoder;
 
 public:
     Image(const QFileInfo&);
@@ -50,6 +51,12 @@ public:
     QPixmap icon(int height);
     
     QSharedPointer<ExifWrapper> exif();
+    
+    QString formatInfoString();
+
+    bool isRaw();
+    bool hasEquallyNamedJpeg();
+    bool hasEquallyNamedTiff();
 
 signals:
     void thumbnailChanged();

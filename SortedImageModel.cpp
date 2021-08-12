@@ -67,7 +67,7 @@ struct Entry
     
     const QFileInfo& getFileInfo() const
     {
-        return this->hasImageDecoder() ? this->dec->fileInfo() : this->info;
+        return this->hasImageDecoder() ? this->dec->image()->fileInfo() : this->info;
     }
 
     const QSharedPointer<SmartImageDecoder>& getDecoder() const

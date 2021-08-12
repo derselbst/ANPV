@@ -21,6 +21,7 @@
 #include "ExifOverlay.hpp"
 #include "SmartImageDecoder.hpp"
 #include "ANPV.hpp"
+#include "Image.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
@@ -334,13 +335,13 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Space:
             if(d->currentImageDecoder)
             {
-                emit requestNext(d->currentImageDecoder->fileInfo().absoluteFilePath());
+                emit requestNext(d->currentImageDecoder->image()->fileInfo().absoluteFilePath());
             }
             break;
         case Qt::Key_Backspace:
             if(d->currentImageDecoder)
             {
-                emit requestPrev(d->currentImageDecoder->fileInfo().absoluteFilePath());
+                emit requestPrev(d->currentImageDecoder->image()->fileInfo().absoluteFilePath());
             }
             break;
         default:
@@ -379,19 +380,19 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         break;
     case DecodingState::Metadata:
     {
-        this->setSceneRect(QRectF(QPointF(0,0), dec->size()));
+        this->setSceneRect(QRectF(QPointF(0,0), dec->image()->size()));
         auto viewMode = d->anpv->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             this->resetTransform();
-            this->setTransform(dec->exif()->transformMatrix(), true);
-            this->fitInView(QRectF(QPointF(0,0), dec->size()), Qt::KeepAspectRatio);
+            this->setTransform(dec->image()->exif()->transformMatrix(), true);
+            this->fitInView(QRectF(QPointF(0,0), dec->image()->size()), Qt::KeepAspectRatio);
         }
         else if(viewMode == ViewMode::CenterAf)
         {
             std::vector<AfPoint> afPoints;
             QSize size;
-            if(dec->exif()->autoFocusPoints(afPoints,size))
+            if(dec->image()->exif()->autoFocusPoints(afPoints,size))
             {
                 QRect inFocusBoundingRect;
                 for(size_t i=0; i < afPoints.size(); i++)
@@ -410,7 +411,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
                 }
             }
         }
-        d->addThumbnailPreview(dec->thumbnail(), dec->size());
+        d->addThumbnailPreview(dec->image()->thumbnail(), dec->image()->size());
         d->exifOverlay->setMetadata(dec);
         break;
     }
@@ -429,9 +430,9 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         break;
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(this->d->currentImageDecoder.data(), dec->image());
+        this->onImageRefinement(this->d->currentImageDecoder.data(), dec->decodedImage());
 
-        QSize fullImageSize = dec->size();
+        QSize fullImageSize = dec->image()->size();
         auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
         d->currentPixmapOverlay->setScale(newScale);
         
@@ -468,15 +469,15 @@ void DocumentView::loadImage(QString url)
         return;
     }
     
-    this->loadImage(DecoderFactory::globalInstance()->makeImage(url);
+    this->loadImage(DecoderFactory::globalInstance()->makeImage(info));
 }
 
-void DocumentView::loadImage(Image image)
+void DocumentView::loadImage(QSharedPointer<Image> image)
 {
     QSharedPointer<SmartImageDecoder> dec = DecoderFactory::globalInstance()->getDecoder(image);
     if(!dec)
     {
-        QString name = info.fileName();
+        QString name = image->fileInfo().fileName();
         d->setDocumentError(QString("Could not find a decoder for file %1").arg(name));
         return;
     }
@@ -513,7 +514,7 @@ QFileInfo DocumentView::currentFile()
 {
     if(d->currentImageDecoder)
     {
-        return d->currentImageDecoder->fileInfo();
+        return d->currentImageDecoder->image()->fileInfo();
     }
     return QFileInfo();
 }

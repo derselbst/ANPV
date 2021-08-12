@@ -5,6 +5,7 @@
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
 #include "xThreadGuard.hpp"
+#include "Image.hpp"
 
 #include <QtDebug>
 #include <QPromise>
@@ -51,13 +52,13 @@ struct SmartImageDecoder::Impl
     
     void open(QFileInfo& info)
     {
-        if(this->file && this->file.isOpen())
+        if(this->file && this->file->isOpen())
         {
             throw std::logic_error("File is already open!");
         }
         
         QSharedPointer<QFile> file(new QFile(info.absoluteFilePath()), &QObject::deleteLater);
-        if (!file.open(QIODevice::ReadOnly))
+        if (!file->open(QIODevice::ReadOnly))
         {
             throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
         }
@@ -114,11 +115,6 @@ void SmartImageDecoder::setDecodingState(DecodingState state)
     }
 }
 
-void SmartImageDecoder::setSize(QSize size)
-{
-    d->size = size;
-}
-
 void SmartImageDecoder::cancelCallback()
 {
     if(d->promise && d->promise->isCanceled())
@@ -140,7 +136,7 @@ void SmartImageDecoder::init()
         {
             if(fileMapped == nullptr)
             {
-                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->fileInfo.absoluteFilePath().toStdString() << "', error was: " << d->file->errorString().toStdString());
+                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file->fileName().toStdString() << "', error was: " << d->file->errorString().toStdString());
             }
         }
         else
@@ -155,30 +151,28 @@ void SmartImageDecoder::init()
         
         QSharedPointer<ExifWrapper> exifWrapper(new ExifWrapper());
         // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
-        exifWrapper.loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
+        exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
         this->image()->setExif(exifWrapper);
-        this->image()->setDefaultTransform(transformMatrix());
-        this->image()->setThumbnail(exifWrapper.thumbnail());
+        this->image()->setDefaultTransform(exifWrapper->transformMatrix());
+        this->image()->setThumbnail(exifWrapper->thumbnail());
         
         this->setDecodingState(DecodingState::Metadata);
 }
 
-QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, int prio, QSize desiredResolution, QRect roiRect)
+QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
     xThreadGuard g(this);
     if(d->promise && !d->promise->future().isFinished())
     {
         return d->promise->future();
     }
-
-    std::lock_guard<std::recursive_mutex> lck(d->m);
     
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
     d->roiRect = roiRect;
     d->promise = std::make_unique<QPromise<DecodingState>>();
     d->promise->setProgressRange(0, 100);
-    QThreadPool::globalInstance()->start(this, prio);
+    QThreadPool::globalInstance()->start(this, static_cast<int>(prio));
 
     return d->promise->future();
 }
@@ -190,8 +184,6 @@ void SmartImageDecoder::run()
 
 void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolution, QRect roiRect)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
-
     try
     {
         if(d->promise)
@@ -243,7 +235,7 @@ void SmartImageDecoder::close()
 {
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
-    d->file.close();
+    d->file->close();
     d->file = nullptr;
 }
 
@@ -260,9 +252,7 @@ void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
 
 void SmartImageDecoder::releaseFullImage()
 {
-    std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);
-
-    if(lck.try_lock())
+    if(d->promise && d->promise->future().isFinished())
     {
         d->releaseFullImage();
         this->setDecodingState(DecodingState::Metadata);
@@ -339,60 +329,6 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
         emit this->imageRefined(this, std::move(img));
         d->lastPreviewImageUpdate = now;
     }
-}
-
-QString SmartImageDecoder::formatInfoString()
-{
-    Formatter f;
-    
-    long n, d;
-    double r;
-    QString s, infoStr;
-    
-    QSize size = this->size();
-    if(size.isValid())
-    {
-        f << "Resolution: " << size.width() << " x " << size.height() << " px<br><br>";
-    }
-    
-    infoStr += f.str().c_str();
-    
-    s = this->exif()->formatToString();
-    if(!s.isEmpty())
-    {
-        infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
-    }
-    
-    static const char *const sizeUnit[] = {" Bytes", " KiB", " MiB", " <b>GiB</b>"};
-    float fsize = this->fileInfo().size();
-    int i;
-    for(i = 0; i<4 && fsize > 1024; i++)
-    {
-        fsize /= 1024.f;
-    }
-    
-    infoStr += QString("<b>===stat()===</b><br><br>");
-    infoStr += "File Size: ";
-    infoStr += QString::number(fsize, 'f', 2) + sizeUnit[i];
-    infoStr += "<br><br>";
-    
-    QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
-    if(t.isValid())
-    {
-        infoStr += "Created on:<br>";
-        infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
-        infoStr += t.toString("  hh:mm:ss<br><br>");
-    }
-    
-    t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
-    if(t.isValid())
-    {
-        infoStr += "Modified on:<br>";
-        infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
-        infoStr += t.toString("hh:mm:ss");
-    }
-    
-    return infoStr;
 }
 
 template<typename T>
