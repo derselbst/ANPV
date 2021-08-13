@@ -101,12 +101,11 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Test REQUIRED)
 
 find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
-
 
 find_package ( PkgConfig REQUIRED )
 
@@ -175,6 +174,13 @@ qt6_wrap_ui(UI_HEADERS
     CancellableProgressWidget.ui
     FileOperationConfig.ui)
 
-add_executable(anpv ${SRC} ${UI_HEADERS} ANPV.qrc)
-target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
-target_include_directories(anpv SYSTEM PRIVATE Qt6::Core Qt6::Widgets ${VIPS_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
+add_subdirectory(test)
+
+add_library(anpv-lib STATIC ${SRC} ${UI_HEADERS})
+
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
+target_include_directories(anpv-lib SYSTEM PRIVATE ${VIPS_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
+target_include_directories(anpv-lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(anpv ANPV.qrc)
+target_link_libraries(anpv PRIVATE anpv-lib)

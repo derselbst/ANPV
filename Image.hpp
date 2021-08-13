@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QRunnable>
+#include <QColorSpace>
 #include <QSize>
 #include <QPixmap>
 #include <QImage>
@@ -52,6 +53,8 @@ public:
     
     QSharedPointer<ExifWrapper> exif();
     
+    QColorSpace colorSpace();
+    
     QString formatInfoString();
 
     bool isRaw();
@@ -67,6 +70,7 @@ protected:
     void setThumbnail(QImage);
     void setThumbnail(QPixmap);
     void setExif(QSharedPointer<ExifWrapper>);
+    void setColorSpace(QColorSpace);
     
 private:
     struct Impl;

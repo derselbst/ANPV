@@ -32,6 +32,8 @@ struct Image::Impl
     QTransform defaultTransform;
     QTransform userTransform;
     
+    QColorSpace colorSpace;
+    
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
     
@@ -147,34 +149,37 @@ void Image::setThumbnail(QPixmap pix)
 
 QPixmap Image::icon(int height)
 {
-    std::unique_lock<std::recursive_mutex> lck(d->m, std::defer_lock);
+    std::lock_guard<std::recursive_mutex> lck(d->m);
     
-    lck.lock();
-    QPixmap thumb = this->thumbnail();
-    if(thumb.isNull())
+    QPixmap pix;
+    if(!d->thumbnailTransformed.isNull())
     {
-        lck.unlock();
+        if(d->thumbnailTransformed.height() == height)
+        {
+            return d->thumbnailTransformed;
+        }
         
-        QFileIconProvider prov;
-        QIcon ico = prov.icon(this->fileInfo());
-        QPixmap pix = ico.pixmap(height, height);
-        pix = pix.scaledToHeight(height);
-        
-        lck.lock();
-        d->thumbnailTransformed = pix;
+        pix = d->thumbnailTransformed;
     }
-    else if(d->thumbnailTransformed.isNull() || d->thumbnailTransformed.height() != height)
+    else
     {
-        QTransform trans = this->defaultTransform();
-        lck.unlock();
-        
-        QPixmap transedThumb = thumb.transformed(trans);
-        transedThumb = transedThumb.scaledToHeight(height);
-        
-        lck.lock();
-        d->thumbnailTransformed = transedThumb;
+        QPixmap thumb = this->thumbnail();
+        if(thumb.isNull())
+        {
+            QFileIconProvider prov;
+            QIcon ico = prov.icon(this->fileInfo());
+            pix = ico.pixmap(height, height);
+        }
+        else
+        {
+            QTransform trans = this->defaultTransform();
+            pix = thumb.transformed(trans);
+        }
     }
     
+    pix = pix.scaledToHeight(height);
+    
+    d->thumbnailTransformed = pix;
     return d->thumbnailTransformed;
 }
 
@@ -188,6 +193,19 @@ void Image::setExif(QSharedPointer<ExifWrapper> e)
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
     d->exifWrapper = e;
+}
+
+
+QColorSpace Image::colorSpace()
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    return d->colorSpace;
+}
+
+void Image::setColorSpace(QColorSpace cs)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    d->colorSpace = cs;
 }
 
 
@@ -255,10 +273,16 @@ bool Image::isRaw()
 
 bool Image::hasEquallyNamedJpeg()
 {
-    return d->hasEquallyNamedFile("JPEG") || d->hasEquallyNamedFile("JPG");
+    static const QLatin1String JPG("JPG");
+    
+    QString suffix = this->fileInfo().suffix().toUpper();
+    return suffix != JPG && d->hasEquallyNamedFile(JPG);
 }
 
 bool Image::hasEquallyNamedTiff()
 {
-    return d->hasEquallyNamedFile("TIFF") || d->hasEquallyNamedFile("TIF");
+    static const QLatin1String TIF("TIF");
+    
+    QString suffix = this->fileInfo().suffix().toUpper();
+    return suffix != TIF && d->hasEquallyNamedFile(TIF);
 }
