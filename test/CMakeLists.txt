@@ -13,7 +13,7 @@ macro ( ADD_ANPV_TEST _test )
     # only build this unit test when explicitly requested by "make check"
     set_target_properties(${_test} PROPERTIES EXCLUDE_FROM_ALL TRUE)
     
-    TARGET_LINK_LIBRARIES(${_test} PRIVATE anpv-lib Qt6::Core Qt6::Gui Qt6::Test)
+    TARGET_LINK_LIBRARIES(${_test} PRIVATE anpv-lib Qt6::Core Qt6::Widgets Qt6::Test)
     
     # add the test to ctest
     ADD_TEST(NAME ${_test} COMMAND ${_test})

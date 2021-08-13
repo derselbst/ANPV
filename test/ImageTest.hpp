@@ -9,4 +9,5 @@ class ImageTest : public QObject
 private slots:
     void testRawImageHasSilblings();
     void testRawImageHasNoSilblings();
+    void testIconHeight();
 };

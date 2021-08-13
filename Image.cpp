@@ -149,6 +149,11 @@ void Image::setThumbnail(QPixmap pix)
 
 QPixmap Image::icon(int height)
 {
+    if(height <= 0)
+    {
+        return QPixmap();
+    }
+    
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
@@ -177,7 +182,7 @@ QPixmap Image::icon(int height)
         }
     }
     
-    pix = pix.scaledToHeight(height);
+    pix = pix.scaledToHeight(height, Qt::FastTransformation);
     
     d->thumbnailTransformed = pix;
     return d->thumbnailTransformed;
