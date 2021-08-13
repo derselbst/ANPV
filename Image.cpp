@@ -8,6 +8,8 @@
 #include <QDir>
 #include <QtDebug>
 #include <QFileIconProvider>
+#include <QSvgRenderer>
+#include <QPainter>
 #include <KDCRAW/KDcraw>
 #include <mutex>
 
@@ -173,7 +175,26 @@ QPixmap Image::icon(int height)
         {
             QFileIconProvider prov;
             QIcon ico = prov.icon(this->fileInfo());
-            pix = ico.pixmap(height, height);
+            pix = ico.pixmap(height);
+            //if(pix.isNull())
+            {
+                QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
+
+                QImage image(height, height, QImage::Format_ARGB32);
+                image.fill(0xaaA08080);  // partly transparent red-ish background
+
+                QPainter painter(&image);
+                renderer.render(&painter);
+
+                // Save, image format based on file extension
+                image.save("./svg-logo-h.png");
+
+                ico = QIcon(":/images/FileNotFound.svg");
+                Q_ASSERT(!ico.isNull());
+                pix = ico.pixmap(height);
+            }
+            pix.toImage().save("test.png");
+            Q_ASSERT(!pix.isNull());
         }
         else
         {

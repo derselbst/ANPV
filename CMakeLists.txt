@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV)
+project (ANPV CXX)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
@@ -100,7 +100,7 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt6 COMPONENTS Core Widgets Test REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 
 find_package(JPEG REQUIRED)
 
@@ -175,11 +175,11 @@ qt6_wrap_ui(UI_HEADERS
 
 add_subdirectory(test)
 
-add_library(anpv-lib STATIC ${SRC} ${UI_HEADERS})
+add_library(anpv-lib STATIC ${SRC} ${UI_HEADERS} ANPV.qrc)
 
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw)
 target_include_directories(anpv-lib SYSTEM PRIVATE ${VIPS_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
 target_include_directories(anpv-lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(anpv ANPV.qrc)
+add_executable(anpv)
 target_link_libraries(anpv PRIVATE anpv-lib)
