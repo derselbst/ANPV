@@ -10,4 +10,5 @@ private slots:
     void testRawImageHasSilblings();
     void testRawImageHasNoSilblings();
     void testIconHeight();
+    void testIconForNonExistingFile();
 };

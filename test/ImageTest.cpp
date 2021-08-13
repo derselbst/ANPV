@@ -94,3 +94,10 @@ void ImageTest::testIconHeight()
         QVERIFY(icon.isNull());
     }
 }
+
+void ImageTest::testIconForNonExistingFile()
+{
+    QSharedPointer<Image> image = DecoderFactory::globalInstance()->makeImage(QFileInfo("filenotfound.zzz"));
+    QPixmap pix = image->icon(100);
+    QVERIFY(!pix.isNull());
+}
