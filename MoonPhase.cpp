@@ -9,7 +9,7 @@ int MoonPhase::fromDateTime(const QDateTime& t)
     static const QDateTime historicFullMoon(QDate(1999, 12, 22), QTime(18,31,18));
     static const qint64 historicFullMoonSec = historicFullMoon.toSecsSinceEpoch();
     
-    constexpr double cycle = std::floor(29.530588861 * 86400);
+    static const double cycle = std::floor(29.530588861 * 86400);
     
     qint64 now = t.toSecsSinceEpoch();
     

@@ -4,6 +4,7 @@
 #include "Formatter.hpp"
 #include "xThreadGuard.hpp"
 #include "ExifWrapper.hpp"
+#include "TraceTimer.hpp"
 
 #include <QDir>
 #include <QtDebug>
@@ -156,6 +157,7 @@ QPixmap Image::icon(int height)
         return QPixmap();
     }
     
+    TraceTimer t(typeid(Image));
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
@@ -163,9 +165,11 @@ QPixmap Image::icon(int height)
     {
         if(d->thumbnailTransformed.height() == height)
         {
+            t.setInfo("using cached thumbnail, size matches");
             return d->thumbnailTransformed;
         }
         
+        t.setInfo("using cached thumbnail, scaling required");
         pix = d->thumbnailTransformed;
     }
     else
@@ -178,20 +182,27 @@ QPixmap Image::icon(int height)
             pix = ico.pixmap(height);
             if(pix.isNull())
             {
+                t.setInfo("no icon found, drawing our own...");
                 QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
 
                 QSize imgSize = renderer.defaultSize().scaled(height,height, Qt::KeepAspectRatio);
                 QImage image(imgSize, QImage::Format_ARGB32);
+                image.fill(0);
 
                 QPainter painter(&image);
                 renderer.render(&painter);
 
                 pix = QPixmap::fromImage(image);
             }
+            else
+            {
+                t.setInfo("using file icon");
+            }
             Q_ASSERT(!pix.isNull());
         }
         else
         {
+            t.setInfo("thumbnail not cached, transforming and scaling it");
             QTransform trans = this->defaultTransform();
             pix = thumb.transformed(trans);
         }
