@@ -7,6 +7,7 @@ class ImageTest : public QObject
 {
     Q_OBJECT
 private slots:
+    void initTestCase();
     void testRawImageHasSilblings();
     void testRawImageHasNoSilblings();
     void testIconHeight();

@@ -176,24 +176,18 @@ QPixmap Image::icon(int height)
             QFileIconProvider prov;
             QIcon ico = prov.icon(this->fileInfo());
             pix = ico.pixmap(height);
-            //if(pix.isNull())
+            if(pix.isNull())
             {
                 QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
 
-                QImage image(height, height, QImage::Format_ARGB32);
-                image.fill(0xaaA08080);  // partly transparent red-ish background
+                QSize imgSize = renderer.defaultSize().scaled(height,height, Qt::KeepAspectRatio);
+                QImage image(imgSize, QImage::Format_ARGB32);
 
                 QPainter painter(&image);
                 renderer.render(&painter);
 
-                // Save, image format based on file extension
-                image.save("./svg-logo-h.png");
-
-                ico = QIcon(":/images/FileNotFound.svg");
-                Q_ASSERT(!ico.isNull());
-                pix = ico.pixmap(height);
+                pix = QPixmap::fromImage(image);
             }
-            pix.toImage().save("test.png");
             Q_ASSERT(!pix.isNull());
         }
         else
@@ -239,8 +233,6 @@ QString Image::formatInfoString()
 {
     Formatter f;
     
-    long n, d;
-    double r;
     QString s, infoStr;
     
     QSize size = this->size();

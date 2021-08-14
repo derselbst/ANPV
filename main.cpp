@@ -1,12 +1,4 @@
 
-#define QT_NO_KEYWORDS
-#define QT_NO_SIGNALS_SLOTS_KEYWORDS
-
-#include <vips/vips8>
-
-#undef QT_NO_SIGNALS_SLOTS_KEYWORDS
-#undef QT_NO_KEYWORDS
-
 #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
@@ -39,6 +31,14 @@ using namespace std::chrono_literals;
 
 
 #if 0
+#define QT_NO_KEYWORDS
+#define QT_NO_SIGNALS_SLOTS_KEYWORDS
+
+#include <vips/vips8>
+
+#undef QT_NO_SIGNALS_SLOTS_KEYWORDS
+#undef QT_NO_KEYWORDS
+
 #include <QApplication>
 #include <QLabel>
 #include <QImage>

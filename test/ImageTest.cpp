@@ -11,6 +11,11 @@
 QTEST_MAIN(ImageTest)
 #include "ImageTest.moc"
 
+void ImageTest::initTestCase()
+{
+    Q_INIT_RESOURCE(ANPV);
+}
+
 void ImageTest::testRawImageHasNoSilblings()
 {
     QTemporaryFile jpg("anpvtestfile-XXXXXX.jpg"), raw("anpvtestfile-XXXXXX.cr2"), tif("anpvtestfile-XXXXXX.tif");
@@ -38,6 +43,16 @@ void ImageTest::testRawImageHasNoSilblings()
     QVERIFY(!imageTif->hasEquallyNamedJpeg());
     QVERIFY(!imageTif->hasEquallyNamedTiff());
     
+    QTemporaryFile noSuffix("anpvtestfile-with-no-suffix-XXXXXX");
+    noSuffix.open();
+    
+    QVERIFY(noSuffix.isOpen());
+    
+    QSharedPointer<Image> imageNoSuffix = DecoderFactory::globalInstance()->makeImage(QFileInfo(noSuffix));
+    
+    QVERIFY(!imageNoSuffix->isRaw());
+    QVERIFY(!imageNoSuffix->hasEquallyNamedJpeg());
+    QVERIFY(!imageNoSuffix->hasEquallyNamedTiff());
 }
 
 void ImageTest::testRawImageHasSilblings()

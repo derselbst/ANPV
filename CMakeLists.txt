@@ -113,12 +113,35 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
-set(APNV_SRC
-main.cpp
-)
 
-message(WARNING ${ANPV_SRC})
-add_library(anpv-lib STATIC ${ANPV_SRC} ANPV.qrc)
+add_library(anpv-lib STATIC
+main.cpp
+src/widgets/CancellableProgressDialog.hpp
+src/widgets/CancellableProgressWidget.cpp
+src/widgets/CancellableProgressWidget.hpp
+src/widgets/CancellableProgressWidget.ui
+DecoderFactory.hpp
+DecoderFactory.cpp
+DecodingState.hpp
+ExifWrapper.cpp
+ExifWrapper.hpp
+src/widgets/FileOperationConfigDialog.cpp
+src/widgets/FileOperationConfigDialog.hpp
+src/widgets/FileOperationConfigDialog.ui
+Formatter.hpp
+Image.cpp
+Image.hpp
+MoonPhase.cpp
+MoonPhase.hpp
+SmartImageDecoder.cpp
+SmartImageDecoder.hpp
+SmartJpegDecoder.cpp
+SmartJpegDecoder.hpp
+SmartTiffDecoder.cpp
+SmartTiffDecoder.hpp
+UserCancellation.hpp
+xThreadGuard.hpp
+ANPV.qrc)
 
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw)
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
