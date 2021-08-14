@@ -407,14 +407,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     uint16_t planar;
     TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &planar);
     
-    uint32_t count;
-    void *profile;
-    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
-    {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-        image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
-    }
-
     this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
     
     if(TIFFIsTiled(d->tiff))
@@ -589,7 +581,19 @@ gehtnich:
             break;
         }
     }
-    
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    uint32_t count;
+    void *profile;
+    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
+    {
+        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
+        image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
+        this->setDecodingMessage("Transforming colorspace...");
+        image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+    }
+#endif
+
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }

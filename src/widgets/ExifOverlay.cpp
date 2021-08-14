@@ -9,6 +9,22 @@
 
 struct ExifOverlay::Impl
 {
+    void effect(ExifOverlay* e, double opa)
+    {
+        auto* eff = new QGraphicsOpacityEffect(e);
+        eff->setOpacity(opa);
+        e->setGraphicsEffect(eff);
+    }
+    
+    void opaqueEffect(ExifOverlay* e)
+    {
+        effect(e, 1);
+    }
+    
+    void transparentEffect(ExifOverlay* e)
+    {
+        effect(e, 0.5);
+    }
 };
 
 ExifOverlay::ExifOverlay(QWidget* parent)
@@ -16,11 +32,9 @@ ExifOverlay::ExifOverlay(QWidget* parent)
 {
     this->setCloseButtonVisible(false);
     this->setWordWrap(false);
+    this->setAttribute(Qt::WA_Hover);
+    d->transparentEffect(this);
     this->hide();
-    
-    auto* feedbackEffect = new QGraphicsOpacityEffect(this);
-    feedbackEffect->setOpacity(0.65);
-    this->setGraphicsEffect(feedbackEffect);
 }
 
 ExifOverlay::~ExifOverlay() = default;
@@ -40,4 +54,16 @@ void ExifOverlay::setMetadata(Image* dec)
         this->adjustSize();
         this->show();
     }
+}
+
+void ExifOverlay::enterEvent(QEnterEvent * event)
+{
+    d->opaqueEffect(this);
+    QWidget::enterEvent(event);
+}
+
+void ExifOverlay::leaveEvent(QEvent * event)
+{
+    d->transparentEffect(this);
+    QWidget::leaveEvent(event);
 }

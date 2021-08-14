@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstdio>
 #include <QDebug>
+#include <QColorSpace>
 #include <csetjmp>
 #include "libkexiv2/src/kexiv2previews.h"
 
@@ -24,6 +25,7 @@ struct my_error_mgr
 struct SmartJpegDecoder::Impl
 {
     SmartJpegDecoder* q;
+    QColorSpace iccProfile{QColorSpace::SRgb};
     
     struct jpeg_decompress_struct cinfo = {};
     struct my_error_mgr jerr;
@@ -82,6 +84,10 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
     auto& cinfo = d->cinfo;
     jpeg_create_decompress(&cinfo);
+
+    /* Tell the library to keep any APP2 data it may find */
+    jpeg_save_markers(&cinfo, JPEG_APP0 + 2, 0xFFFF);
+
     cinfo.progress = &d->progMgr;
     cinfo.client_data = d.get();
     
@@ -99,6 +105,15 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     if(ret != JPEG_HEADER_OK)
     {
         throw std::runtime_error(Formatter() << "jpeg_read_header() failed with code " << ret << ", excpeted: " << JPEG_HEADER_OK);
+    }
+    
+    JOCTET *ptr;
+    std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
+    unsigned int icc_len;
+    if(jpeg_read_icc_profile(&cinfo, &ptr, &icc_len))
+    {
+        icc_data.reset(ptr);
+        d->iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<const char *>(icc_data.get()), icc_len));
     }
     
     // set overall decompression parameters
@@ -217,6 +232,9 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState, QSize desiredRe
     jpeg_finish_decompress(&cinfo);
     
     image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+    image.setColorSpace(d->iccProfile);
+    this->setDecodingMessage("Transforming colorspace...");
+    image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
     
     // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("JPEG decoding completed successfully.");
