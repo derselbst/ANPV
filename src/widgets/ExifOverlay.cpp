@@ -2,7 +2,7 @@
 #include "ExifOverlay.hpp"
 
 #include "AfPointOverlay.hpp"
-#include "SmartImageDecoder.hpp"
+#include "Image.hpp"
 
 #include <QGraphicsOpacityEffect>
 
@@ -25,7 +25,7 @@ ExifOverlay::ExifOverlay(QWidget* parent)
 
 ExifOverlay::~ExifOverlay() = default;
 
-void ExifOverlay::setMetadata(SmartImageDecoder* dec)
+void ExifOverlay::setMetadata(Image* dec)
 {
     QString s = dec->formatInfoString();
     
@@ -41,9 +41,3 @@ void ExifOverlay::setMetadata(SmartImageDecoder* dec)
         this->show();
     }
 }
-
-// void ExifOverlay::unsetMetadata()
-// {
-//     this->setVisible(false);
-//     this->clear();
-// }

@@ -116,18 +116,24 @@ include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
 add_library(anpv-lib STATIC
 main.cpp
+src/widgets/AfPointOverlay.cpp
+src/widgets/AfPointOverlay.hpp
 src/widgets/CancellableProgressDialog.hpp
 src/widgets/CancellableProgressWidget.cpp
 src/widgets/CancellableProgressWidget.hpp
 src/widgets/CancellableProgressWidget.ui
+src/widgets/ExifOverlay.cpp
+src/widgets/ExifOverlay.hpp
+src/widgets/FileOperationConfigDialog.cpp
+src/widgets/FileOperationConfigDialog.hpp
+src/widgets/FileOperationConfigDialog.ui
+src/widgets/MessageWidget.cpp
+src/widgets/MessageWidget.hpp
 DecoderFactory.hpp
 DecoderFactory.cpp
 DecodingState.hpp
 ExifWrapper.cpp
 ExifWrapper.hpp
-src/widgets/FileOperationConfigDialog.cpp
-src/widgets/FileOperationConfigDialog.hpp
-src/widgets/FileOperationConfigDialog.ui
 Formatter.hpp
 Image.cpp
 Image.hpp
