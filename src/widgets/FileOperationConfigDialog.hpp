@@ -5,25 +5,25 @@
 
 namespace Ui
 {
-    class FileOperationConfig;
+    class FileOperationConfigDialog;
 }
 
 class QActionGroup;
 class QLineEdit;
 class ANPV;
 
-class FileOperationConfig : public QDialog
+class FileOperationConfigDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-    explicit FileOperationConfig(QActionGroup* fileOperationActionGroup, ANPV *parent = nullptr);
-    ~FileOperationConfig() override;
+    explicit FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, ANPV *parent = nullptr);
+    ~FileOperationConfigDialog() override;
 
     void accept() override;
     
 private:
-    Ui::FileOperationConfig *ui = nullptr;
+    Ui::FileOperationConfigDialog *ui = nullptr;
     ANPV* anpv = nullptr;
     QActionGroup* fileOperationActionGroup;
     

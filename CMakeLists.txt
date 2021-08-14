@@ -106,11 +106,6 @@ find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
 
-find_package ( PkgConfig REQUIRED )
-
-# Mandatory libraries: glib and gthread
-pkg_check_modules ( VIPS REQUIRED vips-cpp )
-
 
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
@@ -118,68 +113,18 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
-message("")
-### Show a summary of what we got
-# summary_show()
-
-set(SRC
+set(APNV_SRC
 main.cpp
-#AfPointOverlay.cpp
-#AfPointOverlay.hpp
-#ANPV.hpp
-#ANPV.cpp
-CancellableProgressDialog.hpp
-CancellableProgressWidget.cpp
-CancellableProgressWidget.hpp
-DecoderFactory.hpp
-DecoderFactory.cpp
-DecodingState.hpp
-#DocumentView.cpp
-#DocumentView.hpp
-#ExifOverlay.cpp
-#ExifOverlay.hpp
-ExifWrapper.cpp
-ExifWrapper.hpp
-#FileOperationConfig.cpp
-#FileOperationConfig.hpp
-Formatter.hpp
-Image.cpp
-Image.hpp
-#SortedImageModel.cpp
-#SortedImageModel.hpp
-#MessageWidget.cpp
-#MessageWidget.hpp
-MoonPhase.cpp
-MoonPhase.hpp
-#MoveFileCommand.cpp
-#MoveFileCommand.hpp
-#Settings.cpp
-#Settings.hpp
-SmartImageDecoder.cpp
-SmartImageDecoder.hpp
-SmartJpegDecoder.cpp
-SmartJpegDecoder.hpp
-SmartTiffDecoder.cpp
-SmartTiffDecoder.hpp
-#ThumbnailView.cpp
-#ThumbnailView.hpp
-#ThumbnailImageView.cpp
-#ThumbnailImageView.hpp
-UserCancellation.hpp
-xThreadGuard.hpp
 )
 
-qt6_wrap_ui(UI_HEADERS
-    CancellableProgressWidget.ui
-    FileOperationConfig.ui)
+message(WARNING ${ANPV_SRC})
+add_library(anpv-lib STATIC ${ANPV_SRC} ANPV.qrc)
 
-add_subdirectory(test)
-
-add_library(anpv-lib STATIC ${SRC} ${UI_HEADERS} ANPV.qrc)
-
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${VIPS_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw)
-target_include_directories(anpv-lib SYSTEM PRIVATE ${VIPS_INCLUDE_DIRS} ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
-target_include_directories(anpv-lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw)
+target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
+target_include_directories(anpv-lib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoder)
 
 add_executable(anpv)
 target_link_libraries(anpv PRIVATE anpv-lib)
+
+add_subdirectory(test)

@@ -1,5 +1,5 @@
-#include "FileOperationConfig.hpp"
-#include "ui_FileOperationConfig.h"
+#include "FileOperationConfigDialog.hpp"
+#include "ui_FileOperationConfigDialog.h"
 #include "ANPV.hpp"
 
 #include <QDialogButtonBox>
@@ -9,15 +9,15 @@
 #include <QActionGroup>
 #include <QDir>
 
-FileOperationConfig::FileOperationConfig(QActionGroup* fileOperationActionGroup, ANPV *parent)
+FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, ANPV *parent)
 : QDialog(parent),
-  ui(new Ui::FileOperationConfig), anpv(parent), fileOperationActionGroup(fileOperationActionGroup)
+  ui(new Ui::FileOperationConfigDialog), anpv(parent), fileOperationActionGroup(fileOperationActionGroup)
 {
     this->ui->setupUi(this);
     this->setAttribute(Qt::WA_DeleteOnClose);
     
-    connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &FileOperationConfig::accept);
-    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &FileOperationConfig::reject);
+    connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &FileOperationConfigDialog::accept);
+    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &FileOperationConfigDialog::reject);
     
     connect(ui->pushButton, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit); });
     connect(ui->pushButton_2, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_2); });
@@ -27,12 +27,12 @@ FileOperationConfig::FileOperationConfig(QActionGroup* fileOperationActionGroup,
     this->fillDiag();
 }
 
-FileOperationConfig::~FileOperationConfig()
+FileOperationConfigDialog::~FileOperationConfigDialog()
 {
     delete ui;
 }
 
-void FileOperationConfig::fillDiag()
+void FileOperationConfigDialog::fillDiag()
 {
     QList<QAction*> actions = fileOperationActionGroup->actions();
     
@@ -65,7 +65,7 @@ void FileOperationConfig::fillDiag()
 
 }
 
-void FileOperationConfig::accept()
+void FileOperationConfigDialog::accept()
 {
     auto actionBuilder = [&](QCheckBox* checkBox, QKeySequenceEdit* seqEdit, QLineEdit* lineEdit)
     {
@@ -118,7 +118,7 @@ void FileOperationConfig::accept()
     this->QDialog::accept();
 }
 
-void FileOperationConfig::onBrowseClicked(QLineEdit* lineEdit)
+void FileOperationConfigDialog::onBrowseClicked(QLineEdit* lineEdit)
 {
     QString dirToOpen = lineEdit->text();
     QString dir = QFileDialog::getExistingDirectory(this, "Select Target Directory",
