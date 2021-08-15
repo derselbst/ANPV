@@ -129,9 +129,9 @@ src/widgets/FileOperationConfigDialog.hpp
 src/widgets/FileOperationConfigDialog.ui
 src/widgets/MessageWidget.cpp
 src/widgets/MessageWidget.hpp
-DecoderFactory.hpp
-DecoderFactory.cpp
-DecodingState.hpp
+src/decoders/DecoderFactory.hpp
+src/decoders/DecoderFactory.cpp
+src/decoders/DecodingState.hpp
 ExifWrapper.cpp
 ExifWrapper.hpp
 Formatter.hpp
@@ -139,12 +139,12 @@ Image.cpp
 Image.hpp
 MoonPhase.cpp
 MoonPhase.hpp
-SmartImageDecoder.cpp
-SmartImageDecoder.hpp
-SmartJpegDecoder.cpp
-SmartJpegDecoder.hpp
-SmartTiffDecoder.cpp
-SmartTiffDecoder.hpp
+src/decoders/SmartImageDecoder.cpp
+src/decoders/SmartImageDecoder.hpp
+src/decoders/SmartJpegDecoder.cpp
+src/decoders/SmartJpegDecoder.hpp
+src/decoders/SmartTiffDecoder.cpp
+src/decoders/SmartTiffDecoder.hpp
 UserCancellation.hpp
 xThreadGuard.hpp
 src/logic/TraceTimer.cpp
@@ -153,7 +153,7 @@ ANPV.qrc)
 
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw)
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
-target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoder)
+target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders)
 
 add_executable(anpv)
 target_link_libraries(anpv PRIVATE anpv-lib)

@@ -65,15 +65,28 @@ struct SmartImageDecoder::Impl
         this->file = file;
     }
 
-    void setImage(QImage img)
+    void setDecodedImage(QImage img)
     {
         decodedImage = img;
     }
     
     void releaseFullImage()
     {
-        setImage(QImage());
+        setDecodedImage(QImage());
         backingImageBuffer.reset();
+    }
+    
+    void assertNotDecoding()
+    {
+        if(!this->promise)
+        {
+            return;
+        }
+        
+        if(!this->promise->future().isFinished())
+        {
+            std::logic_error("Operation not allowed, decoding is still ongoing.");
+        }
     }
 };
 
@@ -162,10 +175,7 @@ void SmartImageDecoder::init()
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
     xThreadGuard g(this);
-    if(d->promise && !d->promise->future().isFinished())
-    {
-        return d->promise->future();
-    }
+    d->assertNotDecoding();
     
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
@@ -200,7 +210,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             }
             
             QImage decodedImg = this->decodingLoop(targetState, desiredResolution, roiRect);
-            d->setImage(decodedImg);
+            d->setDecodedImage(decodedImg);
             
             // if thumbnail is still null and no roi has been given, set it
             if (this->image()->thumbnail().isNull() && !roiRect.isValid())
@@ -233,6 +243,8 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
 
 void SmartImageDecoder::close()
 {
+    d->assertNotDecoding();
+
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
     d->file->close();
@@ -250,17 +262,11 @@ void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
     QObject::connectNotify(signal);
 }
 
-void SmartImageDecoder::releaseFullImage()
+void SmartImageDecoder::reset()
 {
-    if(d->promise && d->promise->future().isFinished())
-    {
-        d->releaseFullImage();
-        this->setDecodingState(DecodingState::Metadata);
-    }
-    else
-    {
-	    qInfo() << "another thread is currently decoding, ignore releasing the image";
-    }
+    d->assertNotDecoding();
+    d->releaseFullImage();
+    this->setDecodingState(DecodingState::Metadata);
 }
 
 DecodingState SmartImageDecoder::decodingState() const

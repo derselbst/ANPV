@@ -23,8 +23,11 @@ enum DecodingState : quint32
     // Decoding has finished successfully, the full resolution image has been decoded and is now available.
     FullImage,
     
-    // The decoding process has failed.
+    // The decoding process has failed; metadata could be retrieved but file is broken or something.
     Error,
+    
+    // Fatal error occurred before we could do anything, next state will be ready
+    Fatal,
     
     // The decoding was cancelled by the user
     Cancelled
