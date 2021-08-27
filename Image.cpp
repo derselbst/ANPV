@@ -196,7 +196,7 @@ QPixmap Image::icon(int height)
             }
             else
             {
-                t.setInfo("using file icon");
+                t.setInfo("using icon from QFileIconProvider");
             }
             Q_ASSERT(!pix.isNull());
         }

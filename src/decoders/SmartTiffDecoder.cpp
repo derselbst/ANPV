@@ -347,7 +347,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
 }
 
-QImage SmartTiffDecoder::decodingLoop(DecodingState, QSize desiredResolution, QRect roiRect)
+QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     const QRect fullImageRect(QPoint(0,0), this->image()->size());
     

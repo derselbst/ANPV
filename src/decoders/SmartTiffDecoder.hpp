@@ -23,7 +23,7 @@ public:
 
 protected:
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override;
-    QImage decodingLoop(DecodingState state, QSize desiredResolution, QRect roiRect) override;
+    QImage decodingLoop(QSize desiredResolution, QRect roiRect) override;
     void close() override;
     
 private:

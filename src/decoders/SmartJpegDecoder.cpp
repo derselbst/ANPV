@@ -125,7 +125,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     this->image()->setSize(QSize(cinfo.image_width, cinfo.image_height));
 }
 
-QImage SmartJpegDecoder::decodingLoop(DecodingState targetState, QSize desiredResolution, QRect roiRect)
+QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
@@ -222,11 +222,11 @@ QImage SmartJpegDecoder::decodingLoop(DecodingState targetState, QSize desiredRe
         /* terminate output pass */
         jpeg_finish_output(&cinfo);
 
-        if(targetState == DecodingState::PreviewImage)
-        {
-            // only a preview image was requested, which we have finished with this first pass
-            break;
-        }
+//         if(targetState == DecodingState::PreviewImage)
+//         {
+//             // only a preview image was requested, which we have finished with this first pass
+//             break;
+//         }
     }
     
     jpeg_finish_decompress(&cinfo);

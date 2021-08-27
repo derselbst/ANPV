@@ -42,20 +42,22 @@ public:
     QImage decodedImage();
     QString errorMessage();
     QString latestMessage();
+    DecodingState decodingState() const;
+
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
-    DecodingState decodingState() const;
-    void reset();
     
     ExifWrapper* exif();
     
+    void open();
     void init();
     void run() override;
+    void reset();
+    virtual void close();
     
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
-    virtual QImage decodingLoop(DecodingState state, QSize desiredResolution, QRect roiRect) = 0;
-    virtual void close();
+    virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect) = 0;
 
     void connectNotify(const QMetaMethod& signal) override;
     

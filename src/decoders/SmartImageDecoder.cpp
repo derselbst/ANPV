@@ -17,6 +17,8 @@
 
 struct SmartImageDecoder::Impl
 {
+    SmartImageDecoder* q;
+    
     std::unique_ptr<QPromise<DecodingState>> promise;
     std::atomic<DecodingState> state{ DecodingState::Ready };
     DecodingState targetState;
@@ -41,8 +43,6 @@ struct SmartImageDecoder::Impl
     // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
     std::unique_ptr<unsigned char[]> backingImageBuffer;
     
-    SmartImageDecoder* q;
-    
     QSharedPointer<QFile> file;
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
@@ -50,7 +50,7 @@ struct SmartImageDecoder::Impl
     Impl(SmartImageDecoder* q, QSharedPointer<Image> image, QByteArray arr) : q(q), image(image), encodedInputFile(arr)
     {}
     
-    void open(QFileInfo& info)
+    void open(const QFileInfo& info)
     {
         if(this->file && this->file->isOpen())
         {
@@ -122,6 +122,12 @@ void SmartImageDecoder::setDecodingState(DecodingState state)
     DecodingState old = d->state;
     d->state = state;
     
+    if(old == DecodingState::Fatal && (state == DecodingState::Error || state == DecodingState::Cancelled))
+    {
+        // we are already Fatal, ignore new error state
+        return;
+    }
+    
     if(old != state)
     {
         emit this->decodingStateChanged(this, state, old);
@@ -136,40 +142,53 @@ void SmartImageDecoder::cancelCallback()
     }
 }
 
+void SmartImageDecoder::open()
+{
+    d->open(this->image()->fileInfo());
+}
+
 // initializes the decoder, by reading as much of the file as necessary to know about most important information
 void SmartImageDecoder::init()
 {
-        // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
-        qint64 mapSize = d->file->size();
-        const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
-        
-        d->encodedInputBufferSize = mapSize;
-        d->encodedInputBufferPtr = fileMapped;
-        if(d->encodedInputFile.isEmpty())
+    if(!d->file || !d->file->isOpen())
+    {
+        throw std::logic_error("Decoder must be opened for init()");
+    }
+    
+    // if anything goes wrong after here, make sure we are in Fatal state
+    this->setDecodingState(DecodingState::Fatal);
+    
+    // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
+    qint64 mapSize = d->file->size();
+    const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
+    
+    d->encodedInputBufferSize = mapSize;
+    d->encodedInputBufferPtr = fileMapped;
+    if(d->encodedInputFile.isEmpty())
+    {
+        if(fileMapped == nullptr)
         {
-            if(fileMapped == nullptr)
-            {
-                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file->fileName().toStdString() << "', error was: " << d->file->errorString().toStdString());
-            }
+            throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file->fileName().toStdString() << "', error was: " << d->file->errorString().toStdString());
         }
-        else
-        {
-            d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
-            d->encodedInputBufferSize = d->encodedInputFile.size();
-        }
-        
-        this->cancelCallback();
-        
-        this->decodeHeader(d->encodedInputBufferPtr, d->encodedInputBufferSize);
-        
-        QSharedPointer<ExifWrapper> exifWrapper(new ExifWrapper());
-        // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
-        exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
-        this->image()->setExif(exifWrapper);
-        this->image()->setDefaultTransform(exifWrapper->transformMatrix());
-        this->image()->setThumbnail(exifWrapper->thumbnail());
-        
-        this->setDecodingState(DecodingState::Metadata);
+    }
+    else
+    {
+        d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
+        d->encodedInputBufferSize = d->encodedInputFile.size();
+    }
+    
+    this->cancelCallback();
+    
+    this->decodeHeader(d->encodedInputBufferPtr, d->encodedInputBufferSize);
+    
+    QSharedPointer<ExifWrapper> exifWrapper(new ExifWrapper());
+    // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
+    exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
+    this->image()->setExif(exifWrapper);
+    this->image()->setDefaultTransform(exifWrapper->transformMatrix());
+    this->image()->setThumbnail(exifWrapper->thumbnail());
+    
+    this->setDecodingState(DecodingState::Metadata);
 }
 
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
@@ -209,7 +228,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                 this->init();
             }
             
-            QImage decodedImg = this->decodingLoop(targetState, desiredResolution, roiRect);
+            QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
             d->setDecodedImage(decodedImg);
             
             // if thumbnail is still null and no roi has been given, set it
@@ -224,15 +243,14 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     catch(const UserCancellation&)
     {
         this->setDecodingState(DecodingState::Cancelled);
-        this->close();
     }
     catch(const std::exception& e)
     {
         d->errorMessage = e.what();
         this->setDecodingState(DecodingState::Error);
-        this->close();
     }
     
+    this->close();
     if(d->promise)
     {
         // this will not store the result if the future has been canceled already!
@@ -247,8 +265,11 @@ void SmartImageDecoder::close()
 
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
-    d->file->close();
-    d->file = nullptr;
+    if(d->file)
+    {
+        d->file->close();
+        d->file = nullptr;
+    }
 }
 
 void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
@@ -265,6 +286,13 @@ void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
 void SmartImageDecoder::reset()
 {
     d->assertNotDecoding();
+    
+    if(this->decodingState() == DecodingState::Fatal)
+    {
+        this->setDecodingState(DecodingState::Ready);
+        return;
+    }
+
     d->releaseFullImage();
     this->setDecodingState(DecodingState::Metadata);
 }

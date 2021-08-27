@@ -262,6 +262,34 @@ public:
     }
 };
 
+#include <QStandardItemModel>
+#include <QVector>
+#include <QTreeView>
+#include <QListView>
+
+void appendPath(QAbstractItemModel* const model, QStringList& fileParts, const QModelIndex& parent = QModelIndex()){
+	Q_ASSERT(model);
+	if(fileParts.isEmpty())
+		return;
+	if(model->columnCount(parent)<=0)
+		model->insertColumn(0,parent);
+	QModelIndex currIdx;
+	const QString currLevel = fileParts.takeFirst();
+	const int rowCount = model->rowCount(parent);
+	for(int i=0;i<rowCount;++i){
+		if(model->index(i,0,parent).data().toString().compare(currLevel)==0){
+			currIdx = model->index(i,0,parent);
+			break;
+		}
+	}
+	if(!currIdx.isValid()){
+		model->insertRow(rowCount,parent);
+		currIdx=model->index(rowCount,0,parent);
+		model->setData(currIdx,currLevel);
+	}
+	appendPath(model,fileParts,currIdx);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -273,6 +301,45 @@ int main(int argc, char *argv[])
     
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
+    
+    
+    
+    QStandardItemModel *model = new QStandardItemModel(); //give a parent or you'll leak
+
+    QVector<QString> entries({
+        {"text/english/game/pro_scen.msg"},
+        {"text/english/game/pro_wall.msg"},
+        {"text/english/game/proto.msg"},
+        {"text/english/game/quests.msg"},
+        {"example/english/game/pro_scen.msg"},
+        {"script.int"}
+    });
+    for(const QString& entry : entries)
+    {
+        QStringList fileParts = entry.split("/");
+        appendPath(model,fileParts);
+    }
+    
+    QTreeView* treeView = new QTreeView();
+    treeView->setModel(model);
+//     treeView->setRootIsDecorated(false);
+//     treeView->expandAll();
+//     treeView->show();
+    
+    QListView* listView = new QListView();
+    listView->setViewMode(QListView::IconMode);
+    listView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    listView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    listView->setModel(model);
+    listView->show();
+    
+    return a.exec();
+
+    
+    
+    
+    
+    
     
     
     
