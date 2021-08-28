@@ -157,7 +157,7 @@ QPixmap Image::icon(int height)
         return QPixmap();
     }
     
-    TraceTimer t(typeid(Image));
+    TraceTimer t(typeid(Image), 50);
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
