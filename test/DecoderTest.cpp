@@ -66,8 +66,8 @@ void DecoderTest::errorWhileOpeningFile()
     QVERIFY(!dec.errorMessage().isEmpty());
     dec.reset();
     QCOMPARE(dec.decodingState(), DecodingState::Ready);
+    QVERIFY(dec.errorMessage().isEmpty());
     dec.close();
-    
 }
 
 void DecoderTest::testInitialize()
@@ -87,6 +87,7 @@ void DecoderTest::testInitialize()
     QCOMPARE(dec.decodingState(), DecodingState::Fatal);
     dec.reset();
     QCOMPARE(dec.decodingState(), DecodingState::Ready);
+    QVERIFY(dec.errorMessage().isEmpty());
     dec.close();
     
     // try to open a non-empty file successfully
@@ -109,6 +110,7 @@ void DecoderTest::testInitialize()
     QCOMPARE(dec.decodingState(), DecodingState::Fatal);
     dec.reset();
     QCOMPARE(dec.decodingState(), DecodingState::Ready);
+    QVERIFY(dec.errorMessage().isEmpty());
     
     dec.setDecodeHeaderFail(false);
     dec.setDecodingLoopFail(true);
@@ -117,5 +119,10 @@ void DecoderTest::testInitialize()
     dec.decode(DecodingState::FullImage);
     QCOMPARE(dec.decodingState(), DecodingState::Error);
     QCOMPARE(dec.errorMessage(), QString(errDec));
-    
+    dec.close();
+    QCOMPARE(dec.decodingState(), DecodingState::Error);
+    QCOMPARE(dec.errorMessage(), QString(errDec));
+    dec.reset();
+    QCOMPARE(dec.decodingState(), DecodingState::Metadata);
+    QVERIFY(dec.errorMessage().isEmpty());
 }

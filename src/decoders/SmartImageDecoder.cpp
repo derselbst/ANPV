@@ -301,6 +301,7 @@ void SmartImageDecoder::reset()
 {
     d->assertNotDecoding();
     
+    d->errorMessage.clear();
     if(this->decodingState() == DecodingState::Fatal)
     {
         this->setDecodingState(DecodingState::Ready);
