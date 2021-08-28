@@ -8,5 +8,6 @@ class DecoderTest : public QObject
     Q_OBJECT
 private slots:
     void initTestCase();
+    void errorWhileOpeningFile();
     void testInitialize();
 };
