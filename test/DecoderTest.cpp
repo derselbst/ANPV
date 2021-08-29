@@ -8,6 +8,7 @@
 #include <QStringLiteral>
 #include <QTemporaryFile>
 #include <QApplication>
+#include <QSignalSpy>
 
 QTEST_MAIN(DecoderTest)
 #include "DecoderTest.moc"
@@ -50,6 +51,21 @@ protected:
     }
 };
 
+static void verifyDecodingState(ImageDecoderUnderTest& dec, QSignalSpy& spy, DecodingState newState)
+{
+    static DecodingState oldState = DecodingState::Ready;
+    
+    QCOMPARE(spy.count(), 1);
+    QList<QVariant> sig = spy.takeFirst();
+    QCOMPARE(sig.at(1).typeId(), QMetaType::UInt);
+    QCOMPARE(sig.at(2).typeId(), QMetaType::UInt);
+    QCOMPARE(sig.at(1).value<DecodingState>(), newState);
+    QCOMPARE(sig.at(2).value<DecodingState>(), oldState);
+    QCOMPARE(dec.decodingState(), newState);
+    
+    oldState = newState;
+}
+
 void DecoderTest::initTestCase()
 {
     Q_INIT_RESOURCE(ANPV);
@@ -79,14 +95,20 @@ void DecoderTest::testInitialize()
     QSharedPointer<Image> imageJpg = DecoderFactory::globalInstance()->makeImage(QFileInfo(jpg));
     ImageDecoderUnderTest dec(imageJpg);
     
+    QSignalSpy spy(&dec, &ImageDecoderUnderTest::decodingStateChanged);
+    // drop the first signal, it's null for some reason...
+    (void)spy.takeFirst();
+    
     QVERIFY_EXCEPTION_THROWN(dec.init(), std::logic_error);
+    verifyDecodingState(dec, spy, DecodingState::Fatal);
     
     // try to open an empty file
     dec.open();
     QVERIFY_EXCEPTION_THROWN(dec.init(), std::runtime_error);
+    QCOMPARE(spy.count(), 0);
     QCOMPARE(dec.decodingState(), DecodingState::Fatal);
     dec.reset();
-    QCOMPARE(dec.decodingState(), DecodingState::Ready);
+    verifyDecodingState(dec, spy, DecodingState::Ready);
     QVERIFY(dec.errorMessage().isEmpty());
     dec.close();
     
@@ -96,7 +118,7 @@ void DecoderTest::testInitialize()
     QCOMPARE(jpg.size(), 1);
     dec.open();
     dec.init();
-    QCOMPARE(dec.decodingState(), DecodingState::Metadata);
+    verifyDecodingState(dec, spy, DecodingState::Metadata);
     dec.close();
     QCOMPARE(dec.decodingState(), DecodingState::Metadata);
     
@@ -104,25 +126,28 @@ void DecoderTest::testInitialize()
     dec.setDecodeHeaderFail(true);
     dec.open();
     QVERIFY_EXCEPTION_THROWN(dec.init(), std::runtime_error);
-    QCOMPARE(dec.decodingState(), DecodingState::Fatal);
+    verifyDecodingState(dec, spy, DecodingState::Fatal);
     QCOMPARE(dec.errorMessage(), QString(errHeader));
     dec.close();
     QCOMPARE(dec.decodingState(), DecodingState::Fatal);
     dec.reset();
-    QCOMPARE(dec.decodingState(), DecodingState::Ready);
+    verifyDecodingState(dec, spy, DecodingState::Ready);
     QVERIFY(dec.errorMessage().isEmpty());
     
     dec.setDecodeHeaderFail(false);
     dec.setDecodingLoopFail(true);
     dec.open();
     dec.init();
+    verifyDecodingState(dec, spy, DecodingState::Metadata);
     dec.decode(DecodingState::FullImage);
-    QCOMPARE(dec.decodingState(), DecodingState::Error);
+    verifyDecodingState(dec, spy, DecodingState::Error);
     QCOMPARE(dec.errorMessage(), QString(errDec));
     dec.close();
     QCOMPARE(dec.decodingState(), DecodingState::Error);
     QCOMPARE(dec.errorMessage(), QString(errDec));
     dec.reset();
-    QCOMPARE(dec.decodingState(), DecodingState::Metadata);
+    verifyDecodingState(dec, spy, DecodingState::Metadata);
     QVERIFY(dec.errorMessage().isEmpty());
+    
+    QCOMPARE(spy.count(), 0);
 }
