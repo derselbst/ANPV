@@ -92,10 +92,14 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     d->hideTimer = new QTimer(this);
     d->hideTimer->setSingleShot(true);
     d->hideTimer->setInterval(2000);
-    QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
+    if(anpv != nullptr)
     {
-//         d->anpv->hideProgressWidget(this);
-    });
+        QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
+        {
+            throw std::logic_error("NYI");
+    //         d->anpv->hideProgressWidget(this);
+        });
+    }
 
     QObject::connect(d->ui->cancelButton, &QPushButton::clicked, &d->future, &QFutureWatcher<DecodingState>::cancel);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressTextChanged, d->ui->label, &QLabel::setText);

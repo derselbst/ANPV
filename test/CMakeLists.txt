@@ -26,3 +26,4 @@ endmacro ( ADD_ANPV_TEST )
 
 ADD_ANPV_TEST(ImageTest)
 ADD_ANPV_TEST(DecoderTest)
+ADD_ANPV_TEST(ProgressWidgetTest)

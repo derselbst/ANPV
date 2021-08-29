@@ -5,8 +5,7 @@
 #include <QFutureWatcher>
 #include <QString>
 #include <QDebug>
-
-class QFuture;
+#include <QFuture>
 
 template <typename T>
 class CancellableProgressDialog : public QProgressDialog
