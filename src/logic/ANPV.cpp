@@ -61,6 +61,7 @@ struct ANPV::Impl
     
     QDir currentDir;
     ViewMode viewMode = ViewMode::Unknown;
+    ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
     SortedImageModel::Column primarySortColumn = SortedImageModel::Column::Unknown;
     
@@ -183,6 +184,39 @@ void ANPV::setViewMode(ViewMode v)
         d->viewMode = v;
         emit this->viewModeChanged(v, old);
     }
+}
+
+ViewFlags_t ANPV::viewFlags()
+{
+    xThreadGuard(this);
+    return d->viewFlags;
+}
+
+void ANPV::setViewFlags(ViewFlags_t newFlags)
+{
+    xThreadGuard(this);
+    ViewFlags_t old = d->viewFlags;
+    if(old != newFlags)
+    {
+        d->viewFlags = newFlags;
+        emit this->viewFlagsChanged(newFlags, old);
+    }
+}
+
+void ANPV::setViewFlag(ViewFlag v, bool on)
+{
+    xThreadGuard(this);
+    ViewFlags_t newFlags = d->viewFlags;
+    
+    if(on)
+    {
+        newFlags |= static_cast<ViewFlags_t>(v);
+    }
+    else
+    {
+        newFlags &= ~static_cast<ViewFlags_t>(v);
+    }
+    this->setViewFlags(newFlags);
 }
 
 Qt::SortOrder ANPV::sortOrder()
@@ -313,4 +347,26 @@ void ANPV::moveFilesSlot(const QList<QString>& files, const QString& sourceDir, 
 //     });
 //     
 //     d->undoStack->push(cmd);
+}
+
+void ANPV::about()
+{
+    // build up the huge constexpr about anmp string
+    static constexpr char text[] = "<p>\n"
+                                   "<b>ANPV - Another Nameless Picture Viewer</b><br />\n"
+                                   "<br />\n"
+                                   "Version: " ANPV_VERSION "<br />\n"
+                                   "<br />\n"
+    "Website: <a href=\"https://github.com/derselbst/ANPV\">https://github.com/derselbst/ANPV</a><br />\n"
+    "<br />\n"
+    "<small>"
+    "&copy;Tom Moebert (derselbst)<br />\n"
+    "<br />\n"
+    "This program is free software; you can redistribute it and/or modify it"
+    "<br />\n"
+    "under the terms of the GNU Affero Public License version 3."
+    "</small>"
+    "</p>\n";
+
+    QMessageBox::about(d->mainWindow.get(), "About ANPV", text);
 }

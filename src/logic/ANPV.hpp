@@ -34,6 +34,16 @@ enum class ViewMode : int
     CenterAf,
 };
 
+using ViewFlags_t = unsigned int;
+enum class ViewFlag : ViewFlags_t
+{
+    None = 0,
+    CombineRawJpg = 0x1,
+    ShowAfPoints = 0x2,
+    RespectExifOrientation = 0x4,
+};
+
+
 class ANPV : public QObject
 {
 Q_OBJECT
@@ -53,6 +63,10 @@ public:
     ViewMode viewMode();
     void setViewMode(ViewMode);
 
+    ViewFlags_t viewFlags();
+    void setViewFlag(ViewFlag, bool on=true);
+    void setViewFlags(ViewFlags_t);
+    
     QDir currentDir();
     void setCurrentDir(QString str);
     
@@ -65,10 +79,12 @@ public:
 signals:
     void currentDirChanged(QDir dir, QDir old);
     void viewModeChanged(ViewMode newView, ViewMode old);
+    void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
     void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
     void primarySortColumnChanged(SortedImageModel::Column newCol, SortedImageModel::Column old);
     
 public slots:
+    void about();
 //     void showImageView();
 //     void showThumbnailView();
 //     void loadImage(QFileInfo str);

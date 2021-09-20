@@ -85,24 +85,15 @@ struct MainWindow::Impl
         action->setToolTip("This option requires to read EXIF metadata from the file. Therefore, performance greatly suffers when accessing directories that contain many files.");
     }
     
-    void createActions()
+    void createViewActions()
     {
-        QAction* action;
-//         
-//         actionGroupFileOperation = new QActionGroup(q);
-//         connect(actionGroupFileOperation, &QActionGroup::triggered, q, [&](QAction* act)
-//         {
-//             QString targetDir = act->data().toString();
-//             q->moveFilesSlot(targetDir);
-//         });
-
         actionGroupViewMode = new QActionGroup(q);
         
         auto makeViewAction = [&](QAction* action, ViewMode view)
         {
             connect(action, &QAction::triggered, q, [=](bool){ ANPV::globalInstance()->setViewMode(view); });
             connect(ANPV::globalInstance(), &ANPV::viewModeChanged, action,
-                    [=](ViewMode newMode, ViewMode old)
+                    [=](ViewMode newMode, ViewMode)
                     {
                         if(newMode == view)
                         {
@@ -112,12 +103,29 @@ struct MainWindow::Impl
             actionGroupViewMode->addAction(action);
         };
         
-        
         makeViewAction(ui->actionNo_Change, ViewMode::None);
         makeViewAction(ui->actionFit_in_FOV, ViewMode::Fit);
         makeViewAction(ui->actionCenter_AF_focus_point, ViewMode::CenterAf);
         
+        auto makeTriggerAction = [&](QAction* action, ViewFlag v)
+        {
+            connect(action, &QAction::triggered, q, [=](bool isChecked){ ANPV::globalInstance()->setViewFlag(v, isChecked); });
+            connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, action,
+                    [=](ViewFlags_t newMode, ViewFlags_t)
+                    {
+                        action->setChecked((newMode & static_cast<ViewFlags_t>(v)) != 0);
+                    });
+        };
         
+        makeTriggerAction(ui->actionCombine_RAWs_and_JPGs, ViewFlag::CombineRawJpg);
+        makeTriggerAction(ui->actionShow_AF_Points, ViewFlag::ShowAfPoints);
+        makeTriggerAction(ui->actionRespect_EXIF_orientation, ViewFlag::RespectExifOrientation);
+    }
+    
+    void createSortActions()
+    {
+        QAction* action;
+
         actionGroupSortOrder = new QActionGroup(q);
         
         action = new QAction("Sort Order", q);
@@ -188,7 +196,12 @@ struct MainWindow::Impl
         makeSortAction("Camera Model (slow)", SortedImageModel::Column::CameraModel, true);
         makeSortAction("Focal Length (slow)", SortedImageModel::Column::FocalLength, true);
         makeSortAction("Lens Model (slow)", SortedImageModel::Column::Lens, true);
-        
+    }
+    
+    void createActions()
+    {
+        this->createViewActions();
+        this->createSortActions();
 
         actionUndo = undoStack->createUndoAction(q, "Undo");
         actionUndo->setShortcuts(QKeySequence::Undo);
@@ -199,6 +212,12 @@ struct MainWindow::Impl
         actionRedo->setShortcutContext(Qt::ApplicationShortcut);
         
         actionFileOperationConfigDialog = new QAction("File Copy/Move Configuration", q);
+//         actionGroupFileOperation = new QActionGroup(q);
+//         connect(actionGroupFileOperation, &QActionGroup::triggered, q, [&](QAction* act)
+//         {
+//             QString targetDir = act->data().toString();
+//             q->moveFilesSlot(targetDir);
+//         });
 //         connect(actionFileOperationConfigDialog, &QAction::triggered, q, [&](bool)
 //         {
 //             FileOperationConfigDialog* dia = new FileOperationConfigDialog(actionGroupFileOperation, q);
@@ -213,28 +232,8 @@ struct MainWindow::Impl
         ui->actionExit->setShortcuts(QKeySequence::Quit);
         connect(ui->actionExit, &QAction::triggered, q, &QApplication::closeAllWindows);
         
+        connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
-    }
-    
-    // should be called after settings have been read!
-    void initializeActions()
-    {
-//         ViewMode v = ANPV::globalInstance()->viewMode();
-//         switch(v)
-//         {
-//             case ViewMode::None:
-//                 ui->actionNo_Change->setChecked(true);
-//                 break;
-//             case ViewMode::Fit:
-//                 ui->actionFit_in_FOV->setChecked(true);
-//                 break;
-//             case ViewMode::CenterAf:
-//                 ui->actionCenter_AF_focus_point->setChecked(true);
-//                 break;
-//             default:
-//                 throw std::logic_error("case not implemented: viewMode");
-//         }
-        
     }
     
     void createMenus()
@@ -261,6 +260,7 @@ struct MainWindow::Impl
         
         settings.setValue("currentDir", ANPV::globalInstance()->currentDir().absolutePath());
         settings.setValue("viewMode", static_cast<int>(ANPV::globalInstance()->viewMode()));
+        settings.setValue("viewFlags", ANPV::globalInstance()->viewFlags());
         settings.setValue("sortOrder", static_cast<int>(ANPV::globalInstance()->sortOrder()));
         settings.setValue("primarySortColumn", static_cast<int>(ANPV::globalInstance()->primarySortColumn()));
     }
@@ -283,6 +283,7 @@ struct MainWindow::Impl
         
         ANPV::globalInstance()->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
         ANPV::globalInstance()->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
+        ANPV::globalInstance()->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::None)).toUInt());
         ANPV::globalInstance()->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
         ANPV::globalInstance()->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
     }
@@ -301,7 +302,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->createMenus();
     
     d->readSettings();
-    d->initializeActions();
 }
 
 MainWindow::~MainWindow() = default;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV CXX)
+project (ANPV VERSION 0.0.0 LANGUAGES CXX)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
@@ -161,6 +161,7 @@ src/logic/ANPV.cpp
 src/logic/ANPV.hpp
 ANPV.qrc)
 
+target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5::KExiv2 KF5::KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders)
