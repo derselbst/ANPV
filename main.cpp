@@ -1,5 +1,5 @@
 
-#include "ANPV.hpp"
+// #include "ANPV.hpp"
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
 #include "UserCancellation.hpp"
@@ -161,6 +161,7 @@ main (int argc, char **argv)
 
 #else
 
+#if 0
 class SortedImageModel : public QRunnable
 {
     std::vector<std::unique_ptr<Image>> entries;
@@ -261,6 +262,8 @@ public:
         this->directoryWorker->finish();
     }
 };
+
+
 
 #include <QStandardItemModel>
 #include <QVector>
@@ -404,4 +407,29 @@ int main(int argc, char *argv[])
     
     return a.exec();
 }
+#endif
+
+#include "ANPV.hpp"
+
+int main(int argc, char *argv[])
+{
+    Q_INIT_RESOURCE(ANPV);
+    QApplication app(argc, argv);
+    
+    QSplashScreen splash(QPixmap(":/images/splash.jpg"));
+    splash.show();
+    
+    // create and init DecoderFactory in main thread
+    (void)DecoderFactory::globalInstance();
+
+    
+    
+    ANPV a(&splash);
+    
+    int r = app.exec();
+    return r;
+}
+
+
+
 #endif

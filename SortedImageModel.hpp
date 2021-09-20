@@ -22,6 +22,7 @@ public:
     
     enum Column : int
     {
+        Unknown = -1,
         FirstValid = 0,
         FileName = FirstValid,
         FileSize,

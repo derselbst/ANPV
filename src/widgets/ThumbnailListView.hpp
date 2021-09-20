@@ -5,17 +5,18 @@
 #include <memory>
 
 class QWheelEvent;
+class QWidget;
 class SortedImageModel;
 class ThumbnailView;
 class ANPV;
 
-class ThumbnailImageView : public QListView
+class ThumbnailListView : public QListView
 {
 Q_OBJECT
 
 public:
-    ThumbnailImageView(ANPV *anpv, ThumbnailView *parent=nullptr);
-    ~ThumbnailImageView() override;
+    ThumbnailListView(QWidget *parent=nullptr);
+    ~ThumbnailListView() override;
     
     void setModel(SortedImageModel* model);
     void selectedFiles(QList<QString>& selectedFiles);

@@ -11,7 +11,6 @@
 
 struct CancellableProgressWidget::Impl
 {
-    ANPV* anpv;
     std::unique_ptr<Ui::CancellableProgressWidget> ui = std::make_unique<Ui::CancellableProgressWidget>();
     QFutureWatcher<DecodingState> future;
     QTimer* hideTimer = nullptr;
@@ -85,21 +84,17 @@ struct CancellableProgressWidget::Impl
     }
 };
 
-CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState>& future, ANPV* anpv, QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
+CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState>& future, QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
 {
     d->ui->setupUi(this);
-    d->anpv = anpv;
     d->hideTimer = new QTimer(this);
     d->hideTimer->setSingleShot(true);
     d->hideTimer->setInterval(2000);
-    if(anpv != nullptr)
+
+    QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
     {
-        QObject::connect(d->hideTimer, &QTimer::timeout, this, [&]()
-        {
-            throw std::logic_error("NYI");
-    //         d->anpv->hideProgressWidget(this);
-        });
-    }
+        emit this->expired(this);
+    });
 
     QObject::connect(d->ui->cancelButton, &QPushButton::clicked, &d->future, &QFutureWatcher<DecodingState>::cancel);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressTextChanged, d->ui->label, &QLabel::setText);

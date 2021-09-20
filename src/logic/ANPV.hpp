@@ -2,12 +2,14 @@
 #pragma once
 
 #include <memory>
-#include <QMainWindow>
+#include <QDir>
+#include <QObject>
 #include <QString>
 #include <QFileInfo>
 #include <QSharedPointer>
 
 #include "DecodingState.hpp"
+#include "SortedImageModel.hpp"
 
 class QUndoCommand;
 class MoveFileCommand;
@@ -26,16 +28,19 @@ enum class ProgressGroup : int
 
 enum class ViewMode : int
 {
+    Unknown,
     None,
     Fit,
     CenterAf,
 };
 
-class ANPV : public QMainWindow
+class ANPV : public QObject
 {
 Q_OBJECT
 
 public:
+    static ANPV* globalInstance();
+
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
@@ -45,15 +50,29 @@ public:
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
     
-    bool shouldHideProgressWidget();
     ViewMode viewMode();
+    void setViewMode(ViewMode);
+
+    QDir currentDir();
+    void setCurrentDir(QString str);
+    
+    Qt::SortOrder sortOrder();
+    void setSortOrder(Qt::SortOrder);
+    
+    SortedImageModel::Column primarySortColumn();
+    void setPrimarySortColumn(SortedImageModel::Column);
+
+signals:
+    void currentDirChanged(QDir dir, QDir old);
+    void viewModeChanged(ViewMode newView, ViewMode old);
+    void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
+    void primarySortColumnChanged(SortedImageModel::Column newCol, SortedImageModel::Column old);
     
 public slots:
-    void showImageView();
-    void showThumbnailView();
-    void loadImage(QFileInfo str);
-    void loadImage(QSharedPointer<SmartImageDecoder> dec);
-    void setThumbnailDir(QString str);
+//     void showImageView();
+//     void showThumbnailView();
+//     void loadImage(QFileInfo str);
+//     void loadImage(QSharedPointer<SmartImageDecoder> dec);
     
 private:
     struct Impl;

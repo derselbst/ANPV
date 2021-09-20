@@ -1,6 +1,5 @@
 #include "FileOperationConfigDialog.hpp"
 #include "ui_FileOperationConfigDialog.h"
-#include "ANPV.hpp"
 
 #include <QDialogButtonBox>
 #include <QFileDialog>
@@ -9,9 +8,9 @@
 #include <QActionGroup>
 #include <QDir>
 
-FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, ANPV *parent)
+FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, QWidget *parent)
 : QDialog(parent),
-  ui(new Ui::FileOperationConfigDialog), anpv(parent), fileOperationActionGroup(fileOperationActionGroup)
+  ui(new Ui::FileOperationConfigDialog), fileOperationActionGroup(fileOperationActionGroup)
 {
     this->ui->setupUi(this);
     this->setAttribute(Qt::WA_DeleteOnClose);

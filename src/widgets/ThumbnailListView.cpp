@@ -1,4 +1,4 @@
-#include "ThumbnailImageView.hpp"
+#include "ThumbnailListView.hpp"
 
 #include <QGraphicsScene>
 #include <QKeyEvent>
@@ -11,7 +11,7 @@
 #include <QGuiApplication>
 #include <QDebug>
 #include <QListView>
-#include <QMainWindow>
+#include <QWidget>
 #include <QFileSystemModel>
 #include <QString>
 #include <QTreeView>
@@ -36,15 +36,15 @@
 #include "MoveFileCommand.hpp"
 #include "ThumbnailView.hpp"
 
-struct ThumbnailImageView::Impl
+struct ThumbnailListView::Impl
 {
-    ANPV* anpv=nullptr;
-    ThumbnailView* parentView=nullptr;
-    ThumbnailImageView* q=nullptr;
+    ThumbnailListView* q=nullptr;
     SortedImageModel* model=nullptr;
     
-    QAction* actionCut=nullptr;
+    QAction *actionOpenSelectionInternally;
+    QAction *actionOpenSelectionExternally;
     QAction* actionOpenFolder=nullptr;
+    QAction* actionCut=nullptr;
     QAction* actionCopy=nullptr;
     QAction* actionDelete=nullptr;
     
@@ -52,7 +52,7 @@ struct ThumbnailImageView::Impl
     QString lastTargetDirectory;
     void onFileOperation(Operation op)
     {
-        QDir currentDir = parentView->currentDir();
+        QDir currentDir = ANPV::globalInstance()->currentDir();
         QString dirToOpen = lastTargetDirectory.isNull() ? currentDir.absolutePath() : lastTargetDirectory;
         QString dir = QFileDialog::getExistingDirectory(q, "Select Target Directory",
                                                 dirToOpen,
@@ -74,7 +74,7 @@ struct ThumbnailImageView::Impl
         switch(op)
         {
             case Move:
-                anpv->moveFilesSlot(selectedFileNames, currentDir.absolutePath(), dir);
+                ANPV::globalInstance()->moveFilesSlot(selectedFileNames, currentDir.absolutePath(), dir);
                 break;
             case Copy:
             case Delete:
@@ -87,11 +87,19 @@ struct ThumbnailImageView::Impl
 
     void openContainingFolder()
     {
-        QDesktopServices::openUrl(QUrl::fromLocalFile(parentView->currentDir().absolutePath()));
+        QDesktopServices::openUrl(QUrl::fromLocalFile(ANPV::globalInstance()->currentDir().absolutePath()));
+    }
+    
+    void openSelectionInternally()
+    {
+    }
+    
+    void openSelectionExternally()
+    {
     }
 };
 
-ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
+ThumbnailListView::ThumbnailListView(QWidget *parent)
  : QListView(parent), d(std::make_unique<Impl>())
 {
     this->setViewMode(QListView::IconMode);
@@ -103,10 +111,14 @@ ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
     this->setSpacing(2);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
-    d->anpv = anpv;
     d->q = this;
-    d->parentView = parent;
 
+    d->actionOpenSelectionInternally = new QAction("Open", this);
+    connect(d->actionOpenSelectionInternally, &QAction::triggered, this, [&](){ d->openSelectionInternally(); });
+    
+    d->actionOpenSelectionExternally = new QAction("Open with", this);
+    connect(d->actionOpenSelectionExternally, &QAction::triggered, this, [&](){ d->openSelectionExternally(); });
+    
     d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
     connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
     
@@ -122,50 +134,53 @@ ThumbnailImageView::ThumbnailImageView(ANPV *anpv, ThumbnailView *parent)
     d->actionDelete->setShortcuts(QKeySequence::Delete);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
     
-    this->addAction(d->actionOpenFolder);
     
     QAction* sep = new QAction(this);
     sep->setSeparator(true);
+    
+    this->addAction(d->actionOpenSelectionInternally);
+    this->addAction(d->actionOpenSelectionExternally);
+    this->addAction(d->actionOpenFolder);
     this->addAction(sep);
     this->addAction(d->actionCut);
     this->addAction(d->actionCopy);
     this->addAction(d->actionDelete);
 }
 
-ThumbnailImageView::~ThumbnailImageView() = default;
+ThumbnailListView::~ThumbnailListView() = default;
 
-void ThumbnailImageView::setModel(SortedImageModel* model)
+void ThumbnailListView::setModel(SortedImageModel* model)
 {
     d->model = model;
     this->QListView::setModel(model);
 }
 
-void ThumbnailImageView::wheelEvent(QWheelEvent *event)
+void ThumbnailListView::wheelEvent(QWheelEvent *event)
 {
-    auto angleDelta = event->angleDelta();
-
-    if (event->modifiers() & Qt::ControlModifier)
-    {
-        double s = d->model->iconHeight();
-        // zoom
-        if(angleDelta.y() > 0)
-        {
-            d->model->setIconHeight(static_cast<int>(std::ceil(s * 1.2)));
-            event->accept();
-            return;
-        }
-        else if(angleDelta.y() < 0)
-        {
-            d->model->setIconHeight(static_cast<int>(std::floor(s / 1.2)));
-            event->accept();
-            return;
-        }
-    }
+//     auto angleDelta = event->angleDelta();
+// 
+//     if (event->modifiers() & Qt::ControlModifier)
+//     {
+//         double s = d->model->iconHeight();
+//         // zoom
+//         if(angleDelta.y() > 0)
+//         {
+//             d->model->setIconHeight(static_cast<int>(std::ceil(s * 1.2)));
+//             event->accept();
+//             return;
+//         }
+//         else if(angleDelta.y() < 0)
+//         {
+//             d->model->setIconHeight(static_cast<int>(std::floor(s / 1.2)));
+//             event->accept();
+//             return;
+//         }
+//     }
 
     QListView::wheelEvent(event);
 }
 
-void ThumbnailImageView::selectedFiles(QList<QString>& files)
+void ThumbnailListView::selectedFiles(QList<QString>& files)
 {
     QModelIndexList selectedIdx = this->selectionModel()->selectedRows();
     
