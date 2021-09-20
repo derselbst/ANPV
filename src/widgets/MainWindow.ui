@@ -119,6 +119,9 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget">
+   <property name="windowTitle">
+    <string>File Tree</string>
+   </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
@@ -135,6 +138,9 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_3">
+   <property name="windowTitle">
+    <string>Right Unnamed Dock...</string>
+   </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
