@@ -50,6 +50,7 @@ struct MainWindow::Impl
     std::unique_ptr<Ui::MainWindow> ui = std::make_unique<Ui::MainWindow>();
     
     QUndoStack* undoStack;
+    
     std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
     QVBoxLayout* progressWidgetLayout;
     QWidget* progressWidgetContainer;
@@ -287,6 +288,49 @@ struct MainWindow::Impl
         ANPV::globalInstance()->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
         ANPV::globalInstance()->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
     }
+    
+    void onDirectoryTreeLoaded(const QString& s)
+    {
+        QModelIndex curIdx = ui->fileSystemTreeView->currentIndex();
+        if(!curIdx.isValid() || s != ANPV::globalInstance()->dirModel()->fileInfo(curIdx).absoluteFilePath())
+        {
+            QModelIndex mo = ANPV::globalInstance()->dirModel()->index(s);
+            ui->fileSystemTreeView->setCurrentIndex(mo);
+            ui->fileSystemTreeView->scrollTo(mo);
+        }
+    }
+    
+    void resizeTreeColumn(const QModelIndex &index)
+    {
+        ui->fileSystemTreeView->resizeColumnToContents(0);
+        ui->fileSystemTreeView->scrollTo(index);
+    }
+    
+    QDir rememberedActivatedDir;
+    void onTreeActivated(const QModelIndex& idx)
+    {
+        QFileInfo info = ANPV::globalInstance()->dirModel()->fileInfo(idx);
+        rememberedActivatedDir = info.absoluteFilePath();
+        ANPV::globalInstance()->setCurrentDir(info.absoluteFilePath());
+    }
+    
+    void onCurrentDirChanged(QDir& newDir, QDir&)
+    {
+        QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir.absolutePath());
+        ui->fileSystemTreeView->setCurrentIndex(mo);
+        
+        // if the newDir was triggered by an activiation, do not scroll around
+        if(newDir != rememberedActivatedDir)
+        {
+            // vertically scroll to center
+            ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::PositionAtCenter);
+            // and make sure we do not scroll to center horizontally
+            ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::EnsureVisible);
+        }
+        rememberedActivatedDir = QDir();
+//             auto fut = d->fileModel->changeDirAsync(dir);
+//             d->anpv->addBackgroundTask(ProgressGroup::Directory, fut);
+    }
 };
 
 MainWindow::MainWindow(QSplashScreen *splash)
@@ -300,6 +344,33 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
+    
+    splash->showMessage("Initializing MainWindow Widgets");
+    d->ui->fileSystemTreeView->setHeaderHidden(true);
+    d->ui->fileSystemTreeView->setModel(ANPV::globalInstance()->dirModel());
+    d->ui->fileSystemTreeView->showColumn(0);
+    d->ui->fileSystemTreeView->hideColumn(1);
+    d->ui->fileSystemTreeView->hideColumn(2);
+    d->ui->fileSystemTreeView->hideColumn(3);
+    d->ui->fileSystemTreeView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
+    d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
+    
+    
+    
+    
+    
+    splash->showMessage("Connecting MainWindow Signals / Slots");
+    
+    connect(d->ui->fileSystemTreeView, &QTreeView::activated, this,  [&](const QModelIndex &idx){d->onTreeActivated(idx);});
+    connect(d->ui->fileSystemTreeView, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
+    connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
+    connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
+    
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QDir newD, QDir old){ d->onCurrentDirChanged(newD,old);});
+    
+    
+    
     
     d->readSettings();
 }

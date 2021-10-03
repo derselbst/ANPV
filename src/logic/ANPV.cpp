@@ -29,6 +29,7 @@
 #include <QMessageBox>
 #include <QPair>
 #include <QPointer>
+#include <QSettings>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -47,17 +48,20 @@ struct ANPV::Impl
 {
     ANPV* q;
     
-    QUndoStack* undoStack;
-    std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
-    QVBoxLayout* progressWidgetLayout;
-    QWidget* progressWidgetContainer;
-    QStackedLayout* stackedLayout;
-    QWidget *stackedLayoutWidget;
-    DocumentView* imageViewer;
-    ThumbnailView* thumbnailViewer;
+//     QUndoStack* undoStack;
+//     std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
+//     QVBoxLayout* progressWidgetLayout;
+//     QWidget* progressWidgetContainer;
+//     QStackedLayout* stackedLayout;
+//     QWidget *stackedLayoutWidget;
+//     DocumentView* imageViewer;
+//     ThumbnailView* thumbnailViewer;
     
+    // QObjects without parent
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
-    SortedImageModel* fileModel;
+    
+    // QObjects with parent
+    QFileSystemModel* dirModel = nullptr;
     
     QDir currentDir;
     ViewMode viewMode = ViewMode::Unknown;
@@ -65,16 +69,31 @@ struct ANPV::Impl
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
     SortedImageModel::Column primarySortColumn = SortedImageModel::Column::Unknown;
     
-    QAction *actionUndo;
-    QAction *actionRedo;
-    QAction *actionFileOperationConfigDialog;
-    QAction *actionExit;
-    
     Impl(ANPV* parent) : q(parent)
     {
     }
     
-    
+    void writeSettings()
+    {
+        QSettings settings;
+
+        settings.setValue("currentDir", q->currentDir().absolutePath());
+        settings.setValue("viewMode", static_cast<int>(q->viewMode()));
+        settings.setValue("viewFlags", q->viewFlags());
+        settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
+        settings.setValue("primarySortColumn", static_cast<int>(q->primarySortColumn()));
+    }
+
+    void readSettings()
+    {
+        QSettings settings;
+
+        q->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
+        q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
+        q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::None)).toUInt());
+        q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
+        q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
+    }
     
     void onImageNavigate(const QString& url, int stepsForward)
     {
@@ -105,15 +124,19 @@ ANPV::ANPV(QSplashScreen *splash)
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("ANPV");
 
+    splash->showMessage("Creating logic");
+//     d->fileModel = new SortedImageModel(this);
     if(::global.isNull())
     {
         ::global = QPointer<ANPV>(this);
     }
     
-    splash->showMessage("Reading latest settings");
+    d->dirModel = new QFileSystemModel(this);
+    d->dirModel->setRootPath("");
+    d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
-    splash->showMessage("Creating logic");
-//     d->fileModel = new SortedImageModel(this);
+    splash->showMessage("Connecting logic");
+    
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
@@ -121,6 +144,11 @@ ANPV::ANPV(QSplashScreen *splash)
     
     
     d->mainWindow->show();
+    
+    
+    
+    splash->showMessage("Reading latest settings");
+    d->readSettings();
     splash->finish(d->mainWindow.get());
     
     
@@ -149,7 +177,15 @@ ANPV::ANPV(QSplashScreen *splash)
     
 }
 
-ANPV::~ANPV() = default;
+ANPV::~ANPV()
+{
+    d->writeSettings();
+}
+
+QFileSystemModel* ANPV::dirModel()
+{
+    return d->dirModel;
+}
 
 QDir ANPV::currentDir()
 {

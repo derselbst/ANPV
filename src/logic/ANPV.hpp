@@ -14,6 +14,7 @@
 class QUndoCommand;
 class MoveFileCommand;
 class QSplashScreen;
+class QFileSystemModel;
 class SmartImageDecoder;
 class CancellableProgressWidget;
 
@@ -60,6 +61,8 @@ public:
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
     
+    QFileSystemModel* dirModel();
+
     ViewMode viewMode();
     void setViewMode(ViewMode);
 

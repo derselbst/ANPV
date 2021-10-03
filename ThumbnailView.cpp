@@ -43,6 +43,7 @@ struct ThumbnailView::Impl
     bool isInitialized{false};
     
     QFileSystemModel* dirModel;
+    QTreeView* fileSystemTree;
     
     SortedImageModel* fileModel;
     QDir currentDir;
