@@ -142,7 +142,6 @@ src/decoders/DecoderFactory.cpp
 src/decoders/DecodingState.hpp
 ExifWrapper.cpp
 ExifWrapper.hpp
-Formatter.hpp
 Image.cpp
 Image.hpp
 MoonPhase.cpp
@@ -153,8 +152,9 @@ src/decoders/SmartJpegDecoder.cpp
 src/decoders/SmartJpegDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
-UserCancellation.hpp
-xThreadGuard.hpp
+src/logic/Formatter.hpp
+src/logic/UserCancellation.hpp
+src/logic/xThreadGuard.hpp
 src/logic/TraceTimer.cpp
 src/logic/TraceTimer.hpp
 src/logic/ANPV.cpp
