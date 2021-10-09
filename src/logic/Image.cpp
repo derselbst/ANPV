@@ -5,11 +5,13 @@
 #include "xThreadGuard.hpp"
 #include "ExifWrapper.hpp"
 #include "TraceTimer.hpp"
+#include "ANPV.hpp"
 
 #include <QDir>
+#include <QIcon>
 #include <QtDebug>
-#include <QFileIconProvider>
 #include <QSvgRenderer>
+#include <QAbstractFileIconProvider>
 #include <QPainter>
 #include <KDCRAW/KDcraw>
 #include <mutex>
@@ -192,15 +194,17 @@ QPixmap Image::icon(int height)
         QPixmap thumb = this->thumbnail();
         if(thumb.isNull())
         {
-            QFileIconProvider prov;
-            QIcon ico = prov.icon(this->fileInfo());
-            pix = ico.pixmap(height);
+            QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
+            // this operation is expensive, up to 30ms per call!
+            QIcon ico = prov->icon(this->fileInfo());
+            int myIconHeight = ANPV::MaxIconHeight / 2;
+            pix = ico.pixmap(myIconHeight);
             if(pix.isNull())
             {
                 t.setInfo("no icon found, drawing our own...");
                 QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
 
-                QSize imgSize = renderer.defaultSize().scaled(height,height, Qt::KeepAspectRatio);
+                QSize imgSize = renderer.defaultSize().scaled(myIconHeight,myIconHeight, Qt::KeepAspectRatio);
                 QImage image(imgSize, QImage::Format_ARGB32);
                 image.fill(0);
 
@@ -214,6 +218,7 @@ QPixmap Image::icon(int height)
                 t.setInfo("using icon from QFileIconProvider");
             }
             Q_ASSERT(!pix.isNull());
+            d->thumbnailTransformed = pix;
         }
         else
         {

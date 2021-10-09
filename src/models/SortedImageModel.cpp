@@ -6,7 +6,6 @@
 #include <QSize>
 #include <QtConcurrent/QtConcurrent>
 #include <QThreadPool>
-#include <QFileIconProvider>
 #include <QDir>
 #include <QGuiApplication>
 #include <QCursor>
@@ -48,7 +47,6 @@ struct SortedImageModel::Impl
     int cachedIconHeight = 1;
     
     QTimer layoutChangedTimer;
-    QFileIconProvider iconProvider;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}

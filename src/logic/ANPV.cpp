@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
 #include <QSplashScreen>
+#include <QFileIconProvider>
 #include <QScreen>
 #include <QtDebug>
 #include <QFileInfo>
@@ -47,6 +48,9 @@
 struct ANPV::Impl
 {
     ANPV* q;
+    
+    // normal objects without parent
+    QScopedPointer<QAbstractFileIconProvider> iconProvider;
     
     // QObjects without parent
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
@@ -125,7 +129,11 @@ ANPV::ANPV(QSplashScreen *splash)
         ::global = QPointer<ANPV>(this);
     }
     
+    d->iconProvider.reset(new QFileIconProvider());
+    d->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
+    
     d->dirModel = new QFileSystemModel(this);
+    d->dirModel->setIconProvider(this->iconProvider());
     d->dirModel->setRootPath("");
     d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
@@ -143,6 +151,8 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
+    
+    splash->showMessage("ANPV initialized, waiting for Qt-Framework getting it's events processed...");
     splash->finish(d->mainWindow.get());
     
     
@@ -174,6 +184,11 @@ ANPV::ANPV(QSplashScreen *splash)
 ANPV::~ANPV()
 {
     d->writeSettings();
+}
+
+QAbstractFileIconProvider* ANPV::iconProvider()
+{
+    return d->iconProvider.get();
 }
 
 QFileSystemModel* ANPV::dirModel()
