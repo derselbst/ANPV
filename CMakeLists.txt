@@ -118,7 +118,6 @@ include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 #include_directories("${CMAKE_BINARY_DIR}/kitemviews/src")
 
 add_library(anpv-lib STATIC
-main.cpp
 src/widgets/AfPointOverlay.cpp
 src/widgets/AfPointOverlay.hpp
 src/widgets/CancellableProgressDialog.hpp
@@ -140,19 +139,19 @@ src/widgets/ThumbnailListView.hpp
 src/decoders/DecoderFactory.hpp
 src/decoders/DecoderFactory.cpp
 src/decoders/DecodingState.hpp
-ExifWrapper.cpp
-ExifWrapper.hpp
-Image.cpp
-Image.hpp
-MoonPhase.cpp
-MoonPhase.hpp
 src/decoders/SmartImageDecoder.cpp
 src/decoders/SmartImageDecoder.hpp
 src/decoders/SmartJpegDecoder.cpp
 src/decoders/SmartJpegDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
+src/logic/ExifWrapper.cpp
+src/logic/ExifWrapper.hpp
 src/logic/Formatter.hpp
+src/logic/Image.cpp
+src/logic/Image.hpp
+src/logic/MoonPhase.cpp
+src/logic/MoonPhase.hpp
 src/logic/UserCancellation.hpp
 src/logic/xThreadGuard.hpp
 src/logic/TraceTimer.cpp
@@ -166,7 +165,8 @@ target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LI
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders)
 
-add_executable(anpv)
-target_link_libraries(anpv PRIVATE anpv-lib)
+add_executable(anpv "main.cpp")
+target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
+target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
 
 add_subdirectory(test)
