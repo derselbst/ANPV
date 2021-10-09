@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     QObject::connect(dialog, &QObject::destroyed, &app, &QCoreApplication::quit, Qt::QueuedConnection);
     dialog->show();
 
-    CancellableProgressWidget *progWid = new CancellableProgressWidget(fut, nullptr, mainWindow.data());
+    CancellableProgressWidget *progWid = new CancellableProgressWidget(fut, nullptr);
     mainWindow->setCentralWidget(progWid);
     mainWindow->show();
     
