@@ -40,6 +40,8 @@ public:
     Image(const Image&) = delete;
     Image& operator=(const Image&) = delete;
     
+    bool hasDecoder() const;
+    
     const QFileInfo& fileInfo() const;
     QSize size() const;
     
@@ -65,6 +67,7 @@ signals:
     void thumbnailChanged();
 
 protected:
+    void setHasDecoder(bool);
     void setSize(QSize);
     void setDefaultTransform(QTransform);
     void setThumbnail(QImage);

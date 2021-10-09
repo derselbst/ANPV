@@ -319,7 +319,7 @@ struct MainWindow::Impl
         QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir.absolutePath());
         ui->fileSystemTreeView->setCurrentIndex(mo);
         
-        // if the newDir was triggered by an activiation, do not scroll around
+        // if the newDir was triggered by an activiation in the treeView, do not scroll around
         if(newDir != rememberedActivatedDir)
         {
             // vertically scroll to center

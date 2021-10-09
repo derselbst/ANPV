@@ -16,8 +16,11 @@
 
 struct Image::Impl
 {
-    std::recursive_mutex m;
+    mutable std::recursive_mutex m;
 
+    // set to true, once any SmartImageDecoder has been created for this Image, otherwise stays false
+    bool hasDecoder = false;
+    
     // file path to the decoded input file
     const QFileInfo fileInfo;
     
@@ -65,6 +68,18 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
 Image::~Image()
 {
     xThreadGuard g(this);
+}
+
+bool Image::hasDecoder() const
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    return d->hasDecoder;
+}
+
+void Image::setHasDecoder(bool b)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    d->hasDecoder = b;
 }
 
 const QFileInfo& Image::fileInfo() const

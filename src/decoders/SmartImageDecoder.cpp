@@ -92,6 +92,7 @@ struct SmartImageDecoder::Impl
 
 SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr) : d(std::make_unique<Impl>(this, image, arr))
 {
+    image->setHasDecoder(true);
     this->setAutoDelete(false);
 }
 
@@ -249,7 +250,17 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             // if thumbnail is still null and no roi has been given, set it
             if (this->image()->thumbnail().isNull() && !roiRect.isValid())
             {
-                this->image()->setThumbnail(decodedImg.scaled(500, 500, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                QSize thumbnailSize;
+                static const QSize thumbnailSizeMax(500,500);
+                if(thumbnailSizeMax.width() * thumbnailSizeMax.height() < desiredResolution.width() * desiredResolution.height())
+                {
+                    thumbnailSize = thumbnailSizeMax;
+                }
+                else
+                {
+                    thumbnailSize = desiredResolution;
+                }
+                this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             }
 
             this->setDecodingState(targetState);
