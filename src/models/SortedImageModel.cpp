@@ -414,11 +414,11 @@ struct SortedImageModel::Impl
         
         // move both objects to the UI thread to ensure proper signal delivery
         image->moveToThread(QGuiApplication::instance()->thread());
-        decoder->moveToThread(QGuiApplication::instance()->thread());
         entries.push_back(image);
         
         if(decoder)
         {
+            decoder->moveToThread(QGuiApplication::instance()->thread());
             try
             {
                 QSize iconSize(iconHeight, iconHeight);
@@ -439,9 +439,7 @@ struct SortedImageModel::Impl
                     }
                     
                     watcher.reset(new QFutureWatcher<DecodingState>(), &QObject::deleteLater);
-                    // decode asynchronously
-                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
-                    watcher->setFuture(fut);
+                    watcher->moveToThread(QGuiApplication::instance()->thread());
                     
                     connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, q,
                             [=](SmartImageDecoder* dec, quint32 newState, quint32 old)
@@ -450,6 +448,10 @@ struct SortedImageModel::Impl
                     connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, q,
                             [=](){ onDecodingTaskFinished(decoder); }
                         );
+
+                    // decode asynchronously
+                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
+                    watcher->setFuture(fut);
                 }
             }
             catch(const std::exception& e)

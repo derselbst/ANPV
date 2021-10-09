@@ -56,6 +56,7 @@ struct CancellableProgressWidget::Impl
     {
         this->ui->progressBar->setStyleSheet(getProgressStyle(DecodingState::Ready));
         this->ui->cancelButton->setEnabled(true);
+        this->ui->label->setText("undefined");
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     }
 

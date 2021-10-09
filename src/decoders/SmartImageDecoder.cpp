@@ -111,6 +111,7 @@ SmartImageDecoder::~SmartImageDecoder()
     }
     
     this->close();
+    d->releaseFullImage();
 }
 
 QSharedPointer<Image> SmartImageDecoder::image()

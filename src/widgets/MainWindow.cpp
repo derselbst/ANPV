@@ -46,36 +46,26 @@
 
 struct MainWindow::Impl
 {
-    MainWindow* q;
+    MainWindow* q = nullptr;
     std::unique_ptr<Ui::MainWindow> ui = std::make_unique<Ui::MainWindow>();
     
-    QUndoStack* undoStack;
+    QUndoStack* undoStack = nullptr;
     
     std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
-    QVBoxLayout* progressWidgetLayout;
-    QWidget* progressWidgetContainer;
-    QStackedLayout* stackedLayout;
-    QWidget *stackedLayoutWidget;
-    DocumentView* imageViewer;
+    QVBoxLayout* progressWidgetLayout = nullptr;
+    QWidget* progressWidgetContainer = nullptr;
     
-    SortedImageModel* fileModel;
+    SortedImageModel* fileModel = nullptr;
     
-    QMenu* menuFile;
-    QMenu* menuView;
-    QMenu* menuEdit;
-    QMenu* menuSort;
-    
-    QAction* actionSortFileName;
-    QAction* actionSortFileSize;
-    QActionGroup* actionGroupSortColumn;
-    QActionGroup* actionGroupSortOrder;
-    QActionGroup* actionGroupFileOperation;
-    QActionGroup* actionGroupViewMode;
+    QActionGroup* actionGroupSortColumn = nullptr;
+    QActionGroup* actionGroupSortOrder = nullptr;
+    QActionGroup* actionGroupFileOperation = nullptr;
+    QActionGroup* actionGroupViewMode = nullptr;
         
-    QAction *actionUndo;
-    QAction *actionRedo;
-    QAction *actionFileOperationConfigDialog;
-    QAction *actionExit;
+    QAction *actionUndo = nullptr;
+    QAction *actionRedo = nullptr;
+    QAction *actionFileOperationConfigDialog = nullptr;
+    QAction *actionExit = nullptr;
     
     Impl(MainWindow* parent) : q(parent)
     {
@@ -328,8 +318,9 @@ struct MainWindow::Impl
             ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
         rememberedActivatedDir = QDir();
-//             auto fut = d->fileModel->changeDirAsync(dir);
-//             d->anpv->addBackgroundTask(ProgressGroup::Directory, fut);
+        
+        auto fut = fileModel->changeDirAsync(newDir);
+        q->addBackgroundTask(ProgressGroup::Directory, fut);
     }
 };
 
@@ -341,6 +332,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->undoStack = new QUndoStack(this);
     
     splash->showMessage("Creating MainWindow Widgets");
+    d->fileModel = new SortedImageModel(this);
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
@@ -356,13 +348,17 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
     
+    d->ui->thumbnailListView->setModel(d->fileModel);
     
-    
+    d->progressWidgetLayout = new QVBoxLayout(this);
+    d->progressWidgetContainer = new QWidget(this);
+    d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
+    this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
     
     
     splash->showMessage("Connecting MainWindow Signals / Slots");
     
-    connect(d->ui->fileSystemTreeView, &QTreeView::activated, this,  [&](const QModelIndex &idx){d->onTreeActivated(idx);});
+    connect(d->ui->fileSystemTreeView, &QTreeView::activated, this, [&](const QModelIndex &idx){d->onTreeActivated(idx);});
     connect(d->ui->fileSystemTreeView, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
