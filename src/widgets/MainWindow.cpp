@@ -324,15 +324,24 @@ struct MainWindow::Impl
         ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Directory, fut);
     }
     
-    void onIconHeightChanged(int h, int)
+    void onIconHeightChanged(int h, int old)
     {
-        ui->iconSizeSlider->setValue(h);
+        if(old < 0)
+        {
+            // this is the initial change event, set the value of the slider
+            ui->iconSizeSlider->setValue(h);
+        }
         ui->iconSizeSlider->setToolTip(QString("Icon height: %1 px").arg(h));
+    }
+    
+    void onIconSizeSliderValueChanged(int val)
+    {
+        ANPV::globalInstance()->setIconHeight(val);
     }
     
     void onIconSizeSliderMoved(int val)
     {
-        ANPV::globalInstance()->setIconHeight(val);
+        onIconSizeSliderValueChanged(val);
         QToolTip::showText(QCursor::pos(), QString("%1 px").arg(val), nullptr);
     }
 };
@@ -368,8 +377,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
     this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
     
-    d->ui->iconSizeSlider->setMaximum(ANPV::MaxIconHeight);
-    d->ui->iconSizeSlider->setMinimum(0);
+    d->ui->iconSizeSlider->setRange(0, ANPV::MaxIconHeight);
     
     splash->showMessage("Connecting MainWindow Signals / Slots");
     
@@ -382,6 +390,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
+    connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::QueuedConnection);
+    
     
     
     d->readSettings();
