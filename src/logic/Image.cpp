@@ -224,9 +224,7 @@ QPixmap Image::icon(int height)
     }
     
     pix = pix.scaledToHeight(height, Qt::FastTransformation);
-    
-    d->thumbnailTransformed = pix;
-    return d->thumbnailTransformed;
+    return pix;
 }
 
 QSharedPointer<ExifWrapper> Image::exif()
