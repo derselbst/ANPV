@@ -6,6 +6,7 @@
 #include "ExifWrapper.hpp"
 #include "xThreadGuard.hpp"
 #include "Image.hpp"
+#include "ANPV.hpp"
 
 #include <QtDebug>
 #include <QPromise>
@@ -210,7 +211,6 @@ void SmartImageDecoder::init()
 
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
-    xThreadGuard g(this);
     d->assertNotDecoding();
     
     d->targetState = targetState;
@@ -252,7 +252,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             if (this->image()->thumbnail().isNull() && !roiRect.isValid())
             {
                 QSize thumbnailSize;
-                static const QSize thumbnailSizeMax(500,500);
+                static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
                 if(thumbnailSizeMax.width() * thumbnailSizeMax.height() < desiredResolution.width() * desiredResolution.height())
                 {
                     thumbnailSize = thumbnailSizeMax;

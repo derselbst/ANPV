@@ -25,6 +25,7 @@
 #include "ExifWrapper.hpp"
 #include "xThreadGuard.hpp"
 #include "Image.hpp"
+#include "ANPV.hpp"
 
 
 struct SortedImageModel::Impl
@@ -43,7 +44,8 @@ struct SortedImageModel::Impl
     Column currentSortedCol = Column::FileName;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
     
-    int iconHeight = 150;
+    // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
+    int cachedIconHeight = 1;
     
     QTimer layoutChangedTimer;
     QFileIconProvider iconProvider;
@@ -421,6 +423,7 @@ struct SortedImageModel::Impl
             decoder->moveToThread(QGuiApplication::instance()->thread());
             try
             {
+                int iconHeight = cachedIconHeight;
                 QSize iconSize(iconHeight, iconHeight);
                 decoder->open();
                 
@@ -510,6 +513,12 @@ struct SortedImageModel::Impl
         }
         q->endResetModel();
     }
+    
+    void onIconHeightChanged(int v)
+    {
+        cachedIconHeight = v;
+        this->forceUpdateLayout();
+    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -522,6 +531,8 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
     
     d->watcher = new QFileSystemWatcher(parent);
     connect(d->watcher, &QFileSystemWatcher::directoryChanged, this, [&](const QString& p){ d->onDirectoryChanged(p);});
+    
+    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int v){d->onIconHeightChanged(v);});
 }
 
 SortedImageModel::~SortedImageModel()
@@ -695,7 +706,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             return fileInfo.fileName();
 
         case Qt::DecorationRole:
-            return e->icon(iconHeight());
+            return e->icon(d->cachedIconHeight);
 
         case Qt::ToolTipRole:
             return e->formatInfoString();
@@ -770,19 +781,6 @@ void SortedImageModel::sort(Qt::SortOrder order)
 {
     this->sort(d->currentSortedCol, order);
 }
-
-int SortedImageModel::iconHeight() const
-{
-    return d->iconHeight;
-}
-
-void SortedImageModel::setIconHeight(int iconHeight)
-{
-    emit this->layoutAboutToBeChanged();
-    d->iconHeight = std::max(iconHeight, 1);
-    emit this->layoutChanged();
-}
-
 
 QModelIndex SortedImageModel::index(const QFileInfo& info)
 {

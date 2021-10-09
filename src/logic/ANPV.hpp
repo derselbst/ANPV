@@ -50,6 +50,7 @@ class ANPV : public QObject
 Q_OBJECT
 
 public:
+    static constexpr int MaxIconHeight = 500/*px*/;
     static ANPV* globalInstance();
 
     ANPV(QSplashScreen *splash);
@@ -78,6 +79,9 @@ public:
     
     SortedImageModel::Column primarySortColumn();
     void setPrimarySortColumn(SortedImageModel::Column);
+    
+    int iconHeight();
+    void setIconHeight(int);
 
 signals:
     void currentDirChanged(QDir dir, QDir old);
@@ -85,6 +89,7 @@ signals:
     void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
     void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
     void primarySortColumnChanged(SortedImageModel::Column newCol, SortedImageModel::Column old);
+    void iconHeightChanged(int h, int old);
     
 public slots:
     void about();

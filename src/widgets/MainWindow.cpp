@@ -30,6 +30,7 @@
 #include <QMessageBox>
 #include <QPair>
 #include <QPointer>
+#include <QToolTip>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -320,7 +321,19 @@ struct MainWindow::Impl
         rememberedActivatedDir = QDir();
         
         auto fut = fileModel->changeDirAsync(newDir);
-        q->addBackgroundTask(ProgressGroup::Directory, fut);
+        ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Directory, fut);
+    }
+    
+    void onIconHeightChanged(int h, int)
+    {
+        ui->iconSizeSlider->setValue(h);
+        ui->iconSizeSlider->setToolTip(QString("Icon height: %1 px").arg(h));
+    }
+    
+    void onIconSizeSliderMoved(int val)
+    {
+        ANPV::globalInstance()->setIconHeight(val);
+        QToolTip::showText(QCursor::pos(), QString("%1 px").arg(val), nullptr);
     }
 };
 
@@ -355,6 +368,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
     this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
     
+    d->ui->iconSizeSlider->setMaximum(ANPV::MaxIconHeight);
+    d->ui->iconSizeSlider->setMinimum(0);
     
     splash->showMessage("Connecting MainWindow Signals / Slots");
     
@@ -363,9 +378,10 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
     
-    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QDir newD, QDir old){ d->onCurrentDirChanged(newD,old);});
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QDir newD, QDir old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
+    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
     
-    
+    connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
     
     
     d->readSettings();

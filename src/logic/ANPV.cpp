@@ -48,15 +48,6 @@ struct ANPV::Impl
 {
     ANPV* q;
     
-//     QUndoStack* undoStack;
-//     std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
-//     QVBoxLayout* progressWidgetLayout;
-//     QWidget* progressWidgetContainer;
-//     QStackedLayout* stackedLayout;
-//     QWidget *stackedLayoutWidget;
-//     DocumentView* imageViewer;
-//     ThumbnailView* thumbnailViewer;
-    
     // QObjects without parent
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
     
@@ -68,6 +59,7 @@ struct ANPV::Impl
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
     SortedImageModel::Column primarySortColumn = SortedImageModel::Column::Unknown;
+    int iconHeight = -1;
     
     Impl(ANPV* parent) : q(parent)
     {
@@ -82,6 +74,7 @@ struct ANPV::Impl
         settings.setValue("viewFlags", q->viewFlags());
         settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
         settings.setValue("primarySortColumn", static_cast<int>(q->primarySortColumn()));
+        settings.setValue("iconHeight", q->iconHeight());
     }
 
     void readSettings()
@@ -93,6 +86,7 @@ struct ANPV::Impl
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::None)).toUInt());
         q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
         q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
+        q->setIconHeight(settings.value("iconHeight", 150).toInt());
     }
     
     void onImageNavigate(const QString& url, int stepsForward)
@@ -290,6 +284,24 @@ void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
         emit this->primarySortColumnChanged(col, old);
     }
 }
+
+int ANPV::iconHeight()
+{
+    xThreadGuard(this);
+    return d->iconHeight;
+}
+
+void ANPV::setIconHeight(int h)
+{
+    xThreadGuard(this);
+    int old = d->iconHeight;
+    if(old != h)
+    {
+        d->iconHeight = h;
+        emit iconHeightChanged(h, old);
+    }
+}
+
 /*
 void ANPV::showImageView()
 {

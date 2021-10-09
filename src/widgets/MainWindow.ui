@@ -53,7 +53,10 @@
        <enum>Qt::NoContextMenu</enum>
       </property>
       <property name="toolTip">
-       <string>Icon height: %1 px</string>
+       <string/>
+      </property>
+      <property name="whatsThis">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this slider set the height of the thumbnails (in pixel).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
