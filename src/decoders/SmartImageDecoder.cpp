@@ -44,26 +44,25 @@ struct SmartImageDecoder::Impl
     // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
     std::unique_ptr<unsigned char[]> backingImageBuffer;
     
-    QSharedPointer<QFile> file;
+    QFile file;
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
     
-    Impl(SmartImageDecoder* q, QSharedPointer<Image> image, QByteArray arr) : q(q), image(image), encodedInputFile(arr)
+    Impl(SmartImageDecoder* q, QSharedPointer<Image> image, QByteArray arr) : q(q), image(image), encodedInputFile(arr), file(q)
     {}
     
     void open(const QFileInfo& info)
     {
-        if(this->file && this->file->isOpen())
+        if(this->file.isOpen())
         {
             throw std::logic_error("File is already open!");
         }
         
-        QSharedPointer<QFile> file(new QFile(info.absoluteFilePath()), &QObject::deleteLater);
-        if (!file->open(QIODevice::ReadOnly))
+        this->file.setFileName(info.absoluteFilePath());
+        if (!this->file.open(QIODevice::ReadOnly))
         {
             throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
         }
-        this->file = file;
     }
 
     void setDecodedImage(QImage img)
@@ -164,14 +163,14 @@ void SmartImageDecoder::init()
 {
     try
     {
-        if(!d->file || !d->file->isOpen())
+        if(!d->file.isOpen())
         {
             throw std::logic_error("Decoder must be opened for init()");
         }
         
         // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
-        qint64 mapSize = d->file->size();
-        const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
+        qint64 mapSize = d->file.size();
+        const unsigned char* fileMapped = d->file.map(0, mapSize, QFileDevice::NoOptions);
         
         d->encodedInputBufferSize = mapSize;
         d->encodedInputBufferPtr = fileMapped;
@@ -179,7 +178,7 @@ void SmartImageDecoder::init()
         {
             if(fileMapped == nullptr)
             {
-                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file->fileName().toStdString() << "', error was: " << d->file->errorString().toStdString());
+                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file.fileName().toStdString() << "', error was: " << d->file.errorString().toStdString());
             }
         }
         else
@@ -225,17 +224,33 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
 
 void SmartImageDecoder::run()
 {
-    this->decode(d->targetState, d->desiredResolution, d->roiRect);
+    d->promise->start();
+
+    try
+    {
+        this->decode(d->targetState, d->desiredResolution, d->roiRect);
+        // Immediately close ourself once done. This is important to avoid resource leaks, when the 
+        // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
+        this->close();
+    }
+    catch(...)
+    {
+        Formatter f;
+        f << "Uncaught exception during SmartImageDecoder::run()!";
+        d->errorMessage = f.str().c_str();
+        qCritical() << d->errorMessage;
+        this->setDecodingState(DecodingState::Fatal);
+    }
+
+    // this will not store the result if the future has been canceled already!
+    d->promise->addResult(d->state.load());
+    d->promise->finish();
 }
 
 void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolution, QRect roiRect)
 {
     try
     {
-        if(d->promise)
-        {
-            d->promise->start();
-        }
         this->cancelCallback();
         do
         {
@@ -276,13 +291,6 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
         d->errorMessage = e.what();
         this->setDecodingState(DecodingState::Error);
     }
-
-    if(d->promise)
-    {
-        // this will not store the result if the future has been canceled already!
-        d->promise->addResult(d->state.load());
-        d->promise->finish();
-    }
 }
 
 void SmartImageDecoder::close()
@@ -291,10 +299,9 @@ void SmartImageDecoder::close()
 
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
-    if(d->file)
+    if(d->file.isOpen())
     {
-        d->file->close();
-        d->file = nullptr;
+        d->file.close();
     }
 }
 
