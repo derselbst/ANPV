@@ -228,6 +228,7 @@ void SmartImageDecoder::run()
 
     try
     {
+        this->open();
         this->decode(d->targetState, d->desiredResolution, d->roiRect);
         // Immediately close ourself once done. This is important to avoid resource leaks, when the 
         // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.

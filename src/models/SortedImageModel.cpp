@@ -423,10 +423,10 @@ struct SortedImageModel::Impl
             {
                 int iconHeight = cachedIconHeight;
                 QSize iconSize(iconHeight, iconHeight);
-                decoder->open();
                 
                 if(sortedColumnNeedsPreloadingMetadata())
                 {
+                    decoder->open();
                     // decode synchronously
                     decoder->decode(DecodingState::Metadata, iconSize);
                 }
