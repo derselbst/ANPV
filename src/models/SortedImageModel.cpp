@@ -31,12 +31,14 @@ struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
-    std::atomic<int> runningBackgroundTasks{0};
     std::unique_ptr<QPromise<DecodingState>> directoryWorker;
     
     QFileSystemWatcher* watcher = nullptr;
     QDir currentDir;
     std::vector<QSharedPointer<Image>> entries;
+    
+    // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
+    std::mutex m;
     QMap<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
     
     // The column which is currently sorted
@@ -353,12 +355,39 @@ struct SortedImageModel::Impl
             directoryWorker->future().cancel();
             directoryWorker->future().waitForFinished();
         }
+        entries.clear();
         
-        if(!backgroundTasks.empty())
         {
-            layoutChangedTimer.stop();
-            backgroundTasks.clear();
-            QGuiApplication::restoreOverrideCursor();
+            std::lock_guard<std::mutex> l(m);
+            if(!backgroundTasks.empty())
+            {
+                QMapIterator i(backgroundTasks);
+                while (i.hasNext())
+                {
+                    auto& decoder = i.key();
+                    decoder->disconnect(q);
+                    (void)QThreadPool::globalInstance()->tryTake(decoder.get());
+                    auto& future = i.value();
+                    future->disconnect(q);
+                    future->cancel();
+                }
+
+                i.toFront();
+                while (i.hasNext())
+                {
+                    auto& future = i.value();
+                    if(future->isStarted())
+                    {
+                        // wait until the tasks have finished, because the clear() below will destroy the decoders, and it's not good if that happens while the decoder is still decoding
+                        future->waitForFinished();
+                    }
+                    else
+                    {} // unstarted tasks will never start, because we've removed them from the queue
+                }
+                layoutChangedTimer.stop();
+                backgroundTasks.clear();
+                QGuiApplication::restoreOverrideCursor();
+            }
         }
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
@@ -366,7 +395,7 @@ struct SortedImageModel::Impl
         currentDir = QDir();
     }
 
-    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
+    void onBackgroundImageTaskStateChanged(SmartImageDecoder*, quint32 newState, quint32)
     {
         xThreadGuard g(q);
         if(newState == DecodingState::Ready)
@@ -382,9 +411,17 @@ struct SortedImageModel::Impl
     void onDecodingTaskFinished(QSharedPointer<SmartImageDecoder> dec)
     {
         xThreadGuard g(q);
-        
-        backgroundTasks.remove(dec);
-        if(backgroundTasks.empty())
+
+        size_t itemsRemoved;
+        bool isEmpty;
+        {
+            std::lock_guard<std::mutex> l(m);
+            
+            itemsRemoved = backgroundTasks.remove(dec);
+            isEmpty = backgroundTasks.empty();
+        }
+
+        if(itemsRemoved > 0 && isEmpty)
         {
             layoutChangedTimer.stop();
             forceUpdateLayout();
@@ -439,6 +476,8 @@ struct SortedImageModel::Impl
                 }
                 else
                 {
+                    std::lock_guard<std::mutex> l(m);
+
                     auto& watcher = backgroundTasks[decoder];
                     if(!watcher.isNull())
                     {
@@ -452,10 +491,13 @@ struct SortedImageModel::Impl
                     connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, q,
                             [=](SmartImageDecoder* dec, quint32 newState, quint32 old)
                             { onBackgroundImageTaskStateChanged(dec, newState, old); }
-                        );
+                        , Qt::QueuedConnection);
                     connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, q,
                             [=](){ onDecodingTaskFinished(decoder); }
-                        );
+                        , Qt::QueuedConnection);
+                    connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, q,
+                            [=](){ onDecodingTaskFinished(decoder); }
+                        , Qt::QueuedConnection);
 
                     // decode asynchronously
                     auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
@@ -551,6 +593,7 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
     d->clear();
     
     d->currentDir = dir;
+    this->endRemoveRows();
 
     QThreadPool::globalInstance()->start(this, static_cast<int>(Priority::Normal));
 
@@ -563,8 +606,6 @@ void SortedImageModel::run()
     try
     {
         d->directoryWorker->start();
-        d->setStatusMessage(0, "Clearing old entries");
-        d->entries.clear();
         
         d->setStatusMessage(0, "Looking up directory");
         QFileInfoList fileInfoList = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
@@ -631,7 +672,6 @@ void SortedImageModel::run()
         d->setStatusMessage(entriesProcessed, "Fatal error occurred while loading the directory");
         d->directoryWorker->addResult(DecodingState::Error);
     }
-    this->endRemoveRows();
     d->directoryWorker->finish();
 }
 
