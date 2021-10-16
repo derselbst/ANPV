@@ -353,6 +353,13 @@ struct SortedImageModel::Impl
             directoryWorker->future().cancel();
             directoryWorker->future().waitForFinished();
         }
+        
+        if(!backgroundTasks.empty())
+        {
+            layoutChangedTimer.stop();
+            backgroundTasks.clear();
+            QGuiApplication::restoreOverrideCursor();
+        }
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
         watcher->removePath(currentDir.absolutePath());
