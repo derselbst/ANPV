@@ -103,6 +103,8 @@
     <addaction name="actionNo_Change"/>
     <addaction name="actionFit_in_FOV"/>
     <addaction name="actionCenter_AF_focus_point"/>
+    <addaction name="separator"/>
+    <addaction name="actionReload"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -360,6 +362,14 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically rotates the image as indicated by the EXIF metadata. If no such information is available, landscape orientation will be used by default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionReload">
+   <property name="text">
+    <string>Reload</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
    </property>
   </action>
  </widget>
