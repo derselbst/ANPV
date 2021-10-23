@@ -29,6 +29,7 @@
 #include "AfPointOverlay.hpp"
 #include "SmartImageDecoder.hpp"
 #include "ANPV.hpp"
+#include "Image.hpp"
 #include "DecoderFactory.hpp"
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
@@ -92,7 +93,16 @@ struct ThumbnailListView::Impl
     
     void openSelectionInternally()
     {
-        ANPV::globalInstance()->openImages(this->selectedImages());
+        QList<QSharedPointer<Image>> imgs = this->selectedImages();
+        
+        if(imgs.size() == 1 && imgs[0]->fileInfo().isDir())
+        {
+            ANPV::globalInstance()->setCurrentDir(imgs[0]->fileInfo().absoluteFilePath());
+        }
+        else
+        {
+            ANPV::globalInstance()->openImages(imgs);
+        }
     }
     
     void openSelectionExternally()

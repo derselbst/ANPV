@@ -57,7 +57,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void openImages(QList<QSharedPointer<Image>>);
+    void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView(QSharedPointer<Image> img);
 
     void addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut);

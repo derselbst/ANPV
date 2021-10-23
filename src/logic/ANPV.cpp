@@ -328,7 +328,7 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
     d->mainWindow->setCurrentIndex(img);
 }
 
-void ANPV::openImages(QList<QSharedPointer<Image>> image)
+void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
     mdv->addImages(image);

@@ -16,7 +16,7 @@ public:
     MultiDocumentView(QWidget *parent);
     ~MultiDocumentView() override;
 
-    void addImages(QList<QSharedPointer<Image>> img);
+    void addImages(const QList<QSharedPointer<Image>>& img);
     void keyPressEvent(QKeyEvent *event) override;
 private:
     struct Impl;

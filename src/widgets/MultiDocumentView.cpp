@@ -41,7 +41,7 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
 
 MultiDocumentView::~MultiDocumentView() = default;
 
-void MultiDocumentView::addImages(QList<QSharedPointer<Image>> image)
+void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image)
 {
     for(auto& i : image)
     {
