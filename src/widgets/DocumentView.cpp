@@ -29,7 +29,6 @@
 
 struct DocumentView::Impl
 {
-    ANPV* anpv;
     DocumentView* p;
     
     QTimer fovChangedTimer;
@@ -95,7 +94,7 @@ struct DocumentView::Impl
         if(currentImageDecoder)
         {
             currentImageDecoder->disconnect(p);
-            currentImageDecoder->releaseFullImage();
+            currentImageDecoder->reset();
             currentImageDecoder = nullptr;
         }
         
@@ -232,11 +231,9 @@ struct DocumentView::Impl
     }
 };
 
-DocumentView::DocumentView(ANPV *parent)
+DocumentView::DocumentView(QWidget *parent)
  : QGraphicsView(parent), d(std::make_unique<Impl>(this))
 {
-    d->anpv = parent;
-    
     this->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     this->setResizeAnchor(QGraphicsView::AnchorUnderMouse);
     this->setWindowState(Qt::WindowMaximized);
@@ -330,7 +327,7 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     {
         case Qt::Key_Escape:
             d->clearScene();
-            d->anpv->showThumbnailView();
+            ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
             break;
         case Qt::Key_Space:
             if(d->currentImageDecoder)
@@ -381,7 +378,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::Metadata:
     {
         this->setSceneRect(QRectF(QPointF(0,0), dec->image()->size()));
-        auto viewMode = d->anpv->viewMode();
+        auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             this->resetTransform();
@@ -412,7 +409,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
             }
         }
         d->addThumbnailPreview(dec->image()->thumbnail(), dec->image()->size());
-        d->exifOverlay->setMetadata(dec);
+        d->exifOverlay->setMetadata(dec->image());
         break;
     }
     case DecodingState::PreviewImage:
@@ -422,7 +419,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
             
             std::vector<AfPoint> p;
             QSize s;
-            if(dec->exif()->autoFocusPoints(p,s))
+            if(dec->image()->exif()->autoFocusPoints(p,s))
             {
                 d->addAfPoints(std::make_unique<AfPointOverlay>(p,s));
             }
@@ -507,7 +504,7 @@ void DocumentView::loadImage()
     QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);
-    d->anpv->addBackgroundTask(ProgressGroup::Image, fut);
+    ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Image, fut);
 }
 
 QFileInfo DocumentView::currentFile()

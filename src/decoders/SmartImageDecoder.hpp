@@ -47,8 +47,6 @@ public:
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     
-    ExifWrapper* exif();
-    
     void open();
     void init();
     void run() override;

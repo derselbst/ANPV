@@ -21,7 +21,7 @@ class DocumentView : public QGraphicsView
 Q_OBJECT
 
 public:
-    DocumentView(ANPV *parent);
+    DocumentView(QWidget *parent);
     ~DocumentView() override;
 
     QFileInfo currentFile();

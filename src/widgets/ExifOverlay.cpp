@@ -39,7 +39,7 @@ ExifOverlay::ExifOverlay(QWidget* parent)
 
 ExifOverlay::~ExifOverlay() = default;
 
-void ExifOverlay::setMetadata(Image* dec)
+void ExifOverlay::setMetadata(QSharedPointer<Image> dec)
 {
     QString s = dec->formatInfoString();
     

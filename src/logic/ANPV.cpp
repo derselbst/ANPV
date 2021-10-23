@@ -317,17 +317,20 @@ void ANPV::setIconHeight(int h)
     }
 }
 
+void ANPV::showThumbnailView(QSharedPointer<Image> img)
+{
+    d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    d->mainWindow->raise();
+    d->mainWindow->activateWindow();
+    d->mainWindow->setCurrentIndex(img);
+}
+
 /*
 void ANPV::showImageView()
 {
     d->stackedLayout->setCurrentWidget(d->imageViewer);
 }
 
-void ANPV::showThumbnailView()
-{
-    d->thumbnailViewer->scrollToCurrentImage();
-    d->stackedLayout->setCurrentWidget(d->thumbnailViewer);
-}
 
 void ANPV::loadImage(QFileInfo inf)
 {

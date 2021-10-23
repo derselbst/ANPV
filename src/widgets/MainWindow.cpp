@@ -442,3 +442,8 @@ void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
     }
 }
 
+
+void MainWindow::setCurrentIndex(QSharedPointer<Image> img)
+{
+    // NYI
+}

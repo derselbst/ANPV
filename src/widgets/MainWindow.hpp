@@ -11,6 +11,7 @@
 #include "ANPV.hpp"
 
 class QUndoCommand;
+class Image;
 class MoveFileCommand;
 class QSplashScreen;
 class SmartImageDecoder;
@@ -33,6 +34,7 @@ public:
     
 public slots:
     void hideProgressWidget(CancellableProgressWidget* w);
+    void setCurrentIndex(QSharedPointer<Image>);
     
 private:
     struct Impl;

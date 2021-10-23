@@ -96,7 +96,7 @@ signals:
 public slots:
     void about();
 //     void showImageView();
-//     void showThumbnailView();
+    void showThumbnailView(QSharedPointer<Image> img);
 //     void loadImage(QFileInfo str);
 //     void loadImage(QSharedPointer<SmartImageDecoder> dec);
     

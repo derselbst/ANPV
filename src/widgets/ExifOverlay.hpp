@@ -2,6 +2,7 @@
 #pragma once
 
 #include <memory>
+#include <QSharedPointer>
 #include "MessageWidget.hpp"
 
 class Image;
@@ -17,7 +18,7 @@ public:
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
-    void setMetadata(Image*);
+    void setMetadata(QSharedPointer<Image>);
 
 private:
     struct Impl;
