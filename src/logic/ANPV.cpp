@@ -31,6 +31,7 @@
 #include <QPair>
 #include <QPointer>
 #include <QSettings>
+#include <QTabWidget>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -42,6 +43,7 @@
 #include "FileOperationConfigDialog.hpp"
 #include "CancellableProgressWidget.hpp"
 #include "xThreadGuard.hpp"
+#include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
 
 
@@ -325,13 +327,15 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
     d->mainWindow->setCurrentIndex(img);
 }
 
-/*
-void ANPV::showImageView()
+void ANPV::openImages(QList<QSharedPointer<Image>> image)
 {
-    d->stackedLayout->setCurrentWidget(d->imageViewer);
+    MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
+    mdv->addImages(image);
+    mdv->show();
 }
 
 
+/*
 void ANPV::loadImage(QFileInfo inf)
 {
     this->setWindowTitle(inf.fileName());

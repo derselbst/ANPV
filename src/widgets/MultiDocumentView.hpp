@@ -2,18 +2,13 @@
 #pragma once
 
 #include <memory>
-#include <QTabWidget>
+#include <QMainWindow>
+#include <QList>
 
-class ANPV;
 class Image;
-class QGraphicsScene;
 class QWidget;
-class QPixmap;
-class QWheelEvent;
-class QEvent;
-class SmartImageDecoder;
 
-class MultiDocumentView : public QTabWidget
+class MultiDocumentView : public QMainWindow
 {
 Q_OBJECT
 
@@ -21,6 +16,7 @@ public:
     MultiDocumentView(QWidget *parent);
     ~MultiDocumentView() override;
 
+    void addImages(QList<QSharedPointer<Image>> img);
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

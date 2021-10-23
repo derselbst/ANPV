@@ -92,10 +92,23 @@ struct ThumbnailListView::Impl
     
     void openSelectionInternally()
     {
+        ANPV::globalInstance()->openImages(this->selectedImages());
     }
     
     void openSelectionExternally()
     {
+    }
+    
+    QList<QSharedPointer<Image>> selectedImages()
+    {
+        QList<QSharedPointer<Image>> images;
+        QModelIndexList selectedIdx = q->selectionModel()->selectedRows();
+        
+        for(int i=0; i<selectedIdx.size(); i++)
+        {
+            images.push_back(this->model->data(selectedIdx[i]));
+        }
+        return images;
     }
 };
 

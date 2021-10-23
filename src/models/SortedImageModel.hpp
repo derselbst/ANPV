@@ -48,6 +48,7 @@ public:
     QModelIndex index(const QFileInfo& info);
     QFileInfo fileInfo(const QModelIndex& idx) const;
     QSharedPointer<Image> goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idx);
+    QSharedPointer<Image> data(const QModelIndex &index);
 
     void sort(Column column);
     void sort(Qt::SortOrder order);

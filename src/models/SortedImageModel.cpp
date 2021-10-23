@@ -675,6 +675,15 @@ void SortedImageModel::run()
     d->directoryWorker->finish();
 }
 
+QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx)
+{
+    if(idx.isValid() && idx.row() < d->entries.size())
+    {
+        return d->entries[idx.row()];
+    }
+    return nullptr;
+}
+
 QSharedPointer<Image> SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idxOut)
 {
     int step = (stepsFromCurrent < 0) ? -1 : 1;

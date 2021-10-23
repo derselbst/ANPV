@@ -57,6 +57,9 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
+    void openImages(QList<QSharedPointer<Image>>);
+    void showThumbnailView(QSharedPointer<Image> img);
+
     void addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut);
     void hideProgressWidget(CancellableProgressWidget* w);
     
@@ -95,8 +98,6 @@ signals:
     
 public slots:
     void about();
-//     void showImageView();
-    void showThumbnailView(QSharedPointer<Image> img);
 //     void loadImage(QFileInfo str);
 //     void loadImage(QSharedPointer<SmartImageDecoder> dec);
     

@@ -133,6 +133,8 @@ src/widgets/FileOperationConfigDialog.hpp
 src/widgets/FileOperationConfigDialog.ui
 src/widgets/MessageWidget.cpp
 src/widgets/MessageWidget.hpp
+src/widgets/MultiDocumentView.cpp
+src/widgets/MultiDocumentView.hpp
 src/widgets/MainWindow.cpp
 src/widgets/MainWindow.hpp
 src/widgets/MainWindow.ui
