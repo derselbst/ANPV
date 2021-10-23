@@ -126,6 +126,8 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     
     d->q = this;
 
+    connect(this, &QListView::activated, this, [&](const QModelIndex &index){ d->openSelectionInternally(); });
+
     d->actionOpenSelectionInternally = new QAction("Open", this);
     connect(d->actionOpenSelectionInternally, &QAction::triggered, this, [&](){ d->openSelectionInternally(); });
     
