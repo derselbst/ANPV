@@ -564,7 +564,7 @@ struct SortedImageModel::Impl
     void onIconHeightChanged(int v)
     {
         cachedIconHeight = v;
-        this->forceUpdateLayout();
+        this->updateLayout();
     }
 };
 
@@ -677,7 +677,7 @@ void SortedImageModel::run()
 
 QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx)
 {
-    if(idx.isValid() && idx.row() < d->entries.size())
+    if(idx.isValid() && (unsigned)idx.row() < d->entries.size())
     {
         return d->entries[idx.row()];
     }
