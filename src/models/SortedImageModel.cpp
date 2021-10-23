@@ -39,7 +39,7 @@ struct SortedImageModel::Impl
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::mutex m;
-    QMap<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
+    std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
     
     // The column which is currently sorted
     Column currentSortedCol = Column::FileName;
@@ -361,21 +361,19 @@ struct SortedImageModel::Impl
             std::lock_guard<std::mutex> l(m);
             if(!backgroundTasks.empty())
             {
-                QMapIterator i(backgroundTasks);
-                while (i.hasNext())
+                for (const auto& [key, value] : backgroundTasks)
                 {
-                    auto& decoder = i.key();
+                    auto& decoder = key;
                     decoder->disconnect(q);
                     (void)QThreadPool::globalInstance()->tryTake(decoder.get());
-                    auto& future = i.value();
+                    auto& future = value;
                     future->disconnect(q);
                     future->cancel();
                 }
 
-                i.toFront();
-                while (i.hasNext())
+                for (const auto& [key, value] : backgroundTasks)
                 {
-                    auto& future = i.value();
+                    auto& future = value;
                     if(future->isStarted())
                     {
                         // wait until the tasks have finished, because the clear() below will destroy the decoders, and it's not good if that happens while the decoder is still decoding
@@ -417,7 +415,7 @@ struct SortedImageModel::Impl
         {
             std::lock_guard<std::mutex> l(m);
             
-            itemsRemoved = backgroundTasks.remove(dec);
+            itemsRemoved = backgroundTasks.erase(dec);
             isEmpty = backgroundTasks.empty();
         }
 
@@ -520,6 +518,9 @@ struct SortedImageModel::Impl
         {
             return;
         }
+        
+        return;
+        throw std::logic_error("Implementation is racy");
         
         QFileInfoList fileInfoList = currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
         
