@@ -561,12 +561,6 @@ struct SortedImageModel::Impl
         }
         q->endResetModel();
     }
-    
-    void onIconHeightChanged(int v)
-    {
-        cachedIconHeight = v;
-        this->updateLayout();
-    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -580,7 +574,24 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
     d->watcher = new QFileSystemWatcher(parent);
     connect(d->watcher, &QFileSystemWatcher::directoryChanged, this, [&](const QString& p){ d->onDirectoryChanged(p);});
     
-    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int v){d->onIconHeightChanged(v);});
+    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
+            [&](int v)
+            {
+                d->cachedIconHeight = v;
+                d->updateLayout();
+            });
+
+    connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, this,
+            [&](Qt::SortOrder newOrd, Qt::SortOrder)
+            {
+                this->sort(newOrd);
+            });
+
+    connect(ANPV::globalInstance(), &ANPV::primarySortColumnChanged, this,
+            [&](SortedImageModel::Column newCol, SortedImageModel::Column)
+            {
+                this->sort(newCol);
+            });
 }
 
 SortedImageModel::~SortedImageModel()
