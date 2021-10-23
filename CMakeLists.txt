@@ -124,6 +124,8 @@ src/widgets/CancellableProgressDialog.hpp
 src/widgets/CancellableProgressWidget.cpp
 src/widgets/CancellableProgressWidget.hpp
 src/widgets/CancellableProgressWidget.ui
+src/widgets/DocumentView.cpp
+src/widgets/DocumentView.hpp
 src/widgets/ExifOverlay.cpp
 src/widgets/ExifOverlay.hpp
 src/widgets/FileOperationConfigDialog.cpp
