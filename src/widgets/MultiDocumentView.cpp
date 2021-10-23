@@ -25,6 +25,7 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
     this->move(screenres.topLeft());
     
     d->tw = new QTabWidget(this);
+    d->tw->setTabBarAutoHide(true);
     this->setCentralWidget(d->tw);
     
     this->setAttribute(Qt::WA_DeleteOnClose);
@@ -37,7 +38,8 @@ void MultiDocumentView::addImages(QList<QSharedPointer<Image>> image)
     for(auto& i : image)
     {
         DocumentView* dv = new DocumentView(d->tw);
-        d->tw->addTab(dv, i->fileInfo().fileName());
+        int tabIdx = d->tw->addTab(dv, i->fileInfo().fileName());
+        d->tw->setTabIcon(tabIdx, i->thumbnail());
         dv->loadImage(i);
     }
 }
