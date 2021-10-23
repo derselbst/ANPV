@@ -35,7 +35,6 @@
 #include "MessageWidget.hpp"
 #include "SortedImageModel.hpp"
 #include "MoveFileCommand.hpp"
-#include "ThumbnailView.hpp"
 
 struct ThumbnailListView::Impl
 {

@@ -35,7 +35,6 @@
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
-#include "ThumbnailView.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
 #include "SmartImageDecoder.hpp"
