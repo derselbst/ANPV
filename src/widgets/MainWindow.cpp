@@ -322,6 +322,8 @@ struct MainWindow::Impl
         
         auto fut = fileModel->changeDirAsync(newDir);
         ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Directory, fut);
+        
+        q->setWindowTitle(newDir.absolutePath() + " :: ANPV");
     }
     
     void onIconHeightChanged(int h, int old)

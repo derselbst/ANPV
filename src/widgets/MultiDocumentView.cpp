@@ -13,6 +13,11 @@ struct MultiDocumentView::Impl
 {
     MultiDocumentView* q;
     QTabWidget* tw;
+    
+    void onCurrentTabChanged(int idx)
+    {
+        q->setWindowTitle(tw->tabText(idx));
+    }
 };
 
 MultiDocumentView::MultiDocumentView(QWidget *parent)
@@ -29,6 +34,8 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
     this->setCentralWidget(d->tw);
     
     this->setAttribute(Qt::WA_DeleteOnClose);
+    
+    connect(d->tw, &QTabWidget::currentChanged, this, [&](int index) { d->onCurrentTabChanged(index); });
 }
 
 MultiDocumentView::~MultiDocumentView() = default;
