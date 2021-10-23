@@ -63,7 +63,7 @@ struct DocumentView::Impl
     
     ~Impl()
     {
-        currentImageDecoder = nullptr;
+        this->clearScene();
     }
     
     void clearScene()
@@ -83,12 +83,16 @@ struct DocumentView::Impl
         
         if(!taskFuture.isFinished())
         {
-            taskFuture.cancel();
-            taskFuture.waitForFinished();
-            // We must emit finished() manually here, because the next setFuture() call would prevent finished() signal to be emitted for this current future.
-            emit taskFuture.finished();
-            // Prevent emitting the finished signal twice, in case the next call to setFuture() does not happen, dugh...
-            taskFuture.setFuture(QFuture<DecodingState>());
+            bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
+            if(!taken)
+            {
+                taskFuture.cancel();
+                taskFuture.waitForFinished();
+                // We must emit finished() manually here, because the next setFuture() call would prevent finished() signal to be emitted for this current future.
+                emit taskFuture.finished();
+                // Prevent emitting the finished signal twice, in case the next call to setFuture() does not happen, dugh...
+                taskFuture.setFuture(QFuture<DecodingState>());
+            }
         }
         
         if(currentImageDecoder)

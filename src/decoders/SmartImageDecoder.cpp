@@ -99,17 +99,8 @@ SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr
 SmartImageDecoder::~SmartImageDecoder()
 {
     xThreadGuard g(this);
-    
-    bool taken = QThreadPool::globalInstance()->tryTake(this);
-    if(!taken)
-    {
-        if(d->promise && !d->promise->future().isFinished())
-        {
-            d->promise->future().cancel();
-            d->promise->future().waitForFinished();
-        }
-    }
-    
+    d->assertNotDecoding();
+
     this->close();
     d->releaseFullImage();
 }
