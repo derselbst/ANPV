@@ -9,6 +9,7 @@ class QWidget;
 class SortedImageModel;
 class ThumbnailView;
 class ANPV;
+class Image;
 
 class ThumbnailListView : public QListView
 {
@@ -20,6 +21,7 @@ public:
     
     void setModel(SortedImageModel* model);
     void selectedFiles(QList<QString>& selectedFiles);
+    void setCurrentIndex(const QSharedPointer<Image>& img);
     
 protected:
     void wheelEvent(QWheelEvent *event) override;

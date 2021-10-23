@@ -206,3 +206,15 @@ void ThumbnailListView::selectedFiles(QList<QString>& files)
         files.append(std::move(name));
     }
 }
+
+void ThumbnailListView::setCurrentIndex(const QSharedPointer<Image>& img)
+{
+    QModelIndex wantedIdx = d->model->index(img);
+    if(!wantedIdx.isValid())
+    {
+        return;
+    }
+    
+    this->selectionModel()->setCurrentIndex(wantedIdx, QItemSelectionModel::NoUpdate);
+    this->scrollTo(wantedIdx, QAbstractItemView::PositionAtCenter);
+}

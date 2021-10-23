@@ -330,7 +330,6 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     switch(event->key())
     {
         case Qt::Key_Escape:
-            d->clearScene();
             ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
             break;
         case Qt::Key_Space:

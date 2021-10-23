@@ -848,12 +848,12 @@ void SortedImageModel::sort(Qt::SortOrder order)
     this->sort(d->currentSortedCol, order);
 }
 
-QModelIndex SortedImageModel::index(const QFileInfo& info)
+QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
-                            [&](QSharedPointer<Image>& other)
-                            { return other->fileInfo() == info; });
+                            [&](const QSharedPointer<Image>& other)
+                            { return other == img; });
     
     if(result == d->entries.end())
     {

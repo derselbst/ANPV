@@ -8,6 +8,7 @@
 #include <QRect>
 #include <QScreen>
 #include <QSharedPointer>
+#include <QKeyEvent>
 
 struct MultiDocumentView::Impl
 {
@@ -49,4 +50,10 @@ void MultiDocumentView::addImages(QList<QSharedPointer<Image>> image)
         d->tw->setTabIcon(tabIdx, i->thumbnail());
         dv->loadImage(i);
     }
+}
+
+void MultiDocumentView::keyPressEvent(QKeyEvent *event)
+{
+    // explitly pass on the keyevent to the currently shown DocumentView, because QTabWidget ignores all unknown events
+//     d->tw->currentWidget()->QObject::event(event);
 }

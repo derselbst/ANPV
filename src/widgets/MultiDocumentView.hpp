@@ -17,6 +17,7 @@ public:
     ~MultiDocumentView() override;
 
     void addImages(QList<QSharedPointer<Image>> img);
+    void keyPressEvent(QKeyEvent *event) override;
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
