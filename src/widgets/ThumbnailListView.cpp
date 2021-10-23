@@ -126,7 +126,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     
     d->q = this;
 
-    connect(this, &QListView::activated, this, [&](const QModelIndex &index){ d->openSelectionInternally(); });
+    connect(this, &QListView::activated, this, [&](const QModelIndex &){ d->openSelectionInternally(); });
 
     d->actionOpenSelectionInternally = new QAction("Open", this);
     connect(d->actionOpenSelectionInternally, &QAction::triggered, this, [&](){ d->openSelectionInternally(); });
@@ -172,25 +172,26 @@ void ThumbnailListView::setModel(SortedImageModel* model)
 
 void ThumbnailListView::wheelEvent(QWheelEvent *event)
 {
-//     auto angleDelta = event->angleDelta();
-// 
-//     if (event->modifiers() & Qt::ControlModifier)
-//     {
-//         double s = d->model->iconHeight();
-//         // zoom
-//         if(angleDelta.y() > 0)
-//         {
-//             d->model->setIconHeight(static_cast<int>(std::ceil(s * 1.2)));
-//             event->accept();
-//             return;
-//         }
-//         else if(angleDelta.y() < 0)
-//         {
-//             d->model->setIconHeight(static_cast<int>(std::floor(s / 1.2)));
-//             event->accept();
-//             return;
-//         }
-//     }
+    auto angleDelta = event->angleDelta();
+
+    if (event->modifiers() & Qt::ControlModifier)
+    {
+        constexpr int Step = 50;
+        double s = ANPV::globalInstance()->iconHeight();
+        // zoom
+        if(angleDelta.y() > 0)
+        {
+            ANPV::globalInstance()->setIconHeight(static_cast<int>(std::ceil(s + Step)));
+            event->accept();
+            return;
+        }
+        else if(angleDelta.y() < 0)
+        {
+            ANPV::globalInstance()->setIconHeight(static_cast<int>(std::floor(s - Step)));
+            event->accept();
+            return;
+        }
+    }
 
     QListView::wheelEvent(event);
 }

@@ -326,7 +326,7 @@ struct MainWindow::Impl
     
     void onIconHeightChanged(int h, int old)
     {
-        if(old < 0)
+        if(!ui->iconSizeSlider->isSliderDown())
         {
             // this is the initial change event, set the value of the slider
             ui->iconSizeSlider->setValue(h);

@@ -312,6 +312,7 @@ void ANPV::setIconHeight(int h)
 {
     xThreadGuard(this);
     int old = d->iconHeight;
+    h = std::min(h, ANPV::MaxIconHeight);
     if(old != h)
     {
         d->iconHeight = h;
