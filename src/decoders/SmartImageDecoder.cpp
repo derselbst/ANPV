@@ -256,23 +256,26 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                 this->init();
             }
             
-            QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
-            d->setDecodedImage(decodedImg);
-            
-            // if thumbnail is still null and no roi has been given, set it
-            if (this->image()->thumbnail().isNull() && !roiRect.isValid())
+            if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
-                QSize thumbnailSize;
-                static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
-                if(thumbnailSizeMax.width() * thumbnailSizeMax.height() < desiredResolution.width() * desiredResolution.height())
+                QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
+                d->setDecodedImage(decodedImg);
+                
+                // if thumbnail is still null and no roi has been given, set it
+                if (this->image()->thumbnail().isNull() && !roiRect.isValid())
                 {
-                    thumbnailSize = thumbnailSizeMax;
+                    QSize thumbnailSize;
+                    static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
+                    if(thumbnailSizeMax.width() * thumbnailSizeMax.height() < desiredResolution.width() * desiredResolution.height())
+                    {
+                        thumbnailSize = thumbnailSizeMax;
+                    }
+                    else
+                    {
+                        thumbnailSize = desiredResolution;
+                    }
+                    this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 }
-                else
-                {
-                    thumbnailSize = desiredResolution;
-                }
-                this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             }
 
             this->setDecodingState(targetState);
