@@ -393,7 +393,7 @@ struct SortedImageModel::Impl
         currentDir = QDir();
     }
 
-    void onBackgroundImageTaskStateChanged(SmartImageDecoder*, quint32 newState, quint32)
+    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
     {
         xThreadGuard g(q);
         if(newState == DecodingState::Ready)
@@ -404,6 +404,11 @@ struct SortedImageModel::Impl
         // A thumbnail may be inserted into the list.
         // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
         updateLayout();
+        QModelIndex idx = q->index(dec->image());
+        if(idx.isValid())
+        {
+            emit q->dataChanged(idx, idx, {Qt::DecorationRole, Qt::ToolTipRole});
+        }
     }
 
     void onDecodingTaskFinished(QSharedPointer<SmartImageDecoder> dec)
