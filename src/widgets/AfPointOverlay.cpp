@@ -29,8 +29,6 @@ void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     auto viewport = painter->viewport();
     auto window = painter->window();
     
-    qInfo() << "clip: " << clip << "\nviewport: " << viewport << "\nwindow: " << window;
-    
     auto pen = painter->pen();
     
     for(size_t i=0; i < d->afPoints.size(); i++)

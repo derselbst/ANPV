@@ -91,9 +91,8 @@ struct DocumentView::Impl
             {
                 taskFuture.cancel();
                 taskFuture.waitForFinished();
-                // Prevent emitting the finished signal twice, in case the next call to setFuture() does not happen, dugh...
-                taskFuture.setFuture(QFuture<DecodingState>());
             }
+            taskFuture.setFuture(QFuture<DecodingState>());
         }
         
         if(currentImageDecoder)
@@ -255,17 +254,6 @@ DocumentView::DocumentView(QWidget *parent)
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ emit d->createSmoothPixmap();});
-    
-    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this,
-    [&]()
-    {
-        QGuiApplication::restoreOverrideCursor();
-    });
-    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::canceled, this,
-    [&]()
-    {
-        QGuiApplication::restoreOverrideCursor();
-    });
 }
 
 DocumentView::~DocumentView() = default;
@@ -522,8 +510,7 @@ void DocumentView::loadImage()
 {
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::imageRefined, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
-   
-    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);
     ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Image, fut);
