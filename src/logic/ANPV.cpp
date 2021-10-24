@@ -193,7 +193,7 @@ void ANPV::setCurrentDir(QString str)
     xThreadGuard(this);
     
     QDir old = d->currentDir;
-    if(old != d->currentDir)
+    if(old != str)
     {
         d->currentDir = str;
         emit this->currentDirChanged(str, old);
