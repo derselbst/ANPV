@@ -12,7 +12,12 @@
 struct CancellableProgressWidget::Impl
 {
     std::unique_ptr<Ui::CancellableProgressWidget> ui = std::make_unique<Ui::CancellableProgressWidget>();
+    
     QFutureWatcher<DecodingState> future;
+    // https://bugreports.qt.io/browse/QTBUG-91048
+    // the behaviour of QFutureWatcher::isFinished() changed with QT6.2: now there is no reyable way to detect if the finished event has already been sent out :/
+    bool futureFinishedEventReceived = false;
+    
     QTimer* hideTimer = nullptr;
 
     static QString getProgressStyle(DecodingState state)
@@ -82,6 +87,8 @@ struct CancellableProgressWidget::Impl
         QGuiApplication::restoreOverrideCursor();
         
         hideTimer->start();
+        
+        this->futureFinishedEventReceived = true;
     }
 };
 
@@ -104,6 +111,7 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::progressValueChanged, d->ui->progressBar, &QProgressBar::setValue);
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::started, this, [&](){ d->onStarted(); });
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onFinished(); });
+    QObject::connect(&d->future, &QFutureWatcher<DecodingState>::canceled, this, [&](){ d->onFinished(); });
     d->future.setFuture(future);
 }
 
@@ -114,19 +122,18 @@ CancellableProgressWidget::~CancellableProgressWidget()
 
 bool CancellableProgressWidget::isFinished()
 {
-    return d->future.isFinished();
+    return d->futureFinishedEventReceived;
 }
 
 void CancellableProgressWidget::setFuture(const QFuture<DecodingState>& future)
 {
-    if(!d->future.isFinished()) // finished event already emitted?
+    if(!d->futureFinishedEventReceived) // finished event already emitted?
     {
         d->future.cancel();
-        if(d->future.isStarted()) // should always be true
-        {
-            QGuiApplication::restoreOverrideCursor(); // finished event won't be emitted after setFuture below
-        }
+        // manually finish up ourselves
+        d->onFinished();
     }
     d->hideTimer->stop();
     d->future.setFuture(future);
+    d->futureFinishedEventReceived = false;
 }
