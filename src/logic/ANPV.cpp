@@ -46,6 +46,19 @@
 #include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
 
+class MyDisabledFileIconProvider : public QAbstractFileIconProvider
+{
+public:
+    MyDisabledFileIconProvider() = default;
+    ~MyDisabledFileIconProvider() override = default;
+    
+    // The default implementation of this function is so horribly slow. It spams the UI thread with a bunch of useless events.
+    // Disable this, to make it use the icon(QAbstractFileIconProvider::IconType type) overload.
+    QIcon icon(const QFileInfo &info) const override
+    {
+        return QIcon();
+    }
+};
 
 struct ANPV::Impl
 {
@@ -53,6 +66,7 @@ struct ANPV::Impl
     
     // normal objects without parent
     QScopedPointer<QAbstractFileIconProvider> iconProvider;
+    QScopedPointer<MyDisabledFileIconProvider> noIconProvider;
     QPixmap noIconPixmap;
     
     // QObjects without parent
@@ -133,9 +147,10 @@ ANPV::ANPV(QSplashScreen *splash)
     
     d->iconProvider.reset(new QFileIconProvider());
     d->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
+    d->noIconProvider.reset(new MyDisabledFileIconProvider());
     
     d->dirModel = new QFileSystemModel(this);
-    d->dirModel->setIconProvider(this->iconProvider());
+    d->dirModel->setIconProvider(d->noIconProvider.get());
     d->dirModel->setRootPath("");
     d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
