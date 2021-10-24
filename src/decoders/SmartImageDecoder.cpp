@@ -180,10 +180,7 @@ void SmartImageDecoder::init()
             d->encodedInputBufferSize = d->encodedInputFile.size();
         }
         
-        QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
-        // this operation is expensive, up to 30ms per call!
-        QIcon ico = prov->icon(this->image()->fileInfo());
-        this->image()->setIcon(ico);
+        this->image()->lookupIconFromFileType();
         
         this->cancelCallback();
         

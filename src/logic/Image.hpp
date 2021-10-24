@@ -53,6 +53,7 @@ public:
     QPixmap thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
+    void lookupIconFromFileType();
     
     QSharedPointer<ExifWrapper> exif();
     

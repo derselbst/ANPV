@@ -511,6 +511,10 @@ struct SortedImageModel::Impl
             
             return true;
         }
+        else
+        {
+            image->lookupIconFromFileType();
+        }
         return false;
     }
     

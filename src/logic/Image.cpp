@@ -181,6 +181,14 @@ void Image::setIcon(QIcon ico)
     d->icon = ico;
 }
 
+void Image::lookupIconFromFileType()
+{
+    QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
+    // this operation is expensive, up to 30ms per call!
+    QIcon ico = prov->icon(this->fileInfo());
+    this->setIcon(ico);
+}
+
 QPixmap Image::thumbnailTransformed(int height)
 {
     if(height <= 0)
