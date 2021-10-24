@@ -89,6 +89,8 @@ public:
     
     int iconHeight();
     void setIconHeight(int);
+    
+    QPixmap noIconPixmap();
 
 signals:
     void currentDirChanged(QDir dir, QDir old);

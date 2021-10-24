@@ -202,16 +202,7 @@ QPixmap Image::icon(int height)
             if(pix.isNull())
             {
                 t.setInfo("no icon found, drawing our own...");
-                QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
-
-                QSize imgSize = renderer.defaultSize().scaled(myIconHeight,myIconHeight, Qt::KeepAspectRatio);
-                QImage image(imgSize, QImage::Format_ARGB32);
-                image.fill(0);
-
-                QPainter painter(&image);
-                renderer.render(&painter);
-
-                pix = QPixmap::fromImage(image);
+                pix = ANPV::globalInstance()->noIconPixmap();
             }
             else
             {

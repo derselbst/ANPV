@@ -32,6 +32,7 @@
 #include <QPointer>
 #include <QSettings>
 #include <QTabWidget>
+#include <QSvgRenderer>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -52,6 +53,7 @@ struct ANPV::Impl
     
     // normal objects without parent
     QScopedPointer<QAbstractFileIconProvider> iconProvider;
+    QPixmap noIconPixmap;
     
     // QObjects without parent
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
@@ -94,6 +96,20 @@ struct ANPV::Impl
         q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
         q->setIconHeight(settings.value("iconHeight", 150).toInt());
     }
+    
+    void drawNoIconPixmap()
+    {
+        QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
+
+        QSize imgSize = renderer.defaultSize().scaled(this->iconHeight, this->iconHeight, Qt::KeepAspectRatio);
+        QImage image(imgSize, QImage::Format_ARGB32);
+        image.fill(0);
+
+        QPainter painter(&image);
+        renderer.render(&painter);
+
+        this->noIconPixmap = QPixmap::fromImage(image);
+    }
 };
 
 static QPointer<ANPV> global;
@@ -126,7 +142,13 @@ ANPV::ANPV(QSplashScreen *splash)
     d->fileModel.reset(new SortedImageModel(this));
 
     splash->showMessage("Connecting logic");
-    
+    connect(this, &ANPV::iconHeightChanged, this, [&](int, int){ d->drawNoIconPixmap(); });
+    connect(this, &ANPV::currentDirChanged, this,
+            [&](QDir,QDir)
+            {
+                auto fut = d->fileModel->changeDirAsync(d->currentDir);
+                this->addBackgroundTask(ProgressGroup::Directory, fut);
+            });
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
@@ -171,12 +193,9 @@ void ANPV::setCurrentDir(QString str)
     xThreadGuard(this);
     
     QDir old = d->currentDir;
-    d->currentDir = str;
     if(old != d->currentDir)
     {
-        auto fut = d->fileModel->changeDirAsync(str);
-        this->addBackgroundTask(ProgressGroup::Directory, fut);
-
+        d->currentDir = str;
         emit this->currentDirChanged(str, old);
     }
 }
@@ -244,7 +263,6 @@ void ANPV::setSortOrder(Qt::SortOrder order)
     if(order != old)
     {
         d->sortOrder = order;
-//     d->fileModel->sort(order);
         emit this->sortOrderChanged(order, old);
     }
 }
@@ -262,7 +280,6 @@ void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
     if(old != col)
     {
         d->primarySortColumn = col;
-    //     d->fileModel->sort(col);
         emit this->primarySortColumnChanged(col, old);
     }
 }
@@ -308,6 +325,11 @@ void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& 
 void ANPV::hideProgressWidget(CancellableProgressWidget* w)
 {
     d->mainWindow->hideProgressWidget(w);
+}
+
+QPixmap ANPV::noIconPixmap()
+{
+    return d->noIconPixmap;
 }
 
 void ANPV::moveFilesSlot(const QString& targetDir)
