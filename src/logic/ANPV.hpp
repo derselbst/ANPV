@@ -15,6 +15,7 @@ class QUndoCommand;
 class MoveFileCommand;
 class QSplashScreen;
 class QFileSystemModel;
+class SortedImageModel;
 class QAbstractFileIconProvider;
 class SmartImageDecoder;
 class CancellableProgressWidget;
@@ -68,6 +69,7 @@ public:
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
+    QSharedPointer<SortedImageModel> fileModel();
 
     ViewMode viewMode();
     void setViewMode(ViewMode);

@@ -701,18 +701,18 @@ QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx)
     return nullptr;
 }
 
-QSharedPointer<Image> SortedImageModel::goTo(const QString& currentUrl, int stepsFromCurrent, QModelIndex& idxOut)
+QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
 {
     int step = (stepsFromCurrent < 0) ? -1 : 1;
     
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
                             [&](QSharedPointer<Image>& other)
-                            { return other->fileInfo().absoluteFilePath() == currentUrl; });
+                            { return other == img; });
     
     if(result == d->entries.end())
     {
-        qCritical() << "This should not happen: currentUrl not found.";
+        qInfo() << "requested image not found";
         return nullptr;
     }
     
@@ -741,8 +741,7 @@ QSharedPointer<Image> SortedImageModel::goTo(const QString& currentUrl, int step
         }
         
     } while(stepsFromCurrent);
-    
-    idxOut = this->index(idx, 0);
+
     return e;
 }
 

@@ -58,6 +58,9 @@ struct DocumentView::Impl
     // the full resolution image currently displayed in the scene
     QPixmap currentDocumentPixmap;
     
+    // the model for the current directory needed for navigating back and forth
+    QSharedPointer<SortedImageModel> model;
+
     Impl(DocumentView* parent) : p(parent)
     {}
     
@@ -88,8 +91,6 @@ struct DocumentView::Impl
             {
                 taskFuture.cancel();
                 taskFuture.waitForFinished();
-                // We must emit finished() manually here, because the next setFuture() call would prevent finished() signal to be emitted for this current future.
-                emit taskFuture.finished();
                 // Prevent emitting the finished signal twice, in case the next call to setFuture() does not happen, dugh...
                 taskFuture.setFuture(QFuture<DecodingState>());
             }
@@ -260,9 +261,19 @@ DocumentView::DocumentView(QWidget *parent)
     {
         QGuiApplication::restoreOverrideCursor();
     });
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::canceled, this,
+    [&]()
+    {
+        QGuiApplication::restoreOverrideCursor();
+    });
 }
 
 DocumentView::~DocumentView() = default;
+
+void DocumentView::setModel(QSharedPointer<SortedImageModel> model)
+{
+    d->model = model;
+}
 
 void DocumentView::zoomIn()
 {
@@ -333,15 +344,23 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
             break;
         case Qt::Key_Space:
-            if(d->currentImageDecoder)
+            if(d->currentImageDecoder && d->model)
             {
-                emit requestNext(d->currentImageDecoder->image()->fileInfo().absoluteFilePath());
+                QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), 1);
+                if(newImg)
+                {
+                    this->loadImage(newImg);
+                }
             }
             break;
         case Qt::Key_Backspace:
             if(d->currentImageDecoder)
             {
-                emit requestPrev(d->currentImageDecoder->image()->fileInfo().absoluteFilePath());
+                QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), -1);
+                if(newImg)
+                {
+                    this->loadImage(newImg);
+                }
             }
             break;
         default:
@@ -508,6 +527,8 @@ void DocumentView::loadImage()
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);
     ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Image, fut);
+
+    emit this->imageChanged(d->currentImageDecoder->image());
 }
 
 QFileInfo DocumentView::currentFile()

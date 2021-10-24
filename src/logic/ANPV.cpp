@@ -58,6 +58,7 @@ struct ANPV::Impl
     
     // QObjects with parent
     QFileSystemModel* dirModel = nullptr;
+    QSharedPointer<SortedImageModel> fileModel = nullptr;
     
     QDir currentDir;
     ViewMode viewMode = ViewMode::Unknown;
@@ -93,21 +94,6 @@ struct ANPV::Impl
         q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
         q->setIconHeight(settings.value("iconHeight", 150).toInt());
     }
-    
-    void onImageNavigate(const QString& url, int stepsForward)
-    {
-//         QModelIndex idx;
-//         QSharedPointer<SmartImageDecoder> dec = fileModel->goTo(url, stepsForward, idx);
-//         if(dec && idx.isValid())
-//         {
-//             q->loadImage(dec);
-//             thumbnailViewer->selectThumbnail(idx);
-//         }
-//         else
-//         {
-//             q->showThumbnailView();
-//         }
-    }
 };
 
 static QPointer<ANPV> global;
@@ -124,7 +110,6 @@ ANPV::ANPV(QSplashScreen *splash)
     QCoreApplication::setApplicationName("ANPV");
 
     splash->showMessage("Creating logic");
-//     d->fileModel = new SortedImageModel(this);
     if(::global.isNull())
     {
         ::global = QPointer<ANPV>(this);
@@ -138,48 +123,21 @@ ANPV::ANPV(QSplashScreen *splash)
     d->dirModel->setRootPath("");
     d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
     
+    d->fileModel.reset(new SortedImageModel(this));
+
     splash->showMessage("Connecting logic");
     
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
-//     d->mainWindow->setModel(d->fileModel);
-    
-    
     d->mainWindow->show();
-    
-    
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
+    d->mainWindow->readSettings();
     
     splash->showMessage("ANPV initialized, waiting for Qt-Framework getting it's events processed...");
     splash->finish(d->mainWindow.get());
-    
-    
-//     d->progressWidgetLayout = new QVBoxLayout(this);
-//     d->progressWidgetContainer = new QWidget(this);
-//     d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
-//     this->statusBar()->showMessage(tr("Ready"));
-//     this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
-//     
-//     d->thumbnailViewer = new ThumbnailView(d->fileModel, this);
-//     
-//     d->imageViewer = new DocumentView(this);
-//     connect(d->imageViewer, &DocumentView::requestNext, this,
-//             [&](QString current) { d->onImageNavigate(current, 1); });
-//     connect(d->imageViewer, &DocumentView::requestPrev, this,
-//             [&](QString current) { d->onImageNavigate(current, -1); });
-// 
-//     d->stackedLayout = new QStackedLayout(this);
-//     d->stackedLayout->addWidget(d->thumbnailViewer);
-//     d->stackedLayout->addWidget(d->imageViewer);
-//     
-//     d->stackedLayoutWidget = new QWidget(this);
-//     d->stackedLayoutWidget->setLayout(d->stackedLayout);
-//     this->setCentralWidget(d->stackedLayoutWidget);
-//     
-    
 }
 
 ANPV::~ANPV()
@@ -197,6 +155,11 @@ QFileSystemModel* ANPV::dirModel()
     return d->dirModel;
 }
 
+QSharedPointer<SortedImageModel> ANPV::fileModel()
+{
+    return d->fileModel;
+}
+
 QDir ANPV::currentDir()
 {
     xThreadGuard(this);
@@ -211,7 +174,10 @@ void ANPV::setCurrentDir(QString str)
     d->currentDir = str;
     if(old != d->currentDir)
     {
-        emit this->currentDirChanged(d->currentDir, old);
+        auto fut = d->fileModel->changeDirAsync(str);
+        this->addBackgroundTask(ProgressGroup::Directory, fut);
+
+        emit this->currentDirChanged(str, old);
     }
 }
 
@@ -330,25 +296,9 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
-    mdv->addImages(image);
+    mdv->addImages(image, d->fileModel);
     mdv->show();
 }
-
-
-/*
-void ANPV::loadImage(QFileInfo inf)
-{
-    this->setWindowTitle(inf.fileName());
-    d->imageViewer->loadImage(inf.absoluteFilePath());
-    this->setCurrentDir(inf.absoluteDir().absolutePath());
-}
-
-void ANPV::loadImage(QSharedPointer<SmartImageDecoder> dec)
-{
-    this->setWindowTitle(dec->image()->fileInfo().fileName());
-    d->imageViewer->loadImage(dec);
-}*/
-
 
 void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
 {

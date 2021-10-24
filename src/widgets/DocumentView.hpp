@@ -15,6 +15,7 @@ class QPixmap;
 class QWheelEvent;
 class QEvent;
 class SmartImageDecoder;
+class SortedImageModel;
 
 class DocumentView : public QGraphicsView
 {
@@ -24,6 +25,7 @@ public:
     DocumentView(QWidget *parent);
     ~DocumentView() override;
 
+    void setModel(QSharedPointer<SortedImageModel>);
     QFileInfo currentFile();
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
@@ -35,7 +37,10 @@ public slots:
     void zoomOut();
     void onImageRefinement(SmartImageDecoder* self, QImage img);
     void onDecodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
-    
+
+signals:
+    void imageChanged(QSharedPointer<Image>);
+
 protected:
     void wheelEvent(QWheelEvent *event) override;
     bool viewportEvent(QEvent* event) override;
@@ -44,10 +49,6 @@ protected:
 
     void loadImage();
 
-signals:
-    void requestNext(QString cur);
-    void requestPrev(QString cur);
-    
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

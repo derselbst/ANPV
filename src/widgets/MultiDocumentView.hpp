@@ -7,6 +7,7 @@
 
 class Image;
 class QWidget;
+class SortedImageModel;
 
 class MultiDocumentView : public QMainWindow
 {
@@ -16,7 +17,7 @@ public:
     MultiDocumentView(QWidget *parent);
     ~MultiDocumentView() override;
 
-    void addImages(const QList<QSharedPointer<Image>>& img);
+    void addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model);
     void keyPressEvent(QKeyEvent *event) override;
 private:
     struct Impl;

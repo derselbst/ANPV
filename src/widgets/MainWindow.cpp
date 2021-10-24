@@ -56,8 +56,6 @@ struct MainWindow::Impl
     QVBoxLayout* progressWidgetLayout = nullptr;
     QWidget* progressWidgetContainer = nullptr;
     
-    SortedImageModel* fileModel = nullptr;
-    
     QActionGroup* actionGroupSortColumn = nullptr;
     QActionGroup* actionGroupSortOrder = nullptr;
     QActionGroup* actionGroupFileOperation = nullptr;
@@ -249,12 +247,6 @@ struct MainWindow::Impl
         settings.setValue("geometry", q->saveGeometry());
         settings.setValue("windowState", q->saveState());
         settings.endGroup();
-        
-        settings.setValue("currentDir", ANPV::globalInstance()->currentDir().absolutePath());
-        settings.setValue("viewMode", static_cast<int>(ANPV::globalInstance()->viewMode()));
-        settings.setValue("viewFlags", ANPV::globalInstance()->viewFlags());
-        settings.setValue("sortOrder", static_cast<int>(ANPV::globalInstance()->sortOrder()));
-        settings.setValue("primarySortColumn", static_cast<int>(ANPV::globalInstance()->primarySortColumn()));
     }
 
     void readSettings()
@@ -272,12 +264,6 @@ struct MainWindow::Impl
         q->restoreGeometry(settings.value("geometry").toByteArray());
         q->restoreState(settings.value("windowState").toByteArray());
         settings.endGroup();
-        
-        ANPV::globalInstance()->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
-        ANPV::globalInstance()->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
-        ANPV::globalInstance()->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::None)).toUInt());
-        ANPV::globalInstance()->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
-        ANPV::globalInstance()->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
     }
     
     void onDirectoryTreeLoaded(const QString& s)
@@ -319,10 +305,7 @@ struct MainWindow::Impl
             ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
         rememberedActivatedDir = QDir();
-        
-        auto fut = fileModel->changeDirAsync(newDir);
-        ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Directory, fut);
-        
+
         q->setWindowTitle(newDir.absolutePath() + " :: ANPV");
     }
     
@@ -356,7 +339,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->undoStack = new QUndoStack(this);
     
     splash->showMessage("Creating MainWindow Widgets");
-    d->fileModel = new SortedImageModel(this);
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
@@ -372,7 +354,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
     
-    d->ui->thumbnailListView->setModel(d->fileModel);
+    d->ui->thumbnailListView->setModel(ANPV::globalInstance()->fileModel().get());
     
     d->progressWidgetLayout = new QVBoxLayout(this);
     d->progressWidgetContainer = new QWidget(this);
@@ -393,10 +375,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
     connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::QueuedConnection);
-    
-    
-    
-    d->readSettings();
 }
 
 MainWindow::~MainWindow() = default;
@@ -447,4 +425,9 @@ void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
 void MainWindow::setCurrentIndex(QSharedPointer<Image> img)
 {
     d->ui->thumbnailListView->setCurrentIndex(img);
+}
+
+void MainWindow::readSettings()
+{
+    d->readSettings();
 }

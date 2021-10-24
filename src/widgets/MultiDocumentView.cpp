@@ -41,15 +41,29 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
 
 MultiDocumentView::~MultiDocumentView() = default;
 
-void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image)
+void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model)
 {
     for(auto& i : image)
     {
         DocumentView* dv = new DocumentView(d->tw);
-        int tabIdx = d->tw->addTab(dv, i->fileInfo().fileName());
-        d->tw->setTabIcon(tabIdx, i->thumbnail());
+
+        connect(dv, &DocumentView::imageChanged, this,
+        [=](QSharedPointer<Image> img)
+        {
+            int idx = d->tw->indexOf(dv);
+            if(idx >= 0)
+            {
+                d->tw->setTabIcon(idx, img->thumbnail());
+                d->tw->setTabText(idx, img->fileInfo().fileName());
+                d->onCurrentTabChanged(idx);
+            }
+        });
+
+        d->tw->addTab(dv, "");
+        dv->setModel(model);
         dv->loadImage(i);
     }
+    d->tw->currentWidget()->setFocus(Qt::PopupFocusReason);
 }
 
 void MultiDocumentView::keyPressEvent(QKeyEvent *event)
