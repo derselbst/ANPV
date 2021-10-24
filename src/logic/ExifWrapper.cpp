@@ -372,11 +372,25 @@ QString ExifWrapper::exposureTime()
         double quot = num * 1.0 / den;
         if(quot < 1)
         {
-            return QString ((Formatter() << num << "/" << den).str().c_str());
+            return QString ((Formatter() << num << "/" << den << "s").str().c_str());
         }
         else
         {
-            return QString ((Formatter() << std::setprecision(3) << quot).str().c_str());
+            unsigned h = static_cast<unsigned>(quot / 60 / 60);
+            unsigned m = static_cast<unsigned>(quot / 60);
+            double sec = std::fmod(quot, 60);
+            
+            Formatter f;
+            if(h)
+            {
+                f << h << "h ";
+            }
+            if(m)
+            {
+                f << m << "m ";
+            }
+            
+            return QString ((f << std::setprecision(3) << sec << "s").str().c_str());
         }
     }
     else
