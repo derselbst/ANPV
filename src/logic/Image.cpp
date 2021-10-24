@@ -32,6 +32,8 @@ struct Image::Impl
     // same as thumbnail, but rotated according to EXIF orientation
     QPixmap thumbnailTransformed;
     
+    QIcon icon;
+    
     // size of the fully decoded image, already available in DecodingState::Metadata
     QSize size;
     
@@ -167,7 +169,19 @@ void Image::setThumbnail(QPixmap pix)
     }
 }
 
-QPixmap Image::icon(int height)
+QIcon Image::icon()
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    return d->icon;
+}
+
+void Image::setIcon(QIcon ico)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    d->icon = ico;
+}
+
+QPixmap Image::thumbnailTransformed(int height)
 {
     if(height <= 0)
     {
@@ -178,48 +192,35 @@ QPixmap Image::icon(int height)
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
-    if(!d->thumbnailTransformed.isNull())
+    QPixmap thumb = this->thumbnail();
+    if(thumb.isNull())
     {
-        if(d->thumbnailTransformed.height() == height)
+        pix = this->icon().pixmap(height);
+        if(pix.isNull())
+        {
+            t.setInfo("no icon found, drawing our own...");
+            pix = ANPV::globalInstance()->noIconPixmap();
+        }
+        else
+        {
+            t.setInfo("using icon from QFileIconProvider");
+        }
+        Q_ASSERT(!pix.isNull());
+    }
+    else
+    {
+        if(!d->thumbnailTransformed.isNull() && d->thumbnailTransformed.height() == height)
         {
             t.setInfo("using cached thumbnail, size matches");
             return d->thumbnailTransformed;
         }
         
-        t.setInfo("using cached thumbnail, scaling required");
-        pix = d->thumbnailTransformed;
+        t.setInfo("no matching thumbnail cached, transforming and scaling it");
+        QTransform trans = this->defaultTransform();
+        pix = thumb.transformed(trans);
     }
-    else
-    {
-        QPixmap thumb = this->thumbnail();
-        if(thumb.isNull())
-        {
-            QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
-            // this operation is expensive, up to 30ms per call!
-            QIcon ico = prov->icon(this->fileInfo());
-            int myIconHeight = ANPV::MaxIconHeight / 2;
-            pix = ico.pixmap(myIconHeight);
-            if(pix.isNull())
-            {
-                t.setInfo("no icon found, drawing our own...");
-                pix = ANPV::globalInstance()->noIconPixmap();
-            }
-            else
-            {
-                t.setInfo("using icon from QFileIconProvider");
-            }
-            Q_ASSERT(!pix.isNull());
-            d->thumbnailTransformed = pix;
-        }
-        else
-        {
-            t.setInfo("thumbnail not cached, transforming and scaling it");
-            QTransform trans = this->defaultTransform();
-            pix = thumb.transformed(trans);
-        }
-    }
-    
     pix = pix.scaledToHeight(height, Qt::FastTransformation);
+    d->thumbnailTransformed = pix;
     return pix;
 }
 
@@ -234,7 +235,6 @@ void Image::setExif(QSharedPointer<ExifWrapper> e)
     std::lock_guard<std::recursive_mutex> lck(d->m);
     d->exifWrapper = e;
 }
-
 
 QColorSpace Image::colorSpace()
 {

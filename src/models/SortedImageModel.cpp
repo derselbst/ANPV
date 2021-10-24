@@ -773,7 +773,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             return fileInfo.fileName();
 
         case Qt::DecorationRole:
-            return e->icon(d->cachedIconHeight);
+            return e->thumbnailTransformed(d->cachedIconHeight);
 
         case Qt::ToolTipRole:
             return e->formatInfoString();

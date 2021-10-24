@@ -51,7 +51,8 @@ public:
     void setUserTransform(QTransform);
     
     QPixmap thumbnail();
-    QPixmap icon(int height);
+    QPixmap thumbnailTransformed(int height);
+    QIcon icon();
     
     QSharedPointer<ExifWrapper> exif();
     
@@ -72,6 +73,7 @@ protected:
     void setDefaultTransform(QTransform);
     void setThumbnail(QImage);
     void setThumbnail(QPixmap);
+    void setIcon(QIcon ico);
     void setExif(QSharedPointer<ExifWrapper>);
     void setColorSpace(QColorSpace);
     

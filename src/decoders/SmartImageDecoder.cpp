@@ -12,6 +12,8 @@
 #include <QPromise>
 #include <QMetaMethod>
 #include <QThreadPool>
+#include <QIcon>
+#include <QFileIconProvider>
 #include <chrono>
 #include <atomic>
 #include <mutex>
@@ -177,6 +179,11 @@ void SmartImageDecoder::init()
             d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
             d->encodedInputBufferSize = d->encodedInputFile.size();
         }
+        
+        QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
+        // this operation is expensive, up to 30ms per call!
+        QIcon ico = prov->icon(this->image()->fileInfo());
+        this->image()->setIcon(ico);
         
         this->cancelCallback();
         
