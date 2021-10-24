@@ -384,7 +384,6 @@ struct SortedImageModel::Impl
                 }
                 layoutChangedTimer.stop();
                 backgroundTasks.clear();
-                QGuiApplication::restoreOverrideCursor();
             }
         }
 
@@ -428,8 +427,6 @@ struct SortedImageModel::Impl
         {
             layoutChangedTimer.stop();
             forceUpdateLayout();
-            QGuiApplication::restoreOverrideCursor();
-            qInfo() << "RESTORE";
         }
         else
         {
