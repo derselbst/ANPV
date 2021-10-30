@@ -21,6 +21,7 @@
 #include <QMessageBox>
 #include <QWheelEvent>
 #include <QDesktopServices>
+#include <QSortFilterProxyModel>
 
 #include <vector>
 #include <algorithm>
@@ -39,7 +40,6 @@
 struct ThumbnailListView::Impl
 {
     ThumbnailListView* q=nullptr;
-    SortedImageModel* model=nullptr;
     
     QAction *actionOpenSelectionInternally;
     QAction *actionOpenSelectionExternally;
@@ -113,9 +113,11 @@ struct ThumbnailListView::Impl
         QList<QSharedPointer<Image>> images;
         QModelIndexList selectedIdx = q->selectionModel()->selectedRows();
         
+        auto sourceModel = ANPV::globalInstance()->fileModel();
+        auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*q->model());
         for(int i=0; i<selectedIdx.size(); i++)
         {
-            images.push_back(this->model->data(selectedIdx[i]));
+            images.push_back(sourceModel->data(proxyModel.mapToSource(selectedIdx[i])));
         }
         return images;
     }
@@ -173,12 +175,6 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
 
 ThumbnailListView::~ThumbnailListView() = default;
 
-void ThumbnailListView::setModel(SortedImageModel* model)
-{
-    d->model = model;
-    this->QListView::setModel(model);
-}
-
 void ThumbnailListView::wheelEvent(QWheelEvent *event)
 {
     auto angleDelta = event->angleDelta();
@@ -216,14 +212,3 @@ void ThumbnailListView::selectedFiles(QList<QString>& files)
     }
 }
 
-void ThumbnailListView::setCurrentIndex(const QSharedPointer<Image>& img)
-{
-    QModelIndex wantedIdx = d->model->index(img);
-    if(!wantedIdx.isValid())
-    {
-        return;
-    }
-    
-    this->selectionModel()->setCurrentIndex(wantedIdx, QItemSelectionModel::NoUpdate);
-    this->scrollTo(wantedIdx, QAbstractItemView::PositionAtCenter);
-}

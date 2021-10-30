@@ -43,6 +43,11 @@ MultiDocumentView::~MultiDocumentView() = default;
 
 void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model)
 {
+    if(image.empty())
+    {
+        return;
+    }
+    
     for(auto& i : image)
     {
         DocumentView* dv = new DocumentView(d->tw);

@@ -18,10 +18,8 @@ Q_OBJECT
 public:
     ThumbnailListView(QWidget *parent=nullptr);
     ~ThumbnailListView() override;
-    
-    void setModel(SortedImageModel* model);
+
     void selectedFiles(QList<QString>& selectedFiles);
-    void setCurrentIndex(const QSharedPointer<Image>& img);
     
 protected:
     void wheelEvent(QWheelEvent *event) override;

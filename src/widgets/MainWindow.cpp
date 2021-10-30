@@ -31,6 +31,7 @@
 #include <QPair>
 #include <QPointer>
 #include <QToolTip>
+#include <QSortFilterProxyModel>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -51,6 +52,7 @@ struct MainWindow::Impl
     std::unique_ptr<Ui::MainWindow> ui = std::make_unique<Ui::MainWindow>();
     
     QUndoStack* undoStack = nullptr;
+    QSortFilterProxyModel* proxyModel = nullptr;
     
     std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
     QVBoxLayout* progressWidgetLayout = nullptr;
@@ -329,6 +331,48 @@ struct MainWindow::Impl
         onIconSizeSliderValueChanged(val);
         QToolTip::showText(QCursor::pos(), QString("%1 px").arg(val), nullptr);
     }
+    
+    void filterRegularExpressionChanged()
+    {
+        enum Syntax {
+            FixedString,
+            Wildcard,
+            RegularExpression
+        };
+        
+        Syntax s = Syntax(ui->filterSyntaxComboBox->itemData(ui->filterSyntaxComboBox->currentIndex()).toInt());
+        QString pattern = ui->filterPatternLineEdit->text();
+        switch (s) {
+        case Wildcard:
+            pattern = QRegularExpression::wildcardToRegularExpression(pattern);
+            break;
+        case FixedString:
+            pattern = QRegularExpression::escape(pattern);
+            break;
+        default:
+            break;
+        }
+
+        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        if (!ui->filterCaseSensitivityCheckBox->isChecked())
+        {
+            options |= QRegularExpression::CaseInsensitiveOption;
+        }
+        QRegularExpression regularExpression(pattern, options);
+
+        if (regularExpression.isValid())
+        {
+            ui->filterPatternLineEdit->setToolTip(QString());
+            proxyModel->setFilterRegularExpression(regularExpression);
+//             setTextColor(ui->filterPatternLineEdit, textColor(style()->standardPalette()));
+        }
+        else
+        {
+            ui->filterPatternLineEdit->setToolTip(regularExpression.errorString());
+            proxyModel->setFilterRegularExpression(QRegularExpression());
+//             setTextColor(ui->filterPatternLineEdit, Qt::red);
+        }
+    }
 };
 
 MainWindow::MainWindow(QSplashScreen *splash)
@@ -354,7 +398,12 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
     
-    d->ui->thumbnailListView->setModel(ANPV::globalInstance()->fileModel().get());
+    
+    
+    d->proxyModel = new QSortFilterProxyModel(this);
+    d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
+    
+    d->ui->thumbnailListView->setModel(d->proxyModel);
     
     d->progressWidgetLayout = new QVBoxLayout(this);
     d->progressWidgetContainer = new QWidget(this);
@@ -375,6 +424,13 @@ MainWindow::MainWindow(QSplashScreen *splash)
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
     connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::QueuedConnection);
+
+    connect(d->ui->filterPatternLineEdit, &QLineEdit::textChanged,
+            this, [&](){ d->filterRegularExpressionChanged(); });
+    connect(d->ui->filterSyntaxComboBox, &QComboBox::currentIndexChanged,
+            this, [&](){ d->filterRegularExpressionChanged(); });
+    connect(d->ui->filterCaseSensitivityCheckBox, &QAbstractButton::toggled,
+            this, [&](){ d->filterRegularExpressionChanged(); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -424,7 +480,14 @@ void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
 
 void MainWindow::setCurrentIndex(QSharedPointer<Image> img)
 {
-    d->ui->thumbnailListView->setCurrentIndex(img);
+    QModelIndex wantedIdx = ANPV::globalInstance()->fileModel()->index(img);
+    if(!wantedIdx.isValid())
+    {
+        return;
+    }
+
+    d->ui->thumbnailListView->selectionModel()->setCurrentIndex(wantedIdx, QItemSelectionModel::NoUpdate);
+    d->ui->thumbnailListView->scrollTo(wantedIdx, QAbstractItemView::PositionAtCenter);
 }
 
 void MainWindow::readSettings()
