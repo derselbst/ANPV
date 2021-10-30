@@ -441,7 +441,10 @@ struct SortedImageModel::Impl
     
     void updateLayout()
     {
-        layoutChangedTimer.start();
+        if(!layoutChangedTimer.isActive())
+        {
+            layoutChangedTimer.start();
+        }
     }
     
     void forceUpdateLayout()
