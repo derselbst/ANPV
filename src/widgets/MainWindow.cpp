@@ -270,13 +270,6 @@ struct MainWindow::Impl
     
     void onDirectoryTreeLoaded(const QString& s)
     {
-        QModelIndex curIdx = ui->fileSystemTreeView->currentIndex();
-        if(!curIdx.isValid() || s != ANPV::globalInstance()->dirModel()->fileInfo(curIdx).absoluteFilePath())
-        {
-            QModelIndex mo = ANPV::globalInstance()->dirModel()->index(s);
-            ui->fileSystemTreeView->setCurrentIndex(mo);
-            ui->fileSystemTreeView->scrollTo(mo);
-        }
     }
     
     void resizeTreeColumn(const QModelIndex &index)
