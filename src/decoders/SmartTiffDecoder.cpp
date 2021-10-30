@@ -329,9 +329,19 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     {
         throw std::runtime_error("This TIFF doesn't contain any directories!");
     }
+
+    uint32_t count;
+    void *profile;
+    QColorSpace cs{QColorSpace::SRgb};
+    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
+    {
+        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
+        cs = QColorSpace::fromIccProfile(iccProfile);
+    }
     
     QSize size(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height);
     this->image()->setSize(size);
+    this->image()->setColorSpace(cs);
     auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, size);
     
     if(thumbnailPageToDecode >= 0)
@@ -582,17 +592,9 @@ gehtnich:
         }
     }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    uint32_t count;
-    void *profile;
-    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
-    {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-        image.setColorSpace(QColorSpace::fromIccProfile(iccProfile));
-        this->setDecodingMessage("Transforming colorspace...");
-        image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
-    }
-#endif
+    image.setColorSpace(this->image()->colorSpace());
+    this->setDecodingMessage("Transforming colorspace...");
+    image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
 
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);

@@ -250,6 +250,27 @@ QColorSpace Image::colorSpace()
     return d->colorSpace;
 }
 
+QString Image::namedColorSpace()
+{
+    QColorSpace cs = this->colorSpace();
+    
+    switch(cs.primaries())
+    {
+        case QColorSpace::Primaries::Custom:
+            return "Custom";
+        case QColorSpace::Primaries::SRgb:
+            return "sRGB";
+        case QColorSpace::Primaries::AdobeRgb:
+            return "AdobeRGB";
+        case QColorSpace::Primaries::DciP3D65:
+            return "DCI-P3";
+        case QColorSpace::Primaries::ProPhotoRgb:
+            return "ProPhotoRGB";
+        default:
+            return QString();
+    }
+}
+
 void Image::setColorSpace(QColorSpace cs)
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
@@ -270,10 +291,17 @@ QString Image::formatInfoString()
         QSize size = this->size();
         if(size.isValid())
         {
-            f << "Resolution: " << size.width() << " x " << size.height() << " px<br><br>";
+            f << "Resolution: " << size.width() << " x " << size.height() << " px<br>";
         }
         
         infoStr += f.str().c_str();
+        
+        s = this->namedColorSpace();
+        if(s.isEmpty())
+        {
+            s = "unknown";
+        }
+        infoStr += QString("ColorSpace: " + s + "<br><br>");
         
         s = exifWrapper->formatToString();
         if(!s.isEmpty())

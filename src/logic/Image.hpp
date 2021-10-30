@@ -58,6 +58,7 @@ public:
     QSharedPointer<ExifWrapper> exif();
     
     QColorSpace colorSpace();
+    QString namedColorSpace();
     
     QString formatInfoString();
 

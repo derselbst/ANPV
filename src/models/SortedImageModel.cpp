@@ -422,16 +422,7 @@ struct SortedImageModel::Impl
             itemsRemoved = backgroundTasks.erase(dec);
             isEmpty = backgroundTasks.empty();
         }
-
-        if(itemsRemoved > 0 && isEmpty)
-        {
-            layoutChangedTimer.stop();
-            forceUpdateLayout();
-        }
-        else
-        {
-            updateLayout();
-        }
+        updateLayout();
     }
     
     void setStatusMessage(int prog, const QString& msg)

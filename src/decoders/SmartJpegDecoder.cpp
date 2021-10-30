@@ -25,7 +25,6 @@ struct my_error_mgr
 struct SmartJpegDecoder::Impl
 {
     SmartJpegDecoder* q;
-    QColorSpace iccProfile{QColorSpace::SRgb};
     
     struct jpeg_decompress_struct cinfo = {};
     struct my_error_mgr jerr;
@@ -110,10 +109,11 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     JOCTET *ptr;
     std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
     unsigned int icc_len;
+    QColorSpace iccProfile{QColorSpace::SRgb};
     if(jpeg_read_icc_profile(&cinfo, &ptr, &icc_len))
     {
         icc_data.reset(ptr);
-        d->iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<const char *>(icc_data.get()), icc_len));
+        iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<const char *>(icc_data.get()), icc_len));
     }
     
     // set overall decompression parameters
@@ -123,6 +123,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     this->setDecodingMessage("Calculating output dimensions");
     
     this->image()->setSize(QSize(cinfo.image_width, cinfo.image_height));
+    this->image()->setColorSpace(iccProfile);
 }
 
 QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
@@ -232,7 +233,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_finish_decompress(&cinfo);
     
     image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
-    image.setColorSpace(d->iccProfile);
+    image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
     

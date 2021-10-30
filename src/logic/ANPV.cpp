@@ -328,8 +328,8 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
-    mdv->addImages(image, d->fileModel);
     mdv->show();
+    mdv->addImages(image, d->fileModel);
 }
 
 void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
