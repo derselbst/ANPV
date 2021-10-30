@@ -94,8 +94,6 @@
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="actionShow_Navigator_Window"/>
-    <addaction name="separator"/>
     <addaction name="actionCombine_RAWs_and_JPGs"/>
     <addaction name="actionShow_AF_Points"/>
     <addaction name="actionRespect_EXIF_orientation"/>

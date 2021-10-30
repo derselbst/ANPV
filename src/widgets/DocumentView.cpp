@@ -329,9 +329,13 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     switch(event->key())
     {
         case Qt::Key_Escape:
+            // intentionally ignore the event, so that it can be processed by the parent view (MultiDocumentView)
+            event->ignore();
             ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
+            this->close();
             break;
         case Qt::Key_Space:
+            event->accept();
             if(d->currentImageDecoder && d->model)
             {
                 QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), 1);
@@ -342,6 +346,7 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             }
             break;
         case Qt::Key_Backspace:
+            event->accept();
             if(d->currentImageDecoder)
             {
                 QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), -1);

@@ -67,12 +67,21 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
         d->tw->addTab(dv, "");
         dv->setModel(model);
         dv->loadImage(i);
+        dv->setAttribute(Qt::WA_DeleteOnClose);
     }
     d->tw->currentWidget()->setFocus(Qt::PopupFocusReason);
 }
 
 void MultiDocumentView::keyPressEvent(QKeyEvent *event)
 {
-    // explitly pass on the keyevent to the currently shown DocumentView, because QTabWidget ignores all unknown events
-//     d->tw->currentWidget()->QObject::event(event);
+    switch(event->key())
+    {
+        case Qt::Key_Escape:
+            event->accept();
+            this->close();
+            break;
+        default:
+            QMainWindow::keyPressEvent(event);
+            break;
+    }
 }
