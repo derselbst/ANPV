@@ -37,12 +37,13 @@ steps:
   inputs:
     cmakeArgs: -DCMAKE_PREFIX_PATH=/opt/Qt/6.2.0/gcc_64/ ..
     workingDirectory: 'build'
-
 - task: CMake@1
   displayName: 'CMake Build'
   inputs:
     cmakeArgs: --build . --parallel
     workingDirectory: 'build'
-
-
-
+- task: CMake@1
+  displayName: 'CMake Check'
+  inputs:
+    cmakeArgs: --build . --target check --parallel
+    workingDirectory: 'build'
