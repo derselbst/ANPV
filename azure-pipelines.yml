@@ -19,9 +19,9 @@ steps:
   submodules: true
 - task: Bash@3
   displayName: 'apt-get update'
-  runAsRoot: true
   inputs:
     targetType: 'inline'
+    runAsRoot: true
     script: 'DEBIAN_FRONTEND=noninteractive apt-get update'
 - task: Bash@3
   displayName: 'apt-get install'
