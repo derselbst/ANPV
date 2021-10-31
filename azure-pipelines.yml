@@ -31,11 +31,11 @@ steps:
   displayName: 'test'
   inputs:
     targetType: 'inline'
-    script: 'ls -la /opt/Qt/*'
+    script: 'ls -la /opt/Qt/6.2.0/gcc_64/* && ls -la /opt/Qt/Tools/CMake/*'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
-    cmakeArgs: -DCMAKE_PREFIX_PATH=/opt/Qt ..
+    cmakeArgs: -DCMAKE_MODULE_PATH=/opt/Qt/Tools/CMake ..
     workingDirectory: 'build'
 
 - task: CMake@1
