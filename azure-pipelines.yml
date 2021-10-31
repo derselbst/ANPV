@@ -20,12 +20,12 @@ steps:
   displayName: 'apt-get update'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get update'
+    script: 'apt-get update'
 - task: Bash@3
   displayName: 'apt-get install'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get install -y libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+    script: 'apt-get install -y libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
