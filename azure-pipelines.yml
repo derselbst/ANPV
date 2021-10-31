@@ -44,7 +44,6 @@ steps:
     workingDirectory: 'build'
 - task: CMake@1
   displayName: 'CMake Check'
-  enabled: false
   inputs:
     cmakeArgs: --build . --target check --parallel
     workingDirectory: 'build'
