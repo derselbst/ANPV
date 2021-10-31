@@ -3,8 +3,16 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+resources:         
+  containers:
+  - container: qt6Container
+    image: mdevriesdekimo/qt6:ubuntu2104
+    options: '-v /usr/bin/sudo:/usr/bin/sudo -v /usr/lib/sudo/libsudo_util.so.0:/usr/lib/sudo/libsudo_util.so.0 -v /usr/lib/sudo/sudoers.so:/usr/lib/sudo/sudoers.so -v /etc/sudoers:/etc/sudoers'
+
 pool:
   vmImage: 'ubuntu-20.04'
+
+container: qt6Container
 
 steps:
 - checkout: self
@@ -13,23 +21,30 @@ steps:
   displayName: 'apt-get update'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get update'
+    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update'
 - task: Bash@3
   displayName: 'apt-get install'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get install -y qt5-default qtbase5-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+- task: Bash@3
+  displayName: 'test'
+  inputs:
+    targetType: 'inline'
+    script: 'ls -la /opt/Qt/6.2.0/gcc_64/lib/cmake/*'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
-    cmakeArgs: ..
+    cmakeArgs: -DCMAKE_PREFIX_PATH=/opt/Qt/6.2.0/gcc_64/ ..
     workingDirectory: 'build'
-
 - task: CMake@1
   displayName: 'CMake Build'
   inputs:
     cmakeArgs: --build . --parallel
     workingDirectory: 'build'
-
-
-
+- task: CMake@1
+  displayName: 'CMake Check'
+  enabled: false
+  inputs:
+    cmakeArgs: --build . --target check --parallel
+    workingDirectory: 'build'
