@@ -9,14 +9,10 @@ resources:
     image: mdevriesdekimo/qt6:ubuntu2104
     options: '-v /usr/bin/sudo:/usr/bin/sudo -v /usr/lib/sudo/libsudo_util.so.0:/usr/lib/sudo/libsudo_util.so.0 -v /usr/lib/sudo/sudoers.so:/usr/lib/sudo/sudoers.so -v /etc/sudoers:/etc/sudoers'
 
-
 pool:
   vmImage: 'ubuntu-20.04'
 
 container: qt6Container
-
-variables:
-  DEBIAN_FRONTEND: 'noninteractive'
 
 steps:
 - checkout: self
@@ -25,12 +21,12 @@ steps:
   displayName: 'apt-get update'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get update'
+    script: 'sudo DEBIAN_FRONTEND=noninteractive sudo apt-get update'
 - task: Bash@3
   displayName: 'apt-get install'
   inputs:
     targetType: 'inline'
-    script: 'sudo apt-get install -y libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+    script: 'sudo DEBIAN_FRONTEND=noninteractive sudo apt-get install -y libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
