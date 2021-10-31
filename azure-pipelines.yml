@@ -11,6 +11,8 @@ resources:
 pool:
   vmImage: 'ubuntu-20.04'
 
+container: qt6Container
+
 steps:
 - checkout: self
   submodules: true
