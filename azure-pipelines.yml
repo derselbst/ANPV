@@ -26,7 +26,7 @@ steps:
   displayName: 'apt-get install'
   inputs:
     targetType: 'inline'
-    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
