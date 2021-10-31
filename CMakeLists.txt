@@ -106,7 +106,7 @@ find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
 
-find_package(KF5KIO REQUIRED)
+#find_package(KF5KIO REQUIRED)
 
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
