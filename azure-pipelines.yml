@@ -16,7 +16,7 @@ pool:
 container: qt6Container
 
 variables:
-  - DEBIAN_FRONTEND: 'noninteractive'
+  DEBIAN_FRONTEND: 'noninteractive'
 
 steps:
 - checkout: self
