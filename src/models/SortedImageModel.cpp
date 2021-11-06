@@ -446,7 +446,7 @@ struct SortedImageModel::Impl
         emit q->layoutChanged();
     }
     
-    bool addSingleFile(QFileInfo&& inf)
+    bool addSingleFile(QFileInfo&& inf, QSize& iconSize)
     {
         auto image = DecoderFactory::globalInstance()->makeImage(inf);
         auto decoder = DecoderFactory::globalInstance()->getDecoder(image);
@@ -460,9 +460,6 @@ struct SortedImageModel::Impl
             decoder->moveToThread(QGuiApplication::instance()->thread());
             try
             {
-                int iconHeight = cachedIconHeight;
-                QSize iconSize(iconHeight, iconHeight);
-                
                 if(sortedColumnNeedsPreloadingMetadata())
                 {
                     decoder->open();
@@ -493,10 +490,6 @@ struct SortedImageModel::Impl
                     connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, q,
                             [=](){ onDecodingTaskFinished(decoder); }
                         , Qt::QueuedConnection);
-
-                    // decode asynchronously
-                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
-                    watcher->setFuture(fut);
                 }
             }
             catch(const std::exception& e)
@@ -548,10 +541,13 @@ struct SortedImageModel::Impl
 
         if(!fileInfoList.isEmpty())
         {
+            int iconHeight = cachedIconHeight;
+            QSize iconSize(iconHeight, iconHeight);
+            
             // any file still in the list are new, we need to add them
             for(QFileInfo i : fileInfoList)
             {
-                addSingleFile(std::move(i));
+                addSingleFile(std::move(i), iconSize);
             }
         }
         
@@ -632,7 +628,7 @@ void SortedImageModel::run()
         const int entriesToProcess = fileInfoList.size();
         if(entriesToProcess > 0)
         {
-            d->directoryWorker->setProgressRange(0, entriesToProcess + 1 /* for sorting effort */);
+            d->directoryWorker->setProgressRange(0, entriesToProcess + 2 /* for sorting effort + starting the decoding */);
             
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             if (d->sortedColumnNeedsPreloadingMetadata())
@@ -644,12 +640,14 @@ void SortedImageModel::run()
             d->entries.reserve(entriesToProcess);
             d->entries.shrink_to_fit();
             unsigned readableImages = 0;
+            int iconHeight = d->cachedIconHeight;
+            QSize iconSize(iconHeight, iconHeight);
             while (!fileInfoList.isEmpty())
             {
                 do
                 {
                     QFileInfo inf = fileInfoList.takeFirst();
-                    if(d->addSingleFile(std::move(inf)))
+                    if(d->addSingleFile(std::move(inf), iconSize))
                     {
                         ++readableImages;
                     }
@@ -657,6 +655,21 @@ void SortedImageModel::run()
 
                 d->throwIfDirectoryLoadingCancelled();
                 d->setStatusMessage(entriesProcessed++, msg);
+            }
+            
+            {
+                d->throwIfDirectoryLoadingCancelled();
+                d->setStatusMessage(entriesProcessed++, "Directory read, starting async decoding tasks in the background.");
+                
+                std::lock_guard<std::mutex> l(d->m);
+                for (const auto& [key, value] : d->backgroundTasks)
+                {
+                    auto& decoder = key;
+                    auto& watcher = value;
+                    // decode asynchronously
+                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
+                    watcher->setFuture(fut);
+                }
             }
 
             d->setStatusMessage(entriesProcessed++, "Almost done: Sorting entries, please wait...");
