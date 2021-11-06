@@ -10,13 +10,17 @@ struct AfPointOverlay::Impl
     QSize imageSize;
 };
 
-AfPointOverlay::AfPointOverlay(const std::vector<AfPoint>& afPoints, QSize size) : d(std::make_unique<Impl>())
+AfPointOverlay::AfPointOverlay() : d(std::make_unique<Impl>())
+{}
+
+AfPointOverlay::~AfPointOverlay() = default;
+
+void AfPointOverlay::setAfPoints(const std::vector<AfPoint>& afPoints, const QSize& size)
 {
     d->afPoints = afPoints;
     d->imageSize = size;
+    this->prepareGeometryChange();
 }
-
-AfPointOverlay::~AfPointOverlay() = default;
 
 QRectF AfPointOverlay::boundingRect() const
 {
@@ -25,10 +29,6 @@ QRectF AfPointOverlay::boundingRect() const
 
 void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
-    auto clip = painter->clipBoundingRect();
-    auto viewport = painter->viewport();
-    auto window = painter->window();
-    
     auto pen = painter->pen();
     
     for(size_t i=0; i < d->afPoints.size(); i++)

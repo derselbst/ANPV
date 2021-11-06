@@ -15,11 +15,13 @@ using AfPoint = std::tuple<AfType, QRect>;
 class AfPointOverlay : public QAbstractGraphicsShapeItem
 {
 public:
-    AfPointOverlay(const std::vector<AfPoint>& afPoints, QSize size);
+    AfPointOverlay();
     ~AfPointOverlay() override;
     
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
+    
+    void setAfPoints(const std::vector<AfPoint>& afPoints, const QSize& size);
     
 private:
     struct Impl;

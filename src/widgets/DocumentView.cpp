@@ -44,7 +44,7 @@ struct DocumentView::Impl
     
     std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
 
-    std::unique_ptr<AfPointOverlay> afPointOverlay;
+    std::unique_ptr<AfPointOverlay> afPointOverlay = std::make_unique<AfPointOverlay>();
     
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
@@ -101,8 +101,6 @@ struct DocumentView::Impl
             currentImageDecoder->reset();
             currentImageDecoder = nullptr;
         }
-        
-        afPointOverlay = nullptr;
         
         scene->invalidate();
         
@@ -204,14 +202,6 @@ struct DocumentView::Impl
         }
     }
 
-    void addAfPoints(std::unique_ptr<AfPointOverlay>&& afpoint)
-    {
-        afPointOverlay = std::move(afpoint);
-        afPointOverlay->setZValue(1);
-        afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
-        scene->addItem(afPointOverlay.get());
-    }
-    
     void setDocumentError(SmartImageDecoder* sid)
     {
         setDocumentError(sid->errorMessage());
@@ -404,6 +394,29 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::Metadata:
     {
         this->setSceneRect(QRectF(QPointF(0,0), dec->image()->size()));
+
+        std::vector<AfPoint> afPoints;
+        QSize size;
+        QRect inFocusBoundingRect;
+        if(dec->image()->exif()->autoFocusPoints(afPoints,size))
+        {
+            d->scene->addItem(d->afPointOverlay.get());
+            d->afPointOverlay->setAfPoints(afPoints, size);
+            d->afPointOverlay->setZValue(1);
+            d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
+            d->afPointOverlay->update();
+            for(size_t i=0; i < afPoints.size(); i++)
+            {
+                auto& af = afPoints[i];
+                auto type = std::get<0>(af);
+                auto rect = std::get<1>(af);
+                if(type == AfType::HasFocus)
+                {
+                    inFocusBoundingRect = inFocusBoundingRect.united(rect);
+                }
+            }
+        }
+
         auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
@@ -413,25 +426,9 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
         else if(viewMode == ViewMode::CenterAf)
         {
-            std::vector<AfPoint> afPoints;
-            QSize size;
-            if(dec->image()->exif()->autoFocusPoints(afPoints,size))
+            if(inFocusBoundingRect.isValid())
             {
-                QRect inFocusBoundingRect;
-                for(size_t i=0; i < afPoints.size(); i++)
-                {
-                    auto& af = afPoints[i];
-                    auto type = std::get<0>(af);
-                    auto rect = std::get<1>(af);
-                    if(type == AfType::HasFocus)
-                    {
-                        inFocusBoundingRect = inFocusBoundingRect.united(rect);
-                    }
-                }
-                if(inFocusBoundingRect.isValid())
-                {
-                    this->centerOn(inFocusBoundingRect.center());
-                }
+                this->centerOn(inFocusBoundingRect.center());
             }
         }
         d->addThumbnailPreview(dec->image()->thumbnail(), dec->image()->size());
@@ -442,13 +439,6 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         if (oldState == DecodingState::Metadata)
         {
             d->scene->addItem(d->currentPixmapOverlay.get());
-            
-            std::vector<AfPoint> p;
-            QSize s;
-            if(dec->image()->exif()->autoFocusPoints(p,s))
-            {
-                d->addAfPoints(std::make_unique<AfPointOverlay>(p,s));
-            }
         }
         break;
     case DecodingState::FullImage:
