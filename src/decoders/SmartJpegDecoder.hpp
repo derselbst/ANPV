@@ -15,7 +15,7 @@ class SmartJpegDecoder : public SmartImageDecoder
 Q_OBJECT
 
 public:
-    SmartJpegDecoder(QSharedPointer<Image> image, QByteArray arr = QByteArray());
+    SmartJpegDecoder(QSharedPointer<Image> image);
     ~SmartJpegDecoder() override;
 
     SmartJpegDecoder(const SmartJpegDecoder&) = delete;

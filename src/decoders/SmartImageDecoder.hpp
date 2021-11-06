@@ -32,7 +32,7 @@ class SmartImageDecoder : public QObject, public QRunnable
 Q_OBJECT
 
 public:
-    SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr = QByteArray());
+    SmartImageDecoder(QSharedPointer<Image> image);
     ~SmartImageDecoder() override;
     
     SmartImageDecoder(const SmartImageDecoder&) = delete;

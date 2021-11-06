@@ -7,7 +7,6 @@
 #include "DocumentView.hpp"
 #include "Image.hpp"
 
-#include <KDCRAW/KDcraw>
 #include <QFile>
 #include <QImageReader>
 #include <QDebug>
@@ -80,34 +79,13 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Imag
     {
         QImageReader r(info.absoluteFilePath());
         
-        if(image->isRaw())
+        if(image->isRaw() || r.format() == "jpeg")
         {
-            QByteArray previewData;
-
-            // use KDcraw for getting the embedded preview
-            bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(previewData, info.absoluteFilePath());
-
-            if (!ret)
-            {
-                // if the embedded preview loading failed, load half preview instead.
-                // That's slower but it works even for images containing
-                // small (160x120px) or none embedded preview.
-                if (!KDcrawIface::KDcraw::loadHalfPreview(previewData, info.absoluteFilePath()))
-                {
-                    qWarning() << "unable to get half preview for " << info.absoluteFilePath();
-                    return nullptr;
-                }
-            }
-            
-            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image, previewData), &QObject::deleteLater);
+            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image), &QObject::deleteLater);
         }
         else if(r.format() == "tiff")
         {
             return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(image), &QObject::deleteLater);
-        }
-        else if(r.format() == "jpeg")
-        {
-            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image), &QObject::deleteLater);
         }
     }
     

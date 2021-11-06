@@ -8,6 +8,7 @@
 #include "Image.hpp"
 #include "ANPV.hpp"
 
+#include <KDCRAW/KDcraw>
 #include <QtDebug>
 #include <QPromise>
 #include <QMetaMethod>
@@ -50,7 +51,7 @@ struct SmartImageDecoder::Impl
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
     
-    Impl(SmartImageDecoder* q, QSharedPointer<Image> image, QByteArray arr) : q(q), image(image), encodedInputFile(arr), file(q)
+    Impl(SmartImageDecoder* q, QSharedPointer<Image> image) : q(q), image(image), file(q)
     {}
     
     void open(const QFileInfo& info)
@@ -92,7 +93,7 @@ struct SmartImageDecoder::Impl
     }
 };
 
-SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image, QByteArray arr) : d(std::make_unique<Impl>(this, image, arr))
+SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_unique<Impl>(this, image))
 {
     image->setHasDecoder(true);
     this->setAutoDelete(false);
@@ -167,7 +168,7 @@ void SmartImageDecoder::init()
         
         d->encodedInputBufferSize = mapSize;
         d->encodedInputBufferPtr = fileMapped;
-        if(d->encodedInputFile.isEmpty())
+        if(!this->image()->isRaw())
         {
             if(fileMapped == nullptr)
             {
@@ -176,6 +177,22 @@ void SmartImageDecoder::init()
         }
         else
         {
+            QString filePath = this->image()->fileInfo().absoluteFilePath();
+
+            // use KDcraw for getting the embedded preview
+            bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(d->encodedInputFile, filePath);
+
+            if (!ret)
+            {
+                // if the embedded preview loading failed, load half preview instead.
+                // That's slower but it works even for images containing
+                // small (160x120px) or none embedded preview.
+                if (!KDcrawIface::KDcraw::loadHalfPreview(d->encodedInputFile, filePath))
+                {
+                    throw std::runtime_error(Formatter() << "KDcraw failed to open RAW file '" << d->file.fileName().toStdString() << "'");
+                }
+            }
+            
             d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
             d->encodedInputBufferSize = d->encodedInputFile.size();
         }

@@ -280,7 +280,7 @@ struct SmartTiffDecoder::Impl
     }
 };
 
-SmartTiffDecoder::SmartTiffDecoder(QSharedPointer<Image> image, QByteArray arr) : SmartImageDecoder(image, arr), d(std::make_unique<Impl>(this))
+SmartTiffDecoder::SmartTiffDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
 {}
 
 SmartTiffDecoder::~SmartTiffDecoder() = default;
