@@ -47,6 +47,7 @@ struct SortedImageModel::Impl
     
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
     int cachedIconHeight = 1;
+    ViewFlags_t cachedViewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     
     QTimer layoutChangedTimer;
 
@@ -592,6 +593,13 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
             {
                 this->sort(newCol);
             });
+    
+    connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
+            [&](ViewFlags_t v, ViewFlags_t)
+            {
+                d->cachedViewFlags = v;
+                d->updateLayout();
+            });
 }
 
 SortedImageModel::~SortedImageModel()
@@ -726,7 +734,11 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
         
         e = d->entries[idx];
         QFileInfo eInfo = e->fileInfo();
-        if(e->hasDecoder() && eInfo.suffix() != "bak")
+        bool shouldSkip = eInfo.suffix() == "bak";
+        shouldSkip |= ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+                    && e->isRaw()
+                    && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
+        if(e->hasDecoder() && !shouldSkip)
         {
             stepsFromCurrent -= step;
         }
