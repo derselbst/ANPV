@@ -60,6 +60,8 @@ public:
     }
 };
 
+static QPointer<ANPV> global;
+
 struct ANPV::Impl
 {
     ANPV* q;
@@ -85,6 +87,36 @@ struct ANPV::Impl
     
     Impl(ANPV* parent) : q(parent)
     {
+    }
+    
+    void initLogic()
+    {
+        if(::global.isNull())
+        {
+            ::global = QPointer<ANPV>(q);
+        }
+        
+        this->iconProvider.reset(new QFileIconProvider());
+        this->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
+        this->noIconProvider.reset(new MyDisabledFileIconProvider());
+        
+        this->dirModel = new QFileSystemModel(q);
+        this->dirModel->setIconProvider(this->noIconProvider.get());
+        this->dirModel->setRootPath("");
+        this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
+        
+        this->fileModel.reset(new SortedImageModel(q));
+    }
+    
+    void connectLogic()
+    {
+        connect(q, &ANPV::iconHeightChanged, q, [&](int, int){ this->drawNoIconPixmap(); });
+        connect(q, &ANPV::currentDirChanged, q,
+                [&](QDir,QDir)
+                {
+                    auto fut = this->fileModel->changeDirAsync(this->currentDir);
+                    q->addBackgroundTask(ProgressGroup::Directory, fut);
+                });
     }
     
     void writeSettings()
@@ -126,10 +158,17 @@ struct ANPV::Impl
     }
 };
 
-static QPointer<ANPV> global;
 ANPV* ANPV::globalInstance()
 {
     return global.get();
+}
+
+
+ANPV::ANPV() : d(std::make_unique<Impl>(this))
+{
+    d->initLogic();
+    d->readSettings();
+    d->drawNoIconPixmap();
 }
 
 ANPV::ANPV(QSplashScreen *splash)
@@ -140,30 +179,10 @@ ANPV::ANPV(QSplashScreen *splash)
     QCoreApplication::setApplicationName("ANPV");
 
     splash->showMessage("Creating logic");
-    if(::global.isNull())
-    {
-        ::global = QPointer<ANPV>(this);
-    }
-    
-    d->iconProvider.reset(new QFileIconProvider());
-    d->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
-    d->noIconProvider.reset(new MyDisabledFileIconProvider());
-    
-    d->dirModel = new QFileSystemModel(this);
-    d->dirModel->setIconProvider(d->noIconProvider.get());
-    d->dirModel->setRootPath("");
-    d->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
-    
-    d->fileModel.reset(new SortedImageModel(this));
+    d->initLogic();
 
     splash->showMessage("Connecting logic");
-    connect(this, &ANPV::iconHeightChanged, this, [&](int, int){ d->drawNoIconPixmap(); });
-    connect(this, &ANPV::currentDirChanged, this,
-            [&](QDir,QDir)
-            {
-                auto fut = d->fileModel->changeDirAsync(d->currentDir);
-                this->addBackgroundTask(ProgressGroup::Directory, fut);
-            });
+    d->connectLogic();
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
@@ -334,12 +353,18 @@ void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 
 void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
 {
-    d->mainWindow->addBackgroundTask(group, fut);
+    if(d->mainWindow)
+    {
+        d->mainWindow->addBackgroundTask(group, fut);
+    }
 }
 
 void ANPV::hideProgressWidget(CancellableProgressWidget* w)
 {
-    d->mainWindow->hideProgressWidget(w);
+    if(d->mainWindow)
+    {
+        d->mainWindow->hideProgressWidget(w);
+    }
 }
 
 QPixmap ANPV::noIconPixmap()

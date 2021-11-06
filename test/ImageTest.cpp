@@ -2,6 +2,7 @@
 #include "ImageTest.hpp"
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
+#include "ANPV.hpp"
 
 #include <QTest>
 #include <QDebug>
@@ -14,6 +15,7 @@ QTEST_MAIN(ImageTest)
 void ImageTest::initTestCase()
 {
     Q_INIT_RESOURCE(ANPV);
+    static ANPV a;
 }
 
 void ImageTest::testRawImageHasNoSilblings()
@@ -97,7 +99,7 @@ void ImageTest::testIconHeight()
     
     for(int elem : validSizes)
     {
-        QPixmap icon = imageJpg->icon(elem);
+        QPixmap icon = imageJpg->thumbnailTransformed(elem);
         QCOMPARE(icon.height(), elem);
     }
     
@@ -105,7 +107,7 @@ void ImageTest::testIconHeight()
     
     for(int elem : invalidSizes)
     {
-        QPixmap icon = imageJpg->icon(elem);
+        QPixmap icon = imageJpg->thumbnailTransformed(elem);
         QVERIFY(icon.isNull());
     }
 }
@@ -113,6 +115,6 @@ void ImageTest::testIconHeight()
 void ImageTest::testIconForNonExistingFile()
 {
     QSharedPointer<Image> image = DecoderFactory::globalInstance()->makeImage(QFileInfo("filenotfound.zzz"));
-    QPixmap pix = image->icon(100);
+    QPixmap pix = image->thumbnailTransformed(100);
     QVERIFY(!pix.isNull());
 }

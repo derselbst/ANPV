@@ -55,6 +55,7 @@ public:
     static constexpr int MaxIconHeight = 500/*px*/;
     static ANPV* globalInstance();
 
+    ANPV();
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 

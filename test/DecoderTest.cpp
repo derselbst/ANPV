@@ -2,6 +2,7 @@
 #include "DecoderTest.hpp"
 #include "DecoderFactory.hpp"
 #include "SmartImageDecoder.hpp"
+#include "ANPV.hpp"
 
 #include <QTest>
 #include <QDebug>
@@ -69,6 +70,7 @@ static void verifyDecodingState(ImageDecoderUnderTest& dec, QSignalSpy& spy, Dec
 void DecoderTest::initTestCase()
 {
     Q_INIT_RESOURCE(ANPV);
+    static ANPV a;
 }
 
 void DecoderTest::errorWhileOpeningFile()
