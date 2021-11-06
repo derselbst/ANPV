@@ -16,8 +16,12 @@ macro ( ADD_ANPV_TEST _test )
     TARGET_LINK_LIBRARIES(${_test} PRIVATE anpv-lib Qt6::Core Qt6::Widgets Qt6::Test)
     
     # add the test to ctest
-    ADD_TEST(NAME ${_test} COMMAND ${_test})
-    
+    if(DEFINED ENV{AGENT_ID})
+        ADD_TEST(NAME ${_test} COMMAND ${_test} "-platform" "offscreen")
+    else()
+        ADD_TEST(NAME ${_test} COMMAND ${_test})
+    endif()
+
     # append the current unit test to check-target as dependency
     add_dependencies(buildtests ${_test})
 
