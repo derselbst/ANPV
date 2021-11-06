@@ -208,6 +208,7 @@ struct DocumentView::Impl
     {
         afPointOverlay = std::move(afpoint);
         afPointOverlay->setZValue(1);
+        afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
         scene->addItem(afPointOverlay.get());
     }
     
@@ -254,6 +255,16 @@ DocumentView::DocumentView(QWidget *parent)
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ emit d->createSmoothPixmap();});
+    
+    connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
+            [&](ViewFlags_t v, ViewFlags_t)
+            {
+                bool vis = (v & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0;
+                if(d->afPointOverlay)
+                {
+                    d->afPointOverlay->setVisible(vis);
+                }
+            });
 }
 
 DocumentView::~DocumentView() = default;
