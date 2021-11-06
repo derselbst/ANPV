@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV)
+cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
+project (ANPV VERSION 0.0.0 LANGUAGES CXX)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
@@ -28,8 +28,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Global setting: build everything position independent
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# by default, force c++11
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # in case we have any c code, use the best c standard ever
@@ -53,8 +52,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Warray-bounds -Wstack-protector")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0 -Wextra -fno-inline-functions -fsanitize=address ") #  -D_GLIBCXX_DEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fstack-check -fstack-protector-all")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-check -fstack-protector-all")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fstack-protector-all")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-protector-all")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     if(USE_LIBCXX)
         set(STDCXX "libc++")
@@ -65,7 +64,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -stdlib=${STDCXX}")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0 -Wextra -Wdocumentation -fno-inline-functions ")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g3 -Rpass=loop-vectorize -Rpass-analysis=loop-vectorize -fstack-protector-all")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-check -fstack-protector-all")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-protector-all")
 endif()
 
 ### setup project include dirs
@@ -101,11 +100,13 @@ if ( OpenMP_FOUND OR OpenMP_C_FOUND )
     endif()
 endif()
 
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 
 find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
+
+#find_package(KF5KIO REQUIRED)
 
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
@@ -113,59 +114,65 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
-message("")
-### Show a summary of what we got
-# summary_show()
+#add_subdirectory(kitemviews)
+#include_directories("${CMAKE_BINARY_DIR}/kitemviews/src")
 
-set(SRC
-main.cpp
-AfPointOverlay.cpp
-AfPointOverlay.hpp
-ANPV.hpp
-ANPV.cpp
-CancellableProgressDialog.hpp
-CancellableProgressWidget.cpp
-CancellableProgressWidget.hpp
-DecoderFactory.hpp
-DecoderFactory.cpp
-DecodingState.hpp
-DocumentView.cpp
-DocumentView.hpp
-ExifOverlay.cpp
-ExifOverlay.hpp
-ExifWrapper.cpp
-ExifWrapper.hpp
-FileOperationConfig.cpp
-FileOperationConfig.hpp
-Formatter.hpp
-SortedImageModel.cpp
-SortedImageModel.hpp
-MessageWidget.cpp
-MessageWidget.hpp
-MoonPhase.cpp
-MoonPhase.hpp
-MoveFileCommand.cpp
-MoveFileCommand.hpp
-Settings.cpp
-Settings.hpp
-SmartImageDecoder.cpp
-SmartImageDecoder.hpp
-SmartJpegDecoder.cpp
-SmartJpegDecoder.hpp
-SmartTiffDecoder.cpp
-SmartTiffDecoder.hpp
-ThumbnailView.cpp
-ThumbnailView.hpp
-ThumbnailImageView.cpp
-ThumbnailImageView.hpp
-UserCancellation.hpp
-xThreadGuard.hpp
-)
+add_library(anpv-lib STATIC
+src/widgets/AfPointOverlay.cpp
+src/widgets/AfPointOverlay.hpp
+src/widgets/CancellableProgressDialog.hpp
+src/widgets/CancellableProgressWidget.cpp
+src/widgets/CancellableProgressWidget.hpp
+src/widgets/CancellableProgressWidget.ui
+src/widgets/DocumentView.cpp
+src/widgets/DocumentView.hpp
+src/widgets/ExifOverlay.cpp
+src/widgets/ExifOverlay.hpp
+src/widgets/FileOperationConfigDialog.cpp
+src/widgets/FileOperationConfigDialog.hpp
+src/widgets/FileOperationConfigDialog.ui
+src/widgets/MessageWidget.cpp
+src/widgets/MessageWidget.hpp
+src/widgets/MultiDocumentView.cpp
+src/widgets/MultiDocumentView.hpp
+src/widgets/MainWindow.cpp
+src/widgets/MainWindow.hpp
+src/widgets/MainWindow.ui
+src/widgets/ThumbnailListView.cpp
+src/widgets/ThumbnailListView.hpp
+src/decoders/DecoderFactory.hpp
+src/decoders/DecoderFactory.cpp
+src/decoders/DecodingState.hpp
+src/decoders/SmartImageDecoder.cpp
+src/decoders/SmartImageDecoder.hpp
+src/decoders/SmartJpegDecoder.cpp
+src/decoders/SmartJpegDecoder.hpp
+src/decoders/SmartTiffDecoder.cpp
+src/decoders/SmartTiffDecoder.hpp
+src/logic/ExifWrapper.cpp
+src/logic/ExifWrapper.hpp
+src/logic/Formatter.hpp
+src/logic/Image.cpp
+src/logic/Image.hpp
+src/logic/MoonPhase.cpp
+src/logic/MoonPhase.hpp
+src/logic/UserCancellation.hpp
+src/logic/xThreadGuard.hpp
+src/logic/TraceTimer.cpp
+src/logic/TraceTimer.hpp
+src/logic/ANPV.cpp
+src/logic/ANPV.hpp
+src/models/SortedImageModel.cpp
+src/models/SortedImageModel.hpp
+ANPV.qrc)
 
-qt6_wrap_ui(UI_HEADERS
-    CancellableProgressWidget.ui
-    FileOperationConfig.ui)
+target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5::KExiv2 KF5::KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
+target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
+target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models)
 
-add_executable(anpv ${SRC} ${UI_HEADERS} ANPV.qrc)
-target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5KExiv2 KF5::KDcraw stdc++fs)
-target_include_directories(anpv SYSTEM PRIVATE Qt6::Core Qt6::Widgets ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS} ${KF5KDcraw_INCLUDE_DIRS})
+add_executable(anpv "main.cpp")
+target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
+target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
+
+add_subdirectory(test)

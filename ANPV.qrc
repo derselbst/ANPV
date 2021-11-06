@@ -9,5 +9,6 @@
         <file>images/save.png</file>
         <file>images/splash.jpg</file>
         <file>images/undo.png</file>
+        <file>images/FileNotFound.svg</file>
     </qresource>
 </RCC>

@@ -27,11 +27,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
-- task: Bash@3
-  displayName: 'test'
-  inputs:
-    targetType: 'inline'
-    script: 'ls -la /opt/Qt/6.2.0/gcc_64/lib/cmake/*'
 - task: CMake@1
   displayName: 'CMake configure'
   inputs:
@@ -44,7 +39,6 @@ steps:
     workingDirectory: 'build'
 - task: CMake@1
   displayName: 'CMake Check'
-  enabled: false
   inputs:
     cmakeArgs: --build . --target check --parallel
     workingDirectory: 'build'

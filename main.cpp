@@ -1,12 +1,12 @@
 
-#include "DocumentView.hpp"
-#include "ANPV.hpp"
 #include "DecoderFactory.hpp"
-
+#include "Image.hpp"
+#include "UserCancellation.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QFutureWatcher>
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
 #include <QSplashScreen>
@@ -16,6 +16,7 @@
 #include <QMainWindow>
 #include <QStatusBar>
 #include <QProgressBar>
+#include <QPromise>
 #include <QDir>
 
 #include <chrono>
@@ -23,51 +24,21 @@
 
 using namespace std::chrono_literals;
 
+#include "ANPV.hpp"
+
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
     
     QSplashScreen splash(QPixmap(":/images/splash.jpg"));
     splash.show();
     
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
+
+    ANPV a(&splash);
     
-    ANPV m(&splash);
-    m.show();
-    splash.finish(&m);
-    
-    if(argc == 2)
-    {
-        QString arg(argv[1]);
-        QFileInfo info(arg);
-        if(info.exists())
-        {
-            if(info.isDir())
-            {
-                m.showThumbnailView();
-                m.setThumbnailDir(arg);
-            }
-            else if(info.isFile())
-            {
-                m.showImageView();
-                m.loadImage(info);
-                splash.showMessage("Starting the image decoding task...");
-            }
-        }
-        else
-        {
-            qCritical() << "Path '" << argv[1] << "' not found";
-            return -1;
-        }
-    }
-    else
-    {
-        qInfo() << "No directory given, assuming " << QDir::currentPath();
-        m.showThumbnailView();
-        m.setThumbnailDir(QDir::currentPath());
-    }
-    
-    return a.exec();
+    int r = app.exec();
+    return r;
 }
