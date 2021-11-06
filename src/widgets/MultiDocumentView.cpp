@@ -15,6 +15,9 @@ struct MultiDocumentView::Impl
     MultiDocumentView* q;
     QTabWidget* tw;
     
+    Impl(MultiDocumentView* q) : q(q)
+    {}
+    
     void onCurrentTabChanged(int idx)
     {
         q->setWindowTitle(tw->tabText(idx));
