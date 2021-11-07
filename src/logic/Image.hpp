@@ -50,7 +50,7 @@ public:
     QTransform userTransform() const;
     void setUserTransform(QTransform);
     
-    QPixmap thumbnail();
+    QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
     void lookupIconFromFileType();

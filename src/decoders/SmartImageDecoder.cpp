@@ -208,7 +208,18 @@ void SmartImageDecoder::init()
         exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
         this->image()->setExif(exifWrapper);
         this->image()->setDefaultTransform(exifWrapper->transformMatrix());
-        this->image()->setThumbnail(exifWrapper->thumbnail());
+        
+        QImage thumb = this->image()->thumbnail();
+        if(thumb.isNull())
+        {
+            thumb = exifWrapper->thumbnail();
+        }
+        if(!thumb.isNull())
+        {
+            thumb.setColorSpace(this->image()->colorSpace());
+            thumb.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+            this->image()->setThumbnail(thumb);
+        }
         
         this->setDecodingState(DecodingState::Metadata);
     }

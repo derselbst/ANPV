@@ -61,7 +61,7 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
             int idx = d->tw->indexOf(dv);
             if(idx >= 0)
             {
-                d->tw->setTabIcon(idx, img->thumbnail());
+                d->tw->setTabIcon(idx, img->thumbnailTransformed(50));
                 d->tw->setTabText(idx, img->fileInfo().fileName());
                 d->onCurrentTabChanged(idx);
             }

@@ -27,7 +27,7 @@ struct Image::Impl
     const QFileInfo fileInfo;
     
     // a low resolution preview image of the original full image
-    QPixmap thumbnail;
+    QImage thumbnail;
     
     // same as thumbnail, but rotated according to EXIF orientation
     QPixmap thumbnailTransformed;
@@ -130,7 +130,7 @@ void Image::setUserTransform(QTransform trans)
     d->userTransform = trans;
 }
 
-QPixmap Image::thumbnail()
+QImage Image::thumbnail()
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
     return d->thumbnail;
@@ -143,22 +143,10 @@ void Image::setThumbnail(QImage thumb)
         return;
     }
     
-    QPixmap pix = QPixmap::fromImage(thumb, Qt::NoFormatConversion);
-    this->setThumbnail(pix);
-}
-
-void Image::setThumbnail(QPixmap pix)
-{
-    if(pix.isNull())
-    {
-        // thumbnails should not be unset
-        return;
-    }
-    
     std::unique_lock<std::recursive_mutex> lck(d->m);
-    if(pix.width() > d->thumbnail.width())
+    if(thumb.width() > d->thumbnail.width())
     {
-        d->thumbnail = pix;
+        d->thumbnail = thumb;
         d->thumbnailTransformed = QPixmap();
         
         if(!this->signalsBlocked())
@@ -200,7 +188,7 @@ QPixmap Image::thumbnailTransformed(int height)
     std::lock_guard<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
-    QPixmap thumb = this->thumbnail();
+    QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::NoFormatConversion);
     if(thumb.isNull())
     {
         pix = this->icon().pixmap(height);

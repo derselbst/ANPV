@@ -189,13 +189,13 @@ struct DocumentView::Impl
         QGuiApplication::restoreOverrideCursor();
     }
     
-    void addThumbnailPreview(QPixmap thumb, QSize fullImageSize)
+    void addThumbnailPreview(QImage thumb, QSize fullImageSize)
     {
         if(!thumb.isNull())
         {
             auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
 
-            thumbnailPreviewOverlay->setPixmap(thumb);
+            thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb, Qt::NoFormatConversion));
             thumbnailPreviewOverlay->setScale(newScale);
             
             scene->addItem(thumbnailPreviewOverlay.get());
