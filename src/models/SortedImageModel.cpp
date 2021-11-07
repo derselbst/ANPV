@@ -61,11 +61,11 @@ struct SortedImageModel::Impl
     
     // returns true if the column that is sorted against requires us to preload the image metadata
     // before we insert the items into the model
-    bool sortedColumnNeedsPreloadingMetadata()
+    static constexpr bool sortedColumnNeedsPreloadingMetadata(Column SortCol)
     {
-        if (currentSortedCol == Column::FileName ||
-            currentSortedCol == Column::FileSize ||
-            currentSortedCol == Column::DateModified)
+        if (SortCol == Column::FileName ||
+            SortCol == Column::FileSize ||
+            SortCol == Column::DateModified)
         {
             return false;
         }
@@ -94,28 +94,7 @@ struct SortedImageModel::Impl
     template<Column SortCol>
     static bool sortColumnPredicateLeftBeforeRight(const QSharedPointer<Image>& limg, const QFileInfo& linfo, const QSharedPointer<Image>& rimg, const QFileInfo& rinfo)
     {
-        if constexpr (SortCol == Column::Resolution)
-        {
-            QSize lsize = limg->size();
-            QSize rsize = rimg->size();
-
-            if (lsize.isValid() && rsize.isValid())
-            {
-                if (lsize.width() != rsize.width() && lsize.height() != rsize.height())
-                {
-                    return static_cast<size_t>(lsize.width()) * lsize.height() < static_cast<size_t>(rsize.width()) * rsize.height();
-                }
-            }
-            else if (lsize.isValid())
-            {
-                return true;
-            }
-            else if (rsize.isValid())
-            {
-                return false;
-            }
-        }
-        else if constexpr (SortCol == Column::FileName)
+        if constexpr (SortCol == Column::FileName)
         {
             // nothing to do here, we use the fileName comparison below
         }
@@ -127,124 +106,151 @@ struct SortedImageModel::Impl
         {
             return linfo.lastModified() < rinfo.lastModified();
         }
+        
+        bool leftFileNameIsBeforeRight = compareFileName(linfo, rinfo);
 
-        auto lexif = limg->exif();
-        auto rexif = rimg->exif();
-
-        if (lexif && rexif)
+        if constexpr(sortedColumnNeedsPreloadingMetadata(SortCol))
         {
-            if constexpr (SortCol == Column::DateRecorded)
+            // only evaluate exif() when sortedColumnNeedsPreloadingMetadata() is true!
+            auto lexif = limg->exif();
+            auto rexif = rimg->exif();
+
+            if (lexif && rexif)
             {
-                QDateTime ltime = lexif->dateRecorded();
-                QDateTime rtime = rexif->dateRecorded();
-                
-                if (ltime.isValid() && rtime.isValid())
+                if constexpr (SortCol == Column::DateRecorded)
                 {
-                    if (ltime != rtime)
+                    QDateTime ltime = lexif->dateRecorded();
+                    QDateTime rtime = rexif->dateRecorded();
+                    
+                    if (ltime.isValid() && rtime.isValid())
                     {
-                        return ltime < rtime;
+                        if (ltime != rtime)
+                        {
+                            return ltime < rtime;
+                        }
+                    }
+                    else if(ltime.isValid())
+                    {
+                        return true;
+                    }
+                    else if(rtime.isValid())
+                    {
+                        return false;
                     }
                 }
-                else if(ltime.isValid())
+                else if constexpr (SortCol == Column::Resolution)
                 {
-                    return true;
+                    QSize lsize = limg->size();
+                    QSize rsize = rimg->size();
+
+                    if (lsize.isValid() && rsize.isValid())
+                    {
+                        if (lsize.width() != rsize.width() && lsize.height() != rsize.height())
+                        {
+                            return static_cast<size_t>(lsize.width()) * lsize.height() < static_cast<size_t>(rsize.width()) * rsize.height();
+                        }
+                    }
+                    else if (lsize.isValid())
+                    {
+                        return true;
+                    }
+                    else if (rsize.isValid())
+                    {
+                        return false;
+                    }
                 }
-                else if(rtime.isValid())
+                else if constexpr (SortCol == Column::Aperture)
                 {
-                    return false;
+                    double lap,rap;
+                    lap = rap = std::numeric_limits<double>::max();
+                    
+                    lexif->aperture(lap);
+                    rexif->aperture(rap);
+                    
+                    if(lap != rap)
+                    {
+                        return lap < rap;
+                    }
+                }
+                else if constexpr (SortCol == Column::Exposure)
+                {
+                    double lex,rex;
+                    lex = rex = std::numeric_limits<double>::max();
+                    
+                    lexif->exposureTime(lex);
+                    rexif->exposureTime(rex);
+                    
+                    if(lex != rex)
+                    {
+                        return lex < rex;
+                    }
+                }
+                else if constexpr (SortCol == Column::Iso)
+                {
+                    long liso,riso;
+                    liso = riso = std::numeric_limits<long>::max();
+                    
+                    lexif->iso(liso);
+                    rexif->iso(riso);
+                    
+                    if(liso != riso)
+                    {
+                        return liso < riso;
+                    }
+                }
+                else if constexpr (SortCol == Column::FocalLength)
+                {
+                    double ll,rl;
+                    ll = rl = std::numeric_limits<double>::max();
+                    
+                    lexif->focalLength(ll);
+                    rexif->focalLength(rl);
+                    
+                    if(ll != rl)
+                    {
+                        return ll < rl;
+                    }
+                }
+                else if constexpr (SortCol == Column::Lens)
+                {
+                    QString ll,rl;
+                    
+                    ll = lexif->lens();
+                    rl = rexif->lens();
+                    
+                    if(!ll.isEmpty() && !rl.isEmpty())
+                    {
+                        return ll < rl;
+                    }
+                    else if (!ll.isEmpty())
+                    {
+                        return true;
+                    }
+                    else if (!rl.isEmpty())
+                    {
+                        return false;
+                    }
+                }
+                else if constexpr (SortCol == Column::CameraModel)
+                {
+                    throw std::logic_error("not yet implemented");
+                }
+                else
+                {
+    //                 static_assert("Unknown column to sort for");
                 }
             }
-            else if constexpr (SortCol == Column::Aperture)
+            else if (lexif && !rexif)
             {
-                double lap,rap;
-                lap = rap = std::numeric_limits<double>::max();
-                
-                lexif->aperture(lap);
-                rexif->aperture(rap);
-                
-                if(lap != rap)
-                {
-                    return lap < rap;
-                }
+                return true; // l before r
             }
-            else if constexpr (SortCol == Column::Exposure)
+            else if (!lexif && rexif)
             {
-                double lex,rex;
-                lex = rex = std::numeric_limits<double>::max();
-                
-                lexif->exposureTime(lex);
-                rexif->exposureTime(rex);
-                
-                if(lex != rex)
-                {
-                    return lex < rex;
-                }
+                return false; // l behind r
             }
-            else if constexpr (SortCol == Column::Iso)
-            {
-                long liso,riso;
-                liso = riso = std::numeric_limits<long>::max();
-                
-                lexif->iso(liso);
-                rexif->iso(riso);
-                
-                if(liso != riso)
-                {
-                    return liso < riso;
-                }
-            }
-            else if constexpr (SortCol == Column::FocalLength)
-            {
-                double ll,rl;
-                ll = rl = std::numeric_limits<double>::max();
-                
-                lexif->focalLength(ll);
-                rexif->focalLength(rl);
-                
-                if(ll != rl)
-                {
-                    return ll < rl;
-                }
-            }
-            else if constexpr (SortCol == Column::Lens)
-            {
-                QString ll,rl;
-                
-                ll = lexif->lens();
-                rl = rexif->lens();
-                
-                if(!ll.isEmpty() && !rl.isEmpty())
-                {
-                    return ll < rl;
-                }
-                else if (!ll.isEmpty())
-                {
-                    return true;
-                }
-                else if (!rl.isEmpty())
-                {
-                    return false;
-                }
-            }
-            else if constexpr (SortCol == Column::CameraModel)
-            {
-                throw std::logic_error("not yet implemented");
-            }
-            else
-            {
-//                 static_assert("Unknown column to sort for");
-            }
-        }
-        else if (lexif && !rexif)
-        {
-            return true; // l before r
-        }
-        else if (!lexif && rexif)
-        {
-            return false; // l behind r
         }
 
-        return compareFileName(linfo, rinfo);
+        return leftFileNameIsBeforeRight;
     }
 
     // This is the entry point for sorting. It sorts all Directories first.
@@ -460,7 +466,7 @@ struct SortedImageModel::Impl
             decoder->moveToThread(QGuiApplication::instance()->thread());
             try
             {
-                if(sortedColumnNeedsPreloadingMetadata())
+                if(sortedColumnNeedsPreloadingMetadata(this->currentSortedCol))
                 {
                     decoder->open();
                     // decode synchronously
@@ -631,7 +637,7 @@ void SortedImageModel::run()
             d->directoryWorker->setProgressRange(0, entriesToProcess + 2 /* for sorting effort + starting the decoding */);
             
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
-            if (d->sortedColumnNeedsPreloadingMetadata())
+            if (d->sortedColumnNeedsPreloadingMetadata(d->currentSortedCol))
             {
                 msg += " and reading EXIF data (making it quite slow)";
             }
