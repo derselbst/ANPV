@@ -241,22 +241,7 @@ QColorSpace Image::colorSpace()
 QString Image::namedColorSpace()
 {
     QColorSpace cs = this->colorSpace();
-    
-    switch(cs.primaries())
-    {
-        case QColorSpace::Primaries::Custom:
-            return "Custom";
-        case QColorSpace::Primaries::SRgb:
-            return "sRGB";
-        case QColorSpace::Primaries::AdobeRgb:
-            return "AdobeRGB";
-        case QColorSpace::Primaries::DciP3D65:
-            return "DCI-P3";
-        case QColorSpace::Primaries::ProPhotoRgb:
-            return "ProPhotoRGB";
-        default:
-            return QString();
-    }
+    return cs.description();
 }
 
 void Image::setColorSpace(QColorSpace cs)
