@@ -48,6 +48,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
     void loadImage();
+    void showImage(QSharedPointer<Image> img);
 
 private:
     struct Impl;

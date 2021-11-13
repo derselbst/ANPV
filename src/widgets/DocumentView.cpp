@@ -55,6 +55,8 @@ struct DocumentView::Impl
     // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
     QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
+    DecodingState latestDecodingState = DecodingState::Ready;
+    
     // the full resolution image currently displayed in the scene
     QPixmap currentDocumentPixmap;
     
@@ -87,6 +89,7 @@ struct DocumentView::Impl
             currentImageDecoder->disconnect(p);
             currentImageDecoder->reset();
             currentImageDecoder = nullptr;
+            latestDecodingState = DecodingState::Ready;
         }
         
         removeSmoothPixmap();
@@ -123,6 +126,7 @@ struct DocumentView::Impl
         {
             smoothPixmapOverlay->setPixmap(QPixmap());
             smoothPixmapOverlay->hide();
+            currentPixmapOverlay->show();
         }
     }
     
@@ -179,6 +183,7 @@ struct DocumentView::Impl
             smoothPixmapOverlay->setScale(newScale);
             smoothPixmapOverlay->setPixmap(scaled);
             smoothPixmapOverlay->show();
+            currentPixmapOverlay->hide();
         }
         else
         {
@@ -188,10 +193,12 @@ struct DocumentView::Impl
         QGuiApplication::restoreOverrideCursor();
     }
     
-    void addThumbnailPreview(QImage thumb, QSize fullImageSize)
+    void addThumbnailPreview(QSharedPointer<Image> img)
     {
+        QImage thumb = img->thumbnail();
         if(!thumb.isNull())
         {
+            QSize fullImageSize = img->size();
             auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
 
             thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb, Qt::NoFormatConversion));
@@ -408,45 +415,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         break;
     case DecodingState::Metadata:
     {
-        this->setSceneRect(QRectF(QPointF(0,0), dec->image()->size()));
-
-        std::vector<AfPoint> afPoints;
-        QSize size;
-        QRect inFocusBoundingRect;
-        if(dec->image()->exif()->autoFocusPoints(afPoints,size))
-        {
-            d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
-            d->afPointOverlay->setAfPoints(afPoints, size);
-            for(size_t i=0; i < afPoints.size(); i++)
-            {
-                auto& af = afPoints[i];
-                auto type = std::get<0>(af);
-                auto rect = std::get<1>(af);
-                if(type == AfType::HasFocus)
-                {
-                    inFocusBoundingRect = inFocusBoundingRect.united(rect);
-                }
-            }
-        }
-
-        auto viewMode = ANPV::globalInstance()->viewMode();
-        auto viewFlags = ANPV::globalInstance()->viewFlags();
-        if(viewMode == ViewMode::Fit)
-        {
-            this->resetTransform();
-            this->setTransform(dec->image()->exif()->transformMatrix(), true);
-            this->fitInView(QRectF(QPointF(0,0), dec->image()->size()), Qt::KeepAspectRatio);
-        }
-        
-        if(viewFlags & static_cast<ViewFlags_t>(ViewFlag::CenterAf))
-        {
-            if(inFocusBoundingRect.isValid())
-            {
-                this->centerOn(inFocusBoundingRect.center());
-            }
-        }
-        d->addThumbnailPreview(dec->image()->thumbnail(), dec->image()->size());
-        d->exifOverlay->setMetadata(dec->image());
+        this->showImage(dec->image());
         break;
     }
     case DecodingState::PreviewImage:
@@ -464,6 +433,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         d->currentPixmapOverlay->setScale(newScale);
         
         d->createSmoothPixmap();
+        d->thumbnailPreviewOverlay->hide();
         break;
     }
     case DecodingState::Error:
@@ -475,6 +445,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     default:
         break;
     }
+    d->latestDecodingState = static_cast<DecodingState>(newState);
 }
 
 void DocumentView::loadImage(QString url)
@@ -526,8 +497,74 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
     this->loadImage();
 }
 
+void DocumentView::showImage(QSharedPointer<Image> img)
+{
+    xThreadGuard g(this);
+    
+    QSize fullImgSize = img->size();
+    if(fullImgSize.isValid())
+    {
+        this->setSceneRect(QRectF(QPointF(0,0), fullImgSize));
+        
+        QSharedPointer<ExifWrapper> exif = img->exif();
+        if(exif && d->latestDecodingState < DecodingState::Metadata)
+        {
+            d->latestDecodingState = DecodingState::Metadata;
+            auto viewMode = ANPV::globalInstance()->viewMode();
+            auto viewFlags = ANPV::globalInstance()->viewFlags();
+            if(viewMode == ViewMode::Fit)
+            {
+                this->resetTransform();
+                this->setTransform(img->defaultTransform(), true);
+                this->fitInView(this->sceneRect(), Qt::KeepAspectRatio);
+            }
+            
+            std::vector<AfPoint> afPoints;
+            QSize size;
+            QRect inFocusBoundingRect;
+            QRect selectedFocusBoundingRect;
+            if(exif->autoFocusPoints(afPoints,size))
+            {
+                d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
+                d->afPointOverlay->setAfPoints(afPoints, size);
+                for(size_t i=0; i < afPoints.size(); i++)
+                {
+                    auto& af = afPoints[i];
+                    auto type = std::get<0>(af);
+                    auto rect = std::get<1>(af);
+                    if(type == AfType::HasFocus)
+                    {
+                        inFocusBoundingRect = inFocusBoundingRect.united(rect);
+                    }
+                    else if(type == AfType::Selected)
+                    {
+                        selectedFocusBoundingRect = selectedFocusBoundingRect.united(rect);
+                    }
+                }
+                
+                if(viewFlags & static_cast<ViewFlags_t>(ViewFlag::CenterAf))
+                {
+                    if(inFocusBoundingRect.isValid())
+                    {
+                        this->centerOn(inFocusBoundingRect.center());
+                    }
+                    else if(selectedFocusBoundingRect.isValid())
+                    {
+                        this->centerOn(selectedFocusBoundingRect.center());
+                    }
+                }
+            }
+        }
+    }
+    
+    d->addThumbnailPreview(img);
+    d->exifOverlay->setMetadata(img);
+}
+
 void DocumentView::loadImage()
 {
+    this->showImage(d->currentImageDecoder->image());
+    
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::imageRefined, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
