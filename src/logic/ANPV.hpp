@@ -34,7 +34,6 @@ enum class ViewMode : int
     Unknown,
     None,
     Fit,
-    CenterAf,
 };
 
 using ViewFlags_t = unsigned int;
@@ -44,6 +43,7 @@ enum class ViewFlag : ViewFlags_t
     CombineRawJpg = 0x1,
     ShowAfPoints = 0x2,
     RespectExifOrientation = 0x4,
+    CenterAf = 0x8,
 };
 
 

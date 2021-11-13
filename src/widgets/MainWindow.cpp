@@ -98,7 +98,6 @@ struct MainWindow::Impl
         
         makeViewAction(ui->actionNo_Change, ViewMode::None);
         makeViewAction(ui->actionFit_in_FOV, ViewMode::Fit);
-        makeViewAction(ui->actionCenter_AF_focus_point, ViewMode::CenterAf);
         
         auto makeTriggerAction = [&](QAction* action, ViewFlag v)
         {
@@ -113,6 +112,7 @@ struct MainWindow::Impl
         makeTriggerAction(ui->actionCombine_RAWs_and_JPGs, ViewFlag::CombineRawJpg);
         makeTriggerAction(ui->actionShow_AF_Points, ViewFlag::ShowAfPoints);
         makeTriggerAction(ui->actionRespect_EXIF_orientation, ViewFlag::RespectExifOrientation);
+        makeTriggerAction(ui->actionCenter_AF_focus_point, ViewFlag::CenterAf);
     }
     
     void createSortActions()

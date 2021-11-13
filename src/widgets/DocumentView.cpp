@@ -418,13 +418,15 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         }
 
         auto viewMode = ANPV::globalInstance()->viewMode();
+        auto viewFlags = ANPV::globalInstance()->viewFlags();
         if(viewMode == ViewMode::Fit)
         {
             this->resetTransform();
             this->setTransform(dec->image()->exif()->transformMatrix(), true);
             this->fitInView(QRectF(QPointF(0,0), dec->image()->size()), Qt::KeepAspectRatio);
         }
-        else if(viewMode == ViewMode::CenterAf)
+        
+        if(viewFlags & static_cast<ViewFlags_t>(ViewFlag::CenterAf))
         {
             if(inFocusBoundingRect.isValid())
             {
