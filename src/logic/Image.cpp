@@ -205,10 +205,11 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     else
     {
-        if(!d->thumbnailTransformed.isNull() && d->thumbnailTransformed.height() == height)
+        int currentHeight = d->thumbnailTransformed.height();
+        if(!d->thumbnailTransformed.isNull() && currentHeight >= height)
         {
-            t.setInfo("using cached thumbnail, size matches");
-            return d->thumbnailTransformed;
+            t.setInfo("using cached thumbnail, size is sufficient");
+            return currentHeight == height ? d->thumbnailTransformed : d->thumbnailTransformed.scaledToHeight(height, Qt::FastTransformation);
         }
         
         t.setInfo("no matching thumbnail cached, transforming and scaling it");
