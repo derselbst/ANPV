@@ -96,11 +96,11 @@
     </property>
     <addaction name="actionCombine_RAWs_and_JPGs"/>
     <addaction name="actionShow_AF_Points"/>
+    <addaction name="actionCenter_AF_focus_point"/>
     <addaction name="actionRespect_EXIF_orientation"/>
     <addaction name="separator"/>
     <addaction name="actionNo_Change"/>
     <addaction name="actionFit_in_FOV"/>
-    <addaction name="actionCenter_AF_focus_point"/>
     <addaction name="separator"/>
     <addaction name="actionReload"/>
    </widget>
@@ -232,6 +232,12 @@
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If a RAW file (e.g. .CR2 or .TIF) has a similar named .JPG file, only display the JPG and hide the RAWs.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>F6</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionNo_Change">
    <property name="checkable">
@@ -244,7 +250,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Do not change the scale, rotation or transformation when switching between images.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>F1</string>
+    <string>F3</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -261,7 +267,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When switching between images, fit the entire image into the Field Of View, i.e. the available space of the window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F4</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -272,13 +278,13 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Center AF focus point</string>
+    <string>Center around AF focus point</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will preserve the zoom factor, while making sure to transpose the image so that the AF points which are &amp;quot;in-focus&amp;quot; are located in the center of the FOV. If no AF data is available, no transposing takes place.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>F3</string>
+    <string>F8</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -350,6 +356,12 @@
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shows the AutoFocus Points available in the EXIF metadata. Currently only supported for Canon cameras.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+   <property name="shortcut">
+    <string>F7</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionRespect_EXIF_orientation">
    <property name="checkable">
@@ -360,6 +372,9 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically rotates the image as indicated by the EXIF metadata. If no such information is available, landscape orientation will be used by default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionReload">
