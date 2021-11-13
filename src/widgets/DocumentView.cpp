@@ -34,17 +34,17 @@ struct DocumentView::Impl
     QTimer fovChangedTimer;
     QTransform previousFovTransform;
     
-    QGraphicsScene* scene;
-    MessageWidget* messageWidget;
+    QPointer<QGraphicsScene> scene;
+    QPointer<MessageWidget> messageWidget;
     
     // a smoothly scaled version of the full resolution image
-    std::unique_ptr<QGraphicsPixmapItem> smoothPixmapOverlay;
+    QGraphicsPixmapItem* smoothPixmapOverlay;
     
-    std::unique_ptr<QGraphicsPixmapItem> thumbnailPreviewOverlay = std::make_unique<QGraphicsPixmapItem>();
+    QGraphicsPixmapItem* thumbnailPreviewOverlay;
     
-    std::unique_ptr<QGraphicsPixmapItem> currentPixmapOverlay = std::make_unique<QGraphicsPixmapItem>();
+    QGraphicsPixmapItem* currentPixmapOverlay;
 
-    std::unique_ptr<AfPointOverlay> afPointOverlay = std::make_unique<AfPointOverlay>();
+    AfPointOverlay* afPointOverlay;
     
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
@@ -71,19 +71,6 @@ struct DocumentView::Impl
     
     void clearScene()
     {
-        removeSmoothPixmap();
-        
-        // clear the scene without deleting anything
-        QList<QGraphicsItem*> L = scene->items();
-        while (!L.empty())
-        {
-            scene->removeItem(L.takeFirst());
-        }
-        
-        currentDocumentPixmap = QPixmap();
-        currentPixmapOverlay->setPixmap(currentDocumentPixmap);
-        currentPixmapOverlay->setScale(1);
-        
         if(!taskFuture.isFinished())
         {
             bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
@@ -102,10 +89,22 @@ struct DocumentView::Impl
             currentImageDecoder = nullptr;
         }
         
-        scene->invalidate();
+        removeSmoothPixmap();
+
+        currentDocumentPixmap = QPixmap();
+        currentPixmapOverlay->setPixmap(currentDocumentPixmap);
+        currentPixmapOverlay->setScale(1);
+        currentPixmapOverlay->hide();
+        
+        thumbnailPreviewOverlay->setPixmap(QPixmap());
+        thumbnailPreviewOverlay->hide();
+        
+        afPointOverlay->hide();
         
         messageWidget->hide();
         exifOverlay->hide();
+        
+        scene->invalidate();
     }
     
     void onViewportChanged(QTransform newTransform)
@@ -122,8 +121,8 @@ struct DocumentView::Impl
     {
         if (smoothPixmapOverlay)
         {
-            scene->removeItem(smoothPixmapOverlay.get());
-            smoothPixmapOverlay = nullptr;
+            smoothPixmapOverlay->setPixmap(QPixmap());
+            smoothPixmapOverlay->hide();
         }
     }
     
@@ -176,10 +175,10 @@ struct DocumentView::Impl
             QPixmap fastDownScaled = imgToScale.scaled(viewportRect.size() * 2, Qt::KeepAspectRatio, Qt::FastTransformation);
             QPixmap scaled = fastDownScaled.scaled(viewportRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-            smoothPixmapOverlay = std::make_unique<QGraphicsPixmapItem>(std::move(scaled));
             smoothPixmapOverlay->setPos(visPixRect.topLeft());
             smoothPixmapOverlay->setScale(newScale);
-            scene->addItem(smoothPixmapOverlay.get());
+            smoothPixmapOverlay->setPixmap(scaled);
+            smoothPixmapOverlay->show();
         }
         else
         {
@@ -197,8 +196,7 @@ struct DocumentView::Impl
 
             thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb, Qt::NoFormatConversion));
             thumbnailPreviewOverlay->setScale(newScale);
-            
-            scene->addItem(thumbnailPreviewOverlay.get());
+            thumbnailPreviewOverlay->show();
         }
     }
 
@@ -235,8 +233,25 @@ DocumentView::DocumentView(QWidget *parent)
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     
     d->scene = new QGraphicsScene(this);
-    this->setScene(d->scene);
     
+    d->thumbnailPreviewOverlay = new QGraphicsPixmapItem;
+    d->thumbnailPreviewOverlay->setZValue(-10);
+    d->scene->addItem(d->thumbnailPreviewOverlay);
+    
+    d->currentPixmapOverlay = new QGraphicsPixmapItem;
+    d->currentPixmapOverlay->setZValue(-9);
+    d->scene->addItem(d->currentPixmapOverlay);
+    
+    d->smoothPixmapOverlay = new QGraphicsPixmapItem;
+    d->smoothPixmapOverlay->setZValue(-8);
+    d->scene->addItem(d->smoothPixmapOverlay);
+    
+    d->afPointOverlay = new AfPointOverlay;
+    d->afPointOverlay->setZValue(100);
+    d->scene->addItem(d->afPointOverlay);
+    
+    this->setScene(d->scene);
+            
     d->messageWidget = new MessageWidget(this);
     d->messageWidget->setCloseButtonVisible(false);
     d->messageWidget->setWordWrap(true);
@@ -400,11 +415,8 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         QRect inFocusBoundingRect;
         if(dec->image()->exif()->autoFocusPoints(afPoints,size))
         {
-            d->scene->addItem(d->afPointOverlay.get());
-            d->afPointOverlay->setAfPoints(afPoints, size);
-            d->afPointOverlay->setZValue(1);
             d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
-            d->afPointOverlay->update();
+            d->afPointOverlay->setAfPoints(afPoints, size);
             for(size_t i=0; i < afPoints.size(); i++)
             {
                 auto& af = afPoints[i];
@@ -440,7 +452,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     case DecodingState::PreviewImage:
         if (oldState == DecodingState::Metadata)
         {
-            d->scene->addItem(d->currentPixmapOverlay.get());
+            d->currentPixmapOverlay->show();
         }
         break;
     case DecodingState::FullImage:
