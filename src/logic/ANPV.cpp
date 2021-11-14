@@ -353,7 +353,7 @@ void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 
 void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
 {
-    if(d->mainWindow)
+    if(d->mainWindow && group == ProgressGroup::Directory)
     {
         d->mainWindow->addBackgroundTask(group, fut);
     }

@@ -445,7 +445,11 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     default:
         break;
     }
-    d->latestDecodingState = static_cast<DecodingState>(newState);
+    
+    if(d->latestDecodingState < newState)
+    {
+        d->latestDecodingState = static_cast<DecodingState>(newState);
+    }
 }
 
 void DocumentView::loadImage(QString url)
