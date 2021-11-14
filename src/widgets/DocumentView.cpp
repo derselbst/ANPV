@@ -120,6 +120,17 @@ struct DocumentView::Impl
         }
     }
     
+    void alignImageAccordingToViewMode(const QSharedPointer<Image>& img)
+    {
+        auto viewMode = ANPV::globalInstance()->viewMode();
+        if(viewMode == ViewMode::Fit)
+        {
+            p->resetTransform();
+            p->setTransform(img->defaultTransform(), true);
+            p->fitInView(p->sceneRect(), Qt::KeepAspectRatio);
+        }
+    }
+    
     void removeSmoothPixmap()
     {
         if (smoothPixmapOverlay)
@@ -338,11 +349,20 @@ bool DocumentView::viewportEvent(QEvent* event)
     return QGraphicsView::viewportEvent(event);
 }
 
+void DocumentView::showEvent(QShowEvent* event)
+{
+    if(d->currentImageDecoder)
+    {
+        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
+    }
+    QGraphicsView::showEvent(event);
+}
+
 void DocumentView::resizeEvent(QResizeEvent *event)
 {
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
-    
+
     QGraphicsView::resizeEvent(event);
 }
 
@@ -514,15 +534,10 @@ void DocumentView::showImage(QSharedPointer<Image> img)
         if(exif && d->latestDecodingState < DecodingState::Metadata)
         {
             d->latestDecodingState = DecodingState::Metadata;
-            auto viewMode = ANPV::globalInstance()->viewMode();
-            auto viewFlags = ANPV::globalInstance()->viewFlags();
-            if(viewMode == ViewMode::Fit)
-            {
-                this->resetTransform();
-                this->setTransform(img->defaultTransform(), true);
-                this->fitInView(this->sceneRect(), Qt::KeepAspectRatio);
-            }
+
+            d->alignImageAccordingToViewMode(img);
             
+            auto viewFlags = ANPV::globalInstance()->viewFlags();
             std::vector<AfPoint> afPoints;
             QSize size;
             QRect inFocusBoundingRect;

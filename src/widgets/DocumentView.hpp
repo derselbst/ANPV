@@ -13,6 +13,7 @@ class QGraphicsScene;
 class QWidget;
 class QPixmap;
 class QWheelEvent;
+class QShowEvent;
 class QEvent;
 class SmartImageDecoder;
 class SortedImageModel;
@@ -46,6 +47,7 @@ protected:
     bool viewportEvent(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void showEvent(QShowEvent* event) override;
 
     void loadImage();
     void showImage(QSharedPointer<Image> img);
