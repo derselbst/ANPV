@@ -540,29 +540,29 @@ void DocumentView::showImage(QSharedPointer<Image> img)
             auto viewFlags = ANPV::globalInstance()->viewFlags();
             std::vector<AfPoint> afPoints;
             QSize size;
-            QRect inFocusBoundingRect;
-            QRect selectedFocusBoundingRect;
             if(exif->autoFocusPoints(afPoints,size))
             {
                 d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
                 d->afPointOverlay->setAfPoints(afPoints, size);
-                for(size_t i=0; i < afPoints.size(); i++)
-                {
-                    auto& af = afPoints[i];
-                    auto type = std::get<0>(af);
-                    auto rect = std::get<1>(af);
-                    if(type == AfType::HasFocus)
-                    {
-                        inFocusBoundingRect = inFocusBoundingRect.united(rect);
-                    }
-                    else if(type == AfType::Selected)
-                    {
-                        selectedFocusBoundingRect = selectedFocusBoundingRect.united(rect);
-                    }
-                }
                 
                 if(viewFlags & static_cast<ViewFlags_t>(ViewFlag::CenterAf))
                 {
+                    QRect inFocusBoundingRect;
+                    QRect selectedFocusBoundingRect;
+                    for(size_t i=0; i < afPoints.size(); i++)
+                    {
+                        auto& af = afPoints[i];
+                        auto type = std::get<0>(af);
+                        auto rect = std::get<1>(af);
+                        if(type == AfType::HasFocus)
+                        {
+                            inFocusBoundingRect = inFocusBoundingRect.united(rect);
+                        }
+                        else if(type == AfType::Selected)
+                        {
+                            selectedFocusBoundingRect = selectedFocusBoundingRect.united(rect);
+                        }
+                    }
                     if(inFocusBoundingRect.isValid())
                     {
                         this->centerOn(inFocusBoundingRect.center());
