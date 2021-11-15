@@ -23,7 +23,7 @@ struct ExifOverlay::Impl
     
     void transparentEffect(ExifOverlay* e)
     {
-        effect(e, 0.5);
+        effect(e, 0.35);
     }
 };
 
