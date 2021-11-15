@@ -115,7 +115,7 @@ struct ANPV::Impl
                 [&](QDir,QDir)
                 {
                     auto fut = this->fileModel->changeDirAsync(this->currentDir);
-                    q->addBackgroundTask(ProgressGroup::Directory, fut);
+                    this->mainWindow->setBackgroundTask(fut);
                 });
     }
     
@@ -349,22 +349,6 @@ void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
     mdv->show();
     mdv->addImages(image, d->fileModel);
-}
-
-void ANPV::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
-{
-    if(d->mainWindow && group == ProgressGroup::Directory)
-    {
-        d->mainWindow->addBackgroundTask(group, fut);
-    }
-}
-
-void ANPV::hideProgressWidget(CancellableProgressWidget* w)
-{
-    if(d->mainWindow)
-    {
-        d->mainWindow->hideProgressWidget(w);
-    }
 }
 
 QPixmap ANPV::noIconPixmap()

@@ -55,9 +55,7 @@ struct MainWindow::Impl
     QUndoStack* undoStack = nullptr;
     QSortFilterProxyModel* proxyModel = nullptr;
     
-    std::map<ProgressGroup, QPointer<CancellableProgressWidget>> progressWidgetGroupMap;
-    QVBoxLayout* progressWidgetLayout = nullptr;
-    QWidget* progressWidgetContainer = nullptr;
+    CancellableProgressWidget* cancellableWidget = nullptr;
     
     QActionGroup* actionGroupSortColumn = nullptr;
     QActionGroup* actionGroupSortOrder = nullptr;
@@ -382,11 +380,14 @@ MainWindow::MainWindow(QSplashScreen *splash)
     this->setWindowTitle("ANPV");
     
     d->undoStack = new QUndoStack(this);
+    d->proxyModel = new QSortFilterProxyModel(this);
+    d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
     
     splash->showMessage("Creating MainWindow Widgets");
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
+    d->cancellableWidget = new CancellableProgressWidget(this);
     
     splash->showMessage("Initializing MainWindow Widgets");
     d->ui->fileSystemTreeView->setHeaderHidden(true);
@@ -399,18 +400,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
     
-    
-    
-    d->proxyModel = new QSortFilterProxyModel(this);
-    d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
-    
     d->ui->thumbnailListView->setModel(d->proxyModel);
-    
-    d->progressWidgetLayout = new QVBoxLayout(this);
-    d->progressWidgetContainer = new QWidget(this);
-    d->progressWidgetContainer->setLayout(d->progressWidgetLayout);
-    this->statusBar()->addPermanentWidget(d->progressWidgetContainer, 1);
-    
     d->ui->iconSizeSlider->setRange(0, ANPV::MaxIconHeight);
     
     splash->showMessage("Connecting MainWindow Signals / Slots");
@@ -432,6 +422,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
             this, [&](){ d->filterRegularExpressionChanged(); });
     connect(d->ui->filterCaseSensitivityCheckBox, &QAbstractButton::toggled,
             this, [&](){ d->filterRegularExpressionChanged(); });
+    
+//     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
 }
 
 MainWindow::~MainWindow() = default;
@@ -442,41 +434,19 @@ void MainWindow::closeEvent(QCloseEvent *event)
     QMainWindow::closeEvent(event);
 }
 
-void MainWindow::addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut)
+void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
 {
     xThreadGuard(this);
 
-    CancellableProgressWidget* w;
-    try
-    {
-        w = d->progressWidgetGroupMap.at(group);
-        w->setFuture(fut);
-    }
-    catch(std::out_of_range& e)
-    {
-        w = new CancellableProgressWidget(fut, this);
-        w->connect(w, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
-        d->progressWidgetGroupMap[group] = w;
-    }
-    d->progressWidgetLayout->addWidget(w);
-    w->show();
-
-    for (const auto& [key, value] : d->progressWidgetGroupMap)
-    {
-        if(!value.isNull() && value->isFinished())
-        {
-            this->hideProgressWidget(value);
-        }
-    }
+    d->cancellableWidget->setFuture(fut);
+    this->statusBar()->addPermanentWidget(d->cancellableWidget, 1);
+    d->cancellableWidget->show();
 }
 
 void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
 {
-    if(d->progressWidgetLayout->count() >= 2)
-    {
-        d->progressWidgetLayout->removeWidget(w);
-        w->hide();
-    }
+    this->statusBar()->removeWidget(d->cancellableWidget);
+    d->cancellableWidget->hide();
 }
 
 void MainWindow::setCurrentIndex(QSharedPointer<Image> img)

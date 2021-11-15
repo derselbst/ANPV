@@ -31,7 +31,7 @@ public:
     void closeEvent(QCloseEvent *event) override;
 
     void readSettings();
-    void addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut);
+    void setBackgroundTask(const QFuture<DecodingState>& fut);
     
 public slots:
     void hideProgressWidget(CancellableProgressWidget* w);

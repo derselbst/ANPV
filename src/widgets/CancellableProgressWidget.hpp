@@ -15,7 +15,7 @@ Q_OBJECT
     std::unique_ptr<Impl> d;
     
 public:
-    CancellableProgressWidget(const QFuture<DecodingState>& future, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    CancellableProgressWidget(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
     ~CancellableProgressWidget();
     bool isFinished();
     void setFuture(const QFuture<DecodingState>& future);

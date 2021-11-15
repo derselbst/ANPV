@@ -589,7 +589,6 @@ void DocumentView::loadImage()
 
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);
-    ANPV::globalInstance()->addBackgroundTask(ProgressGroup::Image, fut);
 
     emit this->imageChanged(d->currentImageDecoder->image());
 }

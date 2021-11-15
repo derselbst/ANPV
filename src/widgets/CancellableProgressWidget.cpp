@@ -92,7 +92,7 @@ struct CancellableProgressWidget::Impl
     }
 };
 
-CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState>& future, QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
+CancellableProgressWidget::CancellableProgressWidget(QWidget* parent, Qt::WindowFlags f) : QWidget(parent, f), d(std::make_unique<Impl>())
 {
     d->ui->setupUi(this);
     d->hideTimer = new QTimer(this);
@@ -112,7 +112,6 @@ CancellableProgressWidget::CancellableProgressWidget(const QFuture<DecodingState
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::started, this, [&](){ d->onStarted(); });
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::finished, this, [&](){ d->onFinished(); });
     QObject::connect(&d->future, &QFutureWatcher<DecodingState>::canceled, this, [&](){ d->onFinished(); });
-    d->future.setFuture(future);
 }
 
 CancellableProgressWidget::~CancellableProgressWidget()

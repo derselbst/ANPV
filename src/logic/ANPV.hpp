@@ -23,12 +23,6 @@ class CancellableProgressWidget;
 template<typename T>
 class QFuture;
 
-enum class ProgressGroup : int
-{
-    Directory,
-    Image,
-};
-
 enum class ViewMode : int
 {
     Unknown,
@@ -61,9 +55,6 @@ public:
 
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView(QSharedPointer<Image> img);
-
-    void addBackgroundTask(ProgressGroup group, const QFuture<DecodingState>& fut);
-    void hideProgressWidget(CancellableProgressWidget* w);
     
     void moveFilesSlot(const QString& targetDir);
     void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
