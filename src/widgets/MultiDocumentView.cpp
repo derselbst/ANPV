@@ -22,6 +22,18 @@ struct MultiDocumentView::Impl
     {
         q->setWindowTitle(tw->tabText(idx));
     }
+    
+    void onTabCloseRequested(int idx)
+    {
+        QWidget* w = this->tw->widget(idx);
+        this->tw->removeTab(idx);
+        w->deleteLater();
+        
+        if(this->tw->count() == 0)
+        {
+            q->close();
+        }
+    }
 };
 
 MultiDocumentView::MultiDocumentView(QWidget *parent)
@@ -35,11 +47,14 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
     
     d->tw = new QTabWidget(this);
     d->tw->setTabBarAutoHide(true);
+    d->tw->setTabsClosable(true);
+    d->tw->setMovable(true);
     this->setCentralWidget(d->tw);
     
     this->setAttribute(Qt::WA_DeleteOnClose);
     
     connect(d->tw, &QTabWidget::currentChanged, this, [&](int index) { d->onCurrentTabChanged(index); });
+    connect(d->tw, &QTabWidget::tabCloseRequested, this, [&](int index) { d->onTabCloseRequested(index); });
 }
 
 MultiDocumentView::~MultiDocumentView() = default;
@@ -83,6 +98,14 @@ void MultiDocumentView::keyPressEvent(QKeyEvent *event)
             event->accept();
             this->close();
             break;
+        case Qt::Key_W:
+            if(event->modifiers() & Qt::ControlModifier)
+            {
+                event->accept();
+                d->onTabCloseRequested(d->tw->currentIndex());
+                break;
+            }
+            [[fallthrough]];
         default:
             QMainWindow::keyPressEvent(event);
             break;
