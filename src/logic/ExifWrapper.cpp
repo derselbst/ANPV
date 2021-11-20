@@ -16,12 +16,15 @@
 #include <QPen>
 #include <iomanip>
 #include <KExiv2/KExiv2>
+#include <optional>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
 struct ExifWrapper::Impl
 {
     KExiv2Iface::KExiv2 mExivHandle;
+    
+    std::optional<KExiv2Iface::KExiv2::ImageOrientation> cachedOrientation;
         
     int dotsPerMeter(const QString& keyName)
     {
@@ -53,7 +56,12 @@ struct ExifWrapper::Impl
 
     KExiv2Iface::KExiv2::ImageOrientation orientation()
     {
-        return this->mExivHandle.getImageOrientation();
+        if(!this->cachedOrientation)
+        {
+            // getImageOrientation() is a bit expensive down in Exiv2
+            this->cachedOrientation = this->mExivHandle.getImageOrientation();
+        }
+        return this->cachedOrientation.value();
     }
     
     static QTransform scaleMatrix(OR orientation)
@@ -141,6 +149,7 @@ ExifWrapper& ExifWrapper::operator=(const ExifWrapper& other)
 // NOTE: Exiv2 takes ownership of data, so the caller must keep a reference to it to avoid use-after-free!
 bool ExifWrapper::loadFromData(const QByteArray& data)
 {
+    d->cachedOrientation.reset();
     return d->mExivHandle.loadFromData(data);
 }
 
