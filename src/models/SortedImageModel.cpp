@@ -691,7 +691,15 @@ void SortedImageModel::run()
         else
         {
             d->directoryWorker->setProgressRange(0, 1);
-            d->setStatusMessage(1, "Directory is empty, nothing to see here.");
+            entriesProcessed++;
+            if(d->currentDir.exists())
+            {
+                d->setStatusMessage(entriesProcessed, "Directory is empty, nothing to see here.");
+            }
+            else
+            {
+                throw std::runtime_error("Directory does not exist");
+            }
         }
             
         d->directoryWorker->addResult(DecodingState::FullImage);
