@@ -41,8 +41,8 @@ struct ThumbnailListView::Impl
 {
     ThumbnailListView* q=nullptr;
     
-    QAction *actionOpenSelectionInternally;
-    QAction *actionOpenSelectionExternally;
+    QAction *actionOpenSelectionInternally=nullptr;
+    QAction *actionOpenSelectionExternally=nullptr;
     QAction* actionOpenFolder=nullptr;
     QAction* actionCut=nullptr;
     QAction* actionCopy=nullptr;

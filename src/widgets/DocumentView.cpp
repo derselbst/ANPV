@@ -11,7 +11,12 @@
 #include <QGuiApplication>
 #include <QDebug>
 #include <QFuture>
+#include <QAction>
 #include <QFutureWatcher>
+#include <QClipboard>
+#include <QString>
+#include <QDataStream>
+#include <QScrollBar>
 #include <QtConcurrent/QtConcurrent>
 
 #include <vector>
@@ -36,6 +41,9 @@ struct DocumentView::Impl
     
     QPointer<QGraphicsScene> scene;
     QPointer<MessageWidget> messageWidget;
+    
+    QPointer<QAction> actionCopyTransform;
+    QPointer<QAction> actionPaste;
     
     // a smoothly scaled version of the full resolution image
     QGraphicsPixmapItem* smoothPixmapOverlay;
@@ -240,6 +248,49 @@ struct DocumentView::Impl
         auto posY = wndSize.height()/2 - boxSize.height()/2;
         messageWidget->move(posX, posY);
     }
+    
+    static inline const QString MimeTransform{"anpv/transform"};
+    void onCopyViewTransform()
+    {
+        QByteArray b;
+        {
+            QDataStream out(&b, QIODeviceBase::WriteOnly);
+            out.setVersion(QDataStream::Qt_6_2);
+            out << p->transform();
+            out << p->horizontalScrollBar()->value();
+            out << p->verticalScrollBar()->value();
+        }
+        
+        QMimeData* mime = new QMimeData;
+        mime->setData(MimeTransform, b);
+        
+        QClipboard* clip = QGuiApplication::clipboard();
+        clip->setMimeData(mime);
+    }
+    
+    void onClipboardPaste()
+    {
+        QClipboard* clip = QGuiApplication::clipboard();
+        const QMimeData* mime = clip->mimeData();
+        
+        QByteArray data = mime->data(MimeTransform);
+        if(!data.isEmpty())
+        {
+            QDataStream in(data);
+            in.setVersion(QDataStream::Qt_6_2);
+            
+            QTransform t;
+            int v;
+            in >> t;
+            p->setTransform(t);
+            
+            in >> v;
+            p->horizontalScrollBar()->setValue(v);
+            
+            in >> v;
+            p->verticalScrollBar()->setValue(v);
+        }
+    }
 };
 
 DocumentView::DocumentView(QWidget *parent)
@@ -249,6 +300,7 @@ DocumentView::DocumentView(QWidget *parent)
     this->setResizeAnchor(QGraphicsView::AnchorUnderMouse);
     this->setWindowState(Qt::WindowMaximized);
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
     d->scene = new QGraphicsScene(this);
     
@@ -288,6 +340,15 @@ DocumentView::DocumentView(QWidget *parent)
                     d->afPointOverlay->setVisible(vis);
                 }
             });
+    
+    d->actionCopyTransform = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", this);
+    connect(d->actionCopyTransform, &QAction::triggered, this, [&](){ d->onCopyViewTransform(); });
+    this->addAction(d->actionCopyTransform);
+    
+    d->actionPaste = new QAction(QIcon::fromTheme("edit-paste"), "Paste", this);
+    connect(d->actionPaste, &QAction::triggered, this, [&](){ d->onClipboardPaste(); });
+    this->addAction(d->actionPaste);
+    
 }
 
 DocumentView::~DocumentView() = default;
