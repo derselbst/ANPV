@@ -39,7 +39,6 @@ struct Image::Impl
     
     QSharedPointer<ExifWrapper> exifWrapper;
     
-    QTransform defaultTransform;
     QTransform userTransform;
     
     QColorSpace colorSpace;
@@ -62,6 +61,18 @@ struct Image::Impl
         wantedFile = QFileInfo(QDir(path).filePath(basename + QLatin1Char('.') + wantedSuffix));
         bool upperExists = wantedFile.exists();
         return lowerExists || upperExists;
+    }
+
+    QTransform transformMatrixOrIdentity()
+    {
+        if(this->exifWrapper)
+        {
+            return this->exifWrapper->transformMatrix();
+        }
+        else
+        {
+            return QTransform();
+        }
     }
 };
 
@@ -103,20 +114,7 @@ void Image::setSize(QSize size)
     std::lock_guard<std::recursive_mutex> lck(d->m);
     d->size = size;
 }
-    
-QTransform Image::defaultTransform() const
-{
-    std::lock_guard<std::recursive_mutex> lck(d->m);
-    return d->defaultTransform;
-}
 
-// this could be fed by exif()->transformMatrix()
-void Image::setDefaultTransform(QTransform trans)
-{
-    std::lock_guard<std::recursive_mutex> lck(d->m);
-    d->defaultTransform = trans;
-}
-    
 QTransform Image::userTransform() const
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
@@ -213,8 +211,7 @@ QPixmap Image::thumbnailTransformed(int height)
         }
         
         t.setInfo("no matching thumbnail cached, transforming and scaling it");
-        QTransform trans = this->defaultTransform();
-        pix = thumb.transformed(trans);
+        pix = thumb.transformed(d->transformMatrixOrIdentity());
     }
     pix = pix.scaledToHeight(height, Qt::FastTransformation);
     d->thumbnailTransformed = pix;

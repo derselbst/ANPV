@@ -15,6 +15,7 @@
 #include <QPainter>
 #include <QPen>
 #include <iomanip>
+#include <KExiv2/KExiv2>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
@@ -49,47 +50,58 @@ struct ExifWrapper::Impl
 
         return 0;
     }
+
+    KExiv2Iface::KExiv2::ImageOrientation orientation()
+    {
+        return this->mExivHandle.getImageOrientation();
+    }
     
-    static QTransform transformMatrix(OR orientation)
+    static QTransform scaleMatrix(OR orientation)
     {
         QTransform matrix;
-        switch (orientation) {
-        case OR::ORIENTATION_UNSPECIFIED:
-        case OR::ORIENTATION_NORMAL:
-            break;
-
+        switch (orientation)
+        {
         case OR::ORIENTATION_HFLIP:
+        case OR::ORIENTATION_ROT_90_HFLIP:
             matrix.scale(-1, 1);
-            break;
-
-        case OR::ORIENTATION_ROT_180:
-            matrix.rotate(180);
             break;
 
         case OR::ORIENTATION_VFLIP:
-            matrix.scale(1, -1);
-            break;
-
-        case OR::ORIENTATION_ROT_90_HFLIP:
-            matrix.scale(-1, 1);
-            matrix.rotate(90);
-            break;
-
-        case OR::ORIENTATION_ROT_90:
-            matrix.rotate(90);
-            break;
-
         case OR::ORIENTATION_ROT_90_VFLIP:
             matrix.scale(1, -1);
-            matrix.rotate(90);
             break;
 
-        case OR::ORIENTATION_ROT_270:
-            matrix.rotate(270);
+        default:
             break;
         }
 
         return matrix;
+    }
+    
+    static int rotation(OR orientation)
+    {
+        int rot = 0;
+        switch (orientation)
+        {
+        default:
+            break;
+
+        case OR::ORIENTATION_ROT_180:
+            rot = 180;
+            break;
+
+        case OR::ORIENTATION_ROT_90_HFLIP:
+        case OR::ORIENTATION_ROT_90:
+        case OR::ORIENTATION_ROT_90_VFLIP:
+            rot = 90;
+            break;
+
+        case OR::ORIENTATION_ROT_270:
+            rot = 270;
+            break;
+        }
+
+        return rot;
     }
 };
 
@@ -137,14 +149,26 @@ QString ExifWrapper::errorMessage()
     return d->mExivHandle.getErrorMessage();
 }
 
-KExiv2Iface::KExiv2::ImageOrientation ExifWrapper::orientation()
+qreal ExifWrapper::rotation()
 {
-    return d->mExivHandle.getImageOrientation();
+    return d->rotation(d->orientation());
+}
+
+QTransform ExifWrapper::rotationMatrix()
+{
+    QTransform rotationMatrix;
+    rotationMatrix.rotate(this->rotation());
+    return rotationMatrix;
+}
+
+QTransform ExifWrapper::scaleMatrix()
+{
+    return d->scaleMatrix(d->orientation());
 }
 
 QTransform ExifWrapper::transformMatrix()
 {
-    return d->transformMatrix(this->orientation());
+    return this->scaleMatrix() * this->rotationMatrix();
 }
 
 int ExifWrapper::dotsPerMeterX()
@@ -165,7 +189,7 @@ QSize ExifWrapper::size()
 QSize ExifWrapper::sizeTransposed(QSize size)
 {
     // Adjust the size according to the orientation
-    switch (orientation())
+    switch (d->orientation())
     {
     case OR::ORIENTATION_ROT_90_HFLIP:
     case OR::ORIENTATION_ROT_90:

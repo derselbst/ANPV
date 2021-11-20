@@ -45,8 +45,6 @@ public:
     const QFileInfo& fileInfo() const;
     QSize size() const;
     
-    QTransform defaultTransform() const;
-    
     QTransform userTransform() const;
     void setUserTransform(QTransform);
     
@@ -72,7 +70,6 @@ signals:
 protected:
     void setHasDecoder(bool);
     void setSize(QSize);
-    void setDefaultTransform(QTransform);
     void setThumbnail(QImage);
     void setThumbnail(QPixmap);
     void setIcon(QIcon ico);

@@ -134,8 +134,11 @@ struct DocumentView::Impl
         if(viewMode == ViewMode::Fit)
         {
             p->resetTransform();
-            p->setTransform(img->defaultTransform(), true);
+            p->setTransform(img->exif()->transformMatrix(), true);
             p->fitInView(p->sceneRect(), Qt::KeepAspectRatio);
+        }
+        else if(viewMode == ViewMode::None)
+        {
         }
     }
     

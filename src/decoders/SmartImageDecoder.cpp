@@ -207,7 +207,6 @@ void SmartImageDecoder::init()
         // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
         exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
         this->image()->setExif(exifWrapper);
-        this->image()->setDefaultTransform(exifWrapper->transformMatrix());
         
         QImage thumb = this->image()->thumbnail();
         if(thumb.isNull())

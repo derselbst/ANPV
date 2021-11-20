@@ -6,7 +6,6 @@
 #include <memory>
 #include <QString>
 #include <QTransform>
-#include <KExiv2/KExiv2>
 
 
 namespace Exiv2
@@ -31,7 +30,9 @@ public:
 
     bool loadFromData(const QByteArray& data);
     QString errorMessage();
-    KExiv2Iface::KExiv2::ImageOrientation orientation();
+    qreal rotation();
+    QTransform rotationMatrix();
+    QTransform scaleMatrix();
     QTransform transformMatrix();
     int dotsPerMeterX();
     int dotsPerMeterY();
