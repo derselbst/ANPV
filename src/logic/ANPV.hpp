@@ -11,10 +11,10 @@
 #include "DecodingState.hpp"
 #include "SortedImageModel.hpp"
 
-class QUndoCommand;
 class MoveFileCommand;
 class QSplashScreen;
 class QFileSystemModel;
+class QUndoStack;
 class SortedImageModel;
 class QAbstractFileIconProvider;
 class SmartImageDecoder;
@@ -56,8 +56,7 @@ public:
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView(QSharedPointer<Image> img);
     
-    void moveFilesSlot(const QString& targetDir);
-    void moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir);
+    void moveFiles(QList<QString>&& files, QString&& source, QString&& destination, QUndoStack* undoStack);
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();

@@ -26,7 +26,6 @@
 #include <QAction>
 #include <QMenuBar>
 #include <QMenu>
-#include <QUndoStack>
 #include <QMessageBox>
 #include <QPair>
 #include <QPointer>
@@ -356,63 +355,39 @@ QPixmap ANPV::noIconPixmap()
     return d->noIconPixmap;
 }
 
-void ANPV::moveFilesSlot(const QString& targetDir)
+void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination, QUndoStack* undoStack)
 {
-//     if(targetDir.isEmpty())
-//     {
-//         return;
-//     }
-//     
-//     if(d->stackedLayout->currentWidget() == d->thumbnailViewer)
-//     {
-//         QList<QString> selectedFileNames;
-//         QDir curDir = d->thumbnailViewer->currentDir();
-//         d->thumbnailViewer->selectedFiles(selectedFileNames);
-//         
-//         this->moveFilesSlot(selectedFileNames, curDir.absolutePath(), targetDir);
-//     }
-//     else if(d->stackedLayout->currentWidget() == d->imageViewer)
-//     {
-//         QFileInfo info = d->imageViewer->currentFile();
-//         if(!info.filePath().isEmpty())
-//         {
-//             QList<QString> files;
-//             files.append(info.fileName());
-//             this->moveFilesSlot(files, info.absoluteDir().absolutePath(), targetDir);
-//         }
-//     }
-}
-
-void ANPV::moveFilesSlot(const QList<QString>& files, const QString& sourceDir, const QString& targetDir)
-{
-//     MoveFileCommand* cmd = new MoveFileCommand(files, sourceDir, targetDir);
-//     
-//     connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
-//     {
-//         QMessageBox box(QMessageBox::Critical,
-//                     "Move operation failed",
-//                     "Some files could not be moved to the destination folder. See details below.",
-//                     QMessageBox::Ok,
-//                     d->mainWindow.get());
-//         
-//         QString details;
-//         for(int i=0; i<failedFilesWithReason.size(); i++)
-//         {
-//             QPair<QString, QString>& p = failedFilesWithReason[i];
-//             details += p.first;
-//             
-//             if(!p.second.isEmpty())
-//             {
-//                 details += QString(": ") + p.second;
-//                 details += "\n";
-//             }
-//         }
-//         box.setDetailedText(details);
-//         box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
-//         box.exec();
-//     });
-//     
-//     d->undoStack->push(cmd);
+    MoveFileCommand* cmd = new MoveFileCommand(std::move(files), std::move(source), std::move(destination));
+    
+    connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
+    {
+        QMessageBox box(QMessageBox::Critical,
+                    "Move operation failed",
+                    "Some files could not be moved to the destination folder. See details below.",
+                    QMessageBox::Ok,
+                    d->mainWindow.get());
+        
+        QString details;
+        for(int i=0; i<failedFilesWithReason.size(); i++)
+        {
+            QPair<QString, QString>& p = failedFilesWithReason[i];
+            details += p.first;
+            
+            if(!p.second.isEmpty())
+            {
+                details += QString(": ") + p.second;
+                details += "\n";
+            }
+        }
+        box.setDetailedText(details);
+        box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+        box.exec();
+    });
+    
+    if(undoStack)
+    {
+        undoStack->push(cmd);
+    }
 }
 
 void ANPV::about()

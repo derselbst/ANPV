@@ -156,6 +156,8 @@ src/logic/Image.cpp
 src/logic/Image.hpp
 src/logic/MoonPhase.cpp
 src/logic/MoonPhase.hpp
+src/logic/MoveFileCommand.cpp
+src/logic/MoveFileCommand.hpp
 src/logic/UserCancellation.hpp
 src/logic/xThreadGuard.hpp
 src/logic/TraceTimer.cpp

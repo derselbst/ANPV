@@ -1,12 +1,12 @@
 
 #include "MoveFileCommand.hpp"
 
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
-MoveFileCommand::MoveFileCommand(const QList<QString>& filesToMove, const QString& sourceFolder, const QString &destinationFolder)
-    : filesToMove(filesToMove), sourceFolder(sourceFolder), destinationFolder(destinationFolder)
+MoveFileCommand::MoveFileCommand(QList<QString>&& ftm, QString&& sourceFolder, QString&& destinationFolder)
+    : filesToMove(std::move(ftm)), sourceFolder(std::move(sourceFolder)), destinationFolder(std::move(destinationFolder))
     {
         if(filesToMove.size() == 1)
         {

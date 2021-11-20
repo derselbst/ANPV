@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QListView>
+#include <QString>
 #include <memory>
 
 class QWheelEvent;
@@ -9,7 +10,6 @@ class QWidget;
 class SortedImageModel;
 class ThumbnailView;
 class ANPV;
-class Image;
 
 class ThumbnailListView : public QListView
 {
@@ -19,8 +19,11 @@ public:
     ThumbnailListView(QWidget *parent=nullptr);
     ~ThumbnailListView() override;
 
-    void selectedFiles(QList<QString>& selectedFiles);
-    
+signals:
+    void moveFiles(QList<QString> imgs, QString source, QString destination);
+    void copyFiles(QList<QString> imgs, QString source, QString destination);
+    void deleteFiles(QList<QString> imgs, QString source);
+        
 protected:
     void wheelEvent(QWheelEvent *event) override;
     

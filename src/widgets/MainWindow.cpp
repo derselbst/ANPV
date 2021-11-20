@@ -424,6 +424,11 @@ MainWindow::MainWindow(QSplashScreen *splash)
             this, [&](){ d->filterRegularExpressionChanged(); });
     
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
+    
+    connect(d->ui->thumbnailListView, &ThumbnailListView::moveFiles, this, [&](QList<QString> imgs, QString source, QString destination)
+    {
+        ANPV::globalInstance()->moveFiles(std::move(imgs), std::move(source), std::move(destination), d->undoStack);
+    }, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow() = default;

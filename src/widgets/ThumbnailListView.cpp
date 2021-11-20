@@ -56,7 +56,7 @@ struct ThumbnailListView::Impl
         QString dirToOpen = lastTargetDirectory.isNull() ? currentDir.absolutePath() : lastTargetDirectory;
         QString dir = QFileDialog::getExistingDirectory(q, "Select Target Directory",
                                                 dirToOpen,
-                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseCustomDirectoryIcons | QFileDialog::ReadOnly);
         
         if(dir.isEmpty())
         {
@@ -68,17 +68,24 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<QString> selectedFileNames;
-        q->selectedFiles(selectedFileNames);
+        QList<QSharedPointer<Image>> imgs = this->selectedImages();
+        QList<QString> files;
+        for(QSharedPointer<Image>& i : imgs)
+        {
+            files.push_back(i->fileInfo().fileName());
+        }
         
         switch(op)
         {
             case Move:
-                ANPV::globalInstance()->moveFilesSlot(selectedFileNames, currentDir.absolutePath(), dir);
+                emit q->moveFiles(files, currentDir.absolutePath(), dir);
                 break;
             case Copy:
+                emit q->copyFiles(files, currentDir.absolutePath(), dir);
+                break;
             case Delete:
-                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
+                emit q->deleteFiles(files, currentDir.absolutePath());
+                QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
         }
         
@@ -199,16 +206,5 @@ void ThumbnailListView::wheelEvent(QWheelEvent *event)
     }
 
     QListView::wheelEvent(event);
-}
-
-void ThumbnailListView::selectedFiles(QList<QString>& files)
-{
-    QModelIndexList selectedIdx = this->selectionModel()->selectedRows();
-    
-    for(int i=0; i<selectedIdx.size(); i++)
-    {
-        QString name = selectedIdx[i].data().toString();
-        files.append(std::move(name));
-    }
 }
 

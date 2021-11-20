@@ -16,7 +16,7 @@ class MoveFileCommand : public QObject, public QUndoCommand
     void doMove(const QString& sourceFolder, const QString& destinationFolder);
     
 public:
-    MoveFileCommand(const QList<QString>& filesToMove, const QString& sourceFolder, const QString &destinationFolder);
+    MoveFileCommand(QList<QString>&& ftm, QString&& sourceFolder, QString&& destinationFolder);
     ~MoveFileCommand() override;
     
     void undo() override;
