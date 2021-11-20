@@ -33,19 +33,22 @@ TraceTimer::~TraceTimer()
     }
     
     f << d->className << "::" << d->location.function_name() << "()\n"
-    << "\tElapsed time: " << d->tim.elapsed() << " ms\n";
+    << "\tElapsed time: " << elapsed << " ms\n";
     if(d->info)
     {
         f << "\tAdditional info: " << d->info;
     }
     
-    if(elapsed > d->maxDuration)
+    if(elapsed > 0)
     {
-        qWarning() << f.str().c_str();
-    }
-    else
-    {
-        qDebug() << f.str().c_str();
+        if(elapsed > d->maxDuration)
+        {
+            qWarning() << f.str().c_str();
+        }
+        else
+        {
+            qDebug() << f.str().c_str();
+        }
     }
 }
 
