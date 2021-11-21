@@ -17,6 +17,7 @@
 #include <QString>
 #include <QDataStream>
 #include <QScrollBar>
+#include <QActionGroup>
 #include <QtConcurrent/QtConcurrent>
 
 #include <vector>
@@ -352,6 +353,31 @@ DocumentView::DocumentView(QWidget *parent)
     connect(d->actionPaste, &QAction::triggered, this, [&](){ d->onClipboardPaste(); });
     this->addAction(d->actionPaste);
     
+    QAction* sep = new QAction(this);
+    sep->setSeparator(true);
+    
+    this->addAction(sep);
+    QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
+    this->addActions(fileActions->actions());
+    connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, this, [&](QAction* act)
+    {
+        if(!d->currentImageDecoder)
+        {
+            return;
+        }
+
+        QList<QObject*> objs = act->associatedObjects();
+        for(QObject* o : objs)
+        {
+            if(o == this && this->hasFocus())
+            {
+                QString targetDir = act->data().toString();
+                QFileInfo source = d->currentImageDecoder->image()->fileInfo();
+                ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+                break;
+            }
+        }
+    });
 }
 
 DocumentView::~DocumentView() = default;

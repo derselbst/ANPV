@@ -32,6 +32,8 @@
 #include <QSettings>
 #include <QTabWidget>
 #include <QSvgRenderer>
+#include <QDataStream>
+#include <QFileDialog>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -76,6 +78,8 @@ struct ANPV::Impl
     // QObjects with parent
     QFileSystemModel* dirModel = nullptr;
     QSharedPointer<SortedImageModel> fileModel = nullptr;
+    QActionGroup* actionGroupFileOperation = nullptr;
+    QUndoStack* undoStack = nullptr;
     
     QDir currentDir;
     ViewMode viewMode = ViewMode::Unknown;
@@ -105,6 +109,9 @@ struct ANPV::Impl
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
         this->fileModel.reset(new SortedImageModel(q));
+        
+        this->actionGroupFileOperation = new QActionGroup(q);
+        this->undoStack = new QUndoStack(q);
     }
     
     void connectLogic()
@@ -128,6 +135,21 @@ struct ANPV::Impl
         settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
         settings.setValue("primarySortColumn", static_cast<int>(q->primarySortColumn()));
         settings.setValue("iconHeight", q->iconHeight());
+        
+        QByteArray actionsArray;
+        {
+            QDataStream out(&actionsArray, QIODeviceBase::WriteOnly);
+            out.setVersion(QDataStream::Qt_6_2);
+            QList<QAction*> actions = this->actionGroupFileOperation->actions();
+            for(QAction* a : actions)
+            {
+                out << a->text();
+                out << a->data();
+                out << a->shortcut();
+                out << a->shortcutContext();
+            }
+        }
+        settings.setValue("actionGroupFileOperation", actionsArray);
     }
 
     void readSettings()
@@ -140,6 +162,29 @@ struct ANPV::Impl
         q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
         q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
         q->setIconHeight(settings.value("iconHeight", 150).toInt());
+        
+        QByteArray actionsArray = settings.value("actionGroupFileOperation").toByteArray();
+        if(!actionsArray.isEmpty())
+        {
+            QDataStream in(actionsArray);
+            in.setVersion(QDataStream::Qt_6_2);
+            QVariant data;
+            QString text;
+            QKeySequence seq;
+            Qt::ShortcutContext ctx;
+            while(!in.atEnd())
+            {
+                in >> text;
+                in >> data;
+                in >> seq;
+                in >> ctx;
+                QAction* action = new QAction(text, q);
+                action->setData(data);
+                action->setShortcut(seq);
+                action->setShortcutContext(ctx);
+                this->actionGroupFileOperation->addAction(action);
+            }
+        }
     }
     
     void drawNoIconPixmap()
@@ -355,7 +400,19 @@ QPixmap ANPV::noIconPixmap()
     return d->noIconPixmap;
 }
 
-void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination, QUndoStack* undoStack)
+QActionGroup* ANPV::copyMoveActionGroup()
+{
+    xThreadGuard(this);
+    return d->actionGroupFileOperation;
+}
+
+QUndoStack* ANPV::undoStack()
+{
+    xThreadGuard(this);
+    return d->undoStack;
+}
+
+void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination)
 {
     MoveFileCommand* cmd = new MoveFileCommand(std::move(files), std::move(source), std::move(destination));
     
@@ -384,10 +441,16 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
         box.exec();
     });
     
-    if(undoStack)
-    {
-        undoStack->push(cmd);
-    }
+    this->undoStack()->push(cmd);
+}
+
+QString ANPV::getExistingDirectory(QWidget* parent, QString proposedDirToOpen)
+{
+    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
+    QString dir = QFileDialog::getExistingDirectory(parent, "Select Target Directory",
+                                            dirToOpen,
+                                            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseCustomDirectoryIcons | QFileDialog::ReadOnly);
+    return dir;
 }
 
 void ANPV::about()

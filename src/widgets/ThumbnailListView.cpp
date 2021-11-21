@@ -17,7 +17,6 @@
 #include <QTreeView>
 #include <QDockWidget>
 #include <QAction>
-#include <QFileDialog>
 #include <QMessageBox>
 #include <QWheelEvent>
 #include <QDesktopServices>
@@ -52,17 +51,18 @@ struct ThumbnailListView::Impl
     QString lastTargetDirectory;
     void onFileOperation(Operation op)
     {
+        QString dir = ANPV::globalInstance()->getExistingDirectory(q, lastTargetDirectory);
+        this->startFileOperation(op, std::move(dir));
+    }
+    
+    void startFileOperation(Operation op, QString&& dest)
+    {
         QDir currentDir = ANPV::globalInstance()->currentDir();
-        QString dirToOpen = lastTargetDirectory.isNull() ? currentDir.absolutePath() : lastTargetDirectory;
-        QString dir = QFileDialog::getExistingDirectory(q, "Select Target Directory",
-                                                dirToOpen,
-                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseCustomDirectoryIcons | QFileDialog::ReadOnly);
-        
-        if(dir.isEmpty())
+        if(dest.isEmpty())
         {
             return;
         }
-        if(QDir(dir) == currentDir)
+        if(QDir(dest) == currentDir)
         {
             QMessageBox::information(q, "That doesn't work", "Destination folder cannot be equal with source folder!");
             return;
@@ -78,18 +78,15 @@ struct ThumbnailListView::Impl
         switch(op)
         {
             case Move:
-                emit q->moveFiles(files, currentDir.absolutePath(), dir);
+                ANPV::globalInstance()->moveFiles(std::move(files), currentDir.absolutePath(), std::move(dest));
                 break;
             case Copy:
-                emit q->copyFiles(files, currentDir.absolutePath(), dir);
-                break;
             case Delete:
-                emit q->deleteFiles(files, currentDir.absolutePath());
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
         }
         
-        lastTargetDirectory = dir;
+        lastTargetDirectory = dest;
     }
 
     void openContainingFolder()
@@ -178,6 +175,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->addAction(d->actionCut);
     this->addAction(d->actionCopy);
     this->addAction(d->actionDelete);
+    this->addAction(sep);
 }
 
 ThumbnailListView::~ThumbnailListView() = default;
@@ -208,3 +206,7 @@ void ThumbnailListView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
+void ThumbnailListView::moveSelectedFiles(QString&& destination)
+{
+    d->startFileOperation(Impl::Operation::Move, std::move(destination));
+}

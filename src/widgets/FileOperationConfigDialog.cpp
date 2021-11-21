@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QActionGroup>
 #include <QDir>
+#include "ANPV.hpp"
 
 FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, QWidget *parent)
 : QDialog(parent),
@@ -80,9 +81,10 @@ void FileOperationConfigDialog::accept()
             QString title = isCopy ? "Copy " : "Move ";
             title += "to ";
             title += targetDir;
-            action = new QAction(title);
+            action = new QAction(title, ANPV::globalInstance());
             action->setShortcut(seq);
             action->setData(targetDir);
+            action->setShortcutContext(Qt::WidgetShortcut);
             
             return action;
         }
@@ -120,9 +122,7 @@ void FileOperationConfigDialog::accept()
 void FileOperationConfigDialog::onBrowseClicked(QLineEdit* lineEdit)
 {
     QString dirToOpen = lineEdit->text();
-    QString dir = QFileDialog::getExistingDirectory(this, "Select Target Directory",
-                                        dirToOpen.isEmpty() ? QDir::currentPath() : dirToOpen,
-                                        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString dir = ANPV::globalInstance()->getExistingDirectory(this, dirToOpen);
     
     if(dir.isEmpty())
     {

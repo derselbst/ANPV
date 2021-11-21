@@ -52,14 +52,12 @@ struct MainWindow::Impl
     MainWindow* q = nullptr;
     std::unique_ptr<Ui::MainWindow> ui = std::make_unique<Ui::MainWindow>();
     
-    QUndoStack* undoStack = nullptr;
     QSortFilterProxyModel* proxyModel = nullptr;
     
     CancellableProgressWidget* cancellableWidget = nullptr;
     
     QActionGroup* actionGroupSortColumn = nullptr;
     QActionGroup* actionGroupSortOrder = nullptr;
-    QActionGroup* actionGroupFileOperation = nullptr;
     QActionGroup* actionGroupViewMode = nullptr;
         
     QAction *actionUndo = nullptr;
@@ -189,11 +187,19 @@ struct MainWindow::Impl
         makeSortAction("Lens Model (slow)", SortedImageModel::Column::Lens, true);
     }
     
+    void refreshCopyMoveActions()
+    {
+        QActionGroup* actionGroupFileOperation = ANPV::globalInstance()->copyMoveActionGroup();
+        ui->thumbnailListView->addActions(actionGroupFileOperation->actions());
+        ui->menuEdit->addActions(actionGroupFileOperation->actions());
+    }
+    
     void createActions()
     {
         this->createViewActions();
         this->createSortActions();
 
+        QUndoStack* undoStack = ANPV::globalInstance()->undoStack();
         actionUndo = undoStack->createUndoAction(q, "Undo");
         actionUndo->setShortcuts(QKeySequence::Undo);
         actionUndo->setShortcutContext(Qt::ApplicationShortcut);
@@ -202,23 +208,32 @@ struct MainWindow::Impl
         actionRedo->setShortcuts(QKeySequence::Redo);
         actionRedo->setShortcutContext(Qt::ApplicationShortcut);
         
+        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction* act)
+        {
+            QList<QObject*> objs = act->associatedObjects();
+            for(QObject* o : objs)
+            {
+                if((o == ui->thumbnailListView && ui->thumbnailListView->hasFocus()) || (o == ui->menuEdit && ui->menuEdit->hasFocus()))
+                {
+                    QString targetDir = act->data().toString();
+                    ui->thumbnailListView->moveSelectedFiles(std::move(targetDir));
+                    break;
+                }
+            }
+        });
+
         actionFileOperationConfigDialog = new QAction("File Copy/Move Configuration", q);
-//         actionGroupFileOperation = new QActionGroup(q);
-//         connect(actionGroupFileOperation, &QActionGroup::triggered, q, [&](QAction* act)
-//         {
-//             QString targetDir = act->data().toString();
-//             q->moveFilesSlot(targetDir);
-//         });
-//         connect(actionFileOperationConfigDialog, &QAction::triggered, q, [&](bool)
-//         {
-//             FileOperationConfigDialog* dia = new FileOperationConfigDialog(actionGroupFileOperation, q);
-//             connect(dia, &QDialog::accepted, q, [&]()
-//             {
-//                 menuEdit->addActions(actionGroupFileOperation->actions());
-//             });
-//             
-//             dia->open();
-//         });
+        connect(actionFileOperationConfigDialog, &QAction::triggered, q, [&](bool)
+        {
+            FileOperationConfigDialog* dia = new FileOperationConfigDialog(ANPV::globalInstance()->copyMoveActionGroup(), q);
+            connect(dia, &QDialog::accepted, q, [&]()
+            {
+                this->refreshCopyMoveActions();
+            });
+            
+            dia->open();
+        });
+        this->refreshCopyMoveActions();
 
         ui->actionExit->setShortcuts(QKeySequence::Quit);
         connect(ui->actionExit, &QAction::triggered, q,
@@ -240,6 +255,7 @@ struct MainWindow::Impl
         ui->menuEdit->addAction(actionRedo);
         ui->menuEdit->addSeparator();
         ui->menuEdit->addAction(actionFileOperationConfigDialog);
+        ui->menuEdit->addSeparator();
         
         ui->menuSort->addActions(actionGroupSortColumn->actions());
         ui->menuSort->addActions(actionGroupSortOrder->actions());
@@ -379,7 +395,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
 {
     this->setWindowTitle("ANPV");
     
-    d->undoStack = new QUndoStack(this);
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
     
@@ -424,11 +439,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
             this, [&](){ d->filterRegularExpressionChanged(); });
     
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
-    
-    connect(d->ui->thumbnailListView, &ThumbnailListView::moveFiles, this, [&](QList<QString> imgs, QString source, QString destination)
-    {
-        ANPV::globalInstance()->moveFiles(std::move(imgs), std::move(source), std::move(destination), d->undoStack);
-    }, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow() = default;

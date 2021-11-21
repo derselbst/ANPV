@@ -12,11 +12,11 @@ MoveFileCommand::MoveFileCommand(QList<QString>&& ftm, QString&& sourceFolder, Q
         {
             setText(QString("Move %1 to %2")
             .arg(filesToMove[0])
-            .arg(destinationFolder));
+            .arg(this->destinationFolder));
         }
         else
         {
-            setText(QString("Move %1 files to %2").arg(filesToMove.size()).arg(destinationFolder));
+            setText(QString("Move %1 files to %2").arg(filesToMove.size()).arg(this->destinationFolder));
         }
     }
 

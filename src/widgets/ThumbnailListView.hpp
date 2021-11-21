@@ -19,10 +19,7 @@ public:
     ThumbnailListView(QWidget *parent=nullptr);
     ~ThumbnailListView() override;
 
-signals:
-    void moveFiles(QList<QString> imgs, QString source, QString destination);
-    void copyFiles(QList<QString> imgs, QString source, QString destination);
-    void deleteFiles(QList<QString> imgs, QString source);
+    void moveSelectedFiles(QString&& destination);
         
 protected:
     void wheelEvent(QWheelEvent *event) override;

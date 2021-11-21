@@ -14,6 +14,7 @@
 class MoveFileCommand;
 class QSplashScreen;
 class QFileSystemModel;
+class QActionGroup;
 class QUndoStack;
 class SortedImageModel;
 class QAbstractFileIconProvider;
@@ -56,7 +57,7 @@ public:
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView(QSharedPointer<Image> img);
     
-    void moveFiles(QList<QString>&& files, QString&& source, QString&& destination, QUndoStack* undoStack);
+    void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
@@ -82,6 +83,11 @@ public:
     void setIconHeight(int);
     
     QPixmap noIconPixmap();
+    
+    QActionGroup* copyMoveActionGroup();
+    QUndoStack* undoStack();
+    
+    QString getExistingDirectory(QWidget* parent, QString proposedDirToOpen);
 
 signals:
     void currentDirChanged(QDir dir, QDir old);
