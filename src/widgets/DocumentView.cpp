@@ -371,9 +371,16 @@ DocumentView::DocumentView(QWidget *parent)
         {
             if(o == this && this->hasFocus())
             {
+                QSharedPointer<Image> nextImg = d->model->goTo(d->currentImageDecoder->image(), 1);
+
                 QString targetDir = act->data().toString();
                 QFileInfo source = d->currentImageDecoder->image()->fileInfo();
                 ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+
+                if(nextImg)
+                {
+                    this->loadImage(nextImg);
+                }
                 break;
             }
         }
