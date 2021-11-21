@@ -121,7 +121,7 @@ struct DocumentView::Impl
     
     void onViewportChanged(QTransform newTransform)
     {
-        if(newTransform != previousFovTransform)
+        if(newTransform != previousFovTransform && taskFuture.isFinished())
         {
             fovChangedTimer.start();
             previousFovTransform = newTransform;
