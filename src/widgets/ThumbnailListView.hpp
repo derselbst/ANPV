@@ -3,12 +3,16 @@
 
 #include <QListView>
 #include <QString>
+#include <QSharedPointer>
+#include <QModelIndexList>
+#include <QList>
 #include <memory>
 
 class QWheelEvent;
 class QWidget;
 class SortedImageModel;
 class ThumbnailView;
+class Image;
 class ANPV;
 
 class ThumbnailListView : public QListView
@@ -20,6 +24,8 @@ public:
     ~ThumbnailListView() override;
 
     void moveSelectedFiles(QString&& destination);
+    QList<QSharedPointer<Image>> selectedImages();
+    QList<QSharedPointer<Image>> selectedImages(const QModelIndexList& selectedIdx);
         
 protected:
     void wheelEvent(QWheelEvent *event) override;

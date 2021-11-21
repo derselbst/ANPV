@@ -388,6 +388,35 @@ struct MainWindow::Impl
 //             setTextColor(ui->filterPatternLineEdit, Qt::red);
         }
     }
+    
+    void clearInfoBox()
+    {
+        this->ui->infoBox->setText("");
+    }
+    
+    void onThumbnailListViewSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+    {
+        auto imgs = this->ui->thumbnailListView->selectedImages();
+        
+        if(imgs.isEmpty())
+        {
+            this->clearInfoBox();
+        }
+        else
+        {
+            size_t count = imgs.size();
+            size_t size = 0;
+            for(QSharedPointer<Image>& i : imgs)
+            {
+                size += i->fileInfo().size();
+            }
+            
+            QString text = QString(
+                "%1 items selected<br />"
+                "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
+            this->ui->infoBox->setText(text);
+        }
+    }
 };
 
 MainWindow::MainWindow(QSplashScreen *splash)
@@ -415,8 +444,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
     
-    d->ui->thumbnailListView->setModel(d->proxyModel);
     d->ui->iconSizeSlider->setRange(0, ANPV::MaxIconHeight);
+    d->ui->thumbnailListView->setModel(d->proxyModel);
     
     splash->showMessage("Connecting MainWindow Signals / Slots");
     
@@ -438,6 +467,11 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->filterCaseSensitivityCheckBox, &QAbstractButton::toggled,
             this, [&](){ d->filterRegularExpressionChanged(); });
     
+    connect(d->proxyModel, &QSortFilterProxyModel::modelAboutToBeReset, this, [&](){ d->clearInfoBox(); });
+    connect(d->ui->thumbnailListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection &selected, const QItemSelection &deselected)
+    {
+        d->onThumbnailListViewSelectionChanged(selected, deselected);
+    });
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
 }
 

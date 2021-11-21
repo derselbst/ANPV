@@ -207,6 +207,19 @@ ANPV* ANPV::globalInstance()
     return global.get();
 }
 
+QString ANPV::formatByteHtmlString(float fsize)
+{
+    static const char *const sizeUnit[] = {" Bytes", " KiB", " MiB", " <b>GiB</b>"};
+
+    unsigned i;
+    for(i = 0; i<sizeof(sizeUnit)/sizeof(sizeUnit[0]) && fsize > 1024; i++)
+    {
+        fsize /= 1024.f;
+    }
+    
+    return QString::number(fsize, 'f', 2) + sizeUnit[i];
+}
+
 
 ANPV::ANPV() : d(std::make_unique<Impl>(this))
 {

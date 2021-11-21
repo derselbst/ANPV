@@ -49,6 +49,7 @@ Q_OBJECT
 public:
     static constexpr int MaxIconHeight = 500/*px*/;
     static ANPV* globalInstance();
+    static QString formatByteHtmlString(float fsize);
 
     ANPV();
     ANPV(QSplashScreen *splash);

@@ -71,7 +71,7 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<QSharedPointer<Image>> imgs = this->selectedImages();
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
         QList<QString> files;
         for(QSharedPointer<Image>& i : imgs)
         {
@@ -97,7 +97,7 @@ struct ThumbnailListView::Impl
     
     void openSelectionInternally()
     {
-        QList<QSharedPointer<Image>> imgs = this->selectedImages();
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
         
         if(imgs.size() == 1 && imgs[0]->fileInfo().isDir())
         {
@@ -121,7 +121,7 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        auto imgs = this->selectedImages();
+        auto imgs = q->selectedImages();
         QString filePaths;
         for(QSharedPointer<Image>& i : imgs)
         {
@@ -131,20 +131,6 @@ struct ThumbnailListView::Impl
         QClipboard* cb = QApplication::clipboard();
         Q_ASSERT(cb != nullptr);
         cb->setText(filePaths);
-    }
-    
-    QList<QSharedPointer<Image>> selectedImages()
-    {
-        QList<QSharedPointer<Image>> images;
-        QModelIndexList selectedIdx = q->selectionModel()->selectedRows();
-        
-        auto sourceModel = ANPV::globalInstance()->fileModel();
-        auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*q->model());
-        for(int i=0; i<selectedIdx.size(); i++)
-        {
-            images.push_back(sourceModel->data(proxyModel.mapToSource(selectedIdx[i])));
-        }
-        return images;
     }
 };
 
@@ -255,6 +241,24 @@ void ThumbnailListView::setSelection(const QRect &rect, QItemSelectionModel::Sel
         
         this->selectionModel()->select(selection, flags);
     }
+}
+
+QList<QSharedPointer<Image>> ThumbnailListView::selectedImages()
+{
+    QModelIndexList selectedIdx = this->selectionModel()->selectedRows();
+    return this->selectedImages(selectedIdx);
+}
+
+QList<QSharedPointer<Image>> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
+{
+    QList<QSharedPointer<Image>> images;
+    auto sourceModel = ANPV::globalInstance()->fileModel();
+    auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
+    for(int i=0; i<selectedIdx.size(); i++)
+    {
+        images.push_back(sourceModel->data(proxyModel.mapToSource(selectedIdx[i])));
+    }
+    return images;
 }
 
 void ThumbnailListView::moveSelectedFiles(QString&& destination)

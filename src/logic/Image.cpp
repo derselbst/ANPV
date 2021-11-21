@@ -280,17 +280,9 @@ QString Image::formatInfoString()
             infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
         }
         
-        static const char *const sizeUnit[] = {" Bytes", " KiB", " MiB", " <b>GiB</b>"};
-        float fsize = this->fileInfo().size();
-        int i;
-        for(i = 0; i<4 && fsize > 1024; i++)
-        {
-            fsize /= 1024.f;
-        }
-        
         infoStr += QString("<b>===stat()===</b><br><br>");
         infoStr += "File Size: ";
-        infoStr += QString::number(fsize, 'f', 2) + sizeUnit[i];
+        infoStr += ANPV::formatByteHtmlString(this->fileInfo().size());
         infoStr += "<br><br>";
         
         QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
