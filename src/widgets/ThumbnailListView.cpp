@@ -21,6 +21,8 @@
 #include <QWheelEvent>
 #include <QDesktopServices>
 #include <QSortFilterProxyModel>
+#include <QApplication>
+#include <QClipboard>
 
 #include <vector>
 #include <algorithm>
@@ -45,6 +47,7 @@ struct ThumbnailListView::Impl
     QAction* actionOpenFolder=nullptr;
     QAction* actionCut=nullptr;
     QAction* actionCopy=nullptr;
+    QAction* actionCopyFilePath=nullptr;
     QAction* actionDelete=nullptr;
     
     enum Operation { Move, Copy, Delete };
@@ -57,11 +60,11 @@ struct ThumbnailListView::Impl
     
     void startFileOperation(Operation op, QString&& dest)
     {
-        QDir currentDir = ANPV::globalInstance()->currentDir();
         if(dest.isEmpty())
         {
             return;
         }
+        QDir currentDir = ANPV::globalInstance()->currentDir();
         if(QDir(dest) == currentDir)
         {
             QMessageBox::information(q, "That doesn't work", "Destination folder cannot be equal with source folder!");
@@ -85,8 +88,6 @@ struct ThumbnailListView::Impl
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
         }
-        
-        lastTargetDirectory = dest;
     }
 
     void openContainingFolder()
@@ -110,6 +111,26 @@ struct ThumbnailListView::Impl
     
     void openSelectionExternally()
     {
+    }
+    
+    void onCopyFilePath()
+    {
+        QModelIndex cur = q->currentIndex();
+        if(!cur.isValid())
+        {
+            return;
+        }
+        
+        auto imgs = this->selectedImages();
+        QString filePaths;
+        for(QSharedPointer<Image>& i : imgs)
+        {
+            filePaths += QString(" '%1' ").arg(i->fileInfo().absoluteFilePath());
+        }
+        
+        QClipboard* cb = QApplication::clipboard();
+        Q_ASSERT(cb != nullptr);
+        cb->setText(filePaths);
     }
     
     QList<QSharedPointer<Image>> selectedImages()
@@ -152,6 +173,9 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
     connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
     
+    d->actionCopyFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
+    connect(d->actionCopyFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
+    
     d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
     d->actionCut->setShortcuts(QKeySequence::Cut);
     connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
@@ -171,6 +195,8 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->addAction(d->actionOpenSelectionInternally);
     this->addAction(d->actionOpenSelectionExternally);
     this->addAction(d->actionOpenFolder);
+    this->addAction(sep);
+    this->addAction(d->actionCopyFilePath);
     this->addAction(sep);
     this->addAction(d->actionCut);
     this->addAction(d->actionCopy);
