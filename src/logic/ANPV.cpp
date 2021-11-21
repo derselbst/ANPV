@@ -444,12 +444,26 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
     this->undoStack()->push(cmd);
 }
 
-QString ANPV::getExistingDirectory(QWidget* parent, QString proposedDirToOpen)
+QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
     QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
-    QString dir = QFileDialog::getExistingDirectory(parent, "Select Target Directory",
-                                            dirToOpen,
-                                            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseCustomDirectoryIcons | QFileDialog::ReadOnly);
+    
+    static const QStringList schemes = QStringList(QStringLiteral("file"));
+    
+    QFileDialog diag(parent, "Select Target Directory", dirToOpen);
+    diag.setSupportedSchemes(schemes);
+    diag.setFileMode(QFileDialog::Directory);
+    diag.setViewMode(QFileDialog::List);
+    diag.setIconProvider(d->noIconProvider.get());
+    diag.setOptions(QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks | QFileDialog::DontUseCustomDirectoryIcons);
+    
+    QString dir;
+    if (diag.exec() == QDialog::Accepted)
+    {
+        dir = diag.selectedFiles().value(0);
+        proposedDirToOpen = dir;
+    }
+    
     return dir;
 }
 

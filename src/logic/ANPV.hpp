@@ -87,7 +87,7 @@ public:
     QActionGroup* copyMoveActionGroup();
     QUndoStack* undoStack();
     
-    QString getExistingDirectory(QWidget* parent, QString proposedDirToOpen);
+    QString getExistingDirectory(QWidget* parent, QString& proposedDirToOpen);
 
 signals:
     void currentDirChanged(QDir dir, QDir old);
