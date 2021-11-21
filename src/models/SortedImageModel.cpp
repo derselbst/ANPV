@@ -519,8 +519,10 @@ struct SortedImageModel::Impl
             return;
         }
         
-        return;
-        throw std::logic_error("Implementation is racy");
+        if(!(this->directoryWorker && this->directoryWorker->future().isFinished()))
+        {
+            return;
+        }
         
         QFileInfoList fileInfoList = currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
         
