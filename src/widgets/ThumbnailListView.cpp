@@ -206,6 +206,31 @@ void ThumbnailListView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
+// QListView's ExtendedSelection mode is broken in IconMode, see
+// https://bugreports.qt.io/browse/QTBUG-94098
+void ThumbnailListView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags flags)
+{
+    if (state() == DragSelectingState)
+    {
+        // visual selection mode (rubberband selection)
+        QListView::setSelection(rect,flags);
+    }
+    else
+    {
+        // logical selection mode (key and mouse click selection)
+        QModelIndex firstIndex = this->indexAt(rect.topLeft());
+        QModelIndex lastIndex = this->indexAt(rect.bottomRight());
+        
+        QItemSelection selection;
+        if (firstIndex.isValid() && lastIndex.isValid())
+        {
+            selection << QItemSelectionRange(firstIndex, lastIndex);
+        }
+        
+        this->selectionModel()->select(selection, flags);
+    }
+}
+
 void ThumbnailListView::moveSelectedFiles(QString&& destination)
 {
     d->startFileOperation(Impl::Operation::Move, std::move(destination));
