@@ -301,11 +301,13 @@ QAbstractFileIconProvider* ANPV::iconProvider()
 
 QFileSystemModel* ANPV::dirModel()
 {
+    xThreadGuard g(this);
     return d->dirModel;
 }
 
 QSharedPointer<SortedImageModel> ANPV::fileModel()
 {
+    xThreadGuard g(this);
     return d->fileModel;
 }
 
@@ -522,6 +524,7 @@ QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 
 void ANPV::about()
 {
+    xThreadGuard g(this);
     // build up the huge constexpr about anmp string
     static constexpr char text[] = "<p>\n"
                                    "<b>ANPV - Another Nameless Picture Viewer</b><br />\n"

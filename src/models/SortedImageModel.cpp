@@ -357,6 +357,7 @@ struct SortedImageModel::Impl
     // stop processing, delete everything and wait until finished
     void clear()
     {
+        xThreadGuard g(q);
         if(directoryWorker != nullptr && !directoryWorker->future().isFinished())
         {
             directoryWorker->future().cancel();
