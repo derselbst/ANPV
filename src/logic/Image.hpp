@@ -7,6 +7,7 @@
 #include <QSize>
 #include <QPixmap>
 #include <QImage>
+#include <QIcon>
 #include <QString>
 #include <QFileInfo>
 #include <QFuture>
@@ -53,7 +54,6 @@ public:
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
-    void lookupIconFromFileType();
     
     QSharedPointer<ExifWrapper> exif();
     
@@ -69,6 +69,9 @@ public:
     DecodingState decodingState() const;
     QImage decodedImage();
     QString errorMessage();
+
+public slots:
+    void lookupIconFromFileType();
 
 signals:
     void decodingStateChanged(Image* self, quint32 newState, quint32 oldState);

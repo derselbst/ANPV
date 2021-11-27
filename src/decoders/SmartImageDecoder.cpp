@@ -193,8 +193,6 @@ void SmartImageDecoder::init()
             d->encodedInputBufferSize = d->encodedInputFile.size();
         }
         
-        this->image()->lookupIconFromFileType();
-        
         this->cancelCallback();
         
         this->decodeHeader(d->encodedInputBufferPtr, d->encodedInputBufferSize);

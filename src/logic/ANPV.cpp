@@ -61,6 +61,42 @@ public:
     }
 };
 
+// Calling QFileIconProvider from multiple threads concurrently leads to the famous "corrputed double linked list" in malloc and free
+class MyUIThreadOnlyIconProvider : public QFileIconProvider
+{
+//     QCache<QString, QIcon> iconCache;
+public:
+    MyUIThreadOnlyIconProvider() = default;
+    ~MyUIThreadOnlyIconProvider() override = default;
+    
+    QIcon icon(IconType type) const override
+    {
+        xThreadGuard g(QGuiApplication::instance()->thread());
+        return this->QFileIconProvider::icon(type);
+    }
+    QIcon icon(const QFileInfo &info) const override
+    {
+        xThreadGuard g(QGuiApplication::instance()->thread());
+        QIcon ico = this->QFileIconProvider::icon(info);
+        return ico;
+    }
+    QString type(const QFileInfo &info) const override
+    {
+        xThreadGuard g(QGuiApplication::instance()->thread());
+        return this->QFileIconProvider::type(info);
+    }
+    void setOptions(Options options) override
+    {
+        xThreadGuard g(QGuiApplication::instance()->thread());
+        return this->QFileIconProvider::setOptions(options);
+    }
+    Options options() const override
+    {
+        xThreadGuard g(QGuiApplication::instance()->thread());
+        return this->QFileIconProvider::options();
+    }
+};
+
 static QPointer<ANPV> global;
 
 struct ANPV::Impl
@@ -99,7 +135,7 @@ struct ANPV::Impl
             ::global = QPointer<ANPV>(q);
         }
         
-        this->iconProvider.reset(new QFileIconProvider());
+        this->iconProvider.reset(new MyUIThreadOnlyIconProvider());
         this->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
         this->noIconProvider.reset(new MyDisabledFileIconProvider());
         

@@ -166,8 +166,10 @@ void Image::setIcon(QIcon ico)
     d->icon = ico;
 }
 
+// must be called from UI thread
 void Image::lookupIconFromFileType()
 {
+    xThreadGuard g(this);
     QAbstractFileIconProvider* prov = ANPV::globalInstance()->iconProvider();
     // this operation is expensive, up to 30ms per call!
     QIcon ico = prov->icon(this->fileInfo());

@@ -504,7 +504,7 @@ struct SortedImageModel::Impl
         }
         else
         {
-            image->lookupIconFromFileType();
+            QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
         }
         return false;
     }
