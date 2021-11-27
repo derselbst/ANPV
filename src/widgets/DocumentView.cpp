@@ -685,7 +685,7 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
-    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
+    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->screen()->geometry().size());
     d->taskFuture.setFuture(fut);
 
     emit this->imageChanged(d->currentImageDecoder->image());
