@@ -23,8 +23,7 @@ struct SmartImageDecoder::Impl
 {
     SmartImageDecoder* q;
     
-    std::unique_ptr<QPromise<DecodingState>> promise;
-    std::atomic<DecodingState> state{ DecodingState::Ready };
+    QScopedPointer<QPromise<DecodingState>> promise;
     DecodingState targetState;
     QSize desiredResolution;
     QRect roiRect;
@@ -33,16 +32,11 @@ struct SmartImageDecoder::Impl
 
     std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
-    QString errorMessage;
-    
     QSharedPointer<Image> image;
     
     // May or may not contain (a part of) the encoded input file
     // It does for embedded JPEG preview in CR2
     QByteArray encodedInputFile;
-    
-    // the fully decoded image - might be incomplete if the state is PreviewImage
-    QImage decodedImage;
     
     // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
     std::unique_ptr<unsigned char[]> backingImageBuffer;
@@ -51,7 +45,7 @@ struct SmartImageDecoder::Impl
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
     
-    Impl(SmartImageDecoder* q, QSharedPointer<Image> image) : q(q), image(image), file(q)
+    Impl(SmartImageDecoder* q, QSharedPointer<Image> image) : q(q), image(image)
     {}
     
     void open(const QFileInfo& info)
@@ -67,10 +61,15 @@ struct SmartImageDecoder::Impl
             throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
         }
     }
+    
+    DecodingState decodingState()
+    {
+        return q->image()->decodingState();
+    }
 
     void setDecodedImage(QImage img)
     {
-        decodedImage = img;
+        q->image()->setDecodedImage(img);
     }
     
     void releaseFullImage()
@@ -91,17 +90,26 @@ struct SmartImageDecoder::Impl
             std::logic_error("Operation not allowed, decoding is still ongoing.");
         }
     }
+    
+    void setErrorMessage(const QString& err)
+    {
+        q->image()->setErrorMessage(err);
+    }
+
+    QString latestMessage()
+    {
+        return this->decodingMessage;
+    }
 };
 
 SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_unique<Impl>(this, image))
 {
-    image->setHasDecoder(true);
+    image->setDecodingState(DecodingState::Ready);
     this->setAutoDelete(false);
 }
 
 SmartImageDecoder::~SmartImageDecoder()
 {
-    xThreadGuard g(this);
     d->assertNotDecoding();
 
     this->close();
@@ -115,19 +123,7 @@ QSharedPointer<Image> SmartImageDecoder::image()
 
 void SmartImageDecoder::setDecodingState(DecodingState state)
 {
-    DecodingState old = d->state;
-    d->state = state;
-    
-    if(old == DecodingState::Fatal && (state == DecodingState::Error || state == DecodingState::Cancelled))
-    {
-        // we are already Fatal, ignore new error state
-        return;
-    }
-    
-    if(old != state)
-    {
-        emit this->decodingStateChanged(this, state, old);
-    }
+    this->image()->setDecodingState(state);
 }
 
 void SmartImageDecoder::cancelCallback()
@@ -146,7 +142,7 @@ void SmartImageDecoder::open()
     }
     catch(const std::exception& e)
     {
-        d->errorMessage = e.what();
+        d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Fatal);
         throw;
     }
@@ -224,7 +220,7 @@ void SmartImageDecoder::init()
     }
     catch(const std::exception& e)
     {
-        d->errorMessage = e.what();
+        d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Fatal);
         throw;
     }
@@ -237,7 +233,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
     d->roiRect = roiRect;
-    d->promise = std::make_unique<QPromise<DecodingState>>();
+    d->promise.reset(new QPromise<DecodingState>());
     d->promise->setProgressRange(0, 100);
     QThreadPool::globalInstance()->start(this, static_cast<int>(prio));
 
@@ -260,13 +256,14 @@ void SmartImageDecoder::run()
     {
         Formatter f;
         f << "Uncaught exception during SmartImageDecoder::run()!";
-        d->errorMessage = f.str().c_str();
-        qCritical() << d->errorMessage;
+        QString err = f.str().c_str();
+        d->setErrorMessage(err);
+        qCritical() << err;
         this->setDecodingState(DecodingState::Fatal);
     }
 
     // this will not store the result if the future has been canceled already!
-    d->promise->addResult(d->state.load());
+    d->promise->addResult(d->decodingState());
     d->promise->finish();
 }
 
@@ -277,7 +274,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
         this->cancelCallback();
         do
         {
-            if(decodingState() != DecodingState::Metadata)
+            if(d->decodingState() != DecodingState::Metadata)
             {
                 // metadata has not been read yet or try to recover previous error
                 this->init();
@@ -314,7 +311,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
     catch(const std::exception& e)
     {
-        d->errorMessage = e.what();
+        d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Error);
     }
 }
@@ -331,23 +328,12 @@ void SmartImageDecoder::close()
     }
 }
 
-void SmartImageDecoder::connectNotify(const QMetaMethod& signal)
-{
-    if (signal == QMetaMethod::fromSignal(&SmartImageDecoder::decodingStateChanged))
-    {
-        DecodingState cur = decodingState();
-        emit this->decodingStateChanged(this, cur, cur);
-    }
-
-    QObject::connectNotify(signal);
-}
-
 void SmartImageDecoder::reset()
 {
     d->assertNotDecoding();
     
-    d->errorMessage.clear();
-    if(this->decodingState() == DecodingState::Fatal)
+    d->setErrorMessage(QString());
+    if(d->decodingState() == DecodingState::Fatal)
     {
         this->setDecodingState(DecodingState::Ready);
         return;
@@ -357,36 +343,8 @@ void SmartImageDecoder::reset()
     this->setDecodingState(DecodingState::Metadata);
 }
 
-DecodingState SmartImageDecoder::decodingState() const
-{
-    return d->state;
-}
-
-QString SmartImageDecoder::latestMessage()
-{
-    xThreadGuard g(this);
-    return d->decodingMessage;
-}
-
-QString SmartImageDecoder::errorMessage()
-{
-    xThreadGuard g(this);
-    return d->errorMessage;
-}
-
-QImage SmartImageDecoder::decodedImage()
-{
-    xThreadGuard g(this);
-    return d->decodedImage;
-}
-
 void SmartImageDecoder::setDecodingMessage(QString&& msg)
 {
-    if(this->signalsBlocked())
-    {
-        return;
-    }
-
     if(d->promise && d->decodingMessage != msg)
     {
         d->decodingMessage = std::move(msg);
@@ -396,11 +354,6 @@ void SmartImageDecoder::setDecodingMessage(QString&& msg)
 
 void SmartImageDecoder::setDecodingProgress(int prog)
 {
-    if(this->signalsBlocked())
-    {
-        return;
-    }
-
     if(d->promise && d->decodingProgress != prog)
     {
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
@@ -409,18 +362,13 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 
 void SmartImageDecoder::updatePreviewImage(QImage&& img)
 {
-    if(this->signalsBlocked())
-    {
-        return;
-    }
-
     constexpr int DecodePreviewImageRefreshDuration = 100;
     
     auto now = std::chrono::steady_clock::now();
     auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
     if(durationMs.count() > DecodePreviewImageRefreshDuration)
     {
-        emit this->imageRefined(this, std::move(img));
+        this->image()->setDecodedImage(std::move(img));
         d->lastPreviewImageUpdate = now;
     }
 }

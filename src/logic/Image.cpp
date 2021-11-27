@@ -13,6 +13,7 @@
 #include <QSvgRenderer>
 #include <QAbstractFileIconProvider>
 #include <QPainter>
+#include <QMetaMethod>
 #include <KDCRAW/KDcraw>
 #include <mutex>
 
@@ -20,8 +21,7 @@ struct Image::Impl
 {
     mutable std::recursive_mutex m;
 
-    // set to true, once any SmartImageDecoder has been created for this Image, otherwise stays false
-    bool hasDecoder = false;
+    DecodingState state{ DecodingState::Unknown };
     
     // file path to the decoded input file
     const QFileInfo fileInfo;
@@ -34,6 +34,9 @@ struct Image::Impl
     
     QIcon icon;
     
+    // the fully decoded image - might be incomplete if the state is PreviewImage
+    QImage decodedImage;
+    
     // size of the fully decoded image, already available in DecodingState::Metadata
     QSize size;
     
@@ -42,6 +45,8 @@ struct Image::Impl
     QTransform userTransform;
     
     QColorSpace colorSpace;
+    
+    QString errorMessage;
     
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
@@ -88,13 +93,7 @@ Image::~Image()
 bool Image::hasDecoder() const
 {
     std::lock_guard<std::recursive_mutex> lck(d->m);
-    return d->hasDecoder;
-}
-
-void Image::setHasDecoder(bool b)
-{
-    std::lock_guard<std::recursive_mutex> lck(d->m);
-    d->hasDecoder = b;
+    return d->state != DecodingState::Unknown;
 }
 
 const QFileInfo& Image::fileInfo() const
@@ -150,7 +149,7 @@ void Image::setThumbnail(QImage thumb)
         if(!this->signalsBlocked())
         {
             lck.unlock();
-            emit this->thumbnailChanged();
+            emit this->thumbnailChanged(this, d->thumbnail);
         }
     }
 }
@@ -327,4 +326,84 @@ bool Image::hasEquallyNamedTiff()
     
     QString suffix = this->fileInfo().suffix().toUpper();
     return suffix != TIF && d->hasEquallyNamedFile(TIF);
+}
+
+DecodingState Image::decodingState() const
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    return d->state;
+}
+
+void Image::setDecodingState(DecodingState state)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    DecodingState old = d->state;
+    d->state = state;
+    
+    if(old == DecodingState::Fatal && (state == DecodingState::Error || state == DecodingState::Cancelled))
+    {
+        // we are already Fatal, ignore new error states
+        return;
+    }
+    
+    if(old != state)
+    {
+        emit this->decodingStateChanged(this, state, old);
+    }
+}
+
+QString Image::errorMessage()
+{
+    xThreadGuard g(this);
+    return d->errorMessage;
+}
+
+void Image::setErrorMessage(const QString& err)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    if(d->errorMessage != err)
+    {
+        d->errorMessage = err;
+    }
+}
+
+QImage Image::decodedImage()
+{
+    xThreadGuard g(this);
+    return d->decodedImage;
+}
+
+void Image::setDecodedImage(QImage img)
+{
+    std::lock_guard<std::recursive_mutex> lck(d->m);
+    // skip comparison with current image, can be slow
+    d->decodedImage = img;
+    emit this->decodedImageChanged(this, d->decodedImage);
+}
+
+void Image::connectNotify(const QMetaMethod& signal)
+{
+    if (signal == QMetaMethod::fromSignal(&Image::decodingStateChanged))
+    {
+        DecodingState cur = this->decodingState();
+        emit this->decodingStateChanged(this, cur, cur);
+    }
+    else if(signal == QMetaMethod::fromSignal(&Image::thumbnailChanged))
+    {
+        QImage thumb = this->thumbnail();
+        if(!thumb.isNull())
+        {
+            emit this->thumbnailChanged(this, thumb);
+        }
+    }
+    else if(signal == QMetaMethod::fromSignal(&Image::decodingStateChanged))
+    {
+        QImage img = this->decodedImage();
+        if(!img.isNull())
+        {
+            emit this->decodedImageChanged(this, img);
+        }
+    }
+
+    QObject::connectNotify(signal);
 }

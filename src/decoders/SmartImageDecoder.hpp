@@ -1,23 +1,15 @@
 
 #pragma once
 
-#include "DecodingState.hpp"
-
-#include <QObject>
 #include <QRunnable>
 #include <QSize>
-#include <QPixmap>
 #include <QImage>
-#include <QString>
-#include <QFileInfo>
 #include <QFuture>
-#include <functional>
-#include <memory>
-#include <stdexcept>
 #include <cstdint>
 
+#include "DecodingState.hpp"
+
 class ExifWrapper;
-class QMetaMethod;
 class Image;
 
 enum class Priority : int
@@ -27,10 +19,11 @@ enum class Priority : int
     Important = 1,
 };
 
-class SmartImageDecoder : public QObject, public QRunnable
+/**
+ * Base class for image decoders. Not a QObject and may therefore be owned by any thread, passed around as pleased.
+ */
+class SmartImageDecoder : public QRunnable
 {
-Q_OBJECT
-
 public:
     SmartImageDecoder(QSharedPointer<Image> image);
     ~SmartImageDecoder() override;
@@ -39,10 +32,6 @@ public:
     SmartImageDecoder& operator=(const SmartImageDecoder&) = delete;
     
     QSharedPointer<Image> image();
-    QImage decodedImage();
-    QString errorMessage();
-    QString latestMessage();
-    DecodingState decodingState() const;
 
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
@@ -57,23 +46,17 @@ protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
     virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect) = 0;
 
-    void connectNotify(const QMetaMethod& signal) override;
-    
     void cancelCallback();
-    void setDecodingState(DecodingState state);
-    
-    void setDecodingMessage(QString&& msg);
-    void setDecodingProgress(int prog);
     void updatePreviewImage(QImage&& img);
 
     template<typename T>
     T* allocateImageBuffer(uint32_t width, uint32_t height);
-    
+
+    void setDecodingState(DecodingState state);
+    void setDecodingMessage(QString&& msg);
+    void setDecodingProgress(int prog);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
-
-signals:
-    void decodingStateChanged(SmartImageDecoder* self, quint32 newState, quint32 oldState);
-    void imageRefined(SmartImageDecoder* self, QImage img);
 };

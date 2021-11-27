@@ -15,15 +15,17 @@
 #include <stdexcept>
 #include <cstdint>
 
+#include "DecodingState.hpp"
+
 class ExifWrapper;
 class QMetaMethod;
 
 /**
- * Thread-safe container for most of once-decoded-never-changing information of an image.
- * Used by the main-thread to know about most useful information.
+ * Thread-safe container for most of decoded information of an image.
+ * Owned and used by the main-thread to know about most useful information.
  * Fed by the background decoding thread.
  * Will also be used for other regular files and folders.
- * In this case, DecoderFactory would simply fail to find a decoder for this "image" instance.
+ * In this case, DecoderFactory would simply fail to find a decoder for *this and hasDecoder() will stay false.
  */
 class Image : public QObject
 {
@@ -64,11 +66,18 @@ public:
     bool hasEquallyNamedJpeg();
     bool hasEquallyNamedTiff();
 
+    DecodingState decodingState() const;
+    QImage decodedImage();
+    QString errorMessage();
+
 signals:
-    void thumbnailChanged();
+    void decodingStateChanged(Image* self, quint32 newState, quint32 oldState);
+    void thumbnailChanged(Image* self, QImage);
+    void decodedImageChanged(Image* self, QImage img);
 
 protected:
-    void setHasDecoder(bool);
+    void connectNotify(const QMetaMethod& signal) override;
+
     void setSize(QSize);
     void setThumbnail(QImage);
     void setThumbnail(QPixmap);
@@ -76,6 +85,12 @@ protected:
     void setExif(QSharedPointer<ExifWrapper>);
     void setColorSpace(QColorSpace);
     
+    void setDecodingState(DecodingState state);
+    void setDecodedImage(QImage);
+    void setErrorMessage(const QString&);
+    
+    void updatePreviewImage(QImage&& img);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

@@ -12,8 +12,6 @@
 
 class SmartJpegDecoder : public SmartImageDecoder
 {
-Q_OBJECT
-
 public:
     SmartJpegDecoder(QSharedPointer<Image> image);
     ~SmartJpegDecoder() override;

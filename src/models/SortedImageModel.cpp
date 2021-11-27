@@ -371,7 +371,6 @@ struct SortedImageModel::Impl
                 for (const auto& [key, value] : backgroundTasks)
                 {
                     auto& decoder = key;
-                    decoder->disconnect(q);
                     (void)QThreadPool::globalInstance()->tryTake(decoder.get());
                     auto& future = value;
                     future->disconnect(q);
@@ -399,7 +398,7 @@ struct SortedImageModel::Impl
         currentDir = QDir();
     }
 
-    void onBackgroundImageTaskStateChanged(SmartImageDecoder* dec, quint32 newState, quint32)
+    void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
     {
         xThreadGuard g(q);
         if(newState == DecodingState::Ready)
@@ -410,7 +409,7 @@ struct SortedImageModel::Impl
         // A thumbnail may be inserted into the list.
         // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
         updateLayout();
-        QModelIndex idx = q->index(dec->image());
+        QModelIndex idx = q->index(img);
         if(idx.isValid())
         {
             emit q->dataChanged(idx, idx, {Qt::DecorationRole, Qt::ToolTipRole});
@@ -463,7 +462,6 @@ struct SortedImageModel::Impl
         
         if(decoder)
         {
-            decoder->moveToThread(QGuiApplication::instance()->thread());
             try
             {
                 if(sortedColumnNeedsPreloadingMetadata(this->currentSortedCol))
@@ -484,11 +482,10 @@ struct SortedImageModel::Impl
                     }
                     
                     watcher.reset(new QFutureWatcher<DecodingState>(), &QObject::deleteLater);
-                    watcher->moveToThread(QGuiApplication::instance()->thread());
                     
-                    connect(decoder.data(), &SmartImageDecoder::decodingStateChanged, q,
-                            [=](SmartImageDecoder* dec, quint32 newState, quint32 old)
-                            { onBackgroundImageTaskStateChanged(dec, newState, old); }
+                    connect(image.data(), &Image::decodingStateChanged, q,
+                            [=](Image* img, quint32 newState, quint32 old)
+                            { onBackgroundImageTaskStateChanged(img, newState, old); }
                         , Qt::QueuedConnection);
                     connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, q,
                             [=](){ onDecodingTaskFinished(decoder); }
@@ -677,6 +674,7 @@ void SortedImageModel::run()
                     // decode asynchronously
                     auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
                     watcher->setFuture(fut);
+                    watcher->moveToThread(QGuiApplication::instance()->thread());
                 }
             }
 
@@ -890,10 +888,15 @@ void SortedImageModel::sort(Qt::SortOrder order)
 
 QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
+    this->index(img.data());
+}
+
+QModelIndex SortedImageModel::index(const Image* img)
+{
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
                             [&](const QSharedPointer<Image>& other)
-                            { return other == img; });
+                            { return other.data() == img; });
     
     if(result == d->entries.end())
     {

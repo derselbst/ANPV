@@ -348,10 +348,8 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     {
         this->setDecodingMessage((Formatter() << "Decoding TIFF thumbnail found at directory no. " << thumbnailPageToDecode).str().c_str());
         
-        QSignalBlocker blocker(this);
         QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
         this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
-        blocker.unblock();
 
         this->image()->setThumbnail(thumb);
     }

@@ -95,7 +95,7 @@ struct DocumentView::Impl
         
         if(currentImageDecoder)
         {
-            currentImageDecoder->disconnect(p);
+            currentImageDecoder->image()->disconnect(p);
             currentImageDecoder->reset();
             currentImageDecoder = nullptr;
             latestDecodingState = DecodingState::Ready;
@@ -230,9 +230,9 @@ struct DocumentView::Impl
         }
     }
 
-    void setDocumentError(SmartImageDecoder* sid)
+    void setDocumentError(const QSharedPointer<Image>& img)
     {
-        setDocumentError(sid->errorMessage());
+        setDocumentError(img->errorMessage());
     }
     
     void setDocumentError(QString error)
@@ -503,24 +503,25 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     QGuiApplication::restoreOverrideCursor();
 }
 
-void DocumentView::onImageRefinement(SmartImageDecoder* dec, QImage img)
+void DocumentView::onImageRefinement(Image* img, QImage image)
 {
-    if(dec != this->d->currentImageDecoder.data())
+    if(img != this->d->currentImageDecoder->image().data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
     }
     
     d->removeSmoothPixmap();
-    d->currentDocumentPixmap = QPixmap::fromImage(img, Qt::NoFormatConversion);
+    d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
 
     d->scene->invalidate();
 }
 
-void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newState, quint32 oldState)
+void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 oldState)
 {
-    if(dec != this->d->currentImageDecoder.data())
+    auto& dec = d->currentImageDecoder;
+    if(img != dec->image().data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
@@ -543,7 +544,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
         break;
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(this->d->currentImageDecoder.data(), dec->decodedImage());
+        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
 
         QSize fullImageSize = dec->image()->size();
         auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
@@ -555,7 +556,7 @@ void DocumentView::onDecodingStateChanged(SmartImageDecoder* dec, quint32 newSta
     }
     case DecodingState::Error:
         d->currentDocumentPixmap = QPixmap();
-        d->setDocumentError(dec);
+        d->setDocumentError(dec->image());
         [[fallthrough]];
     case DecodingState::Cancelled:
         break;
@@ -681,8 +682,8 @@ void DocumentView::loadImage()
 {
     this->showImage(d->currentImageDecoder->image());
     
-    QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::imageRefined, this, &DocumentView::onImageRefinement);
-    QObject::connect(d->currentImageDecoder.data(), &SmartImageDecoder::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
+    QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
+    QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->geometry().size());
     d->taskFuture.setFuture(fut);

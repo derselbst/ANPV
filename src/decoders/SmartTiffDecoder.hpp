@@ -12,8 +12,6 @@
 
 class SmartTiffDecoder : public SmartImageDecoder
 {
-Q_OBJECT
-
 public:
     SmartTiffDecoder(QSharedPointer<Image> image);
     ~SmartTiffDecoder() override;

@@ -81,11 +81,11 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Imag
         
         if(image->isRaw() || r.format() == "jpeg")
         {
-            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image), &QObject::deleteLater);
+            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image));
         }
         else if(r.format() == "tiff")
         {
-            return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(image), &QObject::deleteLater);
+            return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(image));
         }
     }
     

@@ -46,6 +46,7 @@ public:
     
     using QAbstractListModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
+    QModelIndex index(const Image* img);
     QFileInfo fileInfo(const QModelIndex& idx) const;
     QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
     QSharedPointer<Image> data(const QModelIndex &index);

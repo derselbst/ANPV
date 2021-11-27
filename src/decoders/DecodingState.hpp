@@ -6,7 +6,10 @@
 
 enum DecodingState : quint32
 {
-    // Decoder is idle, nothing has been decoded yet
+    // No decoder has been assigned yet
+    Unknown,
+    
+    // Decoder is assigned and idle, nothing has been decoded yet
     Ready,
     
     // Metadata is available, something like dimensions of the image and EXIF data (if any) are known at this stage
