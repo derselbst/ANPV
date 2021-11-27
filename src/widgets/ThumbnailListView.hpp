@@ -8,6 +8,7 @@
 #include <QList>
 #include <memory>
 
+class QAbstractItemModel;
 class QWheelEvent;
 class QWidget;
 class SortedImageModel;
@@ -22,6 +23,7 @@ Q_OBJECT
 public:
     ThumbnailListView(QWidget *parent=nullptr);
     ~ThumbnailListView() override;
+    void setModel(QAbstractItemModel *model) override;
 
     void moveSelectedFiles(QString&& destination);
     QList<QSharedPointer<Image>> selectedImages();

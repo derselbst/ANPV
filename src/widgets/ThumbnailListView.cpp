@@ -132,6 +132,17 @@ struct ThumbnailListView::Impl
         Q_ASSERT(cb != nullptr);
         cb->setText(filePaths);
     }
+    
+    void scrollToCurrentIdx()
+    {
+        QModelIndex cur = q->currentIndex();
+        if(!cur.isValid())
+        {
+            return;
+        }
+        
+        q->scrollTo(cur, QAbstractItemView::PositionAtCenter);
+    }
 };
 
 ThumbnailListView::ThumbnailListView(QWidget *parent)
@@ -241,6 +252,17 @@ void ThumbnailListView::setSelection(const QRect &rect, QItemSelectionModel::Sel
         
         this->selectionModel()->select(selection, flags);
     }
+}
+
+void ThumbnailListView::setModel(QAbstractItemModel *model)
+{
+    QAbstractItemModel* old = this->model();
+    if(old)
+    {
+        old->disconnect(this);
+    }
+    connect(model, &QAbstractItemModel::layoutChanged, this, [&](const QList<QPersistentModelIndex>, QAbstractItemModel::LayoutChangeHint){ d->scrollToCurrentIdx(); }, Qt::QueuedConnection);
+    QListView::setModel(model);
 }
 
 QList<QSharedPointer<Image>> ThumbnailListView::selectedImages()
