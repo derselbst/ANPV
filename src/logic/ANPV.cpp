@@ -395,6 +395,7 @@ void ANPV::setIconHeight(int h)
 
 void ANPV::showThumbnailView(QSharedPointer<Image> img)
 {
+    xThreadGuard(this);
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();
@@ -403,6 +404,7 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
 
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
+    xThreadGuard(this);
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
     mdv->show();
     mdv->addImages(image, d->fileModel);
@@ -427,6 +429,7 @@ QUndoStack* ANPV::undoStack()
 
 void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination)
 {
+    xThreadGuard(this);
     MoveFileCommand* cmd = new MoveFileCommand(std::move(files), std::move(source), std::move(destination));
     
     connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
@@ -459,6 +462,7 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
 
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
+    xThreadGuard(this);
     QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
     
     static const QStringList schemes = QStringList(QStringLiteral("file"));
