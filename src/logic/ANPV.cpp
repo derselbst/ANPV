@@ -107,6 +107,7 @@ struct ANPV::Impl
     QScopedPointer<QAbstractFileIconProvider> iconProvider;
     QScopedPointer<MyDisabledFileIconProvider> noIconProvider;
     QPixmap noIconPixmap;
+    QPixmap noPreviewPixmap;
     
     // QObjects without parent
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
@@ -152,7 +153,12 @@ struct ANPV::Impl
     
     void connectLogic()
     {
-        connect(q, &ANPV::iconHeightChanged, q, [&](int, int){ this->drawNoIconPixmap(); });
+        connect(q, &ANPV::iconHeightChanged, q,
+                [&](int, int)
+                { 
+                    this->drawNotFoundPixmap();
+                    this->drawNoPreviewPixmap();
+                });
         connect(q, &ANPV::currentDirChanged, q,
                 [&](QDir,QDir)
                 {
@@ -223,9 +229,9 @@ struct ANPV::Impl
         }
     }
     
-    void drawNoIconPixmap()
+    QPixmap renderSvg(QString resource)
     {
-        QSvgRenderer renderer(QString(":/images/FileNotFound.svg"));
+        QSvgRenderer renderer(resource);
 
         QSize imgSize = renderer.defaultSize().scaled(this->iconHeight, this->iconHeight, Qt::KeepAspectRatio);
         QImage image(imgSize, QImage::Format_ARGB32);
@@ -234,7 +240,17 @@ struct ANPV::Impl
         QPainter painter(&image);
         renderer.render(&painter);
 
-        this->noIconPixmap = QPixmap::fromImage(image);
+        return QPixmap::fromImage(image);
+    }
+    
+    void drawNotFoundPixmap()
+    {
+        this->noIconPixmap = this->renderSvg(QString(":/images/FileNotFound.svg"));
+    }
+    
+    void drawNoPreviewPixmap()
+    {
+        this->noPreviewPixmap = this->renderSvg(QString(":/images/NoPreview.svg"));
     }
 };
 
@@ -261,7 +277,8 @@ ANPV::ANPV() : d(std::make_unique<Impl>(this))
 {
     d->initLogic();
     d->readSettings();
-    d->drawNoIconPixmap();
+    d->drawNotFoundPixmap();
+    d->drawNoPreviewPixmap();
 }
 
 ANPV::ANPV(QSplashScreen *splash)
@@ -451,6 +468,11 @@ void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 QPixmap ANPV::noIconPixmap()
 {
     return d->noIconPixmap;
+}
+
+QPixmap ANPV::noPreviewPixmap()
+{
+    return d->noPreviewPixmap;
 }
 
 QActionGroup* ANPV::copyMoveActionGroup()

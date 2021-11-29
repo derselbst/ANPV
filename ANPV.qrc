@@ -10,5 +10,6 @@
         <file>images/splash.jpg</file>
         <file>images/undo.png</file>
         <file>images/FileNotFound.svg</file>
+        <file>images/NoPreview.svg</file>
     </qresource>
 </RCC>

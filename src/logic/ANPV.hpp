@@ -84,6 +84,7 @@ public:
     void setIconHeight(int);
     
     QPixmap noIconPixmap();
+    QPixmap noPreviewPixmap();
     
     QActionGroup* copyMoveActionGroup();
     QUndoStack* undoStack();

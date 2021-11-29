@@ -83,7 +83,6 @@ protected:
 
     void setSize(QSize);
     void setThumbnail(QImage);
-    void setThumbnail(QPixmap);
     void setIcon(QIcon ico);
     void setExif(QSharedPointer<ExifWrapper>);
     void setColorSpace(QColorSpace);

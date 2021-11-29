@@ -194,7 +194,14 @@ QPixmap Image::thumbnailTransformed(int height)
         if(pix.isNull())
         {
             t.setInfo("no icon found, drawing our own...");
-            pix = ANPV::globalInstance()->noIconPixmap();
+            if(this->hasDecoder())
+            {
+                pix = ANPV::globalInstance()->noPreviewPixmap();
+            }
+            else
+            {
+                pix = ANPV::globalInstance()->noIconPixmap();
+            }
         }
         else
         {
