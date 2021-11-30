@@ -407,9 +407,6 @@ struct SortedImageModel::Impl
             // ignore ready state
             return;
         }
-        // A thumbnail may be inserted into the list.
-        // This typically happens when the user has clicked on an image that does not have an embedded thumbnail.
-        updateLayout();
         QModelIndex idx = q->index(img);
         if(idx.isValid())
         {
@@ -429,7 +426,6 @@ struct SortedImageModel::Impl
             itemsRemoved = backgroundTasks.erase(dec);
             isEmpty = backgroundTasks.empty();
         }
-        updateLayout();
     }
     
     void setStatusMessage(int prog, const QString& msg)
@@ -488,6 +484,8 @@ struct SortedImageModel::Impl
                             [=](Image* img, quint32 newState, quint32 old)
                             { onBackgroundImageTaskStateChanged(img, newState, old); }
                         , Qt::QueuedConnection);
+                    connect(image.data(), &Image::thumbnailChanged, q,
+                            [&](Image*, QImage){ updateLayout(); });
                     connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, q,
                             [=](){ onDecodingTaskFinished(decoder); }
                         , Qt::QueuedConnection);
