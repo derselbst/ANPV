@@ -363,7 +363,6 @@ struct SortedImageModel::Impl
             directoryWorker->future().cancel();
             directoryWorker->future().waitForFinished();
         }
-        entries.clear();
         
         {
             std::lock_guard<std::mutex> l(m);
@@ -393,6 +392,7 @@ struct SortedImageModel::Impl
                 backgroundTasks.clear();
             }
         }
+        entries.clear();
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
         watcher->removePath(currentDir.absolutePath());
