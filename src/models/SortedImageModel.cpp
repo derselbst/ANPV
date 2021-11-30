@@ -812,7 +812,18 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             return e->thumbnailTransformed(d->cachedIconHeight);
 
         case Qt::ToolTipRole:
-            return e->formatInfoString();
+            switch(e->decodingState())
+            {
+                case Ready:
+                    return "Decoding not yet started";
+                case Cancelled:
+                    return "Decoding cancelled";
+                case Error:
+                case Fatal:
+                    return e->errorMessage();
+                default:
+                    return e->formatInfoString();
+            }
 
         case Qt::TextAlignmentRole:
             if (index.column() == Column::FileName)
