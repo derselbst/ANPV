@@ -45,10 +45,6 @@ TraceTimer::~TraceTimer()
         {
             qWarning() << f.str().c_str();
         }
-        else
-        {
-            qDebug() << f.str().c_str();
-        }
     }
 }
 
