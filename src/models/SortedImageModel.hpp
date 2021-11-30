@@ -49,7 +49,7 @@ public:
     QModelIndex index(const Image* img);
     QFileInfo fileInfo(const QModelIndex& idx) const;
     QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
-    QSharedPointer<Image> data(const QModelIndex &index);
+    QSharedPointer<Image> decoder(const QModelIndex &index) const;
 
     void sort(Column column);
     void sort(Qt::SortOrder order);
@@ -57,6 +57,7 @@ public:
 public: // QAbstractItemModel
     
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 

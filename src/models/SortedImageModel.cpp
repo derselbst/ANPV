@@ -728,7 +728,7 @@ void SortedImageModel::run()
     d->directoryWorker->finish();
 }
 
-QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx) const
+QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
 {
     if(idx.isValid() && (unsigned)idx.row() < d->entries.size())
     {
@@ -789,7 +789,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
     
     if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
     {
-        QSharedPointer<Image> e = this->data(index);
+        QSharedPointer<Image> e = this->decoder(index);
         if(e && d->hideRawIfNonRawAvailable(e))
         {
             f &= ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
