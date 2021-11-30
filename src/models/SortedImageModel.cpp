@@ -435,6 +435,7 @@ struct SortedImageModel::Impl
     
     void updateLayout()
     {
+        xThreadGuard g(q);
         if(!layoutChangedTimer.isActive())
         {
             layoutChangedTimer.start();
@@ -443,6 +444,7 @@ struct SortedImageModel::Impl
     
     void forceUpdateLayout()
     {
+        xThreadGuard g(q);
         qInfo() << "forceUpdateLayout()";
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
@@ -510,6 +512,7 @@ struct SortedImageModel::Impl
     
     void onDirectoryChanged(const QString& path)
     {
+        xThreadGuard g(q);
         if(path != this->currentDir.absolutePath())
         {
             return;
@@ -565,6 +568,7 @@ struct SortedImageModel::Impl
     
     bool hideRawIfNonRawAvailable(const QSharedPointer<Image>& e)
     {
+        xThreadGuard g(q);
         return ((this->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
                  && e->isRaw()
                  && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
@@ -616,6 +620,8 @@ SortedImageModel::~SortedImageModel()
 
 QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
 {
+    xThreadGuard g(this);
+
     this->beginRemoveRows(QModelIndex(), 0, rowCount());
     d->clear();
     
@@ -730,6 +736,8 @@ void SortedImageModel::run()
 
 QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
 {
+    xThreadGuard g(this);
+
     if(idx.isValid() && (unsigned)idx.row() < d->entries.size())
     {
         return d->entries[idx.row()];
@@ -739,6 +747,8 @@ QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
 
 QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
 {
+    xThreadGuard g(this);
+
     int step = (stepsFromCurrent < 0) ? -1 : 1;
     
     auto result = std::find_if(d->entries.begin(),
@@ -785,6 +795,8 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
 
 Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
 {
+    xThreadGuard g(this);
+
     Qt::ItemFlags f = this->QAbstractListModel::flags(index);
     
     if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
@@ -801,11 +813,14 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
 
 int SortedImageModel::columnCount(const QModelIndex &) const
 {
+    xThreadGuard g(this);
     return Column::Count;
 }
 
 int SortedImageModel::rowCount(const QModelIndex&) const
 {
+    xThreadGuard g(this);
+
     if (d->directoryWorker && d->directoryWorker->future().isFinished())
     {
         return d->entries.size();
@@ -818,6 +833,8 @@ int SortedImageModel::rowCount(const QModelIndex&) const
 
 QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
+    xThreadGuard g(this);
+
     if (index.isValid())
     {
         const QSharedPointer<Image>& e = d->entries.at(index.row());
@@ -864,6 +881,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 
 bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 {
+    xThreadGuard g(this);
+
     return false;
 
     this->beginInsertRows(parent, row, row + count - 1);
@@ -873,6 +892,8 @@ bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 
 void SortedImageModel::sort(int column, Qt::SortOrder order)
 {
+    xThreadGuard g(this);
+
     bool sortColChanged = d->currentSortedCol != column;
     bool sortOrderChanged = d->sortOrder != order;
     
@@ -908,21 +929,29 @@ void SortedImageModel::sort(int column, Qt::SortOrder order)
 
 void SortedImageModel::sort(Column column)
 {
+    xThreadGuard g(this);
+
     this->sort(column, d->sortOrder);
 }
 
 void SortedImageModel::sort(Qt::SortOrder order)
 {
+    xThreadGuard g(this);
+
     this->sort(d->currentSortedCol, order);
 }
 
 QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
+    xThreadGuard g(this);
+
     return this->index(img.data());
 }
 
 QModelIndex SortedImageModel::index(const Image* img)
 {
+    xThreadGuard g(this);
+
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
                             [&](const QSharedPointer<Image>& other)
@@ -939,6 +968,8 @@ QModelIndex SortedImageModel::index(const Image* img)
 
 QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
 {
+    xThreadGuard g(this);
+
     if(index.isValid())
     {
         return d->entries.at(index.row())->fileInfo();
