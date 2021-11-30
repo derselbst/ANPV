@@ -62,9 +62,9 @@ public:
     
     QString formatInfoString();
 
-    bool isRaw();
-    bool hasEquallyNamedJpeg();
-    bool hasEquallyNamedTiff();
+    bool isRaw() const;
+    bool hasEquallyNamedJpeg() const;
+    bool hasEquallyNamedTiff() const;
 
     DecodingState decodingState() const;
     QImage decodedImage();
