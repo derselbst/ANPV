@@ -395,12 +395,12 @@ void Image::setDecodedImage(QImage img)
 
 void Image::connectNotify(const QMetaMethod& signal)
 {
-    if (signal == QMetaMethod::fromSignal(&Image::decodingStateChanged))
+    if (signal.name() == QStringLiteral("decodingStateChanged"))
     {
         DecodingState cur = this->decodingState();
         emit this->decodingStateChanged(this, cur, cur);
     }
-    else if(signal == QMetaMethod::fromSignal(&Image::thumbnailChanged))
+    else if(signal.name() == QStringLiteral("thumbnailChanged"))
     {
         QImage thumb = this->thumbnail();
         if(!thumb.isNull())
@@ -408,7 +408,7 @@ void Image::connectNotify(const QMetaMethod& signal)
             emit this->thumbnailChanged(this, thumb);
         }
     }
-    else if(signal == QMetaMethod::fromSignal(&Image::decodingStateChanged))
+    else if(signal.name() == QStringLiteral("decodedImageChanged"))
     {
         QImage img = this->decodedImage();
         if(!img.isNull())
