@@ -562,6 +562,13 @@ struct SortedImageModel::Impl
         }
         q->endResetModel();
     }
+    
+    bool hideRawIfNonRawAvailable(const QSharedPointer<Image>& e)
+    {
+        return ((this->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+                 && e->isRaw()
+                 && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
+    }
 };
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
@@ -598,7 +605,7 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent)
             [&](ViewFlags_t v, ViewFlags_t)
             {
                 d->cachedViewFlags = v;
-                d->updateLayout();
+                d->forceUpdateLayout();
             });
 }
 
@@ -721,7 +728,7 @@ void SortedImageModel::run()
     d->directoryWorker->finish();
 }
 
-QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx)
+QSharedPointer<Image> SortedImageModel::data(const QModelIndex& idx) const
 {
     if(idx.isValid() && (unsigned)idx.row() < d->entries.size())
     {
@@ -761,9 +768,7 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
         e = d->entries[idx];
         QFileInfo eInfo = e->fileInfo();
         bool shouldSkip = eInfo.suffix() == "bak";
-        shouldSkip |= ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
-                    && e->isRaw()
-                    && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
+        shouldSkip |= d->hideRawIfNonRawAvailable(e);
         if(e->hasDecoder() && !shouldSkip)
         {
             stepsFromCurrent -= step;
@@ -778,6 +783,21 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
     return e;
 }
 
+Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags f = this->QAbstractListModel::flags(index);
+    
+    if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+    {
+        QSharedPointer<Image> e = this->data(index);
+        if(e && d->hideRawIfNonRawAvailable(e))
+        {
+            f &= ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+        }
+    }
+    
+    return f;
+}
 
 int SortedImageModel::columnCount(const QModelIndex &) const
 {
@@ -898,7 +918,7 @@ void SortedImageModel::sort(Qt::SortOrder order)
 
 QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
-    this->index(img.data());
+    return this->index(img.data());
 }
 
 QModelIndex SortedImageModel::index(const Image* img)
