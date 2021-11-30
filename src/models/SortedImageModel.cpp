@@ -354,6 +354,14 @@ struct SortedImageModel::Impl
         q->endInsertRows();
     }
     
+    void waitForDirectoryWorker()
+    {
+        if(directoryWorker != nullptr && !directoryWorker->future().isFinished())
+        {
+            directoryWorker->future().waitForFinished();
+        }
+    }
+    
     // stop processing, delete everything and wait until finished
     void clear()
     {
@@ -738,9 +746,13 @@ QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
 {
     xThreadGuard g(this);
 
-    if(idx.isValid() && (unsigned)idx.row() < d->entries.size())
+    if(idx.isValid())
     {
-        return d->entries[idx.row()];
+        d->waitForDirectoryWorker();
+        if((unsigned)idx.row() < d->entries.size())
+        {
+            return d->entries[idx.row()];
+        }
     }
     return nullptr;
 }
@@ -748,6 +760,7 @@ QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
 QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
 {
     xThreadGuard g(this);
+    d->waitForDirectoryWorker();
 
     int step = (stepsFromCurrent < 0) ? -1 : 1;
     
@@ -837,6 +850,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 
     if (index.isValid())
     {
+        d->waitForDirectoryWorker();
         const QSharedPointer<Image>& e = d->entries.at(index.row());
         const QFileInfo& fileInfo = e->fileInfo();
 
@@ -893,6 +907,7 @@ bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 void SortedImageModel::sort(int column, Qt::SortOrder order)
 {
     xThreadGuard g(this);
+    d->waitForDirectoryWorker();
 
     bool sortColChanged = d->currentSortedCol != column;
     bool sortOrderChanged = d->sortOrder != order;
@@ -951,7 +966,12 @@ QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 QModelIndex SortedImageModel::index(const Image* img)
 {
     xThreadGuard g(this);
+    if(img == nullptr)
+    {
+        return QModelIndex();
+    }
 
+    d->waitForDirectoryWorker();
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
                             [&](const QSharedPointer<Image>& other)
@@ -972,6 +992,7 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
 
     if(index.isValid())
     {
+        d->waitForDirectoryWorker();
         return d->entries.at(index.row())->fileInfo();
     }
     
