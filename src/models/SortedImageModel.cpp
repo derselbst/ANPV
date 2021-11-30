@@ -415,6 +415,12 @@ struct SortedImageModel::Impl
             // ignore ready state
             return;
         }
+        if(!this->directoryWorker->future().isFinished())
+        {
+            // directory worker still running, once done he will reset the model. no need to dataChanged()
+            return;
+        }
+
         QModelIndex idx = q->index(img);
         if(idx.isValid())
         {
