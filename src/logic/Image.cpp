@@ -92,7 +92,7 @@ Image::~Image()
 
 bool Image::hasDecoder() const
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->state != DecodingState::Unknown;
 }
 
@@ -104,32 +104,32 @@ const QFileInfo& Image::fileInfo() const
 
 QSize Image::size() const
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->size;
 }
 
 void Image::setSize(QSize size)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     d->size = size;
 }
 
 QTransform Image::userTransform() const
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->userTransform;
 }
 
 // this is what the user wants it to look like in the UI
 void Image::setUserTransform(QTransform trans)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     d->userTransform = trans;
 }
 
 QImage Image::thumbnail()
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->thumbnail;
 }
 
@@ -156,13 +156,13 @@ void Image::setThumbnail(QImage thumb)
 
 QIcon Image::icon()
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->icon;
 }
 
 void Image::setIcon(QIcon ico)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     d->icon = ico;
 }
 
@@ -184,7 +184,7 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     
     TraceTimer t(typeid(Image), 10);
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;
     QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::NoFormatConversion);
@@ -228,19 +228,19 @@ QPixmap Image::thumbnailTransformed(int height)
 
 QSharedPointer<ExifWrapper> Image::exif()
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->exifWrapper;
 }
 
 void Image::setExif(QSharedPointer<ExifWrapper> e)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     d->exifWrapper = e;
 }
 
 QColorSpace Image::colorSpace()
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->colorSpace;
 }
 
@@ -252,7 +252,7 @@ QString Image::namedColorSpace()
 
 void Image::setColorSpace(QColorSpace cs)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     d->colorSpace = cs;
 }
 
@@ -339,13 +339,13 @@ bool Image::hasEquallyNamedTiff() const
 
 DecodingState Image::decodingState() const
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->state;
 }
 
 void Image::setDecodingState(DecodingState state)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     DecodingState old = d->state;
     d->state = state;
     
@@ -357,6 +357,7 @@ void Image::setDecodingState(DecodingState state)
     
     if(old != state)
     {
+        lck.unlock();
         emit this->decodingStateChanged(this, state, old);
     }
 }
@@ -369,9 +370,10 @@ QString Image::errorMessage()
 
 void Image::setErrorMessage(const QString& err)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     if(d->errorMessage != err)
     {
+        lck.unlock();
         d->errorMessage = err;
     }
 }
@@ -384,9 +386,10 @@ QImage Image::decodedImage()
 
 void Image::setDecodedImage(QImage img)
 {
-    std::lock_guard<std::recursive_mutex> lck(d->m);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     // skip comparison with current image, can be slow
     d->decodedImage = img;
+    lck.unlock();
     emit this->decodedImageChanged(this, d->decodedImage);
 }
 
