@@ -3,7 +3,7 @@
 <svg version="1.2" width="195.17mm" height="247.01mm" viewBox="1034 3734 19517 24701" preserveAspectRatio="xMidYMid" fill-rule="evenodd" stroke-width="28.222" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" xmlns:ooo="http://xml.openoffice.org/svg/export" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:presentation="http://sun.com/xmlns/staroffice/presentation" xmlns:smil="http://www.w3.org/2001/SMIL20/" xmlns:anim="urn:oasis:names:tc:opendocument:xmlns:animation:1.0" xml:space="preserve">
  <defs>
   <font id="EmbeddedFont_1" horiz-adv-x="2048">
-   <font-face font-family="Liberation Sans embedded" units-per-em="2048" font-weight="bold" font-style="normal" ascent="1842" descent="419"/>
+   <font-face font-family="My Liberation Sans embedded" units-per-em="2048" font-weight="bold" font-style="normal" ascent="1842" descent="419"/>
    <missing-glyph horiz-adv-x="2048" d="M 0,0 L 2047,0 2047,2047 0,2047 0,0 Z"/>
    <glyph unicode="?" horiz-adv-x="1061" d="M 1133,1026 C 1133,982 1127,943 1116,910 1104,877 1088,847 1069,821 1050,794 1028,771 1003,750 978,729 953,709 927,690 901,671 876,653 851,635 826,617 803,598 783,578 763,557 747,535 734,511 721,486 714,458 713,426 L 446,426 C 449,483 462,531 483,572 504,612 529,647 559,677 589,707 621,734 655,758 689,781 721,805 750,830 779,855 803,882 822,911 841,940 850,974 850,1014 850,1073 831,1119 793,1153 754,1187 700,1204 629,1204 595,1204 564,1199 535,1189 506,1178 481,1164 460,1145 438,1126 420,1104 406,1077 392,1050 383,1021 379,989 L 94,1001 C 102,1060 119,1116 144,1168 169,1220 203,1265 246,1304 289,1343 343,1373 406,1396 469,1419 542,1430 625,1430 705,1430 776,1421 839,1402 902,1383 955,1357 999,1322 1042,1287 1076,1244 1099,1194 1122,1144 1133,1088 1133,1026 Z M 438,0 L 438,270 727,270 727,0 438,0 Z"/>
   </font>
@@ -109,13 +109,13 @@
   <g class="com.sun.star.drawing.TextShape">
    <g id="id10">
     <rect class="BoundingBox" stroke="none" fill="none" x="12800" y="20301" width="7751" height="8134"/>
-    <text class="TextShape"><tspan class="TextParagraph" font-family="Liberation Sans, sans-serif" font-size="7056px" font-weight="700"><tspan class="TextPosition" x="14520" y="26814"><tspan fill="rgb(0,0,0)" stroke="none">?</tspan></tspan></tspan></text>
+    <text font-family="My Liberation Sans embedded" font-size="7056px" font-weight="700" x="14520" y="26814" fill="rgb(0,0,0)" stroke="none">?</text>
    </g>
   </g>
   <g class="com.sun.star.drawing.TextShape">
    <g id="id11">
     <rect class="BoundingBox" stroke="none" fill="none" x="12500" y="20000" width="7751" height="8134"/>
-    <text class="TextShape"><tspan class="TextParagraph" font-family="Liberation Sans, sans-serif" font-size="7056px" font-weight="700"><tspan class="TextPosition" x="14220" y="26513"><tspan fill="rgb(255,255,255)" stroke="none">?</tspan></tspan></tspan></text>
+    <text font-family="My Liberation Sans embedded" font-size="7056px" font-weight="700" x="14220" y="26513" fill="rgb(255,255,255)" stroke="none">?</text>
    </g>
   </g>
  </g>
