@@ -62,7 +62,7 @@ struct DocumentView::Impl
     // the latest image decoder, the same that displays the current image
     // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
     // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
-    QSharedPointer<SmartImageDecoder> currentImageDecoder;
+    std::unique_ptr<SmartImageDecoder> currentImageDecoder;
     
     DecodingState latestDecodingState = DecodingState::Ready;
     
@@ -97,7 +97,6 @@ struct DocumentView::Impl
         {
             currentImageDecoder->image()->disconnect(p);
             currentImageDecoder->reset();
-            currentImageDecoder = nullptr;
             latestDecodingState = DecodingState::Ready;
         }
         
@@ -594,7 +593,7 @@ void DocumentView::loadImage(QString url)
 
 void DocumentView::loadImage(QSharedPointer<Image> image)
 {
-    QSharedPointer<SmartImageDecoder> dec = DecoderFactory::globalInstance()->getDecoder(image);
+    auto dec = DecoderFactory::globalInstance()->getDecoder(image);
     if(!dec)
     {
         QString name = image->fileInfo().fileName();
@@ -605,17 +604,10 @@ void DocumentView::loadImage(QSharedPointer<Image> image)
     this->loadImage(std::move(dec));
 }
 
-void DocumentView::loadImage(QSharedPointer<SmartImageDecoder>&& dec)
+void DocumentView::loadImage(std::unique_ptr<SmartImageDecoder>&& dec)
 {
     d->clearScene();
     d->currentImageDecoder = std::move(dec);
-    this->loadImage();
-}
-
-void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
-{
-    d->clearScene();
-    d->currentImageDecoder = dec;
     this->loadImage();
 }
 

@@ -30,8 +30,7 @@ public:
     QFileInfo currentFile();
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
-    void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
-    void loadImage(QSharedPointer<SmartImageDecoder>&& dec);
+    void loadImage(std::unique_ptr<SmartImageDecoder>&& dec);
     
 public slots:
     void zoomIn();

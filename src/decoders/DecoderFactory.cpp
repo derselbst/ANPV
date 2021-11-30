@@ -72,7 +72,7 @@ QSharedPointer<Image> DecoderFactory::makeImage(const QFileInfo& url)
     return QSharedPointer<Image> (new Image(url), &QObject::deleteLater);
 }
 
-QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Image> image)
+std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Image> image)
 {
     const QFileInfo& info = image->fileInfo();
     if(info.isFile())
@@ -81,11 +81,11 @@ QSharedPointer<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Imag
         
         if(image->isRaw() || r.format() == "jpeg")
         {
-            return QSharedPointer<SmartImageDecoder> (new SmartJpegDecoder(image));
+            return std::make_unique<SmartJpegDecoder>(image);
         }
         else if(r.format() == "tiff")
         {
-            return QSharedPointer<SmartImageDecoder> (new SmartTiffDecoder(image));
+            return std::make_unique<SmartTiffDecoder>(image);
         }
     }
     

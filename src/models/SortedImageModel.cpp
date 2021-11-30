@@ -39,7 +39,7 @@ struct SortedImageModel::Impl
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::mutex m;
-    std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
+    std::list<QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
     
     // The column which is currently sorted
     Column currentSortedCol = Column::FileName;
@@ -376,25 +376,17 @@ struct SortedImageModel::Impl
             std::lock_guard<std::mutex> l(m);
             if(!backgroundTasks.empty())
             {
-                for (const auto& [key, value] : backgroundTasks)
+                for (const auto& value : backgroundTasks)
                 {
-                    auto& decoder = key;
-                    (void)QThreadPool::globalInstance()->tryTake(decoder.get());
                     auto& future = value;
                     future->disconnect(q);
                     future->cancel();
                 }
 
-                for (const auto& [key, value] : backgroundTasks)
+                for (const auto& value : backgroundTasks)
                 {
                     auto& future = value;
-                    if(future->isStarted())
-                    {
-                        // wait until the tasks have finished, because the clear() below will destroy the decoders, and it's not good if that happens while the decoder is still decoding
-                        future->waitForFinished();
-                    }
-                    else
-                    {} // unstarted tasks will never start, because we've removed them from the queue
+                    future->waitForFinished();
                 }
                 layoutChangedTimer.stop();
                 backgroundTasks.clear();
@@ -425,20 +417,6 @@ struct SortedImageModel::Impl
         if(idx.isValid())
         {
             emit q->dataChanged(idx, idx, {Qt::DecorationRole, Qt::ToolTipRole});
-        }
-    }
-
-    void onDecodingTaskFinished(QSharedPointer<SmartImageDecoder> dec)
-    {
-        xThreadGuard g(q);
-
-        size_t itemsRemoved;
-        bool isEmpty;
-        {
-            std::lock_guard<std::mutex> l(m);
-            
-            itemsRemoved = backgroundTasks.erase(dec);
-            isEmpty = backgroundTasks.empty();
         }
     }
     
@@ -485,29 +463,26 @@ struct SortedImageModel::Impl
                 }
                 else
                 {
-                    std::lock_guard<std::mutex> l(m);
-
-                    auto& watcher = backgroundTasks[decoder];
-                    if(!watcher.isNull())
-                    {
-                        qCritical() << "This shouldn't happen: Image to be added is already decoding??";
-                        return false;
-                    }
-                    
-                    watcher.reset(new QFutureWatcher<DecodingState>(), &QObject::deleteLater);
-                    
                     connect(image.data(), &Image::decodingStateChanged, q,
-                            [=](Image* img, quint32 newState, quint32 old)
+                            [&](Image* img, quint32 newState, quint32 old)
                             { onBackgroundImageTaskStateChanged(img, newState, old); }
                         , Qt::QueuedConnection);
                     connect(image.data(), &Image::thumbnailChanged, q,
                             [&](Image*, QImage){ updateLayout(); });
-                    connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, q,
-                            [=](){ onDecodingTaskFinished(decoder); }
-                        , Qt::QueuedConnection);
-                    connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, q,
-                            [=](){ onDecodingTaskFinished(decoder); }
-                        , Qt::QueuedConnection);
+
+                    QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+                    watcher->moveToThread(QGuiApplication::instance()->thread());
+                    
+                    // decode asynchronously, delete the decoder once done
+                    decoder->setAutoDelete(true);
+                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
+                    watcher->setFuture(fut);
+                    
+                    // release ownership, it now lives in QThreadPool
+                    (void)decoder.release();
+
+                    std::lock_guard<std::mutex> l(m);
+                    this->backgroundTasks.push_back(watcher);
                 }
             }
             catch(const std::exception& e)
@@ -686,22 +661,6 @@ void SortedImageModel::run()
 
                 d->throwIfDirectoryLoadingCancelled();
                 d->setStatusMessage(entriesProcessed++, msg);
-            }
-            
-            {
-                d->throwIfDirectoryLoadingCancelled();
-                d->setStatusMessage(entriesProcessed++, "Directory read, starting async decoding tasks in the background.");
-                
-                std::lock_guard<std::mutex> l(d->m);
-                for (const auto& [key, value] : d->backgroundTasks)
-                {
-                    auto& decoder = key;
-                    auto& watcher = value;
-                    // decode asynchronously
-                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
-                    watcher->setFuture(fut);
-                    watcher->moveToThread(QGuiApplication::instance()->thread());
-                }
             }
 
             d->setStatusMessage(entriesProcessed++, "Almost done: Sorting entries, please wait...");

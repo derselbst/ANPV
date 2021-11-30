@@ -80,6 +80,10 @@ struct SmartImageDecoder::Impl
         backingImageBuffer.reset();
     }
     
+    // Actually, this is gives no guarantee; e.g. it could be that the worker thread has just finished and calls QPromise::finished(). In there,
+    // Qt sets the QFuture's state to finished and only then starts to run the continuation. If in the meantime another thread deletes
+    // this object, it also deletes this QPromise, leaving the promise with a nasty use-after-free.
+    // Observed in Qt 6.2.1
     void assertNotDecoding()
     {
         if(!this->promise)
