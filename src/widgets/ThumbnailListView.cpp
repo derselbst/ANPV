@@ -135,8 +135,8 @@ struct ThumbnailListView::Impl
     
     void scrollToCurrentIdx()
     {
-        QModelIndex cur = q->currentIndex();
-        if(!cur.isValid())
+        QModelIndex cur = q->selectionModel()->currentIndex();
+        if(!cur.isValid() || !q->selectionModel()->isSelected(cur))
         {
             return;
         }
