@@ -41,7 +41,9 @@ struct SmartImageDecoder::Impl
     // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
     std::unique_ptr<unsigned char[]> backingImageBuffer;
     
-    QFile file;
+    // DO NOT STORE THE QFILE DIRECTLY!
+    // QFile is a QObject! It has thread affinity! Creating it by the worker thread and destrorying it by the UI thread will lead to memory corruption!
+    QScopedPointer<QFile> file;
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
     
@@ -50,13 +52,13 @@ struct SmartImageDecoder::Impl
     
     void open(const QFileInfo& info)
     {
-        if(this->file.isOpen())
+        if(this->file != nullptr && this->file->isOpen())
         {
             throw std::logic_error("File is already open!");
         }
         
-        this->file.setFileName(info.absoluteFilePath());
-        if (!this->file.open(QIODevice::ReadOnly))
+        this->file.reset(new QFile(info.absoluteFilePath()));
+        if (!this->file->open(QIODevice::ReadOnly))
         {
             throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
         }
@@ -153,14 +155,16 @@ void SmartImageDecoder::init()
 {
     try
     {
-        if(!d->file.isOpen())
+        if(!d->file || !d->file->isOpen())
         {
             throw std::logic_error("Decoder must be opened for init()");
         }
+
+        xThreadGuard g(d->file.data());
         
-        // mmap() the file. Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
-        qint64 mapSize = d->file.size();
-        const unsigned char* fileMapped = d->file.map(0, mapSize, QFileDevice::NoOptions);
+        // mmap() the file-> Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
+        qint64 mapSize = d->file->size();
+        const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
         
         d->encodedInputBufferSize = mapSize;
         d->encodedInputBufferPtr = fileMapped;
@@ -168,7 +172,7 @@ void SmartImageDecoder::init()
         {
             if(fileMapped == nullptr)
             {
-                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file.fileName().toStdString() << "', error was: " << d->file.errorString().toStdString());
+                throw std::runtime_error(Formatter() << "Could not mmap() file '" << d->file->fileName().toStdString() << "', error was: " << d->file->errorString().toStdString());
             }
         }
         else
@@ -185,7 +189,7 @@ void SmartImageDecoder::init()
                 // small (160x120px) or none embedded preview.
                 if (!KDcrawIface::KDcraw::loadHalfPreview(d->encodedInputFile, filePath))
                 {
-                    throw std::runtime_error(Formatter() << "KDcraw failed to open RAW file '" << d->file.fileName().toStdString() << "'");
+                    throw std::runtime_error(Formatter() << "KDcraw failed to open RAW file '" << d->file->fileName().toStdString() << "'");
                 }
             }
             
@@ -320,9 +324,11 @@ void SmartImageDecoder::close()
 
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
-    if(d->file.isOpen())
+    if(d->file)
     {
-        d->file.close();
+        xThreadGuard g(d->file.data());
+        d->file->close();
+        d->file.reset();
     }
 }
 

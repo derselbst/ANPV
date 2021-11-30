@@ -36,12 +36,14 @@ public:
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     
+    // open(), init(), close(), reset() must be called by the same thread!
     void open();
     void init();
-    void run() override;
-    void reset();
     virtual void close();
+    void reset();
     
+    void run() override;
+
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
     virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect) = 0;
