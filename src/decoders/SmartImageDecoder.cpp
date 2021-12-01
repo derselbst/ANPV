@@ -91,9 +91,10 @@ struct SmartImageDecoder::Impl
             return;
         }
         
-        if(!this->promise->future().isFinished())
+        bool isFin = this->promise->future().isFinished();
+        if(!isFin)
         {
-            std::logic_error("Operation not allowed, decoding is still ongoing.");
+            throw std::logic_error("Operation not allowed, decoding is still ongoing.");
         }
     }
     
@@ -325,8 +326,6 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
 
 void SmartImageDecoder::close()
 {
-    d->assertNotDecoding();
-
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
     if(d->file)
