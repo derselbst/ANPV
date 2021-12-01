@@ -442,7 +442,7 @@ struct SortedImageModel::Impl
         emit q->layoutChanged();
     }
     
-    bool addSingleFile(QFileInfo&& inf, QSize& iconSize)
+    bool addSingleFile(QFileInfo&& inf, const QSize& iconSize, std::vector<std::unique_ptr<SmartImageDecoder>>* decoderList)
     {
         auto image = DecoderFactory::globalInstance()->makeImage(inf);
         auto decoder = DecoderFactory::globalInstance()->getDecoder(image);
@@ -455,7 +455,7 @@ struct SortedImageModel::Impl
         {
             try
             {
-                if(sortedColumnNeedsPreloadingMetadata(this->currentSortedCol))
+                if(decoderList == nullptr || sortedColumnNeedsPreloadingMetadata(this->currentSortedCol))
                 {
                     decoder->open();
                     // decode synchronously
@@ -470,19 +470,7 @@ struct SortedImageModel::Impl
                     connect(image.data(), &Image::thumbnailChanged, q,
                             [&](Image*, QImage){ updateLayout(); });
 
-                    QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
-                    watcher->moveToThread(QGuiApplication::instance()->thread());
-                    
-                    // decode asynchronously, delete the decoder once done
-                    decoder->setAutoDelete(true);
-                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
-                    watcher->setFuture(fut);
-                    
-                    // release ownership, it now lives in QThreadPool
-                    (void)decoder.release();
-
-                    std::lock_guard<std::mutex> l(m);
-                    this->backgroundTasks.push_back(watcher);
+                    decoderList->emplace_back(std::move(decoder));
                 }
             }
             catch(const std::exception& e)
@@ -543,7 +531,7 @@ struct SortedImageModel::Impl
             // any file still in the list are new, we need to add them
             for(QFileInfo i : fileInfoList)
             {
-                addSingleFile(std::move(i), iconSize);
+                addSingleFile(std::move(i), iconSize, nullptr);
             }
         }
         
@@ -648,12 +636,14 @@ void SortedImageModel::run()
             unsigned readableImages = 0;
             int iconHeight = d->cachedIconHeight;
             QSize iconSize(iconHeight, iconHeight);
+            std::vector<std::unique_ptr<SmartImageDecoder>> decodersToRunLater;
+            decodersToRunLater.reserve(entriesToProcess);
             while (!fileInfoList.isEmpty())
             {
                 do
                 {
                     QFileInfo inf = fileInfoList.takeFirst();
-                    if(d->addSingleFile(std::move(inf), iconSize))
+                    if(d->addSingleFile(std::move(inf), iconSize, &decodersToRunLater))
                     {
                         ++readableImages;
                     }
@@ -661,6 +651,28 @@ void SortedImageModel::run()
 
                 d->throwIfDirectoryLoadingCancelled();
                 d->setStatusMessage(entriesProcessed++, msg);
+            }
+            
+            {
+                d->throwIfDirectoryLoadingCancelled();
+                d->setStatusMessage(entriesProcessed++, "Directory read, starting async decoding tasks in the background.");
+
+                std::lock_guard<std::mutex> l(d->m);
+                for(auto& decoder : decodersToRunLater)
+                {
+                    QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+                    watcher->moveToThread(QGuiApplication::instance()->thread());
+                    
+                    decoder->setAutoDelete(true);
+                    // decode asynchronously, delete the decoder once done
+                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
+                    watcher->setFuture(fut);
+                    
+                    // release ownership, it now lives in QThreadPool
+                    (void)decoder.release();
+
+                    d->backgroundTasks.push_back(watcher);
+                }
             }
 
             d->setStatusMessage(entriesProcessed++, "Almost done: Sorting entries, please wait...");
