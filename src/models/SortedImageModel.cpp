@@ -449,6 +449,14 @@ struct SortedImageModel::Impl
         
         // move both objects to the UI thread to ensure proper signal delivery
         image->moveToThread(QGuiApplication::instance()->thread());
+
+        connect(image.data(), &Image::decodingStateChanged, q,
+                [&](Image* img, quint32 newState, quint32 old)
+                { onBackgroundImageTaskStateChanged(img, newState, old); }
+            , Qt::QueuedConnection);
+        connect(image.data(), &Image::thumbnailChanged, q,
+                [&](Image*, QImage){ updateLayout(); });
+
         entries.push_back(image);
         
         if(decoder)
@@ -463,13 +471,6 @@ struct SortedImageModel::Impl
                 }
                 else
                 {
-                    connect(image.data(), &Image::decodingStateChanged, q,
-                            [&](Image* img, quint32 newState, quint32 old)
-                            { onBackgroundImageTaskStateChanged(img, newState, old); }
-                        , Qt::QueuedConnection);
-                    connect(image.data(), &Image::thumbnailChanged, q,
-                            [&](Image*, QImage){ updateLayout(); });
-
                     decoderList->emplace_back(std::move(decoder));
                 }
             }
