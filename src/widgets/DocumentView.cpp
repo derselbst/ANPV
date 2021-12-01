@@ -296,6 +296,82 @@ struct DocumentView::Impl
             p->verticalScrollBar()->setValue(v);
         }
     }
+    
+    void goTo(int i)
+    {
+        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        if(this->currentImageDecoder && this->model)
+        {
+            QSharedPointer<Image> newImg = this->model->goTo(this->currentImageDecoder->image(), i);
+            if(newImg)
+            {
+                p->loadImage(newImg);
+            }
+        }
+        QGuiApplication::restoreOverrideCursor();
+    }
+    
+    void createActions()
+    {
+        QAction* act;
+        
+        act = new QAction(QIcon::fromTheme("go-next"), "Go Next", p);
+        act->setShortcuts({{Qt::Key_Space}, {Qt::Key_Right}});
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, p, [&](){ this->goTo(+1); });
+        p->addAction(act);
+        
+        act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", p);
+        act->setShortcuts({{Qt::Key_Backspace}, {Qt::Key_Left}});
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, p, [&](){ this->goTo(-1); });
+        p->addAction(act);
+
+        act = new QAction(p);
+        act->setSeparator(true);
+        p->addAction(act);
+        
+        act = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", p);
+        connect(act, &QAction::triggered, p, [&](){ this->onCopyViewTransform(); });
+        p->addAction(act);
+        
+        act = new QAction(QIcon::fromTheme("edit-paste"), "Paste", p);
+        connect(act, &QAction::triggered, p, [&](){ this->onClipboardPaste(); });
+        p->addAction(act);
+        
+        act = new QAction(p);
+        act->setSeparator(true);
+        p->addAction(act);
+        
+        QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
+        p->addActions(fileActions->actions());
+        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, p, [&](QAction* act)
+        {
+            if(!this->currentImageDecoder)
+            {
+                return;
+            }
+
+            QList<QObject*> objs = act->associatedObjects();
+            for(QObject* o : objs)
+            {
+                if(o == p && p->hasFocus())
+                {
+                    QSharedPointer<Image> nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+
+                    QString targetDir = act->data().toString();
+                    QFileInfo source = this->currentImageDecoder->image()->fileInfo();
+                    ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+
+                    if(nextImg)
+                    {
+                        p->loadImage(nextImg);
+                    }
+                    break;
+                }
+            }
+        });
+    }
 };
 
 DocumentView::DocumentView(QWidget *parent)
@@ -346,46 +422,7 @@ DocumentView::DocumentView(QWidget *parent)
                 }
             });
     
-    d->actionCopyTransform = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", this);
-    connect(d->actionCopyTransform, &QAction::triggered, this, [&](){ d->onCopyViewTransform(); });
-    this->addAction(d->actionCopyTransform);
-    
-    d->actionPaste = new QAction(QIcon::fromTheme("edit-paste"), "Paste", this);
-    connect(d->actionPaste, &QAction::triggered, this, [&](){ d->onClipboardPaste(); });
-    this->addAction(d->actionPaste);
-    
-    QAction* sep = new QAction(this);
-    sep->setSeparator(true);
-    
-    this->addAction(sep);
-    QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
-    this->addActions(fileActions->actions());
-    connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, this, [&](QAction* act)
-    {
-        if(!d->currentImageDecoder)
-        {
-            return;
-        }
-
-        QList<QObject*> objs = act->associatedObjects();
-        for(QObject* o : objs)
-        {
-            if(o == this && this->hasFocus())
-            {
-                QSharedPointer<Image> nextImg = d->model->goTo(d->currentImageDecoder->image(), 1);
-
-                QString targetDir = act->data().toString();
-                QFileInfo source = d->currentImageDecoder->image()->fileInfo();
-                ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
-
-                if(nextImg)
-                {
-                    this->loadImage(nextImg);
-                }
-                break;
-            }
-        }
-    });
+    d->createActions();
 }
 
 DocumentView::~DocumentView() = default;
@@ -474,28 +511,6 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             event->ignore();
             ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
             this->close();
-            break;
-        case Qt::Key_Space:
-            event->accept();
-            if(d->currentImageDecoder && d->model)
-            {
-                QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), 1);
-                if(newImg)
-                {
-                    this->loadImage(newImg);
-                }
-            }
-            break;
-        case Qt::Key_Backspace:
-            event->accept();
-            if(d->currentImageDecoder)
-            {
-                QSharedPointer<Image> newImg = d->model->goTo(d->currentImageDecoder->image(), -1);
-                if(newImg)
-                {
-                    this->loadImage(newImg);
-                }
-            }
             break;
         default:
             QGraphicsView::keyPressEvent(event);
