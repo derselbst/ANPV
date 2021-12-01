@@ -468,6 +468,7 @@ struct SortedImageModel::Impl
                     decoder->open();
                     // decode synchronously
                     decoder->decode(DecodingState::Metadata, iconSize);
+                    decoder->close();
                 }
                 else
                 {

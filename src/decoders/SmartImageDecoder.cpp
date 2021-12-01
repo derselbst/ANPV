@@ -117,8 +117,6 @@ SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_
 SmartImageDecoder::~SmartImageDecoder()
 {
     d->assertNotDecoding();
-
-    this->close();
     d->releaseFullImage();
 }
 
