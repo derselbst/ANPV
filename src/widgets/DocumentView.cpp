@@ -82,9 +82,10 @@ struct DocumentView::Impl
     
     void clearScene()
     {
-        if(!taskFuture.isFinished())
+        bool isFinished = taskFuture.isFinished();
+        bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
+        if(!isFinished)
         {
-            bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
             if(!taken)
             {
                 taskFuture.cancel();
@@ -97,6 +98,7 @@ struct DocumentView::Impl
         {
             currentImageDecoder->image()->disconnect(p);
             currentImageDecoder->reset();
+            currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
         }
         

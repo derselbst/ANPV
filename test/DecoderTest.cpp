@@ -181,15 +181,34 @@ public:
     }
 };
 
-void DecoderTest::testDeletionWhileRunning()
+void DecoderTest::testResettingWhileDecoding()
 {
     MySleepyImageDecoder* dec = new MySleepyImageDecoder();
     dec->setAutoDelete(false);
     dec->setSleep(2000);
+    QFutureWatcher<DecodingState> watcher;
     QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+
+    connect(&watcher, &QFutureWatcher<DecodingState>::started, this,
+            [&]()
+            {
+                // as soon as the decoding has started, try to reset the decoder
+                QVERIFY_EXCEPTION_THROWN(dec->reset(), std::logic_error);
+            });
+    QSignalSpy spy(&watcher, &QFutureWatcher<DecodingState>::started);
     
-    QVERIFY_EXCEPTION_THROWN(dec->reset(), std::logic_error);
-    QThread::msleep(3000);
+    watcher.setFuture(fut);
+    // manually run the event loop to get the events delivered
+    QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents, dec->sleep/4);
+    watcher.waitForFinished();
+
+    QVERIFY(fut.isStarted());
+    QVERIFY(watcher.isStarted());
+    QVERIFY(fut.isFinished());
+    QVERIFY(watcher.isFinished());
+    QVERIFY(!fut.isRunning());
+    QVERIFY(!watcher.isRunning());
+    QCOMPARE(spy.count(), 1);
     delete dec;
 }
 
@@ -199,16 +218,63 @@ void DecoderTest::testFinishBeforeSettingFutureWatcher()
     dec->setAutoDelete(true);
     dec->setSleep(1);
     QFutureWatcher<DecodingState> watcher;
+    QSignalSpy spyStartedBeforeStarted(&watcher, &QFutureWatcher<DecodingState>::started);
+    QSignalSpy spyFinishedBeforeStarted(&watcher, &QFutureWatcher<DecodingState>::finished);
+    
     QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
     
     // at this point future is finished, dec has been deleted
     QThread::msleep(1000);
     watcher.setFuture(fut);
+    
+    QSignalSpy spyStartedAfterFinished(&watcher, &QFutureWatcher<DecodingState>::started);
+    QSignalSpy spyFinishedAfterFinished(&watcher, &QFutureWatcher<DecodingState>::finished);
+    
+    fut.waitForFinished();
+    watcher.waitForFinished();
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    
     QVERIFY(fut.isStarted());
     QVERIFY(watcher.isStarted());
     QVERIFY(fut.isFinished());
     QVERIFY(watcher.isFinished());
     QVERIFY(!fut.isRunning());
     QVERIFY(!watcher.isRunning());
+    
+    QCOMPARE(spyStartedBeforeStarted.count(), 1);
+    QCOMPARE(spyFinishedBeforeStarted.count(), 1);
+    
+    QCOMPARE(spyStartedAfterFinished.count(), 1);
+    QCOMPARE(spyFinishedAfterFinished.count(), 1);
+    
+}
+
+void DecoderTest::testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted()
+{
+    QThreadPool* qtp = QThreadPool::globalInstance();
+    int maxThreads = qtp->maxThreadCount();
+    qtp->setMaxThreadCount(1);
+    
+    bool tryTakeResult;
+    qtp->start([&]()
+    {
+        MySleepyImageDecoder* dec = new MySleepyImageDecoder();
+        dec->setAutoDelete(false);
+        
+        // start the decoder
+        dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+        
+        // immediately take it from the queue again. must always succeed as there is only one worker thread, and we're running it ;)
+        tryTakeResult = qtp->tryTake(dec);
+        
+        // should not complain that decoding is ongoing
+        dec->reset();
+        
+        delete dec;
+    });
+    
+    qtp->waitForDone();
+    QVERIFY(tryTakeResult);
+    qtp->setMaxThreadCount(maxThreads);
 }
 

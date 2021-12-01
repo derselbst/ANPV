@@ -10,6 +10,7 @@ private slots:
     void initTestCase();
     void errorWhileOpeningFile();
     void testInitialize();
-    void testDeletionWhileRunning();
+    void testResettingWhileDecoding();
     void testFinishBeforeSettingFutureWatcher();
+    void testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted();
 };

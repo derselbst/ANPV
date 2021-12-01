@@ -91,8 +91,8 @@ struct SmartImageDecoder::Impl
             return;
         }
         
-        bool isFin = this->promise->future().isFinished();
-        if(!isFin)
+        bool isRun = this->promise->future().isRunning();
+        if(isRun)
         {
             throw std::logic_error("Operation not allowed, decoding is still ongoing.");
         }
