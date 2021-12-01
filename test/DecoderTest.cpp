@@ -11,12 +11,16 @@
 #include <QTemporaryFile>
 #include <QApplication>
 #include <QSignalSpy>
+#include <QThread>
+#include <QFuture>
+#include <QFutureWatcher>
 
 QTEST_MAIN(DecoderTest)
 #include "DecoderTest.moc"
 
 constexpr const char errHeader[] = "Some header decode error";
 constexpr const char errDec[]    = "Some decoding decode error";
+
 
 class ImageDecoderUnderTest : public SmartImageDecoder
 {
@@ -154,3 +158,57 @@ void DecoderTest::testInitialize()
     
     QCOMPARE(spy.count(), 0);
 }
+
+class MySleepyImageDecoder : public ImageDecoderUnderTest
+{
+    friend class DecoderTest;
+    int sleep = 0;
+public:
+    explicit MySleepyImageDecoder() : ImageDecoderUnderTest(DecoderFactory::globalInstance()->makeImage(QFileInfo("IdON0tEx1st.jpg")))
+    {}
+    
+    void setSleep(int sleep)
+    {
+        this->sleep = sleep;
+    }
+    
+    void open() override {}
+    void close() override {}
+    void init() override {}
+    void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect()) override
+    {
+        QThread::msleep(this->sleep);
+    }
+};
+
+void DecoderTest::testDeletionWhileRunning()
+{
+    MySleepyImageDecoder* dec = new MySleepyImageDecoder();
+    dec->setAutoDelete(false);
+    dec->setSleep(2000);
+    QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+    
+    QVERIFY_EXCEPTION_THROWN(dec->reset(), std::logic_error);
+    QThread::msleep(3000);
+    delete dec;
+}
+
+void DecoderTest::testFinishBeforeSettingFutureWatcher()
+{
+    MySleepyImageDecoder* dec = new MySleepyImageDecoder();
+    dec->setAutoDelete(true);
+    dec->setSleep(1);
+    QFutureWatcher<DecodingState> watcher;
+    QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+    
+    // at this point future is finished, dec has been deleted
+    QThread::msleep(1000);
+    watcher.setFuture(fut);
+    QVERIFY(fut.isStarted());
+    QVERIFY(watcher.isStarted());
+    QVERIFY(fut.isFinished());
+    QVERIFY(watcher.isFinished());
+    QVERIFY(!fut.isRunning());
+    QVERIFY(!watcher.isRunning());
+}
+

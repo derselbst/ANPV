@@ -33,12 +33,13 @@ public:
     
     QSharedPointer<Image> image();
 
-    void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     QFuture<DecodingState> decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     
-    // open(), init(), close(), reset() must be called by the same thread!
-    void open();
-    void init();
+    // open(), init(), decode(), close(), reset() must be called by the same thread!
+    // they are virtual for the purpose of unit testing.
+    virtual void open();
+    virtual void init();
+    virtual void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     virtual void close();
     void reset();
     
@@ -62,3 +63,4 @@ private:
     struct Impl;
     std::unique_ptr<Impl> d;
 };
+
