@@ -262,6 +262,15 @@ QString Image::formatInfoString()
     Formatter f;
     
     QString infoStr;
+    if(this->isRaw())
+    {
+        infoStr += "<b>This is a RAW file!</b><br>"
+                   "What you see is an<br>"
+                   "embedded preview, which<br>"
+                   "might be of lower quality<br>"
+                   "than the RAW itself!<br><br>";
+    }
+    
     auto exifWrapper = this->exif();
     if(exifWrapper)
     {
