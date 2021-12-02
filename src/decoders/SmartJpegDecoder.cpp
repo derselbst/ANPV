@@ -76,7 +76,10 @@ struct SmartJpegDecoder::Impl
 SmartJpegDecoder::SmartJpegDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
 {}
 
-SmartJpegDecoder::~SmartJpegDecoder() = default;
+SmartJpegDecoder::~SmartJpegDecoder()
+{
+    this->assertNotDecoding();
+}
 
 
 void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)

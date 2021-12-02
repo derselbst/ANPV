@@ -50,6 +50,7 @@ protected:
     virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect) = 0;
 
     void cancelCallback();
+    void assertNotDecoding();
     void updatePreviewImage(QImage&& img);
 
     template<typename T>

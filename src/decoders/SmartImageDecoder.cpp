@@ -23,6 +23,10 @@ struct SmartImageDecoder::Impl
 {
     SmartImageDecoder* q;
     
+    // assertNotDecoding() doesn't gives us a guarantee. But at least for deletion we need this guarantee.
+    // That's the job of this mutex.
+    mutable std::recursive_mutex asyncApiMtx;
+    
     QScopedPointer<QPromise<DecodingState>> promise;
     DecodingState targetState;
     QSize desiredResolution;
@@ -80,24 +84,6 @@ struct SmartImageDecoder::Impl
         backingImageBuffer.reset();
     }
     
-    // Actually, this is gives no guarantee; e.g. it could be that the worker thread has just finished and calls QPromise::finished(). In there,
-    // Qt sets the QFuture's state to finished and only then starts to run the continuation. If in the meantime another thread deletes
-    // this object, it also deletes this QPromise, leaving the promise with a nasty use-after-free.
-    // Observed in Qt 6.2.1
-    void assertNotDecoding()
-    {
-        if(!this->promise)
-        {
-            return;
-        }
-        
-        bool isRun = this->promise->future().isRunning();
-        if(isRun)
-        {
-            throw std::logic_error("Operation not allowed, decoding is still ongoing.");
-        }
-    }
-    
     void setErrorMessage(const QString& err)
     {
         q->image()->setErrorMessage(err);
@@ -117,7 +103,8 @@ SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_
 
 SmartImageDecoder::~SmartImageDecoder()
 {
-    d->assertNotDecoding();
+    this->assertNotDecoding();
+    std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
 }
 
@@ -233,7 +220,8 @@ void SmartImageDecoder::init()
 
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
-    d->assertNotDecoding();
+    this->assertNotDecoding();
+    std::lock_guard g(d->asyncApiMtx);
     
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
@@ -250,6 +238,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
 
 void SmartImageDecoder::run()
 {
+    std::lock_guard g(d->asyncApiMtx);
     d->promise->start();
 
     try
@@ -338,7 +327,8 @@ void SmartImageDecoder::close()
 
 void SmartImageDecoder::reset()
 {
-    d->assertNotDecoding();
+    this->assertNotDecoding();
+    std::lock_guard g(d->asyncApiMtx);
     
     d->setErrorMessage(QString());
     if(d->decodingState() == DecodingState::Fatal)
@@ -378,6 +368,41 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img)
     {
         this->image()->setDecodedImage(std::move(img));
         d->lastPreviewImageUpdate = now;
+    }
+}
+
+// Actually, this is gives no guarantee; e.g. it could be that the worker thread has just finished and calls QPromise::finished(). In there,
+// Qt sets the QFuture's state to finished and only then starts to run the continuation. If in the meantime another thread deletes
+// this object, it also deletes this QPromise, leaving the promise with a nasty use-after-free.
+// Observed in Qt 6.2.1:
+// Stack trace worker thread:
+//     #0  0x00007ffff3bc518b in raise () from /lib64/libc.so.6
+//     #1  0x00007ffff3bc6585 in abort () from /lib64/libc.so.6
+//     #2  0x00000000004eca07 in __sanitizer::Abort() () at ../projects/compiler-rt/lib/sanitizer_common/sanitizer_posix_libcdep.cpp:155
+//     #3  0x00000000004eb374 in __sanitizer::Die() () at ../projects/compiler-rt/lib/sanitizer_common/sanitizer_termination.cpp:58
+//     #4  0x00000000004f95f9 in ~ScopedReport () at ../projects/compiler-rt/lib/ubsan/ubsan_diag.cpp:392
+//     #5  0x000000000050062f in HandleDynamicTypeCacheMiss () at ../projects/compiler-rt/lib/ubsan/ubsan_handlers_cxx.cpp:82
+//     #6  0x00000000004ffffa in __ubsan_handle_dynamic_type_cache_miss () at ../projects/compiler-rt/lib/ubsan/ubsan_handlers_cxx.cpp:87
+//     #7  0x0000000000571982 in QFutureInterface<DecodingState>::reportFinished (this=this@entry=0x6020089945b0) at /usr/include/qt6/QtCore/qfutureinterface.h:267
+//     #8  0x0000000000571801 in QPromise<DecodingState>::finish (this=this@entry=0x6020089945b0) at /usr/include/qt6/QtCore/qpromise.h:95
+//     #9  0x0000000000661a7a in SmartImageDecoder::run (this=0x6030023f1c70) at /ANPV/src/decoders/SmartImageDecoder.cpp:275
+//     #10 0x00007ffff591ee3d in QThreadPoolThread::run (this=0x6040002bda50) at /usr/src/debug/qt6-base-6.2.1-lp153.19.1.x86_64/src/corelib/thread/qthreadpool.cpp:99
+//     #11 0x00007ffff5917909 in QThreadPrivate::start (arg=0x6040002bda50) at /usr/src/debug/qt6-base-6.2.1-lp153.19.1.x86_64/src/corelib/thread/qthread_unix.cpp:338
+//     #12 0x00007ffff458da1a in start_thread () from /lib64/libpthread.so.0
+//     #13 0x00007ffff3c8bd0f in clone () from /lib64/libc.so.6
+// Stack trace of the main thread was already in loadImage() / showImage(), i.e. it was past clearScene(), so decoder has just been deleted.
+// Hence, the only purpose of this function is to indicate some obvious programming error, like making calls to the decoder although it's still running...
+void SmartImageDecoder::assertNotDecoding()
+{
+    if(!d->promise)
+    {
+        return;
+    }
+    
+    bool isRun = d->promise->future().isRunning();
+    if(isRun)
+    {
+        throw std::logic_error("Operation not allowed, decoding is still ongoing.");
     }
 }
 

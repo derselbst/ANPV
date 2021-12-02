@@ -283,7 +283,10 @@ struct SmartTiffDecoder::Impl
 SmartTiffDecoder::SmartTiffDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
 {}
 
-SmartTiffDecoder::~SmartTiffDecoder() = default;
+SmartTiffDecoder::~SmartTiffDecoder()
+{
+    this->assertNotDecoding();
+}
 
 void SmartTiffDecoder::close()
 {
