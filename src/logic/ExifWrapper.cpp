@@ -400,7 +400,7 @@ bool ExifWrapper::exposureTime(double& quot)
 QString ExifWrapper::exposureTime()
 {
     long num, den;
-    if(this->exposureTime(num, den))
+    if(this->exposureTime(num, den) && den != 0)
     {
         double quot = num * 1.0 / den;
         if(quot < 1)
