@@ -3,6 +3,7 @@
 #include <QGraphicsScene>
 #include <QKeyEvent>
 #include <QWheelEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QFlags>
 #include <QTimer>
@@ -409,6 +410,7 @@ DocumentView::DocumentView(QWidget *parent)
     this->setWindowState(Qt::WindowMaximized);
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
+    this->setDragMode(QGraphicsView::ScrollHandDrag);
     
     d->scene = new QGraphicsScene(this);
     
@@ -539,6 +541,58 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
     }
     QGuiApplication::restoreOverrideCursor();
 }
+
+
+void DocumentView::mouseMoveEvent(QMouseEvent *event)
+{
+    auto width = this->width();
+    auto height = this->height();
+    auto pos = event->pos();
+    
+    bool yExceeded = pos.y() < 0 || pos.y() >= height;
+    bool xExceeded = pos.x() < 0 || pos.x() >= width;
+    if (yExceeded || xExceeded)
+    {
+        event->accept();
+        // Mouse cursor has left the widget. Wrap the mouse.
+        auto globalPos = this->mapToGlobal(event->pos());
+        if (yExceeded)
+        {
+            // Cursor left on the y axis. Move cursor to the opposite side.
+            globalPos.setY(globalPos.y() + (pos.y() < 0 ? height-1 : -height+2));
+        }
+        else
+        {
+            // Cursor left on the x axis. Move cursor to the opposite side.
+            globalPos.setX(globalPos.x() + (pos.x() < 0 ? width-1 : -width+2));
+        }
+        QPoint cursorPos = this->mapFromGlobal(QCursor::pos());
+        // For the scroll hand dragging to work with mouse wrapping
+        // we have to emulate a mouse release, move the cursor and
+        // then emulate a mouse press. Not doing this causes the
+        // scroll hand drag to stop after the cursor has moved.
+        QMouseEvent r_event(QEvent::MouseButtonRelease,
+                            this->mapFromGlobal(QCursor::pos()),
+                            Qt::LeftButton,
+                            Qt::NoButton,
+                            Qt::NoModifier);
+        this->mouseReleaseEvent(&r_event);
+        
+        QCursor::setPos(globalPos);
+        
+        QMouseEvent p_event(QEvent::MouseButtonPress,
+                                this->mapFromGlobal(QCursor::pos()),
+                                Qt::LeftButton,
+                                Qt::LeftButton,
+                                Qt::NoModifier);
+        this->mousePressEvent(&p_event);
+    }
+    else
+    {
+        QGraphicsView::mouseMoveEvent(event);
+    }
+}
+
 
 void DocumentView::onImageRefinement(Image* img, QImage image)
 {

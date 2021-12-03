@@ -13,6 +13,7 @@ class QGraphicsScene;
 class QWidget;
 class QPixmap;
 class QWheelEvent;
+class QMouseEvent;
 class QShowEvent;
 class QEvent;
 class SmartImageDecoder;
@@ -46,6 +47,7 @@ protected:
     bool viewportEvent(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     void showEvent(QShowEvent* event) override;
 
     void loadImage();
