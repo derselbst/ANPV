@@ -59,5 +59,6 @@ jobs:
         destinationFolder: 'qt-src'
         overwriteExistingFiles: false
     - task: CmdLine@2
+      condition: always()
       inputs:
         script: 'dir'
