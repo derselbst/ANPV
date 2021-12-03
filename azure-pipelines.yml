@@ -48,13 +48,11 @@ jobs:
     steps:
     - checkout: self
       submodules: true
-    - task: PowerShell@2
+    - task: Bash@3
       inputs:
         targetType: 'inline'
         script: |
-          $ErrorActionPreference = 'Stop';
-          $Wc = New-Object System.Net.WebClient ;
-          $Wc.DownloadFile('https://download.qt.io/official_releases/qt/6.2/6.2.2/single/qt-everywhere-src-6.2.2.zip', 'C:\qt.zip') ;
+          wget https://download.qt.io/official_releases/qt/6.2/6.2.2/single/qt-everywhere-src-6.2.2.zip
     - task: ExtractFiles@1
       inputs:
         archiveFilePatterns: '**/*.zip'
