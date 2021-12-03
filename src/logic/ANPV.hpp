@@ -35,10 +35,11 @@ using ViewFlags_t = unsigned int;
 enum class ViewFlag : ViewFlags_t
 {
     None = 0,
-    CombineRawJpg = 0x1,
-    ShowAfPoints = 0x2,
-    RespectExifOrientation = 0x4,
-    CenterAf = 0x8,
+    CombineRawJpg = 1 << 0,
+    ShowAfPoints =  1 << 1,
+    RespectExifOrientation = 1 << 2,
+    CenterAf = 1 << 3,
+    ShowScrollBars = 1 << 4,
 };
 
 

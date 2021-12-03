@@ -35,7 +35,7 @@
 
 struct DocumentView::Impl
 {
-    DocumentView* p;
+    DocumentView* p = nullptr;
     
     QTimer fovChangedTimer;
     QTransform previousFovTransform;
@@ -47,13 +47,15 @@ struct DocumentView::Impl
     QPointer<QAction> actionPaste;
     
     // a smoothly scaled version of the full resolution image
-    QGraphicsPixmapItem* smoothPixmapOverlay;
+    QGraphicsPixmapItem* smoothPixmapOverlay = nullptr;
     
-    QGraphicsPixmapItem* thumbnailPreviewOverlay;
+    QGraphicsPixmapItem* thumbnailPreviewOverlay = nullptr;
     
-    QGraphicsPixmapItem* currentPixmapOverlay;
+    QGraphicsPixmapItem* currentPixmapOverlay = nullptr;
 
-    AfPointOverlay* afPointOverlay;
+    QAction* actionShowScrollBars = nullptr;
+
+    AfPointOverlay* afPointOverlay = nullptr;
     
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
     
@@ -297,6 +299,22 @@ struct DocumentView::Impl
         }
     }
     
+    void onViewFlagsChanged(ViewFlags_t v)
+    {
+        bool vis = (v & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0;
+        if(this->afPointOverlay)
+        {
+            this->afPointOverlay->setVisible(vis);
+        }
+        
+        bool showScrollBar = (v & static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)) != 0;
+        auto policy = showScrollBar ? Qt::ScrollBarAlwaysOn : Qt::ScrollBarAlwaysOff;
+        // Qt::ScrollBarAsNeeded causes many resizeEvents to be delivered
+        p->setHorizontalScrollBarPolicy(policy);
+        p->setVerticalScrollBarPolicy(policy);
+        this->actionShowScrollBars->setChecked(showScrollBar);
+    }
+    
     void goTo(int i)
     {
         QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -326,6 +344,15 @@ struct DocumentView::Impl
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, p, [&](){ this->goTo(-1); });
         p->addAction(act);
+
+        act = new QAction(p);
+        act->setSeparator(true);
+        p->addAction(act);
+        
+        this->actionShowScrollBars = new QAction("Show Scroll Bars", p);
+        this->actionShowScrollBars->setCheckable(true);
+        connect(this->actionShowScrollBars, &QAction::toggled, p, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
+        p->addAction(this->actionShowScrollBars);
 
         act = new QAction(p);
         act->setSeparator(true);
@@ -383,10 +410,6 @@ DocumentView::DocumentView(QWidget *parent)
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
-    // Qt::ScrollBarAsNeeded causes many resizeEvents to be delivered
-    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    
     d->scene = new QGraphicsScene(this);
     
     d->thumbnailPreviewOverlay = new QGraphicsPixmapItem;
@@ -412,21 +435,15 @@ DocumentView::DocumentView(QWidget *parent)
     d->messageWidget->setWordWrap(true);
     d->messageWidget->hide();
     
+    d->createActions();
+
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ emit d->createSmoothPixmap();});
     
+    d->onViewFlagsChanged(ANPV::globalInstance()->viewFlags());
     connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
-            [&](ViewFlags_t v, ViewFlags_t)
-            {
-                bool vis = (v & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0;
-                if(d->afPointOverlay)
-                {
-                    d->afPointOverlay->setVisible(vis);
-                }
-            });
-    
-    d->createActions();
+            [&](ViewFlags_t v, ViewFlags_t){ d->onViewFlagsChanged(v); });
 }
 
 DocumentView::~DocumentView() = default;
