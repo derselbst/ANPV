@@ -3,42 +3,63 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-resources:         
+resources:
   containers:
   - container: qt6Container
     image: mdevriesdekimo/qt6:ubuntu2104
     options: '-v /usr/bin/sudo:/usr/bin/sudo -v /usr/lib/sudo/libsudo_util.so.0:/usr/lib/sudo/libsudo_util.so.0 -v /usr/lib/sudo/sudoers.so:/usr/lib/sudo/sudoers.so -v /etc/sudoers:/etc/sudoers'
 
-pool:
-  vmImage: 'ubuntu-20.04'
-
-container: qt6Container
-
-steps:
-- checkout: self
-  submodules: true
-- task: Bash@3
-  displayName: 'apt-get update'
-  inputs:
-    targetType: 'inline'
-    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update'
-- task: Bash@3
-  displayName: 'apt-get install'
-  inputs:
-    targetType: 'inline'
-    script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
-- task: CMake@1
-  displayName: 'CMake configure'
-  inputs:
-    cmakeArgs: -DCMAKE_PREFIX_PATH=/opt/Qt/6.2.0/gcc_64/ ..
-    workingDirectory: 'build'
-- task: CMake@1
-  displayName: 'CMake Build'
-  inputs:
-    cmakeArgs: --build . --parallel
-    workingDirectory: 'build'
-- task: CMake@1
-  displayName: 'CMake Check'
-  inputs:
-    cmakeArgs: --build . --target check --parallel
-    workingDirectory: 'build'
+jobs:
+  - job: Linux
+    pool:
+      vmImage: 'ubuntu-20.04'
+    container: qt6Container
+    steps:
+    - checkout: self
+      submodules: true
+    - task: Bash@3
+      displayName: 'apt-get update'
+      inputs:
+        targetType: 'inline'
+        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update'
+    - task: Bash@3
+      displayName: 'apt-get install'
+      inputs:
+        targetType: 'inline'
+        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+    - task: CMake@1
+      displayName: 'CMake configure'
+      inputs:
+        cmakeArgs: -DCMAKE_PREFIX_PATH=/opt/Qt/6.2.0/gcc_64/ ..
+        workingDirectory: 'build'
+    - task: CMake@1
+      displayName: 'CMake Build'
+      inputs:
+        cmakeArgs: --build . --parallel
+        workingDirectory: 'build'
+    - task: CMake@1
+      displayName: 'CMake Check'
+      inputs:
+        cmakeArgs: --build . --target check --parallel
+        workingDirectory: 'build'
+  - job: Windows
+    pool:
+      vmImage: 'windows-latest'
+    steps:
+    - checkout: self
+      submodules: true
+    - task: PowerShell@2
+      inputs:
+        targetType: 'inline'
+        script: |
+          $ErrorActionPreference = 'Stop';
+          $Wc = New-Object System.Net.WebClient ;
+          $Wc.DownloadFile('https://download.qt.io/official_releases/qt/6.2/6.2.2/single/qt-everywhere-src-6.2.2.zip', 'C:\qt.zip') ;
+    - task: ExtractFiles@1
+      inputs:
+        archiveFilePatterns: '**/*.zip'
+        cleanDestinationFolder: true
+        overwriteExistingFiles: false
+    - task: CmdLine@2
+      inputs:
+        script: 'dir'
