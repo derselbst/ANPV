@@ -56,7 +56,7 @@ jobs:
     - task: ExtractFiles@1
       inputs:
         archiveFilePatterns: '**/*.zip'
-        cleanDestinationFolder: true
+        destinationFolder: 'qt-src'
         overwriteExistingFiles: false
     - task: CmdLine@2
       inputs:
