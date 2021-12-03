@@ -383,6 +383,10 @@ DocumentView::DocumentView(QWidget *parent)
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
+    // Qt::ScrollBarAsNeeded causes many resizeEvents to be delivered
+    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    
     d->scene = new QGraphicsScene(this);
     
     d->thumbnailPreviewOverlay = new QGraphicsPixmapItem;
@@ -486,10 +490,6 @@ bool DocumentView::viewportEvent(QEvent* event)
 
 void DocumentView::showEvent(QShowEvent* event)
 {
-    if(d->currentImageDecoder)
-    {
-        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
-    }
     QGraphicsView::showEvent(event);
 }
 
@@ -497,6 +497,10 @@ void DocumentView::resizeEvent(QResizeEvent *event)
 {
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
+    if(d->currentImageDecoder)
+    {
+        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
+    }
 
     QGraphicsView::resizeEvent(event);
 }
