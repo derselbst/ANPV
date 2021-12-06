@@ -55,7 +55,7 @@ jobs:
       toolset: 'v142'
       generator: 'Visual Studio 16 2019'
       configuration: 'RelWithDebInfo'
-      VCPKG_REVISION: 'e6dcc079c81161786eb7b052209a2047e79f2c6c'
+      VCPKG_REVISION: '63e935d967a3410e26bf4a708efa39d8384d2bbb'
       platform: 'x64'
       cmake_platform: 'x64'
     steps:
@@ -91,7 +91,7 @@ jobs:
       displayName: 'Update vcpkg'
     - bash: |
         set -ex
-        vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows qtbase:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows qtbase:$(platform)-windows qtsvg:$(platform)-windows
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
