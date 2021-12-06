@@ -94,7 +94,6 @@ jobs:
         vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
-      displayName: 'Update vcpkg'
     - bash: |
         set -ex
         vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
