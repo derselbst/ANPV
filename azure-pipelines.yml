@@ -51,11 +51,19 @@ jobs:
   - job: Windows
     timeoutInMinutes: 240
     cancelTimeoutInMinutes: 2
+    strategy:
+      matrix:
+        Win10:
+          toolset: 'v142'
+          generator: 'Visual Studio 16 2019'
+          poo: 'windows-2019'
+        Win11:
+          toolset: 'v143'
+          generator: 'Visual Studio 17 2022'
+          poo: 'windows-2022'
     pool:
-      vmImage: 'windows-2019'
+      vmImage: $(poo)
     variables:
-      toolset: 'v142'
-      generator: 'Visual Studio 16 2019'
       configuration: 'RelWithDebInfo'
       VCPKG_REVISION: '63e935d967a3410e26bf4a708efa39d8384d2bbb'
       platform: 'x64'
