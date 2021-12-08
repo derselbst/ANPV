@@ -3,7 +3,7 @@ ENABLE_TESTING()
 
 add_custom_target(buildtests)
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --verbose --output-on-failure)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --verbose --output-on-failure)
 add_dependencies(check buildtests)
 
 
