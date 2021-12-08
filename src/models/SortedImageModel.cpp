@@ -17,6 +17,10 @@
 #endif
 #include <cstring> // for strverscmp()
 
+#ifdef _WINDOWS
+#include <shlwapi.h>
+#endif
+
 #include "SmartImageDecoder.hpp"
 #include "DecoderFactory.hpp"
 #include "UserCancellation.hpp"
@@ -83,12 +87,21 @@ struct SortedImageModel::Impl
         }
     }
     
+    static int compareVersionStrings(const char* l, const char* r)
+    {
+#ifdef _WINDOWS
+        return StrCmpLogicalA(l,r);
+#else
+        return strverscmp(l,r);
+#endif
+    }
+    
     static bool compareFileName(const QFileInfo& linfo, const QFileInfo& rinfo)
     {
         QByteArray lfile = linfo.fileName().toCaseFolded().toLatin1();
         QByteArray rfile = rinfo.fileName().toCaseFolded().toLatin1();
         
-        return strverscmp(lfile.constData(), rfile.constData()) < 0;
+        return compareVersionStrings(lfile.constData(), rfile.constData()) < 0;
     }
 
     template<Column SortCol>
