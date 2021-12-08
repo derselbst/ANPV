@@ -24,16 +24,8 @@ set(CMAKE_AUTORCC ON)
 # to always look for includes there:
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-
 # Global setting: build everything position independent
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# in case we have any c code, use the best c standard ever
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # if(${CMAKE_VERSION} VERSION_GREATER "3.6.0")
 # find_program(CLANG_TIDY
@@ -176,5 +168,14 @@ target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_C
 add_executable(anpv "main.cpp")
 target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
 target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
+
+set_target_properties(anpv anpv-lib
+                      PROPERTIES
+                      CXX_STANDARD 20
+                      CXX_EXTENSIONS OFF
+                      CXX_STANDARD_REQUIRED ON
+                      C_STANDARD 99
+                      C_EXTENSIONS OFF
+                      C_STANDARD_REQUIRED ON)
 
 add_subdirectory(test)
