@@ -27,6 +27,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Global setting: build everything position independent
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+add_compile_definitions(_HAS_AUTO_PTR_ETC=1)
+
 # if(${CMAKE_VERSION} VERSION_GREATER "3.6.0")
 # find_program(CLANG_TIDY
 #   NAMES "clang-tidy"
