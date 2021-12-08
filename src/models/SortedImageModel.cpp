@@ -19,7 +19,7 @@
 
 #ifdef _WINDOWS
 #define NOMINMAX
-#include <shlwapi.h>
+#include <windows.h>
 #endif
 
 #include "SmartImageDecoder.hpp"
