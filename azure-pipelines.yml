@@ -75,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | $(poo)
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
