@@ -103,6 +103,10 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
+        vcpkg install ecm:$(platform)-windows
+      displayName: 'vcpkg build Dependencies'
+    - bash: |
+        set -ex
         cd $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
         pwd
         ls -Rg .
