@@ -7,14 +7,14 @@
 
 struct TraceTimer::Impl
 {
-    std::experimental::source_location location;
+    std::source_location location;
     int maxDuration; // in miliseconds
     std::string className;
     QElapsedTimer tim;
     const char* info = nullptr;
 };
 
-TraceTimer::TraceTimer(const std::type_info& ti, int maxMs, const std::experimental::source_location& location) : d(std::make_unique<Impl>())
+TraceTimer::TraceTimer(const std::type_info& ti, int maxMs, const std::source_location& location) : d(std::make_unique<Impl>())
 {
     d->location = location;
     d->maxDuration = maxMs;
