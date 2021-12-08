@@ -116,18 +116,15 @@ jobs:
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3
       displayName: 'Compile ANPV'
-      enabled: false
     - bash: |
         set -ex
         cmake --build build --config $(configuration) --target check --parallel 3
       displayName: 'Execute Unittests'
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
-      enabled: false
     - bash: |
         set -ex
         cmake --build build --config $(configuration) --target install || exit -1
       displayName: 'ANPV install'
-      enabled: false
     - task: CopyFiles@2
       inputs:
         SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
@@ -135,9 +132,7 @@ jobs:
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
         CleanTargetFolder: true
       displayName: 'Copy Binaries to Artifact Dir'
-      enabled: false
     - task: PublishBuildArtifacts@1
-      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-vcpkg-$(platform)
