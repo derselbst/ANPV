@@ -152,4 +152,4 @@ jobs:
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: ANPV-vcpkg-$(platform)
+          artifactName: ANPV-vcpkg-$(platform)-$(poo)
