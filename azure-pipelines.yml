@@ -135,7 +135,7 @@ jobs:
         cmake --build build --config $(configuration) --target install || exit -1
       displayName: 'ANPV install'
     - task: CopyFiles@2
-      enabled: false
+      continueOnError: true
       inputs:
         SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
         Contents: '**'
