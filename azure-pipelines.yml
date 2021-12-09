@@ -131,6 +131,7 @@ jobs:
       displayName: 'Execute Unittests'
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
       continueOnError: true
+      enabled: false
     - bash: |
         set -e
         cmake --build build --config $(configuration) --target install
