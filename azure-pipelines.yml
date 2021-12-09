@@ -135,11 +135,11 @@ jobs:
         cmake --build build --config $(configuration) --target install || exit -1
       displayName: 'ANPV install'
     - task: CopyFiles@2
+      enabled: false
       inputs:
         SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
-        CleanTargetFolder: true
       displayName: 'Copy Binaries to Artifact Dir'
     - task: PublishBuildArtifacts@1
       inputs:
