@@ -125,14 +125,14 @@ jobs:
         cmake --build . --config $(configuration) --parallel 3
       displayName: 'Compile ANPV'
     - bash: |
-        set -ex
+        set -e
+        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
         cmake --build build --config $(configuration) --target check --parallel 3
       displayName: 'Execute Unittests'
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
       continueOnError: true
     - bash: |
         set -e
-        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
         cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
     - bash: |
