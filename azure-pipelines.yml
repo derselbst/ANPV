@@ -131,12 +131,16 @@ jobs:
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
       continueOnError: true
     - bash: |
-        set -ex
-        cmake --build build --config $(configuration) --target install || exit -1
+        set -e
+        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
+        cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/debug
       displayName: 'Cleanup install dir'
     - task: CopyFiles@2
       continueOnError: true
