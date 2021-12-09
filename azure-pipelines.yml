@@ -75,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "staticlibs"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -101,17 +101,17 @@ jobs:
       displayName: 'Update vcpkg'
     - bash: |
         set -ex
-        vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows
+        vcpkg install libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        cd $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
+        cd $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
         pwd
         ls -Rg .
         pkg-config --list-all
@@ -126,7 +126,7 @@ jobs:
       displayName: 'Compile ANPV'
     - bash: |
         set -e
-        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/
+        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
         cmake --build build --config $(configuration) --target check --parallel 3
       displayName: 'Execute Unittests'
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
@@ -138,15 +138,15 @@ jobs:
       displayName: 'ANPV install'
     - bash: |
         set -ex
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/debug
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/debug
       displayName: 'Cleanup install dir'
     - task: CopyFiles@2
       continueOnError: true
       inputs:
-        SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
+        SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static/'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Binaries to Artifact Dir'
