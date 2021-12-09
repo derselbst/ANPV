@@ -129,7 +129,7 @@ jobs:
         cmake --build build --config $(configuration) --target check --parallel 3
       displayName: 'Execute Unittests'
       condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
-      enabled: false
+      continueOnError: true
     - bash: |
         set -ex
         cmake --build build --config $(configuration) --target install || exit -1
@@ -138,17 +138,14 @@ jobs:
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
       displayName: 'Cleanup install dir'
-      enabled: false
     - task: CopyFiles@2
       continueOnError: true
-      enabled: false
       inputs:
         SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Binaries to Artifact Dir'
     - task: PublishBuildArtifacts@1
-      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-vcpkg-$(platform)
