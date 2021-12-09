@@ -147,13 +147,14 @@ jobs:
       displayName: 'Cleanup install dir'
       enabled: false
     - task: CopyFiles@2
+      enabled: false
       continueOnError: true
       inputs:
-        SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static/'
+        SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Binaries to Artifact Dir'
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: $(Build.ArtifactStagingDirectory)
+          pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
           artifactName: ANPV-vcpkg-$(platform)-$(poo)
