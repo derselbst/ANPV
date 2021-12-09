@@ -166,10 +166,6 @@ target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5::KExiv2 KF5::KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models)
-if(WIN32)
-  target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
-endif()
-
 
 add_executable(anpv "main.cpp")
 target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
@@ -189,5 +185,10 @@ set_target_properties(anpv anpv-lib
                       C_STANDARD 99
                       C_EXTENSIONS OFF
                       C_STANDARD_REQUIRED ON)
+
+if(WIN32)
+  target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
+  set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 add_subdirectory(test)
