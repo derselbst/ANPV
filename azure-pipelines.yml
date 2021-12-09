@@ -121,9 +121,10 @@ jobs:
         set -ex
         mkdir build
         cd build
-        cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows -DCMAKE_VERBOSE_MAKEFILE=1 ..
+        cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3
       displayName: 'Compile ANPV'
+      enabled: false
     - bash: |
         set -e
         export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
@@ -136,6 +137,7 @@ jobs:
         set -e
         cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
+      enabled: false
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
@@ -143,6 +145,7 @@ jobs:
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/debug
       displayName: 'Cleanup install dir'
+      enabled: false
     - task: CopyFiles@2
       continueOnError: true
       inputs:
