@@ -134,6 +134,10 @@ jobs:
         set -ex
         cmake --build build --config $(configuration) --target install || exit -1
       displayName: 'ANPV install'
+    - bash: |
+        set -ex
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
+      displayName: 'Cleanup install dir'
     - task: CopyFiles@2
       continueOnError: true
       inputs:
