@@ -175,6 +175,12 @@ add_executable(anpv "main.cpp")
 target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
 target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
 
+install ( TARGETS anpv
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
 set_target_properties(anpv anpv-lib
                       PROPERTIES
                       CXX_STANDARD 20
