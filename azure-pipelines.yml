@@ -138,14 +138,17 @@ jobs:
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
       displayName: 'Cleanup install dir'
+      enabled: false
     - task: CopyFiles@2
       continueOnError: true
+      enabled: false
       inputs:
         SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows/'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Binaries to Artifact Dir'
     - task: PublishBuildArtifacts@1
+      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-vcpkg-$(platform)
