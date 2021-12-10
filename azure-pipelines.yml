@@ -119,6 +119,14 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows
+      displayName: 'Cleanup install dir'
+    - bash: |
+        set -ex
         mkdir build
         cd build
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_VERBOSE_MAKEFILE=1 ..
@@ -136,13 +144,6 @@ jobs:
         set -e
         cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
-    - bash: |
-        set -ex
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
-      displayName: 'Cleanup install dir'
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
