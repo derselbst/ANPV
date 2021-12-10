@@ -131,7 +131,8 @@ jobs:
         cd build
         export PKG_CONFIG_PATH=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/lib/pkgconfig
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
-        cmake --build . --config $(configuration) --parallel 3
+        cmake --build . --config $(configuration) --parallel 3 --target anpv
+        cmake --build . --config $(configuration) --target help
       displayName: 'Compile ANPV'
     - bash: |
         set -e
