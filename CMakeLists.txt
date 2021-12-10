@@ -188,6 +188,11 @@ set_target_properties(anpv anpv-lib
 
 if(WIN32)
   target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
+  target_link_libraries(anpv-lib PRIVATE "lcms2") # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+  target_link_libraries(anpv-lib PRIVATE "jasper") # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
+  target_link_libraries(anpv-lib PRIVATE "harfbuzz;harfbuzz-subset") # StrCmpLogicalW()
+  target_link_libraries(anpv-lib PRIVATE "lzma") # tiff.lib(tif_lzma.c.obj) : error LNK2019: unresolved external symbol lzma_code referenced in function LZMADecode
+  target_link_libraries(anpv-lib PRIVATE "Kernel32") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
