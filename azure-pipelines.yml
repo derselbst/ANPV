@@ -142,6 +142,8 @@ jobs:
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
       displayName: 'Cleanup install dir'
     - task: CopyFiles@2
       enabled: false
