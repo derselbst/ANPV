@@ -53,10 +53,10 @@ jobs:
     cancelTimeoutInMinutes: 2
     strategy:
       matrix:
-        Win10:
-          toolset: 'v142'
-          generator: 'Visual Studio 16 2019'
-          poo: 'windows-2019'
+#        Win10:
+#          toolset: 'v142'
+#          generator: 'Visual Studio 16 2019'
+#          poo: 'windows-2019'
         Win11:
           toolset: 'v143'
           generator: 'Visual Studio 17 2022'
@@ -124,7 +124,6 @@ jobs:
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3
       displayName: 'Compile ANPV'
-      enabled: false
     - bash: |
         set -e
         export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
@@ -137,7 +136,6 @@ jobs:
         set -e
         cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
-      enabled: false
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
@@ -145,14 +143,6 @@ jobs:
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
       displayName: 'Cleanup install dir'
-    - task: CopyFiles@2
-      enabled: false
-      continueOnError: true
-      inputs:
-        SourceFolder: '$(VCPKG_INSTALLATION_ROOT)/installed/'
-        Contents: '**'
-        TargetFolder: '$(Build.ArtifactStagingDirectory)'
-      displayName: 'Copy Binaries to Artifact Dir'
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
