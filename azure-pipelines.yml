@@ -132,7 +132,6 @@ jobs:
         export PKG_CONFIG_PATH=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/lib/pkgconfig
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
-        cmake --build . --config $(configuration) --target help
       displayName: 'Compile ANPV'
     - bash: |
         set -e
@@ -144,9 +143,13 @@ jobs:
       enabled: false
     - bash: |
         set -e
-        cmake --build build --config $(configuration) --target install
+        cmake --build build --config $(configuration) --target install || true
       displayName: 'ANPV install'
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
+          artifactName: ANPV-vcpkg-$(platform)-$(poo)
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathtoPublish: 'build\$(configuration)\anpv.exe'
           artifactName: ANPV-vcpkg-$(platform)-$(poo)
