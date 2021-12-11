@@ -75,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "staticlibs"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -101,11 +101,13 @@ jobs:
       displayName: 'Update vcpkg'
     - bash: |
         set -ex
+        vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows
         vcpkg install libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
+        vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
         vcpkg install qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
@@ -132,10 +134,12 @@ jobs:
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3
       displayName: 'Compile ANPV'
+      enabled: false
     - bash: |
         set -e
         cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
+      enabled: false
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows
@@ -153,6 +157,7 @@ jobs:
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
+      enabled: false
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static
@@ -160,11 +165,13 @@ jobs:
       condition: or(succeeded(), failed())
     - task: CopyFiles@2
       continueOnError: true
+      enabled: false
       inputs:
         SourceFolder: 'build\$(configuration)'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
+      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
