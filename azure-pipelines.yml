@@ -123,6 +123,25 @@ jobs:
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
+      displayName: 'Cleanup vcpkg dir'
+    - bash: |
+        set -ex
+        mkdir build
+        cd build
+        export PKG_CONFIG_PATH=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/lib/pkgconfig
+        cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows -DCMAKE_VERBOSE_MAKEFILE=1 ..
+        cmake --build . --config $(configuration) --parallel 3
+      displayName: 'Compile ANPV'
+    - bash: |
+        set -e
+        cmake --build build --config $(configuration) --target install
+      displayName: 'ANPV install'
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows
+          artifactName: ANPV-vcpkg-$(platform)-$(poo)
+    - bash: |
+        set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows
       displayName: 'Cleanup install dir'
     - bash: |
@@ -132,31 +151,18 @@ jobs:
         export PKG_CONFIG_PATH=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/lib/pkgconfig
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
-      displayName: 'Compile ANPV'
-    - bash: |
-        set -e
-        export PATH=$PATH:$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
-        cmake --build build --config $(configuration) --target check --parallel 3
-      displayName: 'Execute Unittests'
-      condition: and(succeeded(), and(ne(variables['platform'], 'arm'), ne(variables['platform'], 'arm64')))
-      continueOnError: true
-      enabled: false
-    - bash: |
-        set -e
-        cmake --build build --config $(configuration) --target install
-      displayName: 'ANPV install'
-      enabled: false
+      displayName: 'Compile static ANPV'
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
-          artifactName: ANPV-vcpkg-$(platform)-$(poo)
+          pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static
+          artifactName: ANPV-vcpkg-static-$(platform)-$(poo)
     - task: CopyFiles@2
       continueOnError: true
       inputs:
         SourceFolder: 'build\$(configuration)'
-        Contents: 'anpv.*'
+        Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: ANPV-vcpkg-$(platform)-$(poo)
+          artifactName: ANPV-standalone-$(platform)-$(poo)
