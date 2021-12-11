@@ -49,7 +49,7 @@ jobs:
         cmakeArgs: --build . --target check --parallel
         workingDirectory: 'build'
   - job: Windows
-    timeoutInMinutes: 240
+    timeoutInMinutes: 300
     cancelTimeoutInMinutes: 2
     strategy:
       matrix:
