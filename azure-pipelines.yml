@@ -143,13 +143,20 @@ jobs:
       enabled: false
     - bash: |
         set -e
-        cmake --build build --config $(configuration) --target install || true
+        cmake --build build --config $(configuration) --target install
       displayName: 'ANPV install'
+      enabled: false
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/
           artifactName: ANPV-vcpkg-$(platform)-$(poo)
+    - task: CopyFiles@2
+      continueOnError: true
+      inputs:
+        SourceFolder: 'build\$(configuration)'
+        Contents: 'anpv.*'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
       inputs:
-          pathtoPublish: 'build\$(configuration)\anpv.exe'
+          pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-vcpkg-$(platform)-$(poo)
