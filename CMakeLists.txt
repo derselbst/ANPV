@@ -187,7 +187,7 @@ set_target_properties(anpv anpv-lib
                       C_STANDARD_REQUIRED ON)
 
 if(WIN32)
-  if(CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreaded")
+  if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
     pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
     target_link_libraries(anpv PRIVATE PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
     
@@ -202,7 +202,7 @@ if(WIN32)
   endif()
   
   target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
-  target_link_libraries(anpv PRIVATE "Kernel32") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
+  target_link_libraries(anpv PRIVATE "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
