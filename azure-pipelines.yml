@@ -64,7 +64,7 @@ jobs:
     pool:
       vmImage: $(poo)
     variables:
-      configuration: 'RelWithDebInfo'
+      configuration: 'Release'
       VCPKG_REVISION: '63e935d967a3410e26bf4a708efa39d8384d2bbb'
       platform: 'x64'
       cmake_platform: 'x64'
