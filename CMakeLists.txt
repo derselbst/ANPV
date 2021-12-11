@@ -187,11 +187,21 @@ set_target_properties(anpv anpv-lib
                       C_STANDARD_REQUIRED ON)
 
 if(WIN32)
+  if(CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreaded")
+    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+    
+    pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
+    
+    pkg_check_modules ( HB REQUIRED harfbuzz IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::HB) # Qt6Gui.lib(qtextengine.cpp.obj) : error LNK2019: unresolved external symbol hb_language_get_default referenced in function
+    
+    pkg_check_modules ( LZMA REQUIRED liblzma IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::LZMA) # tiff.lib(tif_lzma.c.obj) : error LNK2019: unresolved external symbol lzma_code referenced in function LZMADecode
+  endif()
+  
   target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
-  target_link_libraries(anpv PRIVATE "lcms2") # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
-  target_link_libraries(anpv PRIVATE "jasper") # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
-  target_link_libraries(anpv PRIVATE "harfbuzz") # Qt6Gui.lib(qtextengine.cpp.obj) : error LNK2019: unresolved external symbol hb_language_get_default referenced in function
-  target_link_libraries(anpv PRIVATE "lzma") # tiff.lib(tif_lzma.c.obj) : error LNK2019: unresolved external symbol lzma_code referenced in function LZMADecode
   target_link_libraries(anpv PRIVATE "Kernel32") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
