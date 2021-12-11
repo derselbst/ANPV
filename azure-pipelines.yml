@@ -113,6 +113,11 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
+        vcpkg install qtimageformats:$(platform)-windows
+        vcpkg install qtimageformats:$(platform)-windows-static
+      displayName: 'vcpkg build QtImageformats'
+    - bash: |
+        set -ex
         cd $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/
         pwd
         ls -Rg .
@@ -148,6 +153,7 @@ jobs:
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/debug
       displayName: 'Cleanup install dir'
     - bash: |
         set -ex
@@ -157,7 +163,6 @@ jobs:
         cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
-      enabled: false
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static
@@ -165,13 +170,11 @@ jobs:
       condition: or(succeeded(), failed())
     - task: CopyFiles@2
       continueOnError: true
-      enabled: false
       inputs:
         SourceFolder: 'build\$(configuration)'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
-      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
