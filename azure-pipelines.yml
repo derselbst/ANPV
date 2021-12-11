@@ -151,6 +151,7 @@ jobs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows
           artifactName: ANPV-vcpkg-$(platform)-$(poo)
       condition: or(succeeded(), failed())
+      enabled: false
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows
