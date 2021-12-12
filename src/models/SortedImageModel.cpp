@@ -17,6 +17,13 @@
 #endif
 #include <cstring> // for strverscmp()
 
+#ifdef _WINDOWS
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shlwapi.h>
+#endif
+
 #include "SmartImageDecoder.hpp"
 #include "DecoderFactory.hpp"
 #include "UserCancellation.hpp"
@@ -82,13 +89,18 @@ struct SortedImageModel::Impl
             throw UserCancellation();
         }
     }
-    
+
     static bool compareFileName(const QFileInfo& linfo, const QFileInfo& rinfo)
     {
-        QByteArray lfile = linfo.fileName().toCaseFolded().toLatin1();
-        QByteArray rfile = rinfo.fileName().toCaseFolded().toLatin1();
-        
+#ifdef _WINDOWS
+        std::wstring l = linfo.fileName().toCaseFolded().toStdWString();
+        std::wstring r = rinfo.fileName().toCaseFolded().toStdWString();
+        return StrCmpLogicalW(l.c_str(),r.c_str()) < 0;
+#else
+        QByteArray lfile = linfo.fileName().toCaseFolded().toUtf8();
+        QByteArray rfile = rinfo.fileName().toCaseFolded().toUtf8();
         return strverscmp(lfile.constData(), rfile.constData()) < 0;
+#endif
     }
 
     template<Column SortCol>

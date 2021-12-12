@@ -24,16 +24,10 @@ set(CMAKE_AUTORCC ON)
 # to always look for includes there:
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-
 # Global setting: build everything position independent
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# in case we have any c code, use the best c standard ever
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+add_compile_definitions(_HAS_AUTO_PTR_ETC=1)
 
 # if(${CMAKE_VERSION} VERSION_GREATER "3.6.0")
 # find_program(CLANG_TIDY
@@ -176,5 +170,40 @@ target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_C
 add_executable(anpv "main.cpp")
 target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
 target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
+
+install ( TARGETS anpv
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+set_target_properties(anpv anpv-lib
+                      PROPERTIES
+                      CXX_STANDARD 20
+                      CXX_EXTENSIONS OFF
+                      CXX_STANDARD_REQUIRED ON
+                      C_STANDARD 99
+                      C_EXTENSIONS OFF
+                      C_STANDARD_REQUIRED ON)
+
+if(WIN32)
+  if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
+    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+    
+    pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
+    
+    pkg_check_modules ( HB REQUIRED harfbuzz IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::HB) # Qt6Gui.lib(qtextengine.cpp.obj) : error LNK2019: unresolved external symbol hb_language_get_default referenced in function
+    
+    pkg_check_modules ( LZMA REQUIRED liblzma IMPORTED_TARGET )
+    target_link_libraries(anpv PRIVATE PkgConfig::LZMA) # tiff.lib(tif_lzma.c.obj) : error LNK2019: unresolved external symbol lzma_code referenced in function LZMADecode
+  endif()
+  
+  target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
+  target_link_libraries(anpv PRIVATE "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
+  set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 add_subdirectory(test)

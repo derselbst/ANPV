@@ -1,12 +1,22 @@
 #pragma once
 
+#include <version>
 #include <memory>
+
+#if defined(__cpp_lib_source_location) && (__cpp_lib_source_location == 201907L)
+#include <source_location>
+using source_loc = std::source_location;
+#else
 #include <experimental/source_location>
+using source_loc = std::experimental::source_location;
+#endif
+
+
 
 class TraceTimer
 {
 public:
-    TraceTimer(const std::type_info& ti, int maxMs, const std::experimental::source_location& location = std::experimental::source_location::current());
+    TraceTimer(const std::type_info& ti, int maxMs, const source_loc& location = source_loc::current());
     ~TraceTimer();
 
     TraceTimer(const TraceTimer &) = delete;
