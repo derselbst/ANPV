@@ -116,7 +116,7 @@ jobs:
         vcpkg install qtimageformats:$(platform)-windows
         vcpkg install qtimageformats:$(platform)-windows-static
       displayName: 'vcpkg build QtImageformats'
-      enabled: true
+      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
