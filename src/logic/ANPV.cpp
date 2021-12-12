@@ -287,6 +287,7 @@ ANPV::ANPV(QSplashScreen *splash)
     QCoreApplication::setOrganizationName("derselbst");
     QCoreApplication::setOrganizationDomain("");
     QCoreApplication::setApplicationName("ANPV");
+    QApplication::setWindowIcon(QIcon(":/images/ANPV.png"));
 
     splash->showMessage("Creating logic");
     d->initLogic();
