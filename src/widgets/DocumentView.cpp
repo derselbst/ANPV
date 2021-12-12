@@ -20,6 +20,7 @@
 #include <QScrollBar>
 #include <QActionGroup>
 #include <QtConcurrent/QtConcurrent>
+#include <QColorDialog>
 
 #include <vector>
 #include <algorithm>
@@ -330,6 +331,24 @@ struct DocumentView::Impl
         QGuiApplication::restoreOverrideCursor();
     }
     
+    void onSetBackgroundColor()
+    {
+        QBrush currentBrush = this->scene->backgroundBrush();
+        QColor currentColor = currentBrush.color();
+        if(currentBrush.style() == Qt::NoBrush)
+        {
+            currentColor = Qt::white;
+        }
+        QColorDialog colDiag(currentColor, p);
+        colDiag.setOptions(QColorDialog::ShowAlphaChannel);
+        QObject::connect(&colDiag, &QColorDialog::currentColorChanged, p, [&](const QColor& col){ this->scene->setBackgroundBrush(QBrush(col)); });
+        int ret = colDiag.exec();
+        if(ret == QDialog::Rejected)
+        {
+            this->scene->setBackgroundBrush(currentBrush);
+        }
+    }
+    
     void createActions()
     {
         QAction* act;
@@ -354,6 +373,10 @@ struct DocumentView::Impl
         this->actionShowScrollBars->setCheckable(true);
         connect(this->actionShowScrollBars, &QAction::toggled, p, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
         p->addAction(this->actionShowScrollBars);
+        
+        act = new QAction("Set Background Color", p);
+        connect(act, &QAction::triggered, p, [&](){ this->onSetBackgroundColor(); });
+        p->addAction(act);
 
         act = new QAction(p);
         act->setSeparator(true);
@@ -566,7 +589,6 @@ void DocumentView::mouseMoveEvent(QMouseEvent *event)
             // Cursor left on the x axis. Move cursor to the opposite side.
             globalPos.setX(globalPos.x() + (pos.x() < 0 ? width-1 : -width+2));
         }
-        QPoint cursorPos = this->mapFromGlobal(QCursor::pos());
         // For the scroll hand dragging to work with mouse wrapping
         // we have to emulate a mouse release, move the cursor and
         // then emulate a mouse press. Not doing this causes the
