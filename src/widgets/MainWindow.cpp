@@ -423,7 +423,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
  : QMainWindow(), d(std::make_unique<Impl>(this))
 {
     this->setWindowTitle("ANPV");
-    this->setIcon(QIcon(":/images/ANPV.png"));
     
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
