@@ -14,11 +14,13 @@ class MultiDocumentView : public QMainWindow
 Q_OBJECT
 
 public:
-    MultiDocumentView(QWidget *parent);
+    MultiDocumentView(QMainWindow *parent);
     ~MultiDocumentView() override;
 
     void addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model);
     void keyPressEvent(QKeyEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

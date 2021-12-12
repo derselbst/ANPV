@@ -9,6 +9,7 @@
 #include <QScreen>
 #include <QSharedPointer>
 #include <QKeyEvent>
+#include <QSettings>
 
 struct MultiDocumentView::Impl
 {
@@ -34,17 +35,31 @@ struct MultiDocumentView::Impl
             q->close();
         }
     }
+        
+    void writeSettings()
+    {
+        QSettings settings;
+        settings.beginGroup("MultiDocumentView");
+        settings.setValue("geometry", q->saveGeometry());
+        settings.setValue("windowState", q->saveState());
+        settings.endGroup();
+    }
+
+    void readSettings(QMainWindow *parent)
+    {
+        QSettings settings;
+        settings.beginGroup("MultiDocumentView");
+        // open the window on the primary screen
+        // by moving and resize it explicitly
+        q->restoreGeometry(settings.value("geometry", parent->saveGeometry()).toByteArray());
+        q->restoreState(settings.value("windowState", parent->saveState()).toByteArray());
+        settings.endGroup();
+    }
 };
 
-MultiDocumentView::MultiDocumentView(QWidget *parent)
+MultiDocumentView::MultiDocumentView(QMainWindow *parent)
  : QMainWindow(parent), d(std::make_unique<Impl>(this))
 {
-    QScreen *ps = QGuiApplication::primaryScreen();
-    QRect screenres = ps->geometry();
-    
-    this->resize(screenres.width(), screenres.height());
-    this->move(screenres.topLeft());
-    
     d->tw = new QTabWidget(this);
     d->tw->setTabBarAutoHide(true);
     d->tw->setTabsClosable(true);
@@ -52,6 +67,8 @@ MultiDocumentView::MultiDocumentView(QWidget *parent)
     this->setCentralWidget(d->tw);
     
     this->setAttribute(Qt::WA_DeleteOnClose);
+    
+    d->readSettings(parent);
     
     connect(d->tw, &QTabWidget::currentChanged, this, [&](int index) { d->onCurrentTabChanged(index); });
     connect(d->tw, &QTabWidget::tabCloseRequested, this, [&](int index) { d->onTabCloseRequested(index); });
@@ -110,4 +127,10 @@ void MultiDocumentView::keyPressEvent(QKeyEvent *event)
             QMainWindow::keyPressEvent(event);
             break;
     }
+}
+
+void MultiDocumentView::closeEvent(QCloseEvent *event)
+{
+    d->writeSettings();
+    QMainWindow::closeEvent(event);
 }
