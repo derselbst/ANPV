@@ -53,10 +53,6 @@ jobs:
     cancelTimeoutInMinutes: 2
     strategy:
       matrix:
-        WinXP:
-          toolset: 'v141_xp'
-          generator: 'Visual Studio 16 2019'
-          poo: 'windows-2019'
         Win10:
           toolset: 'v142'
           generator: 'Visual Studio 16 2019'
@@ -79,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs2"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -120,6 +116,7 @@ jobs:
         vcpkg install qtimageformats:$(platform)-windows
         vcpkg install qtimageformats:$(platform)-windows-static
       displayName: 'vcpkg build QtImageformats'
+      enabled: false
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
