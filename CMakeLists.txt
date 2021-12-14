@@ -111,7 +111,7 @@ include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 #add_subdirectory(kitemviews)
 #include_directories("${CMAKE_BINARY_DIR}/kitemviews/src")
 
-add_library(anpv-lib STATIC
+qt_add_library(anpv-lib STATIC MANUAL_FINALIZATION
 src/widgets/AfPointOverlay.cpp
 src/widgets/AfPointOverlay.hpp
 src/widgets/CancellableProgressDialog.hpp
@@ -167,8 +167,8 @@ target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LI
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models)
 
-add_executable(anpv "main.cpp")
-target_link_libraries(anpv PRIVATE Qt6::Core Qt6::Widgets anpv-lib)
+qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
+target_link_libraries(anpv PRIVATE Qt6::Widgets anpv-lib)
 target_include_directories(anpv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/logic)
 
 install ( TARGETS anpv
@@ -205,5 +205,8 @@ if(WIN32)
   target_link_libraries(anpv PRIVATE "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
+
+qt_finalize_target(anpv-lib)
+qt_finalize_target(anpv)
 
 add_subdirectory(test)
