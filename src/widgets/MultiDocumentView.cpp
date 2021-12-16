@@ -22,6 +22,7 @@ struct MultiDocumentView::Impl
     void onCurrentTabChanged(int idx)
     {
         q->setWindowTitle(tw->tabText(idx));
+        q->setWindowIcon(tw->tabIcon(idx));
     }
     
     void onTabCloseRequested(int idx)

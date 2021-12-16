@@ -2,7 +2,10 @@
 
 **A**nother **N**ameless **P**icture **V**iewer
 
+<img src="images/ANPV.png" height="50" alt="ANPV Icon">
+
 [![Build Status](https://dev.azure.com/tommbrt/tommbrt/_apis/build/status/derselbst.ANPV?branchName=master)](https://dev.azure.com/tommbrt/tommbrt/_build/latest?definitionId=7&branchName=master)
+
 
 # Features
 
