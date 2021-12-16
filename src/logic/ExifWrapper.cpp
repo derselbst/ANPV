@@ -500,7 +500,7 @@ QString ExifWrapper::formatToString()
     if(dt.isValid())
     {
         int phase = MoonPhase::fromDateTime(dt);
-        f << "<br>Recorded on:<br>"
+        f << "<br>Originally recorded on:<br>"
           << dt.toString("yyyy-MM-dd (dddd)<br>").toStdString()
           << dt.toString("hh:mm:ss<br>").toStdString()
           << MoonPhase::formatToString(phase).toStdString() << " (" << phase << "%)";

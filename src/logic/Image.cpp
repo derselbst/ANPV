@@ -305,7 +305,7 @@ QString Image::formatInfoString()
         QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
         if(t.isValid())
         {
-            infoStr += "Created on:<br>";
+            infoStr += "File created on:<br>";
             infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
             infoStr += t.toString("  hh:mm:ss<br><br>");
         }
@@ -313,7 +313,7 @@ QString Image::formatInfoString()
         t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
         if(t.isValid())
         {
-            infoStr += "Modified on:<br>";
+            infoStr += "File modified on:<br>";
             infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
             infoStr += t.toString("hh:mm:ss");
         }
