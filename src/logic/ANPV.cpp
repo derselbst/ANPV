@@ -455,7 +455,6 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();
-    d->mainWindow->setCurrentIndex(img);
 }
 
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
