@@ -496,7 +496,7 @@ QString ExifWrapper::formatToString()
 {
     Formatter f;
     
-    long n, d;
+    long n;
     double r;
     bool b;
     QString s;
