@@ -20,6 +20,7 @@ class SortedImageModel;
 class QAbstractFileIconProvider;
 class SmartImageDecoder;
 class CancellableProgressWidget;
+class QMimeData;
 
 template<typename T>
 class QFuture;
@@ -51,6 +52,8 @@ public:
     static constexpr int MaxIconHeight = 500/*px*/;
     static ANPV* globalInstance();
     static QString formatByteHtmlString(float fsize);
+    static void setClipboardDataCut(QMimeData *mimeData, bool cut);
+    static bool isClipboardDataCut(const QMimeData *mimeData);
 
     ANPV();
     ANPV(QSplashScreen *splash);

@@ -34,6 +34,7 @@
 #include <QSvgRenderer>
 #include <QDataStream>
 #include <QFileDialog>
+#include <QMimeData>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -251,6 +252,29 @@ struct ANPV::Impl
     void drawNoPreviewPixmap()
     {
         this->noPreviewPixmap = this->renderSvg(QString(":/images/NoPreview.svg"));
+    }
+    
+    // https://api.kde.org/frameworks/kcoreaddons/html/kurlmimedata_8cpp_source.html#l00029
+    static QString kdeUriListMime()
+    {
+        return QStringLiteral("application/x-kde4-urilist");
+    }
+    
+    static QString kdeCutMime()
+    {
+        return QStringLiteral("application/x-kde-cutselection");
+    }
+
+    static QByteArray uriListData(const QList<QUrl> &urls)
+    {
+        // compatible with qmimedata.cpp encoding of QUrls
+        QByteArray result;
+        for (int i = 0; i < urls.size(); ++i)
+        {
+            result += urls.at(i).toEncoded();
+            result += "\r\n";
+        }
+        return result;
     }
 };
 
@@ -518,6 +542,27 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
     });
     
     this->undoStack()->push(cmd);
+}
+
+void ANPV::setClipboardDataCut(QMimeData *mimeData, bool cut)
+{
+    const QByteArray cutSelectionData = cut ? "1" : "0";
+    mimeData->setData(kdeCutMime(), cutSelectionData);
+}
+
+bool ANPV::isClipboardDataCut(const QMimeData *mimeData)
+{
+    const QByteArray a = mimeData->data(kdeCutMime());
+    return (!a.isEmpty() && a.at(0) == '1');
+}
+
+void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
+{
+    // Export the most local urls as text/uri-list and plain text, for non KDE apps.
+    mimeData->setUrls(localUrls); // set text/uri-list and text/plain
+
+    // Export the real KIO urls as a kde-specific mimetype
+    mimeData->setData(kdeUriListMime(), uriListData(localUrls));
 }
 
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
