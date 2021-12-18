@@ -111,6 +111,15 @@ struct ExifWrapper::Impl
 
         return rot;
     }
+    
+    static QString boolToString(bool b)
+    {
+        if(b)
+        {
+            return QStringLiteral("enabled");
+        }
+        return QStringLiteral("disabled");
+    }
 };
 
 ExifWrapper::ExifWrapper()
@@ -461,12 +470,35 @@ QDateTime ExifWrapper::dateRecorded()
     return d->mExivHandle.getImageDateTime();
 }
 
+bool ExifWrapper::hasDarkFrameSubtraction(bool& hasDarkFrameSub)
+{
+    long l;
+    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.NoiseReduction", l))
+    {
+        hasDarkFrameSub = l != 0;
+        return true;
+    }
+    return false;
+}
+
+bool ExifWrapper::isMirrorLockupEnabled(bool& isEnabled)
+{
+    long l;
+    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.MirrorLockup", l))
+    {
+        isEnabled = l != 0;
+        return true;
+    }
+    return false;
+}
+
 QString ExifWrapper::formatToString()
 {
     Formatter f;
     
     long n, d;
     double r;
+    bool b;
     QString s;
     
     if(this->aperture(r))
@@ -483,6 +515,18 @@ QString ExifWrapper::formatToString()
     if(this->iso(n))
     {
         f << "ISO: " << n << "<br>";
+    }
+    
+    if(this->hasDarkFrameSubtraction(b))
+    {
+        s = d->boolToString(b);
+        f << "Long Noise Reduction: " << s.toStdString() << "<br>";
+    }
+    
+    if(this->isMirrorLockupEnabled(b))
+    {
+        s = d->boolToString(b);
+        f << "Mirror Lockup: " << s.toStdString() << "<br>";
     }
     
     s = this->lens();
