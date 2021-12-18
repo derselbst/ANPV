@@ -547,12 +547,12 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
 void ANPV::setClipboardDataCut(QMimeData *mimeData, bool cut)
 {
     const QByteArray cutSelectionData = cut ? "1" : "0";
-    mimeData->setData(kdeCutMime(), cutSelectionData);
+    mimeData->setData(d->kdeCutMime(), cutSelectionData);
 }
 
 bool ANPV::isClipboardDataCut(const QMimeData *mimeData)
 {
-    const QByteArray a = mimeData->data(kdeCutMime());
+    const QByteArray a = mimeData->data(d->kdeCutMime());
     return (!a.isEmpty() && a.at(0) == '1');
 }
 

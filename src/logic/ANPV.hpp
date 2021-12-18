@@ -63,6 +63,7 @@ public:
     void showThumbnailView(QSharedPointer<Image> img);
     
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
+    void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
