@@ -547,12 +547,12 @@ void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destina
 void ANPV::setClipboardDataCut(QMimeData *mimeData, bool cut)
 {
     const QByteArray cutSelectionData = cut ? "1" : "0";
-    mimeData->setData(d->kdeCutMime(), cutSelectionData);
+    mimeData->setData(Impl::kdeCutMime(), cutSelectionData);
 }
 
 bool ANPV::isClipboardDataCut(const QMimeData *mimeData)
 {
-    const QByteArray a = mimeData->data(d->kdeCutMime());
+    const QByteArray a = mimeData->data(Impl::kdeCutMime());
     return (!a.isEmpty() && a.at(0) == '1');
 }
 
@@ -562,7 +562,7 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
     mimeData->setUrls(localUrls); // set text/uri-list and text/plain
 
     // Export the real KIO urls as a kde-specific mimetype
-    mimeData->setData(kdeUriListMime(), uriListData(localUrls));
+    mimeData->setData(d->kdeUriListMime(), d->uriListData(localUrls));
 }
 
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
