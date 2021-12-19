@@ -57,6 +57,8 @@ public:
     bool focalLength(double& quot);
     
     QDateTime dateRecorded();
+    QString darkFrameSubtraction();
+    bool isMirrorLockupEnabled(bool& isEnabled);
     
     QString formatToString();
 

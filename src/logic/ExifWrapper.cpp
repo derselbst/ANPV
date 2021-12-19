@@ -111,6 +111,15 @@ struct ExifWrapper::Impl
 
         return rot;
     }
+    
+    static QString boolToString(bool b)
+    {
+        if(b)
+        {
+            return QStringLiteral("enabled");
+        }
+        return QStringLiteral("disabled");
+    }
 };
 
 ExifWrapper::ExifWrapper()
@@ -461,12 +470,67 @@ QDateTime ExifWrapper::dateRecorded()
     return d->mExivHandle.getImageDateTime();
 }
 
+QString ExifWrapper::darkFrameSubtraction()
+{
+    long l;
+    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.NoiseReduction", l) ||
+       d->mExivHandle.getExifTagLong("Exif.CanonFi.NoiseReduction", l)
+    )
+    {
+        if(l == -1)
+        {
+            if(d->mExivHandle.getExifTagLong("Exif.Canon.LightingOpt", l, 4))
+            {
+                // translate Canon LightingOpt Tags to old value
+                switch(l)
+                {
+                    case 0:
+                        break;
+                    case 1:
+                        l = 4;
+                        break;
+                    case 2:
+                        l = 3;
+                        break;
+                    default:
+                        return QStringLiteral("unknown LightingOpt val ") + QString::number(l);
+                }
+            }
+        }
+        switch(l)
+        {
+            case 0:
+                return QStringLiteral("Off");
+            case 1:
+            case 3:
+                return QStringLiteral("On");
+            case 4:
+                return QStringLiteral("Auto");
+            default:
+                return QStringLiteral("unknown value ") + QString::number(l);
+        }
+    }
+    return QString();
+}
+
+bool ExifWrapper::isMirrorLockupEnabled(bool& isEnabled)
+{
+    long l;
+    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.MirrorLockup", l))
+    {
+        isEnabled = l != 0;
+        return true;
+    }
+    return false;
+}
+
 QString ExifWrapper::formatToString()
 {
     Formatter f;
     
-    long n, d;
+    long n;
     double r;
+    bool b;
     QString s;
     
     if(this->aperture(r))
@@ -483,6 +547,18 @@ QString ExifWrapper::formatToString()
     if(this->iso(n))
     {
         f << "ISO: " << n << "<br>";
+    }
+    
+    s = this->darkFrameSubtraction();
+    if(!s.isEmpty())
+    {
+        f << "Long Noise Reduction: " << s.toStdString() << "<br>";
+    }
+    
+    if(this->isMirrorLockupEnabled(b))
+    {
+        s = d->boolToString(b);
+        f << "Mirror Lockup: " << s.toStdString() << "<br>";
     }
     
     s = this->lens();
