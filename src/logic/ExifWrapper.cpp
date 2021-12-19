@@ -470,15 +470,43 @@ QDateTime ExifWrapper::dateRecorded()
     return d->mExivHandle.getImageDateTime();
 }
 
-bool ExifWrapper::hasDarkFrameSubtraction(bool& hasDarkFrameSub)
+QString ExifWrapper::darkFrameSubtraction()
 {
     long l;
-    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.NoiseReduction", l))
+    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.NoiseReduction", l) ||
+       d->mExivHandle.getExifTagLong("Exif.CanonFi.NoiseReduction", l)
+    )
     {
-        hasDarkFrameSub = l != 0;
-        return true;
+        if(l == -1)
+        {
+            if(d->mExivHandle.getExifTagLong("Exif.Canon.LightingOpt", l, 4))
+            {
+                // translate Canon LightingOpt Tags to old value
+                switch(l)
+                {
+                    case 1:
+                        l = 4;
+                        break;
+                    case 2:
+                        l = 3;
+                        break;
+                }
+            }
+        }
+        switch(l)
+        {
+            case 0:
+                return QStringLiteral("Off");
+            case 1:
+            case 3:
+                return QStringLiteral("On");
+            case 4:
+                return QStringLiteral("Auto");
+            default:
+                return QStringLiteral("unknown value ") + QString::number(l);
+        }
     }
-    return false;
+    return QString();
 }
 
 bool ExifWrapper::isMirrorLockupEnabled(bool& isEnabled)
@@ -517,9 +545,9 @@ QString ExifWrapper::formatToString()
         f << "ISO: " << n << "<br>";
     }
     
-    if(this->hasDarkFrameSubtraction(b))
+    s = this->darkFrameSubtraction();
+    if(!s.isEmpty())
     {
-        s = d->boolToString(b);
         f << "Long Noise Reduction: " << s.toStdString() << "<br>";
     }
     
