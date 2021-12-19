@@ -484,12 +484,16 @@ QString ExifWrapper::darkFrameSubtraction()
                 // translate Canon LightingOpt Tags to old value
                 switch(l)
                 {
+                    case 0:
+                        break;
                     case 1:
                         l = 4;
                         break;
                     case 2:
                         l = 3;
                         break;
+                    default:
+                        return QStringLiteral("unknown LightingOpt val ") + QString::number(l);
                 }
             }
         }
