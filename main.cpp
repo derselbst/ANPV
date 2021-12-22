@@ -37,7 +37,48 @@ int main(int argc, char *argv[])
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
 
-    ANPV a(&splash);
+    ANPV anpv(&splash);
+    
+    if(argc == 2)
+    {
+        QString arg(argv[1]);
+        QFileInfo info(arg);
+        if(info.exists())
+        {
+            if(info.isDir())
+            {
+                anpv.setCurrentDir(info.absoluteFilePath());
+                anpv.showThumbnailView();
+            }
+            else if(info.isFile())
+            {
+                goto openFiles;
+            }
+        }
+        else
+        {
+            qCritical() << "Path '" << argv[1] << "' not found";
+            return -1;
+        }
+    }
+    else
+    {
+openFiles:
+        QList<QFileInfo> files;
+        for(i=1; i<argc;i++)
+        {
+            files.emplace_back(QFileInfo(QString(argv[i])));
+        }
+        
+        // create symlinks into temporary dir
+        
+        // maybe change path to temp dir, maybe not
+        
+        // open images
+        
+        splash.showMessage("Starting the image decoding task...");
+        anpv.openImages(files);
+    }
     
     int r = app.exec();
     return r;
