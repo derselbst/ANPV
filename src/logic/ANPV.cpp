@@ -562,7 +562,7 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
     mimeData->setUrls(localUrls); // set text/uri-list and text/plain
 
     // Export the real KIO urls as a kde-specific mimetype
-    mimeData->setData(d->kdeUriListMime(), d->uriListData(localUrls));
+    mimeData->setData(Impl::kdeUriListMime(), Impl::uriListData(localUrls));
 }
 
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)

@@ -54,6 +54,7 @@ public:
     static QString formatByteHtmlString(float fsize);
     static void setClipboardDataCut(QMimeData *mimeData, bool cut);
     static bool isClipboardDataCut(const QMimeData *mimeData);
+    static void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
 
     ANPV();
     ANPV(QSplashScreen *splash);
@@ -63,7 +64,6 @@ public:
     void showThumbnailView(QSharedPointer<Image> img);
     
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
-    void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();

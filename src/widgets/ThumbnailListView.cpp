@@ -23,6 +23,7 @@
 #include <QSortFilterProxyModel>
 #include <QApplication>
 #include <QClipboard>
+#include <QMimeData>
 
 #include <vector>
 #include <algorithm>
@@ -45,9 +46,11 @@ struct ThumbnailListView::Impl
     QAction *actionOpenSelectionInternally=nullptr;
     QAction *actionOpenSelectionExternally=nullptr;
     QAction* actionOpenFolder=nullptr;
-    QAction* actionCut=nullptr;
+    QAction* actionMoveTo=nullptr;
+    QAction* actionCopyTo=nullptr;
+    QAction* actionCopyToFilePath=nullptr;
+    QAction* actionMove=nullptr;
     QAction* actionCopy=nullptr;
-    QAction* actionCopyFilePath=nullptr;
     QAction* actionDelete=nullptr;
     
     enum Operation { Move, Copy, Delete };
@@ -88,6 +91,21 @@ struct ThumbnailListView::Impl
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
         }
+    }
+    
+    void onCopyToClipboard(Operation op)
+    {
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
+        QList<QUrl> files;
+        for(QSharedPointer<Image>& i : imgs)
+        {
+            files.push_back(QUrl::fromLocalFile(i->fileInfo().absoluteFilePath()));
+        }
+        
+        QMimeData *mimeData = new QMimeData;
+        ANPV::setUrls(mimeData, files);
+        ANPV::setClipboardDataCut(mimeData, op == Operation::Move);
+        QGuiApplication::clipboard()->setMimeData(mimeData);
     }
 
     void openContainingFolder()
@@ -170,35 +188,54 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
     connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
     
-    d->actionCopyFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
-    connect(d->actionCopyFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
+    d->actionCopyToFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
+    connect(d->actionCopyToFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
     
-    d->actionCut = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
-    d->actionCut->setShortcuts(QKeySequence::Cut);
-    connect(d->actionCut, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
+    d->actionMoveTo = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
+    connect(d->actionMoveTo, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
     
-    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
+    d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
+    connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Copy); });
+    
+    d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
+    d->actionMove->setShortcuts(QKeySequence::Cut);
+    connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(Impl::Operation::Move); });
+    
+    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
     d->actionCopy->setShortcuts(QKeySequence::Copy);
-    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Copy); });
+    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(Impl::Operation::Copy); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
     
-    
-    QAction* sep = new QAction(this);
-    sep->setSeparator(true);
-    
     this->addAction(d->actionOpenSelectionInternally);
     this->addAction(d->actionOpenSelectionExternally);
     this->addAction(d->actionOpenFolder);
+    
+    QAction* sep = new QAction(this);
+    sep->setSeparator(true);
     this->addAction(sep);
-    this->addAction(d->actionCopyFilePath);
+    
+    this->addAction(d->actionCopyToFilePath);
+    
+    sep = new QAction(this);
+    sep->setSeparator(true);
     this->addAction(sep);
-    this->addAction(d->actionCut);
+    
+    this->addAction(d->actionMoveTo);
+    this->addAction(d->actionCopyTo);
+    
+    sep = new QAction(this);
+    sep->setSeparator(true);
+    this->addAction(sep);
+    this->addAction(d->actionMove);
     this->addAction(d->actionCopy);
-    this->addAction(d->actionDelete);
+    
+    sep = new QAction(this);
+    sep->setSeparator(true);
     this->addAction(sep);
+    this->addAction(d->actionDelete);
 }
 
 ThumbnailListView::~ThumbnailListView() = default;
