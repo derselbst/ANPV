@@ -204,6 +204,16 @@ if(WIN32)
   target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
   target_link_libraries(anpv PRIVATE "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
+else()
+    install(
+            FILES contrib/ANPV.desktop
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+        )
+
+    install(
+            FILES images/ANPV.svg
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps/
+        )
 endif()
 
 qt_finalize_target(anpv-lib)

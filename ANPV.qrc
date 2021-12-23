@@ -11,7 +11,7 @@
         <file>images/undo.png</file>
         <file>images/FileNotFound.svg</file>
         <file>images/NoPreview.svg</file>
-        <file>images/ANPV.png</file>
+        <file>images/ANPV.svg</file>
         <file>images/ANPV.ico</file>
     </qresource>
 </RCC>
