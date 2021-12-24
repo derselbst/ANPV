@@ -61,7 +61,7 @@ public:
     ~ANPV() override;
 
     void openImages(const QList<QSharedPointer<Image>>&);
-    void showThumbnailView(QSharedPointer<Image> img);
+    void showThumbnailView();
     
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
     
@@ -78,6 +78,7 @@ public:
     
     QDir currentDir();
     void setCurrentDir(QString str);
+    void restoreSavedDir();
     
     Qt::SortOrder sortOrder();
     void setSortOrder(Qt::SortOrder);

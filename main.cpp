@@ -1,7 +1,7 @@
 
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
-#include "UserCancellation.hpp"
+#include "Formatter.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -18,6 +18,7 @@
 #include <QProgressBar>
 #include <QPromise>
 #include <QDir>
+#include <QMessageBox>
 
 #include <chrono>
 #include <thread>
@@ -39,7 +40,13 @@ int main(int argc, char *argv[])
 
     ANPV anpv(&splash);
     
-    if(argc == 2)
+    switch(argc)
+    {
+    case 1:
+        anpv.restoreSavedDir();
+        anpv.showThumbnailView();
+        break;
+    case 2:
     {
         QString arg(argv[1]);
         QFileInfo info(arg);
@@ -49,25 +56,28 @@ int main(int argc, char *argv[])
             {
                 anpv.setCurrentDir(info.absoluteFilePath());
                 anpv.showThumbnailView();
+                break;
             }
             else if(info.isFile())
             {
-                goto openFiles;
+                // fallthrough
             }
         }
         else
         {
-            qCritical() << "Path '" << argv[1] << "' not found";
+            Formatter f;
+            f << "Path '" << argv[1] << "' not found";
+            QMessageBox::critical(nullptr, "ANPV", f.str().c_str());
+            qCritical() << f.str().c_str();
             return -1;
         }
     }
-    else
+    default:
     {
-openFiles:
-        QList<QFileInfo> files;
-        for(i=1; i<argc;i++)
+        QList<QSharedPointer<Image>> files;
+        for(int i=1; i<argc;i++)
         {
-            files.emplace_back(QFileInfo(QString(argv[i])));
+            files.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString(argv[i]))));
         }
         
         // create symlinks into temporary dir
@@ -78,6 +88,8 @@ openFiles:
         
         splash.showMessage("Starting the image decoding task...");
         anpv.openImages(files);
+    }
+    break;
     }
     
     int r = app.exec();

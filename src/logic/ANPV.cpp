@@ -199,7 +199,6 @@ struct ANPV::Impl
     {
         QSettings settings;
 
-        q->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
         q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)).toUInt());
         q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
@@ -321,7 +320,6 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
-    d->mainWindow->show();
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
@@ -369,6 +367,12 @@ void ANPV::setCurrentDir(QString str)
         d->currentDir = str;
         emit this->currentDirChanged(str, old);
     }
+}
+
+void ANPV::restoreSavedDir()
+{
+    QSettings settings;
+    this->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
 }
 
 ViewMode ANPV::viewMode()
@@ -473,9 +477,10 @@ void ANPV::setIconHeight(int h)
     }
 }
 
-void ANPV::showThumbnailView(QSharedPointer<Image> img)
+void ANPV::showThumbnailView()
 {
     xThreadGuard(this);
+    d->mainWindow->show();
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();

@@ -555,7 +555,7 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Escape:
             // intentionally ignore the event, so that it can be processed by the parent view (MultiDocumentView)
             event->ignore();
-            ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
+            ANPV::globalInstance()->showThumbnailView();
             this->close();
             break;
         default:
