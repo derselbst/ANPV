@@ -89,14 +89,18 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
         DocumentView* dv = new DocumentView(d->tw);
 
         connect(dv, &DocumentView::imageChanged, this,
-        [=](QSharedPointer<Image> img)
+        [&](QSharedPointer<Image> img)
         {
             int idx = d->tw->indexOf(dv);
             if(idx >= 0)
             {
                 d->tw->setTabIcon(idx, img->thumbnailTransformed(d->tw->iconSize().height()));
                 d->tw->setTabText(idx, img->fileInfo().fileName());
-                d->onCurrentTabChanged(idx);
+                // update title and icon of window, if this Image is the one currently active
+                if(d->tw->currentIndex() == idx)
+                {
+                    d->onCurrentTabChanged(idx);
+                }
             }
         });
 
