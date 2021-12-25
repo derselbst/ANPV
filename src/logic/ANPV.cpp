@@ -47,6 +47,7 @@
 #include "xThreadGuard.hpp"
 #include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
+#include "WaitCursor.hpp"
 
 class MyDisabledFileIconProvider : public QAbstractFileIconProvider
 {
@@ -484,9 +485,10 @@ void ANPV::showThumbnailView(QSharedPointer<Image> img)
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     xThreadGuard g(this);
+    WaitCursor w;
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
-    mdv->show();
     mdv->addImages(image, d->fileModel);
+    mdv->show();
 }
 
 QPixmap ANPV::noIconPixmap()
