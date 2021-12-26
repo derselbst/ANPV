@@ -34,6 +34,7 @@
 #include "ExifWrapper.hpp"
 #include "MessageWidget.hpp"
 #include "xThreadGuard.hpp"
+#include "WaitCursor.hpp"
 
 struct DocumentView::Impl
 {
@@ -165,7 +166,7 @@ struct DocumentView::Impl
         {
             return;
         }
-        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        WaitCursor w;
 
         // get the area of what the user sees
         QRect viewportRect = p->viewport()->rect();
@@ -217,8 +218,6 @@ struct DocumentView::Impl
         {
             qDebug() << "Skipping smooth pixmap scaling: Too far zoomed in";
         }
-        
-        QGuiApplication::restoreOverrideCursor();
     }
     
     void addThumbnailPreview(QSharedPointer<Image> img)
@@ -319,7 +318,7 @@ struct DocumentView::Impl
     
     void goTo(int i)
     {
-        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
             QSharedPointer<Image> newImg = this->model->goTo(this->currentImageDecoder->image(), i);
@@ -328,7 +327,6 @@ struct DocumentView::Impl
                 p->loadImage(newImg);
             }
         }
-        QGuiApplication::restoreOverrideCursor();
     }
     
     void onSetBackgroundColor()
@@ -549,7 +547,7 @@ void DocumentView::resizeEvent(QResizeEvent *event)
 
 void DocumentView::keyPressEvent(QKeyEvent *event)
 {
-    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    WaitCursor w;
     switch(event->key())
     {
         case Qt::Key_Escape:
@@ -562,7 +560,6 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             QGraphicsView::keyPressEvent(event);
             break;
     }
-    QGuiApplication::restoreOverrideCursor();
 }
 
 

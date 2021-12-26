@@ -47,6 +47,7 @@
 #include "xThreadGuard.hpp"
 #include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
+#include "WaitCursor.hpp"
 
 class MyDisabledFileIconProvider : public QAbstractFileIconProvider
 {
@@ -353,13 +354,13 @@ QSharedPointer<SortedImageModel> ANPV::fileModel()
 
 QDir ANPV::currentDir()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->currentDir;
 }
 
 void ANPV::setCurrentDir(QString str)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     
     QDir old = d->currentDir;
     if(old != str)
@@ -410,13 +411,13 @@ void ANPV::fixupAndSetCurrentDir(QString str)
 
 ViewMode ANPV::viewMode()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->viewMode;
 }
 
 void ANPV::setViewMode(ViewMode v)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     ViewMode old = d->viewMode;
     if(old != v)
     {
@@ -427,13 +428,13 @@ void ANPV::setViewMode(ViewMode v)
 
 ViewFlags_t ANPV::viewFlags()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->viewFlags;
 }
 
 void ANPV::setViewFlags(ViewFlags_t newFlags)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     ViewFlags_t old = d->viewFlags;
     if(old != newFlags)
     {
@@ -444,7 +445,7 @@ void ANPV::setViewFlags(ViewFlags_t newFlags)
 
 void ANPV::setViewFlag(ViewFlag v, bool on)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     ViewFlags_t newFlags = d->viewFlags;
     
     if(on)
@@ -460,13 +461,13 @@ void ANPV::setViewFlag(ViewFlag v, bool on)
 
 Qt::SortOrder ANPV::sortOrder()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->sortOrder;
 }
 
 void ANPV::setSortOrder(Qt::SortOrder order)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     Qt::SortOrder old = d->sortOrder;
     if(order != old)
     {
@@ -477,13 +478,13 @@ void ANPV::setSortOrder(Qt::SortOrder order)
 
 SortedImageModel::Column ANPV::primarySortColumn()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->primarySortColumn;
 }
 
 void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     SortedImageModel::Column old = d->primarySortColumn;
     if(old != col)
     {
@@ -494,13 +495,13 @@ void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
 
 int ANPV::iconHeight()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->iconHeight;
 }
 
 void ANPV::setIconHeight(int h)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     int old = d->iconHeight;
     h = std::min(h, ANPV::MaxIconHeight);
     if(old != h)
@@ -512,7 +513,7 @@ void ANPV::setIconHeight(int h)
 
 void ANPV::showThumbnailView()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     d->mainWindow->show();
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
@@ -521,10 +522,11 @@ void ANPV::showThumbnailView()
 
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
+    WaitCursor w;
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
-    mdv->show();
     mdv->addImages(image, d->fileModel);
+    mdv->show();
 }
 
 QPixmap ANPV::noIconPixmap()
@@ -539,19 +541,19 @@ QPixmap ANPV::noPreviewPixmap()
 
 QActionGroup* ANPV::copyMoveActionGroup()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->actionGroupFileOperation;
 }
 
 QUndoStack* ANPV::undoStack()
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     return d->undoStack;
 }
 
 void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     MoveFileCommand* cmd = new MoveFileCommand(std::move(files), std::move(source), std::move(destination));
     
     connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
@@ -605,7 +607,7 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
 
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
     QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
     
     static const QStringList schemes = QStringList(QStringLiteral("file"));

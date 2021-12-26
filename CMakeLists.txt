@@ -153,6 +153,7 @@ src/logic/MoonPhase.hpp
 src/logic/MoveFileCommand.cpp
 src/logic/MoveFileCommand.hpp
 src/logic/UserCancellation.hpp
+src/logic/WaitCursor.hpp
 src/logic/xThreadGuard.hpp
 src/logic/TraceTimer.cpp
 src/logic/TraceTimer.hpp

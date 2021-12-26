@@ -7,8 +7,6 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QThreadPool>
 #include <QDir>
-#include <QGuiApplication>
-#include <QCursor>
 
 // #include <execution>
 #include <algorithm>
@@ -30,6 +28,7 @@
 #include "Formatter.hpp"
 #include "ExifWrapper.hpp"
 #include "xThreadGuard.hpp"
+#include "WaitCursor.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
 
@@ -908,7 +907,7 @@ void SortedImageModel::sort(int column, Qt::SortOrder order)
     
     if(d->directoryWorker && d->directoryWorker->future().isFinished())
     {
-        QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        WaitCursor w;
         
         d->setStatusMessage(0, "Sorting entries");
         this->beginResetModel();
@@ -928,8 +927,6 @@ void SortedImageModel::sort(int column, Qt::SortOrder order)
         
         this->endResetModel();
         d->setStatusMessage(100, "Sorting complete");
-        
-        QGuiApplication::restoreOverrideCursor();
     }
 }
 
