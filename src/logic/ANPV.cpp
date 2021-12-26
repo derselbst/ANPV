@@ -369,10 +369,43 @@ void ANPV::setCurrentDir(QString str)
     }
 }
 
-void ANPV::restoreSavedDir()
+QString ANPV::savedCurrentDir()
 {
+    xThreadGuard g(this);
     QSettings settings;
-    this->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
+    return settings.value("currentDir", qgetenv("HOME")).toString();
+}
+
+void ANPV::fixupAndSetCurrentDir(QString str)
+{
+    xThreadGuard g(this);
+
+    QDir fixedDir;
+    QDir wantedDir(str);
+    if (wantedDir.exists() && wantedDir.isReadable())
+    {
+        fixedDir = wantedDir;
+    }
+    else
+    {
+        wantedDir = QDir::home();
+        if (wantedDir.exists() && wantedDir.isReadable())
+        {
+            fixedDir = wantedDir;
+        }
+        else
+        {
+            fixedDir = QDir::root();
+        }
+        QString text = QStringLiteral(
+            "ANPV was unable to access the last opened directory:\n\n"
+            "%1\n\n"
+            "Using %2 instead."
+        ).arg(str).arg(fixedDir.absolutePath());
+        QMessageBox::information(nullptr, "Unable to restore last directory", text);
+    }
+
+    this->setCurrentDir(fixedDir.absolutePath());
 }
 
 ViewMode ANPV::viewMode()

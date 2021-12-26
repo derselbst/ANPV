@@ -34,16 +34,19 @@ int main(int argc, char *argv[])
     
     QSplashScreen splash(QPixmap(":/images/splash.jpg"));
     splash.show();
+
+    splash.showMessage("Initialize Decoder Factory");
     
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
 
     ANPV anpv(&splash);
     
+    QDir cur = anpv.currentDir();
     switch(argc)
     {
     case 1:
-        anpv.restoreSavedDir();
+        anpv.savedCurrentDir();
         anpv.showThumbnailView();
         break;
     case 2:

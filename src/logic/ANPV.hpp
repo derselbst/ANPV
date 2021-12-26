@@ -78,7 +78,8 @@ public:
     
     QDir currentDir();
     void setCurrentDir(QString str);
-    void restoreSavedDir();
+    QString savedCurrentDir();
+    void fixupAndSetCurrentDir(QString str);
     
     Qt::SortOrder sortOrder();
     void setSortOrder(Qt::SortOrder);
