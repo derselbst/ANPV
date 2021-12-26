@@ -129,7 +129,7 @@ jobs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed
           artifactName: vcpkg-deps-$(platform)-$(poo)
       condition: or(succeeded(), failed())
-      enabled: true
+      enabled: false
     - bash: |
         set -ex
         mkdir build
