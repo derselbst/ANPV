@@ -308,7 +308,7 @@ struct MainWindow::Impl
         ANPV::globalInstance()->setCurrentDir(info.absoluteFilePath());
     }
     
-    void onCurrentDirChanged(QDir& newDir, QDir&)
+    void onCurrentDirChanged(QDir newDir, QDir)
     {
         QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir.absolutePath());
         ui->fileSystemTreeView->setCurrentIndex(mo);
@@ -454,7 +454,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
     
-    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QDir newD, QDir old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QFileInfo newD, QFileInfo old){ d->onCurrentDirChanged(newD.dir(), old.dir()); }, Qt::QueuedConnection);
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);

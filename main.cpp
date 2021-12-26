@@ -42,11 +42,12 @@ int main(int argc, char *argv[])
 
     ANPV anpv(&splash);
     
-    QDir cur = anpv.currentDir();
+    QFileInfo cur = anpv.currentDir();
+    QString a = cur.filePath();
     switch(argc)
     {
     case 1:
-        anpv.savedCurrentDir();
+        anpv.fixupAndSetCurrentDir(anpv.savedCurrentDir());
         anpv.showThumbnailView();
         break;
     case 2:

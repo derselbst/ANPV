@@ -67,7 +67,7 @@ struct ThumbnailListView::Impl
         {
             return;
         }
-        QDir currentDir = ANPV::globalInstance()->currentDir();
+        QDir currentDir = ANPV::globalInstance()->currentDir().dir();
         if(QDir(dest) == currentDir)
         {
             QMessageBox::information(q, "That doesn't work", "Destination folder cannot be equal with source folder!");
