@@ -541,7 +541,7 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     d->centerMessageWidget(wndSize);
     if(d->currentImageDecoder)
     {
-        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
+        this->showImage(d->currentImageDecoder->image());
     }
 
     QGraphicsView::resizeEvent(event);
