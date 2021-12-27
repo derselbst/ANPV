@@ -137,11 +137,16 @@ struct DocumentView::Impl
     
     void alignImageAccordingToViewMode(const QSharedPointer<Image>& img)
     {
+        auto exif = img->exif();
+        
         auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             p->resetTransform();
-            p->setTransform(img->exif()->transformMatrix(), true);
+            if(exif)
+            {
+                p->setTransform(exif->transformMatrix(), true);
+            }
             p->fitInView(p->sceneRect(), Qt::KeepAspectRatio);
         }
         else if(viewMode == ViewMode::None)
@@ -539,7 +544,7 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     d->centerMessageWidget(wndSize);
     if(d->currentImageDecoder)
     {
-        this->showImage(d->currentImageDecoder->image());
+        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
     }
 
     QGraphicsView::resizeEvent(event);

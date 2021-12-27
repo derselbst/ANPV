@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
         
         splash.showMessage("Starting the image decoding task...");
         anpv.openImages(files);
+        splash.close();
     }
     break;
     }
