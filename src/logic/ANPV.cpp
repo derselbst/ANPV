@@ -120,7 +120,11 @@ struct ANPV::Impl
     QActionGroup* actionGroupFileOperation = nullptr;
     QUndoStack* undoStack = nullptr;
     
-    QDir currentDir;
+    // Use a simple string for the currentDir, because:
+    // QDir lacks a "null" value, as it defaults to the current working directory
+    // And
+    // QFileInfo sometimes implicitly takes the parent directory, even if the path passed in already is a directory
+    QString currentDir;
     ViewMode viewMode = ViewMode::Unknown;
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
@@ -162,7 +166,7 @@ struct ANPV::Impl
                     this->drawNoPreviewPixmap();
                 });
         connect(q, &ANPV::currentDirChanged, q,
-                [&](QDir,QDir)
+                [&](QString,QString)
                 {
                     auto fut = this->fileModel->changeDirAsync(this->currentDir);
                     this->mainWindow->setBackgroundTask(fut);
@@ -173,10 +177,10 @@ struct ANPV::Impl
     {
         QSettings settings;
 
-        QFileInfo curDir = q->currentDir();
-        if(!curDir.filePath().isEmpty())
+        QString curDir = q->currentDir();
+        if(!curDir.isEmpty())
         {
-            settings.setValue("currentDir", q->currentDir().absolutePath());
+            settings.setValue("currentDir", curDir);
         }
         else
         {
@@ -360,7 +364,7 @@ QSharedPointer<SortedImageModel> ANPV::fileModel()
     return d->fileModel;
 }
 
-QDir ANPV::currentDir()
+QString ANPV::currentDir()
 {
     xThreadGuard g(this);
     return d->currentDir;
@@ -370,11 +374,19 @@ void ANPV::setCurrentDir(QString str)
 {
     xThreadGuard g(this);
     
-    QDir old = d->currentDir;
+    QDir old(d->currentDir);
+    QDir newDir(str);
+    
+    if(!newDir.exists())
+    {
+        qWarning() << "ANPV::setCurrentDir(): ignoring non-existing new directory " << newDir;
+        return;
+    }
+    
     if(old != str)
     {
-        d->currentDir = str;
-        emit this->currentDirChanged(str, old);
+        d->currentDir = newDir.absolutePath();
+        emit this->currentDirChanged(d->currentDir, old.absolutePath());
     }
 }
 
@@ -616,7 +628,7 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
     xThreadGuard g(this);
-    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
+    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir() : proposedDirToOpen;
     
     static const QStringList schemes = QStringList(QStringLiteral("file"));
     

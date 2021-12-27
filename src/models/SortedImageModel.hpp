@@ -41,7 +41,7 @@ public:
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
     
-    QFuture<DecodingState> changeDirAsync(const QDir& dir);
+    QFuture<DecodingState> changeDirAsync(const QString& dir);
     void run() override;
     
     using QAbstractListModel::index; // don't hide base member

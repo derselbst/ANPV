@@ -76,7 +76,7 @@ public:
     void setViewFlag(ViewFlag, bool on=true);
     void setViewFlags(ViewFlags_t);
     
-    QDir currentDir();
+    QString currentDir();
     void setCurrentDir(QString str);
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
@@ -99,7 +99,7 @@ public:
     QString getExistingDirectory(QWidget* parent, QString& proposedDirToOpen);
 
 signals:
-    void currentDirChanged(QDir dir, QDir old);
+    void currentDirChanged(QString dir, QString old);
     void viewModeChanged(ViewMode newView, ViewMode old);
     void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
     void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
