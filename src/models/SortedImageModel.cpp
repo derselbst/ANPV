@@ -608,14 +608,14 @@ SortedImageModel::~SortedImageModel()
     xThreadGuard(this);
 }
 
-QFuture<DecodingState> SortedImageModel::changeDirAsync(const QDir& dir)
+QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
     xThreadGuard g(this);
 
     this->beginRemoveRows(QModelIndex(), 0, rowCount());
     d->clear();
     
-    d->currentDir = dir;
+    d->currentDir = QDir(dir);
     this->endRemoveRows();
 
     QThreadPool::globalInstance()->start(this, static_cast<int>(Priority::Normal));

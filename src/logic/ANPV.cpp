@@ -120,7 +120,11 @@ struct ANPV::Impl
     QActionGroup* actionGroupFileOperation = nullptr;
     QUndoStack* undoStack = nullptr;
     
-    QDir currentDir;
+    // Use a simple string for the currentDir, because:
+    // QDir lacks a "null" value, as it defaults to the current working directory
+    // And
+    // QFileInfo sometimes implicitly takes the parent directory, even if the path passed in already is a directory
+    QString currentDir;
     ViewMode viewMode = ViewMode::Unknown;
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
@@ -162,7 +166,7 @@ struct ANPV::Impl
                     this->drawNoPreviewPixmap();
                 });
         connect(q, &ANPV::currentDirChanged, q,
-                [&](QDir,QDir)
+                [&](QString,QString)
                 {
                     auto fut = this->fileModel->changeDirAsync(this->currentDir);
                     this->mainWindow->setBackgroundTask(fut);
@@ -173,7 +177,15 @@ struct ANPV::Impl
     {
         QSettings settings;
 
-        settings.setValue("currentDir", q->currentDir().absolutePath());
+        QString curDir = q->currentDir();
+        if(!curDir.isEmpty())
+        {
+            settings.setValue("currentDir", curDir);
+        }
+        else
+        {
+            qDebug() << "ANPV::writeSettings(): currentDir is empty, skipping";
+        }
         settings.setValue("viewMode", static_cast<int>(q->viewMode()));
         settings.setValue("viewFlags", q->viewFlags());
         settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
@@ -200,7 +212,6 @@ struct ANPV::Impl
     {
         QSettings settings;
 
-        q->setCurrentDir(settings.value("currentDir", qgetenv("HOME")).toString());
         q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)).toUInt());
         q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
@@ -322,14 +333,12 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
-    d->mainWindow->show();
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
     d->mainWindow->readSettings();
     
     splash->showMessage("ANPV initialized, waiting for Qt-Framework getting it's events processed...");
-    splash->finish(d->mainWindow.get());
 }
 
 ANPV::~ANPV()
@@ -354,7 +363,7 @@ QSharedPointer<SortedImageModel> ANPV::fileModel()
     return d->fileModel;
 }
 
-QDir ANPV::currentDir()
+QString ANPV::currentDir()
 {
     xThreadGuard g(this);
     return d->currentDir;
@@ -364,12 +373,59 @@ void ANPV::setCurrentDir(QString str)
 {
     xThreadGuard g(this);
     
-    QDir old = d->currentDir;
+    QDir old(d->currentDir);
+    QDir newDir(str);
+    
+    if(!newDir.exists())
+    {
+        qWarning() << "ANPV::setCurrentDir(): ignoring non-existing new directory " << newDir;
+        return;
+    }
+    
     if(old != str)
     {
-        d->currentDir = str;
-        emit this->currentDirChanged(str, old);
+        d->currentDir = newDir.absolutePath();
+        emit this->currentDirChanged(d->currentDir, old.absolutePath());
     }
+}
+
+QString ANPV::savedCurrentDir()
+{
+    xThreadGuard g(this);
+    QSettings settings;
+    return settings.value("currentDir", qgetenv("HOME")).toString();
+}
+
+void ANPV::fixupAndSetCurrentDir(QString str)
+{
+    xThreadGuard g(this);
+
+    QDir fixedDir;
+    QDir wantedDir(str);
+    if (wantedDir.exists() && wantedDir.isReadable())
+    {
+        fixedDir = wantedDir;
+    }
+    else
+    {
+        wantedDir = QDir::home();
+        if (wantedDir.exists() && wantedDir.isReadable())
+        {
+            fixedDir = wantedDir;
+        }
+        else
+        {
+            fixedDir = QDir::root();
+        }
+        QString text = QStringLiteral(
+            "ANPV was unable to access the last opened directory:\n\n"
+            "%1\n\n"
+            "Using %2 instead."
+        ).arg(str).arg(fixedDir.absolutePath());
+        QMessageBox::information(nullptr, "Unable to restore last directory", text);
+    }
+
+    this->setCurrentDir(fixedDir.absolutePath());
 }
 
 ViewMode ANPV::viewMode()
@@ -474,12 +530,19 @@ void ANPV::setIconHeight(int h)
     }
 }
 
-void ANPV::showThumbnailView(QSharedPointer<Image> img)
+void ANPV::showThumbnailView()
 {
     xThreadGuard g(this);
+    d->mainWindow->show();
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();
+}
+
+void ANPV::showThumbnailView(QSplashScreen* splash)
+{
+    this->showThumbnailView();
+    splash->finish(d->mainWindow.get());
 }
 
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
@@ -570,7 +633,7 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
     xThreadGuard g(this);
-    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir().absolutePath() : proposedDirToOpen;
+    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir() : proposedDirToOpen;
     
     static const QStringList schemes = QStringList(QStringLiteral("file"));
     

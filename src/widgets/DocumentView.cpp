@@ -137,11 +137,16 @@ struct DocumentView::Impl
     
     void alignImageAccordingToViewMode(const QSharedPointer<Image>& img)
     {
+        auto exif = img->exif();
+        
         auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             p->resetTransform();
-            p->setTransform(img->exif()->transformMatrix(), true);
+            if(exif)
+            {
+                p->setTransform(exif->transformMatrix(), true);
+            }
             p->fitInView(p->sceneRect(), Qt::KeepAspectRatio);
         }
         else if(viewMode == ViewMode::None)
@@ -553,7 +558,11 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Escape:
             // intentionally ignore the event, so that it can be processed by the parent view (MultiDocumentView)
             event->ignore();
-            ANPV::globalInstance()->showThumbnailView(d->currentImageDecoder->image());
+            if(ANPV::globalInstance()->currentDir().isEmpty() && d->currentImageDecoder)
+            {
+                ANPV::globalInstance()->setCurrentDir(d->currentImageDecoder->image()->fileInfo().dir().absolutePath());
+            }
+            ANPV::globalInstance()->showThumbnailView();
             this->close();
             break;
         default:
@@ -561,7 +570,6 @@ void DocumentView::keyPressEvent(QKeyEvent *event)
             break;
     }
 }
-
 
 void DocumentView::mouseMoveEvent(QMouseEvent *event)
 {

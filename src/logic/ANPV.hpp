@@ -61,7 +61,8 @@ public:
     ~ANPV() override;
 
     void openImages(const QList<QSharedPointer<Image>>&);
-    void showThumbnailView(QSharedPointer<Image> img);
+    void showThumbnailView();
+    void showThumbnailView(QSplashScreen*);
     
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
     
@@ -76,8 +77,10 @@ public:
     void setViewFlag(ViewFlag, bool on=true);
     void setViewFlags(ViewFlags_t);
     
-    QDir currentDir();
+    QString currentDir();
     void setCurrentDir(QString str);
+    QString savedCurrentDir();
+    void fixupAndSetCurrentDir(QString str);
     
     Qt::SortOrder sortOrder();
     void setSortOrder(Qt::SortOrder);
@@ -97,7 +100,7 @@ public:
     QString getExistingDirectory(QWidget* parent, QString& proposedDirToOpen);
 
 signals:
-    void currentDirChanged(QDir dir, QDir old);
+    void currentDirChanged(QString dir, QString old);
     void viewModeChanged(ViewMode newView, ViewMode old);
     void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
     void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);

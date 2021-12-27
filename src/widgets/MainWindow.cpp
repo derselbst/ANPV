@@ -308,13 +308,13 @@ struct MainWindow::Impl
         ANPV::globalInstance()->setCurrentDir(info.absoluteFilePath());
     }
     
-    void onCurrentDirChanged(QDir& newDir, QDir&)
+    void onCurrentDirChanged(QString& newDir, QString&)
     {
-        QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir.absolutePath());
+        QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir);
         ui->fileSystemTreeView->setCurrentIndex(mo);
         
         // if the newDir was triggered by an activiation in the treeView, do not scroll around
-        if(newDir != rememberedActivatedDir)
+        if(QDir(newDir) != rememberedActivatedDir)
         {
             // vertically scroll to center
             ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::PositionAtCenter);
@@ -323,7 +323,7 @@ struct MainWindow::Impl
         }
         rememberedActivatedDir = QDir();
 
-        q->setWindowTitle(newDir.absolutePath() + " :: ANPV");
+        q->setWindowTitle(newDir + " :: ANPV");
     }
     
     void onIconHeightChanged(int h, int old)
@@ -453,8 +453,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->fileSystemTreeView, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
-    
-    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QDir newD, QDir old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
+
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QString newD, QString old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);

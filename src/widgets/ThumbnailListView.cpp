@@ -110,7 +110,7 @@ struct ThumbnailListView::Impl
 
     void openContainingFolder()
     {
-        QDesktopServices::openUrl(QUrl::fromLocalFile(ANPV::globalInstance()->currentDir().absolutePath()));
+        QDesktopServices::openUrl(QUrl::fromLocalFile(ANPV::globalInstance()->currentDir()));
     }
     
     void openSelectionInternally()
