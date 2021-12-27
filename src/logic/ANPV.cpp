@@ -173,7 +173,15 @@ struct ANPV::Impl
     {
         QSettings settings;
 
-        settings.setValue("currentDir", q->currentDir().absolutePath());
+        QFileInfo curDir = q->currentDir();
+        if(!curDir.filePath().isEmpty())
+        {
+            settings.setValue("currentDir", q->currentDir().absolutePath());
+        }
+        else
+        {
+            qDebug() << "ANPV::writeSettings(): currentDir is empty, skipping";
+        }
         settings.setValue("viewMode", static_cast<int>(q->viewMode()));
         settings.setValue("viewFlags", q->viewFlags());
         settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));

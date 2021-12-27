@@ -454,7 +454,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
     
-    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QFileInfo newD, QFileInfo old){ d->onCurrentDirChanged(newD.dir(), old.dir()); }, Qt::QueuedConnection);
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QFileInfo newD, QFileInfo old){ d->onCurrentDirChanged(newD.absoluteDir(), old.absoluteDir()); }, Qt::QueuedConnection);
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
     
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
