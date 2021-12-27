@@ -120,7 +120,7 @@ struct ANPV::Impl
     QActionGroup* actionGroupFileOperation = nullptr;
     QUndoStack* undoStack = nullptr;
     
-    QFileInfo currentDir;
+    QDir currentDir;
     ViewMode viewMode = ViewMode::Unknown;
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
     Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
@@ -162,9 +162,9 @@ struct ANPV::Impl
                     this->drawNoPreviewPixmap();
                 });
         connect(q, &ANPV::currentDirChanged, q,
-                [&](QFileInfo, QFileInfo)
+                [&](QDir,QDir)
                 {
-                    auto fut = this->fileModel->changeDirAsync(this->currentDir.dir());
+                    auto fut = this->fileModel->changeDirAsync(this->currentDir);
                     this->mainWindow->setBackgroundTask(fut);
                 });
     }
@@ -360,7 +360,7 @@ QSharedPointer<SortedImageModel> ANPV::fileModel()
     return d->fileModel;
 }
 
-QFileInfo ANPV::currentDir()
+QDir ANPV::currentDir()
 {
     xThreadGuard g(this);
     return d->currentDir;
@@ -369,13 +369,12 @@ QFileInfo ANPV::currentDir()
 void ANPV::setCurrentDir(QString str)
 {
     xThreadGuard g(this);
-    QFileInfo newDir(str);
-    Q_ASSERT(newDir.isDir());
-    QFileInfo old = d->currentDir;
-    if(old != newDir)
+    
+    QDir old = d->currentDir;
+    if(old != str)
     {
-        d->currentDir = newDir;
-        emit this->currentDirChanged(newDir, old);
+        d->currentDir = str;
+        emit this->currentDirChanged(str, old);
     }
 }
 
