@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     switch(argc)
     {
     case 1:
-        anpv.savedCurrentDir();
+        anpv.fixupAndSetCurrentDir(anpv.savedCurrentDir());
         anpv.showThumbnailView();
         break;
     case 2:
