@@ -278,8 +278,9 @@ void ThumbnailListView::setSelection(const QRect &rect, QItemSelectionModel::Sel
     else
     {
         // logical selection mode (key and mouse click selection)
-        QModelIndex firstIndex = this->indexAt(rect.topLeft());
-        QModelIndex lastIndex = this->indexAt(rect.bottomRight());
+        QRect normalRect(rect.normalized());
+        QModelIndex firstIndex = this->indexAt(normalRect.topLeft());
+        QModelIndex lastIndex = this->indexAt(normalRect.bottomRight());
         
         QItemSelection selection;
         if (firstIndex.isValid() && lastIndex.isValid())
