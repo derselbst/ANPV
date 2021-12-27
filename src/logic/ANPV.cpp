@@ -339,7 +339,6 @@ ANPV::ANPV(QSplashScreen *splash)
     d->mainWindow->readSettings();
     
     splash->showMessage("ANPV initialized, waiting for Qt-Framework getting it's events processed...");
-    splash->finish(d->mainWindow.get());
 }
 
 ANPV::~ANPV()
@@ -538,6 +537,12 @@ void ANPV::showThumbnailView()
     d->mainWindow->setWindowState( (d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();
+}
+
+void ANPV::showThumbnailView(QSplashScreen* splash)
+{
+    this->showThumbnailView();
+    splash->finish(d->mainWindow.get());
 }
 
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)

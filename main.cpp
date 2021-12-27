@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     {
     case 1:
         anpv.fixupAndSetCurrentDir(anpv.savedCurrentDir());
-        anpv.showThumbnailView();
+        anpv.showThumbnailView(&splash);
         break;
     case 2:
     {
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
             if(info.isDir())
             {
                 anpv.setCurrentDir(info.absoluteFilePath());
-                anpv.showThumbnailView();
+                anpv.showThumbnailView(&splash);
                 break;
             }
             else if(info.isFile())
@@ -82,12 +82,6 @@ int main(int argc, char *argv[])
         {
             files.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString(argv[i]))));
         }
-        
-        // create symlinks into temporary dir
-        
-        // maybe change path to temp dir, maybe not
-        
-        // open images
         
         splash.showMessage("Starting the image decoding task...");
         anpv.openImages(files);

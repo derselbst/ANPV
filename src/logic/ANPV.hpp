@@ -62,6 +62,7 @@ public:
 
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView();
+    void showThumbnailView(QSplashScreen*);
     
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
     
