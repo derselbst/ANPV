@@ -89,7 +89,7 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
         DocumentView* dv = new DocumentView(d->tw);
 
         connect(dv, &DocumentView::imageChanged, this,
-        [&](QSharedPointer<Image> img)
+        [=](QSharedPointer<Image> img)
         {
             int idx = d->tw->indexOf(dv);
             if(idx >= 0)
