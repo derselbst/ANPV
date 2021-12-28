@@ -19,6 +19,7 @@
 #include <QPromise>
 #include <QDir>
 #include <QMessageBox>
+#include <QThread>
 
 #include <chrono>
 #include <thread>
@@ -37,6 +38,9 @@ int main(int argc, char *argv[])
 
     splash.showMessage("Initialize Decoder Factory");
     
+    // set UI Thread to high prio
+    QThread::currentThread()->setPriority(QThread::HighestPriority);
+
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
 
