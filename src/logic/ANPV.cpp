@@ -382,7 +382,7 @@ void ANPV::setCurrentDir(QString str)
         return;
     }
     
-    if(old != str)
+    if(d->currentDir != str)
     {
         d->currentDir = newDir.absolutePath();
         emit this->currentDirChanged(d->currentDir, old.absolutePath());
