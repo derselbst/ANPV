@@ -431,7 +431,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
-    d->cancellableWidget = new CancellableProgressWidget(this);
     
     splash->showMessage("Initializing MainWindow Widgets");
     d->ui->fileSystemTreeView->setHeaderHidden(true);
@@ -485,17 +484,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
 {
-    xThreadGuard(this);
+    xThreadGuard g(this);
 
-    d->cancellableWidget->setFuture(fut);
-    this->statusBar()->addPermanentWidget(d->cancellableWidget, 1);
-    d->cancellableWidget->show();
+    d->ui->cancellableWidget->setFuture(fut);
+    d->ui->cancellableWidget->show();
 }
 
 void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
 {
-    this->statusBar()->removeWidget(d->cancellableWidget);
-    d->cancellableWidget->hide();
+    xThreadGuard g(this);
+
+    d->ui->cancellableWidget->hide();
 }
 
 void MainWindow::setCurrentIndex(QSharedPointer<Image> img)
