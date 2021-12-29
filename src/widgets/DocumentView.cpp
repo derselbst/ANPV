@@ -672,6 +672,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
         d->thumbnailPreviewOverlay->hide();
         break;
     }
+    case DecodingState::Fatal:
     case DecodingState::Error:
         d->currentDocumentPixmap = QPixmap();
         d->setDocumentError(dec->image());
