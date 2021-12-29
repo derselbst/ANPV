@@ -121,7 +121,7 @@ struct ThumbnailListView::Impl
         {
             ANPV::globalInstance()->setCurrentDir(imgs[0]->fileInfo().absoluteFilePath());
         }
-        else
+        else if(imgs.size() != 0)
         {
             ANPV::globalInstance()->openImages(imgs);
         }

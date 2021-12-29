@@ -548,6 +548,11 @@ void ANPV::showThumbnailView(QSplashScreen* splash)
 void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     xThreadGuard g(this);
+    if(image.isEmpty())
+    {
+        qDebug() << "ANPV::openImages() received an empty list, ignoring.";
+        return;
+    }
     WaitCursor w;
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
     mdv->addImages(image, d->fileModel);
