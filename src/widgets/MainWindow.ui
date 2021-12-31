@@ -92,10 +92,6 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="actionOpen_Image"/>
-    <addaction name="separator"/>
-    <addaction name="action_Empty"/>
-    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -260,7 +256,10 @@
     <string>Combine RAWs and JPGs</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If a RAW file (e.g. .CR2 or .TIF) has a similar named .JPG file, only display the JPG and hide the RAWs.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If a RAW file (e.g. .CR2 or .NEF) has a similar named .JPG file, only display the JPG and hide the RAWs.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="statusTip">
+    <string>If a RAW file (e.g. .CR2 or .NEF) has a similar named .JPG file, only display the JPG and hide the RAWs.</string>
    </property>
    <property name="shortcut">
     <string>F6</string>
@@ -312,6 +311,9 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This will preserve the zoom factor, while making sure to transpose the image so that the AF points which are &amp;quot;in-focus&amp;quot; are located in the center of the FOV. If no AF data is available, no transposing takes place.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="statusTip">
+    <string>This will preserve the zoom factor, while making sure to transpose the image so that the AF points which are &quot;in-focus&quot; are located in the center of the FOV. If no AF data is available, no transposing takes place.</string>
    </property>
    <property name="shortcut">
     <string>F8</string>
@@ -385,6 +387,9 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shows the AutoFocus Points available in the EXIF metadata. Currently only supported for Canon cameras.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="statusTip">
+    <string>Shows the AutoFocus Points available in the EXIF metadata. Currently only supported for Canon cameras.</string>
    </property>
    <property name="shortcut">
     <string>F7</string>

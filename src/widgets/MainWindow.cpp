@@ -235,22 +235,16 @@ struct MainWindow::Impl
         });
         this->refreshCopyMoveActions();
 
-        ui->actionExit->setShortcuts(QKeySequence::Quit);
-        connect(ui->actionExit, &QAction::triggered, q,
-                [&]()
-                {
-                    QString pretty = QKeySequence(QKeySequence::Quit).toString();
-                    if (QMessageBox::Yes == QMessageBox::question(q, "Close Confirmation", QString("%1 was hit, exit?").arg(pretty), QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
-                    {
-                        QApplication::closeAllWindows();
-                    }
-                });
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
     }
     
     void createMenus()
     {
+        ui->menuFile->addAction(ANPV::globalInstance()->actionOpen());
+        ui->menuFile->addSeparator();
+        ui->menuFile->addAction(ANPV::globalInstance()->actionExit());
+        
         ui->menuEdit->addAction(actionUndo);
         ui->menuEdit->addAction(actionRedo);
         ui->menuEdit->addSeparator();

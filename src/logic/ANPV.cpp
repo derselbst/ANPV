@@ -37,6 +37,7 @@
 #include <QMimeData>
 
 #include "DocumentView.hpp"
+#include "DecoderFactory.hpp"
 #include "Image.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
@@ -118,6 +119,9 @@ struct ANPV::Impl
     QFileSystemModel* dirModel = nullptr;
     QSharedPointer<SortedImageModel> fileModel = nullptr;
     QActionGroup* actionGroupFileOperation = nullptr;
+    QAction* actionOpen = nullptr;
+    QString lastOpenImageDir;
+    QAction* actionExit = nullptr;
     QUndoStack* undoStack = nullptr;
     
     // Use a simple string for the currentDir, because:
@@ -154,6 +158,34 @@ struct ANPV::Impl
         this->fileModel.reset(new SortedImageModel(q));
         
         this->actionGroupFileOperation = new QActionGroup(q);
+        this->actionExit = new QAction("Close", q);
+        this->actionExit->setShortcuts(QKeySequence::Quit);
+        this->actionExit->setShortcutContext(Qt::ApplicationShortcut);
+        connect(this->actionExit, &QAction::triggered, q,
+                [&]()
+                {
+                    QString pretty = QKeySequence(QKeySequence::Quit).toString();
+                    if (QMessageBox::Yes == QMessageBox::question(QApplication::focusWidget(), "Close Confirmation", QString("%1 was hit, exit?").arg(pretty), QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
+                    {
+                        QApplication::closeAllWindows();
+                    }
+                });
+        this->actionOpen = new QAction("Open Image", q);
+        this->actionOpen->setShortcuts({Qt::CTRL | Qt::Key_O});
+        this->actionOpen->setShortcutContext(Qt::ApplicationShortcut);
+        connect(this->actionOpen, &QAction::triggered, q,
+                [&]()
+                {
+                    QList<QString> files = q->getExistingFile(QApplication::focusWidget(), lastOpenImageDir);
+                    
+                    QList<QSharedPointer<Image>> images;
+                    images.reserve(files.size());
+                    for(auto& f : files)
+                    {
+                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)));
+                    }
+                    q->openImages(images);
+                });
         this->undoStack = new QUndoStack(q);
     }
     
@@ -635,6 +667,25 @@ void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)
     mimeData->setData(Impl::kdeUriListMime(), Impl::uriListData(localUrls));
 }
 
+QList<QString> ANPV::getExistingFile(QWidget* parent, QString& proposedDirToOpen)
+{
+    xThreadGuard g(this);
+    QString dirToOpen = proposedDirToOpen.isEmpty() ? this->currentDir() : proposedDirToOpen;
+    
+    QFileDialog diag(parent, "Select Target Directory", dirToOpen);
+    diag.setFileMode(QFileDialog::ExistingFiles);
+    diag.setViewMode(QFileDialog::Detail);
+    diag.setIconProvider(d->noIconProvider.get());
+    diag.setOptions(QFileDialog::DontUseCustomDirectoryIcons);
+    
+    if (diag.exec() == QDialog::Accepted)
+    {
+        proposedDirToOpen = QFileInfo(diag.selectedFiles().value(0)).absolutePath();
+        return diag.selectedFiles();
+    }
+    return {};
+}
+
 QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
 {
     xThreadGuard g(this);
@@ -657,6 +708,16 @@ QString ANPV::getExistingDirectory(QWidget* parent, QString& proposedDirToOpen)
     }
     
     return dir;
+}
+
+QAction* ANPV::actionOpen()
+{
+    return d->actionOpen;
+}
+
+QAction* ANPV::actionExit()
+{
+    return d->actionExit;
 }
 
 void ANPV::about()

@@ -21,6 +21,7 @@ class QAbstractFileIconProvider;
 class SmartImageDecoder;
 class CancellableProgressWidget;
 class QMimeData;
+class QAction;
 
 template<typename T>
 class QFuture;
@@ -94,9 +95,12 @@ public:
     QPixmap noIconPixmap();
     QPixmap noPreviewPixmap();
     
+    QAction* actionOpen();
+    QAction* actionExit();
     QActionGroup* copyMoveActionGroup();
     QUndoStack* undoStack();
     
+    QList<QString> getExistingFile(QWidget* parent, QString& proposedDirToOpen);
     QString getExistingDirectory(QWidget* parent, QString& proposedDirToOpen);
 
 signals:
