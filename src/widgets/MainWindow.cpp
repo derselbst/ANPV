@@ -111,6 +111,13 @@ struct MainWindow::Impl
         makeTriggerAction(ui->actionShow_AF_Points, ViewFlag::ShowAfPoints);
         makeTriggerAction(ui->actionRespect_EXIF_orientation, ViewFlag::RespectExifOrientation);
         makeTriggerAction(ui->actionCenter_AF_focus_point, ViewFlag::CenterAf);
+
+        connect(ui->actionReload, &QAction::triggered, q,
+            [&](bool)
+            {
+                ANPV::globalInstance()->fileModel()->changeDirAsync(ANPV::globalInstance()->currentDir());
+            }
+        );
     }
     
     void createSortActions()
