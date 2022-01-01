@@ -464,7 +464,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     for (unsigned i = 0; i < linesToCopy; i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(linesToCopy-i-1)*tw], 1, widthToCopy);
+                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
                     this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
