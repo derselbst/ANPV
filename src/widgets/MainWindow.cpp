@@ -71,7 +71,9 @@ struct MainWindow::Impl
     
     void addSlowHint(QAction* action)
     {
-        action->setToolTip("This option requires to read EXIF metadata from the file. Therefore, performance greatly suffers when accessing directories that contain many files.");
+        static const char tip[] = "This option requires to read EXIF metadata from the file. Therefore, performance greatly suffers when accessing directories that contain many files.";
+        action->setToolTip(tip);
+        action->setStatusTip(tip);
     }
     
     void createViewActions()
