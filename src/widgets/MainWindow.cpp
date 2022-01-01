@@ -426,6 +426,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
  : QMainWindow(), d(std::make_unique<Impl>(this))
 {
     this->setWindowTitle("ANPV");
+    this->setWindowFlags(this->windowFlags() | Qt::WindowContextHelpButtonHint);
     
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
