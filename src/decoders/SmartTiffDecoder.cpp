@@ -248,7 +248,7 @@ struct SmartTiffDecoder::Impl
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
                std::fabs(aspect - fullImgAspect) < 0.1 && // aspect matches?
-               (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)) // at least 200 px in one dimension
+               (ret == -1 || (pageInfo[i].width >= 200 || pageInfo[i].height >= 200))) // at least 200 px in one dimension, if we have the choice
             {
                 ret = i;
                 res = len;
