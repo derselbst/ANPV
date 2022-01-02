@@ -2,6 +2,7 @@
 #include "SmartTiffDecoder.hpp"
 #include "Formatter.hpp"
 #include "Image.hpp"
+#include "ANPV.hpp"
 
 #include <cstdio>
 #include <cmath>
@@ -248,7 +249,10 @@ struct SmartTiffDecoder::Impl
             auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
             if(res > len && // current resolution smaller than previous?
                std::fabs(aspect - fullImgAspect) < 0.1 && // aspect matches?
-               (ret == -1 || (pageInfo[i].width >= 200 || pageInfo[i].height >= 200))) // at least 200 px in one dimension, if we have the choice
+               // we do not have a suitable page yet, ensure to not pick every page, i.e. it should be smaller than the double of MaxIconHeight
+               (ret == -1 && !(pageInfo[i].width >= ANPV::MaxIconHeight*2 || pageInfo[i].height >= ANPV::MaxIconHeight*2)
+               // if we do have a suitable make, make sure it's one bigger 200px
+               || (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)))
             {
                 ret = i;
                 res = len;
