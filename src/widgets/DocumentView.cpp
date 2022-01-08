@@ -85,7 +85,7 @@ struct DocumentView::Impl
         this->clearScene();
     }
     
-    void clearScene()
+    void cancelCurrentDecoding()
     {
         bool isFinished = taskFuture.isFinished();
         bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
@@ -98,6 +98,11 @@ struct DocumentView::Impl
             }
             taskFuture.setFuture(QFuture<DecodingState>());
         }
+    }
+    
+    void clearScene()
+    {
+        this->cancelCurrentDecoding();
         
         if(currentImageDecoder)
         {
@@ -225,6 +230,36 @@ struct DocumentView::Impl
         }
     }
     
+    void startImageDecoding()
+    {
+        this->cancelCurrentDecoding();
+
+        // get the area of what the user sees
+        QRect viewportRect = p->viewport()->rect();
+
+        // and map that rect to scene coordinates
+        QRectF viewportRectScene = p->mapToScene(viewportRect).boundingRect();
+
+        // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
+        // Also, intentionally use thumbnailPreviewOverlay, as the boundingRect() of currentPixmapOverlay may be zero,
+        // because no Pixmap is set.
+        QRectF visPixRect = viewportRectScene.intersected(thumbnailPreviewOverlay->sceneBoundingRect());
+
+        // the GraphicsView may have been scaled; we must translate the visible rectangle
+        // (which is in scene coordinates) into the view's coordinates
+        QRectF visPixRectMappedToView = p->mapFromScene(visPixRect).boundingRect();
+
+        auto fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, visPixRectMappedToView.toAlignedRect().size(), visPixRect.toAlignedRect());
+        this->taskFuture.setFuture(fut);
+    }
+    
+    void onFOVChanged()
+    {
+        qDebug() << "onfovchanged()";
+        this->startImageDecoding();
+//         this->createSmoothPixmap();
+    }
+    
     void addThumbnailPreview(QSharedPointer<Image> img)
     {
         QImage thumb = img->thumbnail();
@@ -330,6 +365,7 @@ struct DocumentView::Impl
             if(newImg)
             {
                 p->loadImage(newImg);
+                this->startImageDecoding();
             }
         }
     }
@@ -467,7 +503,7 @@ DocumentView::DocumentView(QWidget *parent)
 
     d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
-    connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ emit d->createSmoothPixmap();});
+    connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ d->onFOVChanged();});
     
     d->onViewFlagsChanged(ANPV::globalInstance()->viewFlags());
     connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
@@ -633,6 +669,10 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
 
+    QSize fullImageSize = img->size();
+    auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
+    d->currentPixmapOverlay->setScale(newScale);
+
     d->scene->invalidate();
 }
 
@@ -663,10 +703,6 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     case DecodingState::FullImage:
     {
         this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
-
-        QSize fullImageSize = dec->image()->size();
-        auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
-        d->currentPixmapOverlay->setScale(newScale);
         
         d->createSmoothPixmap();
         d->thumbnailPreviewOverlay->hide();
@@ -796,9 +832,6 @@ void DocumentView::loadImage()
     
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
-
-    auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->screen()->geometry().size());
-    d->taskFuture.setFuture(fut);
 
     emit this->imageChanged(d->currentImageDecoder->image());
 }

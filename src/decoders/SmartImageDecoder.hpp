@@ -56,6 +56,9 @@ protected:
     template<typename T>
     T* allocateImageBuffer(uint32_t width, uint32_t height);
 
+    template<typename T>
+    static void deallocateImageBuffer(void* mem);
+
     void setDecodingState(DecodingState state);
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);

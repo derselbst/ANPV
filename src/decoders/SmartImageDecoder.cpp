@@ -42,9 +42,6 @@ struct SmartImageDecoder::Impl
     // It does for embedded JPEG preview in CR2
     QByteArray encodedInputFile;
     
-    // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
-    std::unique_ptr<unsigned char[]> backingImageBuffer;
-    
     // DO NOT STORE THE QFILE DIRECTLY!
     // QFile is a QObject! It has thread affinity! Creating it by the worker thread and destrorying it by the UI thread will lead to memory corruption!
     QScopedPointer<QFile> file;
@@ -81,7 +78,6 @@ struct SmartImageDecoder::Impl
     void releaseFullImage()
     {
         setDecodedImage(QImage());
-        backingImageBuffer.reset();
     }
     
     void setErrorMessage(const QString& err)
@@ -409,8 +405,6 @@ void SmartImageDecoder::assertNotDecoding()
 template<typename T>
 T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
 {
-    d->releaseFullImage();
-
     size_t needed = size_t(width) * height * sizeof(T);
     try
     {
@@ -421,8 +415,7 @@ T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
         
-        d->backingImageBuffer = std::move(mem);
-        return reinterpret_cast<T*>(d->backingImageBuffer.get());
+        return reinterpret_cast<T*>(mem.release());
     }
     catch (const std::bad_alloc&)
     {
@@ -431,3 +424,10 @@ T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
 }
 
 template uint32_t* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);
+
+template<typename T>
+void SmartImageDecoder::deallocateImageBuffer(void* mem)
+{
+    delete [] reinterpret_cast<T*>(mem);
+}
+template void SmartImageDecoder::deallocateImageBuffer<uint32_t>(void*);

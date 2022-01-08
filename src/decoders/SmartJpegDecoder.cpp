@@ -134,7 +134,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
-    uint32_t* mem;
+    std::unique_ptr<uint32_t> mem;
     QImage image;
     
     auto& cinfo = d->cinfo;
@@ -155,16 +155,23 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     cinfo.do_block_smoothing = false;
     
     cinfo.scale_num = desiredResolution.width();
-    cinfo.scale_denom = cinfo.image_width;
+    cinfo.scale_denom = roiRect.width();
+    
+    if(cinfo.scale_num * 1.0 / cinfo.scale_denom > 1.0)
+    {
+        // do not upscale the image while decoding
+        cinfo.scale_denom = cinfo.scale_num = 1;
+    }
+    
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
     
-    mem = this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
+    mem.reset(this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height));
 
     bufferSetup.resize(cinfo.output_height * cinfo.rec_outbuf_height);
     for(JDIMENSION i=0; i < bufferSetup.size(); i++)
     {
-        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem + i * cinfo.output_width);
+        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem.get() + i * cinfo.output_width);
     }
     
     this->cancelCallback();
@@ -216,7 +223,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
             
-            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem.get()),
                                     cinfo.output_width,
                                     std::min(totalLinesRead, cinfo.output_height),
                                     rowStride,
@@ -235,10 +242,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     jpeg_finish_decompress(&cinfo);
     
-    image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+    image = QImage(reinterpret_cast<uint8_t*>(mem.get()), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32, &SmartImageDecoder::deallocateImageBuffer<uint32_t>, mem.get());
+    (void)mem.release();
 
-    this->setDecodingMessage("Applying final smooth rescaling...");
-    image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+// //     this->setDecodingMessage("Applying final smooth rescaling...");
+// //     image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     image.setColorSpace(this->image()->colorSpace());
 
     this->setDecodingMessage("Transforming colorspace...");
