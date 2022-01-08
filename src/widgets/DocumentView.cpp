@@ -110,6 +110,9 @@ struct DocumentView::Impl
             currentImageDecoder->reset();
             currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
+            // this makes ensures that the if clause will be entered next time we enter onViewportChanged(),
+            // to display the next or previous image
+            previousFovTransform = QTransform();
         }
 
         currentDocumentPixmap = QPixmap();
@@ -130,10 +133,23 @@ struct DocumentView::Impl
     
     void onViewportChanged(QTransform newTransform)
     {
-        if(newTransform != previousFovTransform && taskFuture.isFinished())
+        if(newTransform != this->previousFovTransform && this->taskFuture.isFinished())
         {
-            fovChangedTimer.start();
-            previousFovTransform = newTransform;
+            if(this->latestDecodingState <= DecodingState::Metadata)
+            {
+                // no preview image available, quickly start the decoding
+                if(!this->fovChangedTimer.isActive())
+                {
+                    // delay the decoding by a few milliseconds, as sometimes there may be two resizeEvents being sent, I don't know why
+                    this->fovChangedTimer.start(50);
+                }
+            }
+            else
+            {
+                // we already have a preview image, the user zoomed or scrolled around, no need to hurry
+                this->fovChangedTimer.start(600);
+            }
+            this->previousFovTransform = newTransform;
         }
     }
     
@@ -246,8 +262,12 @@ struct DocumentView::Impl
         // (which is in scene coordinates) into the view's coordinates
         QRectF visPixRectMappedToView = p->mapFromScene(visPixRect).boundingRect();
 
-        auto fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, visPixRectMappedToView.toAlignedRect().size(), visPixRect.toAlignedRect());
+        QSize desiredRes = visPixRectMappedToView.toAlignedRect().size();
+        
+        auto fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, desiredRes, visPixRect.toAlignedRect());
         this->taskFuture.setFuture(fut);
+        
+        qDebug() << "startImageDecoding(): desiredRes: " << desiredRes << " | visPixRect: " << visPixRect.toAlignedRect();
     }
     
     void onFOVChanged()
@@ -496,7 +516,6 @@ DocumentView::DocumentView(QWidget *parent)
     
     d->createActions();
 
-    d->fovChangedTimer.setInterval(1000);
     d->fovChangedTimer.setSingleShot(true);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&](){ d->onFOVChanged();});
     
@@ -821,7 +840,6 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
-    d->startImageDecoding();
     emit this->imageChanged(d->currentImageDecoder->image());
 }
 
