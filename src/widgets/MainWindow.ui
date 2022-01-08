@@ -179,6 +179,9 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="statusTip">
+           <string>Enter the Filter pattern here</string>
+          </property>
           <property name="placeholderText">
            <string>Search Pattern</string>
           </property>
@@ -191,6 +194,12 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="statusTip">
+           <string notr="true">Choose how the filter pattern should be interpreted.</string>
+          </property>
+          <property name="whatsThis">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The filter pattern may be interpreted in three different ways. It's either handled as a pure string which directly translates to filenames.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;It can also be treated as a wildcard (globbing) pattern. See QRegularExpression::wildcardToRegularExpression() for more information.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;The greatest flexibility is provided by the RegEx pattern. The patterns are Perl-compatible. See documentation of QRegularExpression for details.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -211,6 +220,9 @@
         </item>
         <item row="3" column="1">
          <widget class="QCheckBox" name="filterCaseSensitivityCheckBox">
+          <property name="statusTip">
+           <string>Check if the filter pattern should be treated case-sensitive.</string>
+          </property>
           <property name="text">
            <string>Case-Sensitive Filtering</string>
           </property>

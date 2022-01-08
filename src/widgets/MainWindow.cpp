@@ -358,7 +358,7 @@ struct MainWindow::Impl
             RegularExpression
         };
         
-        Syntax s = Syntax(ui->filterSyntaxComboBox->itemData(ui->filterSyntaxComboBox->currentIndex()).toInt());
+        Syntax s = Syntax(ui->filterSyntaxComboBox->currentIndex());
         QString pattern = ui->filterPatternLineEdit->text();
         switch (s) {
         case Wildcard:
@@ -376,19 +376,21 @@ struct MainWindow::Impl
         {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
-        QRegularExpression regularExpression(pattern, options);
 
+        QRegularExpression regularExpression(pattern, options);
         if (regularExpression.isValid())
         {
+            ui->filterPatternLineEdit->setPalette(ui->filterPatternLineEdit->style()->standardPalette());
             ui->filterPatternLineEdit->setToolTip(QString());
             proxyModel->setFilterRegularExpression(regularExpression);
-//             setTextColor(ui->filterPatternLineEdit, textColor(style()->standardPalette()));
         }
         else
         {
+            QPalette palette;
+            palette.setColor(QPalette::Text, Qt::red);
+            ui->filterPatternLineEdit->setPalette(palette);
             ui->filterPatternLineEdit->setToolTip(regularExpression.errorString());
             proxyModel->setFilterRegularExpression(QRegularExpression());
-//             setTextColor(ui->filterPatternLineEdit, Qt::red);
         }
     }
     
