@@ -33,6 +33,7 @@
 #include <QToolTip>
 #include <QSortFilterProxyModel>
 #include <QCloseEvent>
+#include <QWhatsThis>
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -262,6 +263,11 @@ struct MainWindow::Impl
         
         ui->menuSort->addActions(actionGroupSortColumn->actions());
         ui->menuSort->addActions(actionGroupSortOrder->actions());
+        
+        ui->menuHelp->insertAction(ui->actionAbout_ANPV, QWhatsThis::createAction(q));
+        QAction* sep = new QAction();
+        sep->setSeparator(true);
+        ui->menuHelp->insertAction(ui->actionAbout_ANPV, sep);
     }
     
     void writeSettings()

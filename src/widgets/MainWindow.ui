@@ -199,7 +199,7 @@
            <string notr="true">Choose how the filter pattern should be interpreted.</string>
           </property>
           <property name="whatsThis">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The filter pattern may be interpreted in three different ways. It's either handled as a pure string which directly translates to filenames.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;It can also be treated as a wildcard (globbing) pattern. See QRegularExpression::wildcardToRegularExpression() for more information.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;The greatest flexibility is provided by the RegEx pattern. The patterns are Perl-compatible. See documentation of QRegularExpression for details.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The filter pattern may be interpreted in three different ways. It's either handled as a pure string which directly translates to filenames.&lt;/p&gt;&lt;p&gt;It can also be treated as a wildcard (&lt;a href=&quot;https://en.wikipedia.org/wiki/Glob_(programming)&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;globbing&lt;/span&gt;&lt;/a&gt;) pattern. See &lt;a href=&quot;https://doc.qt.io/qt-6/qregularexpression.html#wildcardToRegularExpression&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;QRegularExpression::wildcardToRegularExpression()&lt;/span&gt;&lt;/a&gt; for more information.&lt;/p&gt;&lt;p&gt;The greatest flexibility is provided by the RegEx pattern. The patterns are Perl-compatible. See documentation of &lt;a href=&quot;https://doc.qt.io/qt-6/qregularexpression.html#introduction&quot;&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;QRegularExpression&lt;/span&gt;&lt;/a&gt; for details.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <item>
            <property name="text">
@@ -259,6 +259,9 @@
    </property>
   </action>
   <action name="actionAbout_ANPV">
+   <property name="icon">
+    <iconset theme=":/images/ANPV.ico"/>
+   </property>
    <property name="text">
     <string>About ANPV</string>
    </property>
