@@ -282,7 +282,6 @@ struct DocumentView::Impl
     
     void onFOVChanged()
     {
-        qDebug() << "onfovchanged()";
         this->startImageDecoding();
     }
     
