@@ -250,14 +250,6 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionExit">
-   <property name="text">
-    <string>Exit</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
   <action name="actionAbout_ANPV">
    <property name="icon">
     <iconset theme=":/images/ANPV.ico"/>
@@ -340,60 +332,9 @@
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionUndo">
-   <property name="text">
-    <string>Undo</string>
-   </property>
-  </action>
-  <action name="actionRedo">
-   <property name="text">
-    <string>Redo</string>
-   </property>
-  </action>
-  <action name="actionFile_Copy_Move_Configuration">
-   <property name="text">
-    <string>File Copy/Move Configuration</string>
-   </property>
-   <property name="shortcut">
-    <string>F12</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
   <action name="actionAbout_Qt">
    <property name="text">
     <string>About Qt</string>
-   </property>
-  </action>
-  <action name="actionOpen_Image">
-   <property name="text">
-    <string>Open Image</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
-  <action name="action_Empty">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </action>
-  <action name="actionShow_Navigator_Window">
-   <property name="text">
-    <string>Show Navigator Window</string>
-   </property>
-   <property name="shortcut">
-    <string>Esc</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionShow_AF_Points">
