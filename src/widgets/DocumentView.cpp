@@ -115,6 +115,8 @@ struct DocumentView::Impl
             previousFovTransform = QTransform();
         }
 
+        removeSmoothPixmap();
+
         currentDocumentPixmap = QPixmap();
         currentPixmapOverlay->setPixmap(currentDocumentPixmap);
         currentPixmapOverlay->setScale(1);
@@ -150,6 +152,7 @@ struct DocumentView::Impl
                 this->fovChangedTimer.start(600);
             }
             this->previousFovTransform = newTransform;
+            removeSmoothPixmap();
         }
     }
     
@@ -245,6 +248,13 @@ struct DocumentView::Impl
     
     void startImageDecoding()
     {
+        if(this->latestDecodingState == DecodingState::FullImage)
+        {
+            // full resolution image already decoded, only create a smooth pixmap
+            this->createSmoothPixmap();
+            return;
+        }
+        
         this->cancelCurrentDecoding();
 
         // get the area of what the user sees

@@ -294,8 +294,6 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                     this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 }
             }
-
-            this->setDecodingState(targetState);
         } while(false);
     }
     catch(const UserCancellation&)

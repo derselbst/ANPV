@@ -257,6 +257,15 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
     
+    if(cinfo.output_width == cinfo.image_width && cinfo.output_height == cinfo.image_height)
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+    else
+    {
+        this->setDecodingState(DecodingState::PreviewImage);
+    }
+    
     return image;
 }
 

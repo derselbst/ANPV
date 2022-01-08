@@ -250,7 +250,7 @@ struct SmartTiffDecoder::Impl
             if(res > len && // current resolution smaller than previous?
                std::fabs(aspect - fullImgAspect) < 0.1 && // aspect matches?
                // we do not have a suitable page yet, ensure to not pick every page, i.e. it should be smaller than the double of MaxIconHeight
-               (ret == -1 && !(pageInfo[i].width >= ANPV::MaxIconHeight*2 || pageInfo[i].height >= ANPV::MaxIconHeight*2)
+               ((ret == -1 && !(pageInfo[i].width >= ANPV::MaxIconHeight*2 || pageInfo[i].height >= ANPV::MaxIconHeight*2))
                // if we do have a suitable make, make sure it's one bigger 200px
                || (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)))
             {
@@ -408,6 +408,15 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QImage image(reinterpret_cast<uint8_t*>(mem), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
+    if(imagePageToDecode == d->findHighestResolution(d->pageInfos))
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+    else
+    {
+        this->setDecodingState(DecodingState::PreviewImage);
+    }
+    
     return image;
 }
 
