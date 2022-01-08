@@ -111,8 +111,6 @@ struct DocumentView::Impl
             currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
         }
-        
-        removeSmoothPixmap();
 
         currentDocumentPixmap = QPixmap();
         currentPixmapOverlay->setPixmap(currentDocumentPixmap);
@@ -136,7 +134,6 @@ struct DocumentView::Impl
         {
             fovChangedTimer.start();
             previousFovTransform = newTransform;
-            removeSmoothPixmap();
         }
     }
     
@@ -257,7 +254,6 @@ struct DocumentView::Impl
     {
         qDebug() << "onfovchanged()";
         this->startImageDecoding();
-//         this->createSmoothPixmap();
     }
     
     void addThumbnailPreview(QSharedPointer<Image> img)
@@ -365,7 +361,6 @@ struct DocumentView::Impl
             if(newImg)
             {
                 p->loadImage(newImg);
-                this->startImageDecoding();
             }
         }
     }
@@ -664,14 +659,14 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
         // ignore events from a previous decoder that might still be running in the background
         return;
     }
-    
-    d->removeSmoothPixmap();
+
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
 
     QSize fullImageSize = img->size();
-    auto newScale = std::max(fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width(), fullImageSize.height() * 1.0 / d->currentDocumentPixmap.height());
+    auto newScale = (fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width());
     d->currentPixmapOverlay->setScale(newScale);
+    d->currentPixmapOverlay->show();
 
     d->scene->invalidate();
 }
@@ -694,17 +689,10 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
         this->showImage(dec->image());
         break;
     }
-    case DecodingState::PreviewImage:
-        if (oldState == DecodingState::Metadata)
-        {
-            d->currentPixmapOverlay->show();
-        }
-        break;
     case DecodingState::FullImage:
     {
         this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
-        
-        d->createSmoothPixmap();
+
         d->thumbnailPreviewOverlay->hide();
         break;
     }
@@ -833,6 +821,7 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
+    d->startImageDecoding();
     emit this->imageChanged(d->currentImageDecoder->image());
 }
 
