@@ -154,15 +154,15 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     cinfo.enable_2pass_quant = false;
     cinfo.do_block_smoothing = false;
     
-    cinfo.scale_num = 1;
-    cinfo.scale_denom = 1;
+    cinfo.scale_num = desiredResolution.width();
+    cinfo.scale_denom = cinfo.image_width;
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
     
     mem = this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
 
-    bufferSetup.resize(cinfo.output_height);
-    for(JDIMENSION i=0; i < cinfo.output_height; i++)
+    bufferSetup.resize(cinfo.output_height * cinfo.rec_outbuf_height);
+    for(JDIMENSION i=0; i < bufferSetup.size(); i++)
     {
         bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem + i * cinfo.output_width);
     }
@@ -236,7 +236,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_finish_decompress(&cinfo);
     
     image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+
+    this->setDecodingMessage("Applying final smooth rescaling...");
+    image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     image.setColorSpace(this->image()->colorSpace());
+
     this->setDecodingMessage("Transforming colorspace...");
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
     
