@@ -506,6 +506,7 @@ DocumentView::DocumentView(QWidget *parent)
     
     d->currentPixmapOverlay = new QGraphicsPixmapItem;
     d->currentPixmapOverlay->setZValue(-9);
+    d->currentPixmapOverlay->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
     d->scene->addItem(d->currentPixmapOverlay);
     
     d->smoothPixmapOverlay = new QGraphicsPixmapItem;
