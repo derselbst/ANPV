@@ -264,9 +264,7 @@ struct DocumentView::Impl
         QRectF viewportRectScene = p->mapToScene(viewportRect).boundingRect();
 
         // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
-        // Also, intentionally use thumbnailPreviewOverlay, as the boundingRect() of currentPixmapOverlay may be zero,
-        // because no Pixmap is set.
-        QRectF visPixRect = viewportRectScene.intersected(thumbnailPreviewOverlay->sceneBoundingRect());
+        QRectF visPixRect = viewportRectScene.intersected(this->currentImageDecoder->image()->fullResolutionRect());
 
         // the GraphicsView may have been scaled; we must translate the visible rectangle
         // (which is in scene coordinates) into the view's coordinates

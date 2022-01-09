@@ -278,8 +278,8 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                 QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
                 d->setDecodedImage(decodedImg);
                 
-                // if thumbnail is still null and no roi has been given, set it
-                if (this->image()->thumbnail().isNull() && !roiRect.isValid())
+                // if thumbnail is still null and we've decoded not just a part of the image
+                if (this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
                 {
                     QSize thumbnailSize;
                     static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);

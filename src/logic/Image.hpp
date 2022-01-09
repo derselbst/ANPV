@@ -47,6 +47,7 @@ public:
     
     const QFileInfo& fileInfo() const;
     QSize size() const;
+    QRect fullResolutionRect() const;
     
     QTransform userTransform() const;
     void setUserTransform(QTransform);
