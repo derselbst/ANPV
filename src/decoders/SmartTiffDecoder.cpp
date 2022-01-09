@@ -241,7 +241,7 @@ struct SmartTiffDecoder::Impl
     {
         int ret = -1;
         const auto fullImgAspect = size.width() * 1.0 / size.height();
-        uint64_t res = size.width() * size.height();
+        uint64_t res = static_cast<size_t>(size.width()) * size.height();
         for(size_t i=0; i<pageInfo.size(); i++)
         {
             auto len = pageInfo[i].nPix();
@@ -275,7 +275,7 @@ struct SmartTiffDecoder::Impl
         
         for(size_t i=0; i<pageInfo.size(); i++)
         {
-            double scale  = size.width() / pageInfo[i].width;
+            double scale = size.width() / pageInfo[i].width;
             if(scale <= targetScale && scale >= prevScale)
             {
                 ret = i;
