@@ -134,7 +134,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
-    std::unique_ptr<uint32_t> mem;
+    std::unique_ptr<uint32_t[]> mem;
     QImage image;
     
     auto& cinfo = d->cinfo;

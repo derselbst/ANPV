@@ -406,7 +406,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
     
-    std::unique_ptr<uint32_t> mem(this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height));
+    std::unique_ptr<uint32_t[]> mem(this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height));
     QImage image(reinterpret_cast<uint8_t*>(mem.get()), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode), &SmartImageDecoder::deallocateImageBuffer<uint32_t>, mem.get());
     (void)mem.release();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
