@@ -129,7 +129,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     this->image()->setColorSpace(iccProfile);
 }
 
-QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
+QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect, QPoint& topLeft)
 {
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here

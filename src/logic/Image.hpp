@@ -5,6 +5,7 @@
 #include <QRunnable>
 #include <QColorSpace>
 #include <QSize>
+#include <QPoint>
 #include <QPixmap>
 #include <QImage>
 #include <QIcon>
@@ -76,7 +77,7 @@ public slots:
 signals:
     void decodingStateChanged(Image* self, quint32 newState, quint32 oldState);
     void thumbnailChanged(Image* self, QImage);
-    void decodedImageChanged(Image* self, QImage img);
+    void decodedImageChanged(Image* self, QImage img, QPoint topLeft);
 
 protected:
     void connectNotify(const QMetaMethod& signal) override;
@@ -88,7 +89,7 @@ protected:
     void setColorSpace(QColorSpace);
     
     void setDecodingState(DecodingState state);
-    void setDecodedImage(QImage);
+    void setDecodedImage(QImage, QPoint=QPoint());
     void setErrorMessage(const QString&);
     
     void updatePreviewImage(QImage&& img);

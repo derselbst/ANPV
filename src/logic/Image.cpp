@@ -393,13 +393,13 @@ QImage Image::decodedImage()
     return d->decodedImage;
 }
 
-void Image::setDecodedImage(QImage img)
+void Image::setDecodedImage(QImage img, QPoint topLeft)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     // skip comparison with current image, can be slow
     d->decodedImage = img;
     lck.unlock();
-    emit this->decodedImageChanged(this, d->decodedImage);
+    emit this->decodedImageChanged(this, d->decodedImage, topLeft);
 }
 
 void Image::connectNotify(const QMetaMethod& signal)
@@ -422,7 +422,7 @@ void Image::connectNotify(const QMetaMethod& signal)
         QImage img = this->decodedImage();
         if(!img.isNull())
         {
-            emit this->decodedImageChanged(this, img);
+            emit this->decodedImageChanged(this, img , QPoint());
         }
     }
 

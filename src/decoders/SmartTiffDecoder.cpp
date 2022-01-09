@@ -263,7 +263,9 @@ struct SmartTiffDecoder::Impl
     
     QImage::Format format(int page)
     {
-        return QImage::Format_ARGB32;
+        // If there's no alpha channel in the original TIFF, progpagate this information to Qt.
+        // This'll allow a performance gain for QPixmap::mask() which may be called by Qt internally.
+        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB32;
     }
     
     static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
@@ -357,8 +359,9 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         
         try
         {
+            QPoint ignore;
             QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
-            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
+            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size(), ignore);
 
             this->image()->setThumbnail(thumb);
         }
@@ -373,7 +376,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
 }
 
-QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
+QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect, QPoint& topLeft)
 {
     const QRect fullImageRect(QPoint(0,0), this->image()->size());
     
@@ -407,13 +410,14 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     std::unique_ptr<uint32_t> mem(this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height));
     QImage image(reinterpret_cast<uint8_t*>(mem.get()), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode), &SmartImageDecoder::deallocateImageBuffer<uint32_t>, mem.get());
     (void)mem.release();
-    this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
+    this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution, topLeft);
+    topLeft = scaleTrafo.map(topLeft);
 
-    if(imagePageToDecode == d->findHighestResolution(d->pageInfos))
-    {
-        this->setDecodingState(DecodingState::FullImage);
-    }
-    else
+//     if(imagePageToDecode == d->findHighestResolution(d->pageInfos))
+//     {
+//         this->setDecodingState(DecodingState::FullImage);
+//     }
+//     else
     {
         this->setDecodingState(DecodingState::PreviewImage);
     }
@@ -421,7 +425,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     return image;
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution, QPoint& topLeft)
 {
     const unsigned width = d->pageInfos[imagePageToDecode].width;
     const unsigned height = d->pageInfos[imagePageToDecode].height;
@@ -456,6 +460,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
         std::vector<uint32_t> tileBuf(tw * tl);
         
+        // A rectangle covering the entire area that was decoded below
+        QRect decodedRoiRect;
         for (unsigned y = 0; y < height; y += tl)
         {
             for (unsigned x = 0; x < width; x += tw)
@@ -490,8 +496,13 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
                 }
+                
+                decodedRoiRect = decodedRoiRect.united(tile);
             }
         }
+        this->updatePreviewImage(QImage());
+        image = image.copy(decodedRoiRect);
+        topLeft = decodedRoiRect.topLeft();
     }
     else
     {
@@ -620,7 +631,7 @@ gehtnich:
 
     image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
-    image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+//     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
 
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
