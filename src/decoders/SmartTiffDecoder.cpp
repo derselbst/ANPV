@@ -411,11 +411,11 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     (void)mem.release();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
-//     if(imagePageToDecode == d->findHighestResolution(d->pageInfos))
-//     {
-//         this->setDecodingState(DecodingState::FullImage);
-//     }
-//     else
+    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect)
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+    else
     {
         this->setDecodingState(DecodingState::PreviewImage);
     }
@@ -427,6 +427,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
 {
     const unsigned width = d->pageInfos[imagePageToDecode].width;
     const unsigned height = d->pageInfos[imagePageToDecode].height;
+    
+    bool skipColorTransform = false;
     
     if(!roi.isValid())
     {
@@ -467,6 +469,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 QRect tile(x,y,tw,tl);
                 if(!tile.intersects(roi))
                 {
+                    skipColorTransform = true;
                     continue;
                 }
             
@@ -498,8 +501,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 decodedRoiRect = decodedRoiRect.united(tile);
             }
         }
-//         this->updatePreviewImage(QImage());
-//         image = image.copy(roi);
     }
     else
     {
@@ -626,10 +627,19 @@ gehtnich:
         }
     }
 
-    image.setColorSpace(this->image()->colorSpace());
-    this->setDecodingMessage("Transforming colorspace...");
-//     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+    if(skipColorTransform)
+    {
+        this->setDecodingMessage("Partial decoding finished, but color transforming is not yet supported for partial decoded images.");
+        // it would also transform the non-decoded surrounding void, which is very memory expensive...
+    }
+    else
+    {
+        image.setColorSpace(this->image()->colorSpace());
+        this->setDecodingMessage("Transforming colorspace...");
+        image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
 
-    this->setDecodingMessage("TIFF decoding completed successfully.");
+        this->setDecodingMessage("TIFF decoding completed successfully.");
+    }
+
     this->setDecodingProgress(100);
 }
