@@ -47,11 +47,11 @@ public:
 
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
-    virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect, QPoint& topLeft) = 0;
+    virtual QImage decodingLoop(QSize desiredResolution, QRect roiRect) = 0;
 
     void cancelCallback();
     void assertNotDecoding();
-    void updatePreviewImage(QImage&& img, QPoint topLeft=QPoint());
+    void updatePreviewImage(QImage&& img);
 
     template<typename T>
     T* allocateImageBuffer(uint32_t width, uint32_t height);

@@ -36,7 +36,7 @@ public:
 public slots:
     void zoomIn();
     void zoomOut();
-    void onImageRefinement(Image* self, QImage img, QPoint topLeft);
+    void onImageRefinement(Image* self, QImage img);
     void onDecodingStateChanged(Image* self, quint32 newState, quint32 oldState);
 
 signals:

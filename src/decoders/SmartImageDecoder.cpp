@@ -70,9 +70,9 @@ struct SmartImageDecoder::Impl
         return q->image()->decodingState();
     }
 
-    void setDecodedImage(QImage img, QPoint topLeft=QPoint())
+    void setDecodedImage(QImage img)
     {
-        q->image()->setDecodedImage(img, topLeft);
+        q->image()->setDecodedImage(img);
     }
     
     void releaseFullImage()
@@ -275,9 +275,8 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             
             if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
-                QPoint topLeftOffset;
-                QImage decodedImg = this->decodingLoop(desiredResolution, roiRect, topLeftOffset);
-                d->setDecodedImage(decodedImg, topLeftOffset);
+                QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
+                d->setDecodedImage(decodedImg);
                 
                 // if thumbnail is still null and no roi has been given, set it
                 if (this->image()->thumbnail().isNull() && !roiRect.isValid())
@@ -353,7 +352,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     }
 }
 
-void SmartImageDecoder::updatePreviewImage(QImage&& img, QPoint topLeft)
+void SmartImageDecoder::updatePreviewImage(QImage&& img)
 {
     constexpr int DecodePreviewImageRefreshDuration = 100;
     
@@ -361,7 +360,7 @@ void SmartImageDecoder::updatePreviewImage(QImage&& img, QPoint topLeft)
     auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
     if(durationMs.count() > DecodePreviewImageRefreshDuration)
     {
-        d->setDecodedImage(std::move(img), topLeft);
+        d->setDecodedImage(std::move(img));
         d->lastPreviewImageUpdate = now;
     }
 }

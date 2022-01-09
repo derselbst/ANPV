@@ -680,7 +680,7 @@ void DocumentView::mouseMoveEvent(QMouseEvent *event)
 }
 
 
-void DocumentView::onImageRefinement(Image* img, QImage image, QPoint topLeft)
+void DocumentView::onImageRefinement(Image* img, QImage image)
 {
     if(img != this->d->currentImageDecoder->image().data())
     {
@@ -690,10 +690,9 @@ void DocumentView::onImageRefinement(Image* img, QImage image, QPoint topLeft)
 
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
-    d->currentPixmapOverlay->setOffset(topLeft);
 
     QSize fullImageSize = img->size();
-    auto newScale = (fullImageSize.width() * 1.0 / d->currentPixmapOverlay->boundingRect().width());
+    auto newScale = (fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width());
     d->currentPixmapOverlay->setScale(newScale);
     d->currentPixmapOverlay->show();
 
@@ -720,7 +719,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     }
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage(), QPoint());
+        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
 
         d->thumbnailPreviewOverlay->hide();
         break;
