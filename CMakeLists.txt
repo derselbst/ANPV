@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV VERSION 0.1 LANGUAGES CXX)
+project (ANPV VERSION 0.2 LANGUAGES CXX)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
