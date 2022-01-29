@@ -379,6 +379,14 @@ struct DocumentView::Impl
         this->actionShowScrollBars->setChecked(showScrollBar);
     }
     
+    void onViewModeChanged(ViewMode neu)
+    {
+        if(this->currentImageDecoder)
+        {
+            this->alignImageAccordingToViewMode(this->currentImageDecoder->image());
+        }
+    }
+    
     void goTo(int i)
     {
         WaitCursor w;
@@ -530,6 +538,11 @@ DocumentView::DocumentView(QWidget *parent)
     d->onViewFlagsChanged(ANPV::globalInstance()->viewFlags());
     connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
             [&](ViewFlags_t v, ViewFlags_t){ d->onViewFlagsChanged(v); });
+    
+    d->onViewModeChanged(ANPV::globalInstance()->viewMode());
+    connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
+            [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
+    
 }
 
 DocumentView::~DocumentView() = default;

@@ -197,6 +197,8 @@ struct SmartTiffDecoder::Impl
 
     std::vector<PageInfo> readPageInfos()
     {
+        auto currentDirectory = TIFFCurrentDirectory(this->tiff);
+        
         std::vector<PageInfo> pageInfos;
         do
         {
@@ -217,6 +219,12 @@ struct SmartTiffDecoder::Impl
                throw std::runtime_error("Error while reading TIFF tags");
             }
         } while(TIFFReadDirectory(tiff));
+        
+        
+        if(!TIFFSetDirectory(this->tiff, currentDirectory))
+        {
+            throw std::runtime_error("This should never happen: TIFFSetDirectory failed to restore previous directory");
+        }
         
         return pageInfos;
     }
