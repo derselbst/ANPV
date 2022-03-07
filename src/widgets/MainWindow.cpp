@@ -36,6 +36,7 @@
 #include <QWhatsThis>
 
 #include "DocumentView.hpp"
+#include "PreviewAllImagesDialog.hpp"
 #include "Image.hpp"
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
@@ -117,6 +118,14 @@ struct MainWindow::Impl
             [&](bool)
             {
                 ANPV::globalInstance()->fileModel()->changeDirAsync(ANPV::globalInstance()->currentDir());
+            }
+        );
+        connect(ui->actionPreview_all_images, &QAction::triggered, q,
+            [&](bool)
+            {
+                PreviewAllImagesDialog d;
+                d.setImageHeight(ANPV::globalInstance()->iconHeight());
+                d.exec();
             }
         );
     }

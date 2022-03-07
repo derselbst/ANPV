@@ -116,6 +116,7 @@
     <addaction name="actionFit_in_FOV"/>
     <addaction name="separator"/>
     <addaction name="actionReload"/>
+    <addaction name="actionPreview_all_images"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -252,7 +253,8 @@
   </widget>
   <action name="actionAbout_ANPV">
    <property name="icon">
-    <iconset theme=":/images/ANPV.ico"/>
+    <iconset theme=":/images/ANPV.ico">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>About ANPV</string>
@@ -377,6 +379,14 @@
    </property>
    <property name="shortcut">
     <string>F5</string>
+   </property>
+  </action>
+  <action name="actionPreview_all_images">
+   <property name="text">
+    <string>Preview all images</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F5</string>
    </property>
   </action>
  </widget>

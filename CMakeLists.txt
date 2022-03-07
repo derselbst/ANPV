@@ -132,6 +132,9 @@ src/widgets/MultiDocumentView.hpp
 src/widgets/MainWindow.cpp
 src/widgets/MainWindow.hpp
 src/widgets/MainWindow.ui
+src/widgets/PreviewAllImagesDialog.cpp
+src/widgets/PreviewAllImagesDialog.hpp
+src/widgets/PreviewAllImagesDialog.ui
 src/widgets/ThumbnailListView.cpp
 src/widgets/ThumbnailListView.hpp
 src/decoders/DecoderFactory.hpp
