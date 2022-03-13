@@ -78,12 +78,12 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Ima
     if(info.isFile())
     {
         QImageReader r(info.absoluteFilePath());
-        
-        if(image->isRaw() || r.format() == "jpeg")
+        QByteArray format = r.format();
+        if(image->isRaw() || format == "jpeg")
         {
             return std::make_unique<SmartJpegDecoder>(image);
         }
-        else if(r.format() == "tiff")
+        else if(format == "tiff")
         {
             return std::make_unique<SmartTiffDecoder>(image);
         }
