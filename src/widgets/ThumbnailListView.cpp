@@ -319,7 +319,7 @@ QList<QSharedPointer<Image>> ThumbnailListView::selectedImages(const QModelIndex
     auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
     for(int i=0; i<selectedIdx.size(); i++)
     {
-        images.push_back(sourceModel->decoder(proxyModel.mapToSource(selectedIdx[i])));
+        images.push_back(sourceModel->image(proxyModel.mapToSource(selectedIdx[i])));
     }
     return images;
 }
