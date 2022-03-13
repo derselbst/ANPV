@@ -41,7 +41,8 @@ struct SortedImageModel::Impl
     
     QFileSystemWatcher* watcher = nullptr;
     QDir currentDir;
-    std::vector<QSharedPointer<Image>> entries;
+    using Entry_t = std::pair<QSharedPointer<Image>, QSharedPointer<SmartImageDecoder>>;
+    std::vector<Entry_t> entries;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::mutex m;
@@ -274,54 +275,54 @@ struct SortedImageModel::Impl
     // |    UNKNOWN    |  0   |   0     |    1    |
     //
     template<Column SortCol>
-    static bool topLevelSortFunction(const QSharedPointer<Image>& l, const QSharedPointer<Image>& r)
+    static bool topLevelSortFunction(const Entry_t& l, const Entry_t& r)
     {
-        const QFileInfo& linfo = l->fileInfo();
-        const QFileInfo& rinfo = r->fileInfo();
+        const QFileInfo& linfo = std::get<0>(l)->fileInfo();
+        const QFileInfo& rinfo = std::get<0>(r)->fileInfo();
 
         bool leftIsBeforeRight =
             (linfo.isDir() && (!rinfo.isDir() || compareFileName(linfo, rinfo))) ||
-            (!rinfo.isDir() && sortColumnPredicateLeftBeforeRight<SortCol>(l, linfo, r, rinfo));
+            (!rinfo.isDir() && sortColumnPredicateLeftBeforeRight<SortCol>(std::get<0>(l), linfo, std::get<0>(r), rinfo));
         
         return leftIsBeforeRight;
     }
 
-    std::function<bool(const QSharedPointer<Image>&, const QSharedPointer<Image>&)> getSortFunction()
+    std::function<bool(const Entry_t&, const Entry_t&)> getSortFunction()
     {
         switch (currentSortedCol)
         {
         case Column::FileName:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::FileName>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileName>(l, r); };
         
         case Column::FileSize:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::FileSize>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileSize>(l, r); };
             
         case Column::DateModified:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::DateModified>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::DateModified>(l, r); };
             
         case Column::Resolution:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::Resolution>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::Resolution>(l, r); };
 
         case Column::DateRecorded:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::DateRecorded>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::DateRecorded>(l, r); };
 
         case Column::Aperture:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::Aperture>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::Aperture>(l, r); };
 
         case Column::Exposure:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::Exposure>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::Exposure>(l, r); };
 
         case Column::Iso:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::Iso>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::Iso>(l, r); };
 
         case Column::FocalLength:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::FocalLength>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FocalLength>(l, r); };
 
         case Column::Lens:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::Lens>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::Lens>(l, r); };
 
         case Column::CameraModel:
-            return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<Column::CameraModel>(l, r); };
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::CameraModel>(l, r); };
 
         default:
             throw std::logic_error(Formatter() << "No sorting function implemented for column " << currentSortedCol);
@@ -340,14 +341,14 @@ struct SortedImageModel::Impl
         
         // find the beginning to reverse
         auto itBegin = std::begin(entries);
-        while(itBegin != std::end(entries) && !(*itBegin)->hasDecoder())
+        while(itBegin != std::end(entries) && !std::get<0>(*itBegin)->hasDecoder())
         {
             ++itBegin;
         }
         
         // find end to reverse
         auto itEnd = std::end(entries) - 1;
-        while(itEnd != std::begin(entries) && !(*itEnd)->hasDecoder())
+        while(itEnd != std::begin(entries) && !std::get<0>(*itEnd)->hasDecoder())
         {
             --itEnd;
         }
@@ -358,6 +359,26 @@ struct SortedImageModel::Impl
         }
     }
 
+    Entry_t entry(const QModelIndex& idx) const
+    {
+        if(idx.isValid())
+        {
+            return this->entry(idx.row());
+        }
+        throw std::invalid_argument("QModelIndex was invalid.");
+    }
+
+    Entry_t entry(unsigned int row) const
+    {
+        xThreadGuard g(q);
+        this->waitForDirectoryWorker();
+        if(row < this->entries.size())
+        {
+            return this->entries[row];
+        }
+        throw std::invalid_argument(Formatter() << "Entry number '" << row << "' not found.");
+    }
+
     void onDirectoryLoaded()
     {
         xThreadGuard g(q);
@@ -365,11 +386,33 @@ struct SortedImageModel::Impl
         q->endInsertRows();
     }
     
-    void waitForDirectoryWorker()
+    void waitForDirectoryWorker() const
     {
         if(directoryWorker != nullptr && !directoryWorker->future().isFinished())
         {
             directoryWorker->future().waitForFinished();
+        }
+    }
+    
+    void cancelAllBackgroundTasks()
+    {
+        std::lock_guard<std::mutex> l(m);
+        if(!backgroundTasks.empty())
+        {
+            for (const auto& value : backgroundTasks)
+            {
+                auto& future = value;
+                future->disconnect(q);
+                future->cancel();
+            }
+
+            for (const auto& value : backgroundTasks)
+            {
+                auto& future = value;
+                future->waitForFinished();
+            }
+            layoutChangedTimer.stop();
+            backgroundTasks.clear();
         }
     }
     
@@ -383,26 +426,7 @@ struct SortedImageModel::Impl
             directoryWorker->future().waitForFinished();
         }
         
-        {
-            std::lock_guard<std::mutex> l(m);
-            if(!backgroundTasks.empty())
-            {
-                for (const auto& value : backgroundTasks)
-                {
-                    auto& future = value;
-                    future->disconnect(q);
-                    future->cancel();
-                }
-
-                for (const auto& value : backgroundTasks)
-                {
-                    auto& future = value;
-                    future->waitForFinished();
-                }
-                layoutChangedTimer.stop();
-                backgroundTasks.clear();
-            }
-        }
+        cancelAllBackgroundTasks();
         entries.clear();
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
@@ -453,10 +477,10 @@ struct SortedImageModel::Impl
         emit q->layoutChanged();
     }
     
-    bool addSingleFile(QFileInfo&& inf, const QSize& iconSize, std::vector<std::unique_ptr<SmartImageDecoder>>* decoderList)
+    bool addSingleFile(QFileInfo&& inf, const QSize& iconSize, std::vector<QSharedPointer<SmartImageDecoder>>* decoderList)
     {
         auto image = DecoderFactory::globalInstance()->makeImage(inf);
-        auto decoder = DecoderFactory::globalInstance()->getDecoder(image);
+        auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
         
         // move both objects to the UI thread to ensure proper signal delivery
         image->moveToThread(QGuiApplication::instance()->thread());
@@ -468,7 +492,7 @@ struct SortedImageModel::Impl
         connect(image.data(), &Image::thumbnailChanged, q,
                 [&](Image*, QImage){ updateLayout(); });
 
-        entries.push_back(image);
+        this->entries.push_back(std::make_pair(image, decoder));
         
         if(decoder)
         {
@@ -518,7 +542,7 @@ struct SortedImageModel::Impl
         q->beginResetModel();
         for(auto it = entries.begin(); it != entries.end();)
         {
-            QFileInfo eInfo = (*it)->fileInfo();
+            QFileInfo eInfo = std::get<0>(*it)->fileInfo();
             auto result = std::find_if(fileInfoList.begin(),
                                     fileInfoList.end(),
                                     [=](QFileInfo& other)
@@ -649,7 +673,7 @@ void SortedImageModel::run()
             unsigned readableImages = 0;
             int iconHeight = d->cachedIconHeight;
             QSize iconSize(iconHeight, iconHeight);
-            std::vector<std::unique_ptr<SmartImageDecoder>> decodersToRunLater;
+            std::vector<QSharedPointer<SmartImageDecoder>> decodersToRunLater;
             decodersToRunLater.reserve(entriesToProcess);
             while (!fileInfoList.isEmpty())
             {
@@ -675,14 +699,10 @@ void SortedImageModel::run()
                 {
                     QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
                     watcher->moveToThread(QGuiApplication::instance()->thread());
-                    
-                    decoder->setAutoDelete(true);
-                    // decode asynchronously, delete the decoder once done
+
+                    // decode asynchronously
                     auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, iconSize);
                     watcher->setFuture(fut);
-                    
-                    // release ownership, it now lives in QThreadPool
-                    (void)decoder.release();
 
                     d->backgroundTasks.push_back(watcher);
                 }
@@ -732,19 +752,51 @@ void SortedImageModel::run()
     d->directoryWorker->finish();
 }
 
-QSharedPointer<Image> SortedImageModel::decoder(const QModelIndex& idx) const
+void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
 {
-    xThreadGuard g(this);
+    xThreadGuard(this);
+    d->waitForDirectoryWorker();
+    d->cancelAllBackgroundTasks();
 
-    if(idx.isValid())
+    for(Impl::Entry_t& e : d->entries)
     {
-        d->waitForDirectoryWorker();
-        if((unsigned)idx.row() < d->entries.size())
+        QSharedPointer<SmartImageDecoder>& decoder = std::get<1>(e);
+        if(decoder)
         {
-            return d->entries[idx.row()];
+            bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
+            if(taken)
+            {
+                qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
+            }
+            QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+
+            // decode asynchronously
+            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            watcher->setFuture(fut);
+
+            d->backgroundTasks.push_back(watcher);
         }
     }
-    return nullptr;
+}
+
+QSharedPointer<Image> SortedImageModel::image(const QModelIndex& idx) const
+{
+    return std::get<0>(d->entry(idx));
+}
+
+QSharedPointer<Image> SortedImageModel::image(unsigned int row) const
+{
+    return std::get<0>(d->entry(row));
+}
+
+QSharedPointer<SmartImageDecoder> SortedImageModel::decoder(const QModelIndex& idx) const
+{
+    return std::get<1>(d->entry(idx));
+}
+
+QSharedPointer<SmartImageDecoder> SortedImageModel::decoder(unsigned int row) const
+{
+    return std::get<1>(d->entry(row));
 }
 
 QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
@@ -756,8 +808,8 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
     
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
-                            [&](QSharedPointer<Image>& other)
-                            { return other == img; });
+                            [&](const Impl::Entry_t& other)
+                            { return std::get<0>(other) == img; });
     
     if(result == d->entries.end())
     {
@@ -778,7 +830,7 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
         
         idx += step;
         
-        e = d->entries[idx];
+        e = this->image(idx);
         QFileInfo eInfo = e->fileInfo();
         bool shouldSkip = eInfo.suffix() == "bak";
         shouldSkip |= d->hideRawIfNonRawAvailable(e);
@@ -804,7 +856,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
     
     if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
     {
-        QSharedPointer<Image> e = this->decoder(index);
+        QSharedPointer<Image> e = this->image(index);
         if(e && d->hideRawIfNonRawAvailable(e))
         {
             f &= ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -841,7 +893,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
     if (index.isValid())
     {
         d->waitForDirectoryWorker();
-        const QSharedPointer<Image>& e = d->entries.at(index.row());
+        QSharedPointer<Image> e = this->image(index.row());
         const QFileInfo& fileInfo = e->fileInfo();
 
         switch (role)
@@ -962,8 +1014,8 @@ QModelIndex SortedImageModel::index(const Image* img)
     d->waitForDirectoryWorker();
     auto result = std::find_if(d->entries.begin(),
                                d->entries.end(),
-                            [&](const QSharedPointer<Image>& other)
-                            { return other.data() == img; });
+                            [&](const Impl::Entry_t& other)
+                            { return std::get<0>(other).data() == img; });
     
     if(result == d->entries.end())
     {
@@ -981,7 +1033,7 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
     if(index.isValid())
     {
         d->waitForDirectoryWorker();
-        return d->entries.at(index.row())->fileInfo();
+        return this->image(index.row())->fileInfo();
     }
     
     return QFileInfo();

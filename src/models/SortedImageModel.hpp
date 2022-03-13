@@ -13,6 +13,7 @@
 class QDir;
 class ImageDecodeTask;
 class Image;
+class SmartImageDecoder;
 
 class SortedImageModel : public QAbstractListModel, public QRunnable
 {
@@ -43,13 +44,17 @@ public:
     
     QFuture<DecodingState> changeDirAsync(const QString& dir);
     void run() override;
+    void decodeAllImages(DecodingState state, int imageHeight);
     
     using QAbstractListModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
     QModelIndex index(const Image* img);
     QFileInfo fileInfo(const QModelIndex& idx) const;
     QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
-    QSharedPointer<Image> decoder(const QModelIndex &index) const;
+    QSharedPointer<Image> image(const QModelIndex& idx) const;
+    QSharedPointer<Image> image(unsigned int row) const;
+    QSharedPointer<SmartImageDecoder> decoder(const QModelIndex& idx) const;
+    QSharedPointer<SmartImageDecoder> decoder(unsigned int row) const;
 
     void sort(Column column);
     void sort(Qt::SortOrder order);

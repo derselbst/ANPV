@@ -267,11 +267,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
         this->cancelCallback();
         do
         {
-            if(d->decodingState() != DecodingState::Metadata)
-            {
-                // metadata has not been read yet or try to recover previous error
-                this->init();
-            }
+            this->init();
             
             if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
