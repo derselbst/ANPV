@@ -394,6 +394,28 @@ struct SortedImageModel::Impl
         }
     }
     
+    void cancelAllBackgroundTasks()
+    {
+        std::lock_guard<std::mutex> l(m);
+        if(!backgroundTasks.empty())
+        {
+            for (const auto& value : backgroundTasks)
+            {
+                auto& future = value;
+                future->disconnect(q);
+                future->cancel();
+            }
+
+            for (const auto& value : backgroundTasks)
+            {
+                auto& future = value;
+                future->waitForFinished();
+            }
+            layoutChangedTimer.stop();
+            backgroundTasks.clear();
+        }
+    }
+    
     // stop processing, delete everything and wait until finished
     void clear()
     {
@@ -404,26 +426,7 @@ struct SortedImageModel::Impl
             directoryWorker->future().waitForFinished();
         }
         
-        {
-            std::lock_guard<std::mutex> l(m);
-            if(!backgroundTasks.empty())
-            {
-                for (const auto& value : backgroundTasks)
-                {
-                    auto& future = value;
-                    future->disconnect(q);
-                    future->cancel();
-                }
-
-                for (const auto& value : backgroundTasks)
-                {
-                    auto& future = value;
-                    future->waitForFinished();
-                }
-                layoutChangedTimer.stop();
-                backgroundTasks.clear();
-            }
-        }
+        cancelAllBackgroundTasks();
         entries.clear();
 
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
@@ -747,6 +750,33 @@ void SortedImageModel::run()
         d->directoryWorker->addResult(DecodingState::Error);
     }
     d->directoryWorker->finish();
+}
+
+void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
+{
+    xThreadGuard(this);
+    d->waitForDirectoryWorker();
+    d->cancelAllBackgroundTasks();
+
+    for(Impl::Entry_t& e : d->entries)
+    {
+        QSharedPointer<SmartImageDecoder>& decoder = std::get<1>(e);
+        if(decoder)
+        {
+            bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
+            if(taken)
+            {
+                qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
+            }
+            QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+
+            // decode asynchronously
+            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            watcher->setFuture(fut);
+
+            d->backgroundTasks.push_back(watcher);
+        }
+    }
 }
 
 QSharedPointer<Image> SortedImageModel::image(const QModelIndex& idx) const

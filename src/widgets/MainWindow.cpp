@@ -125,7 +125,10 @@ struct MainWindow::Impl
             {
                 PreviewAllImagesDialog d;
                 d.setImageHeight(ANPV::globalInstance()->iconHeight());
-                d.exec();
+                if(d.exec() == QDialog::Accepted)
+                {
+                    ANPV::globalInstance()->fileModel()->decodeAllImages(DecodingState::PreviewImage, d.imageHeight());
+                }
             }
         );
     }

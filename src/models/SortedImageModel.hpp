@@ -44,6 +44,7 @@ public:
     
     QFuture<DecodingState> changeDirAsync(const QString& dir);
     void run() override;
+    void decodeAllImages(DecodingState state, int imageHeight);
     
     using QAbstractListModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
