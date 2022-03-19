@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "types.hpp"
+
 #include <QListView>
 #include <QString>
 #include <QSharedPointer>
@@ -26,8 +28,8 @@ public:
     void setModel(QAbstractItemModel *model) override;
 
     void moveSelectedFiles(QString&& destination);
-    QList<QSharedPointer<Image>> selectedImages();
-    QList<QSharedPointer<Image>> selectedImages(const QModelIndexList& selectedIdx);
+    QList<Entry_t> selectedImages();
+    QList<Entry_t> selectedImages(const QModelIndexList& selectedIdx);
         
 protected:
     void wheelEvent(QWheelEvent *event) override;

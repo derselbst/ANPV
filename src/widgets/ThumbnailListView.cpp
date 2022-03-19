@@ -74,11 +74,11 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<QSharedPointer<Image>> imgs = q->selectedImages();
+        QList<Entry_t> imgs = q->selectedImages();
         QList<QString> files;
-        for(QSharedPointer<Image>& i : imgs)
+        for(Entry_t& e : imgs)
         {
-            files.push_back(i->fileInfo().fileName());
+            files.push_back(SortedImageModel::image(e)->fileInfo().fileName());
         }
         
         switch(op)
@@ -95,11 +95,11 @@ struct ThumbnailListView::Impl
     
     void onCopyToClipboard(Operation op)
     {
-        QList<QSharedPointer<Image>> imgs = q->selectedImages();
+        QList<Entry_t> imgs = q->selectedImages();
         QList<QUrl> files;
-        for(QSharedPointer<Image>& i : imgs)
+        for(Entry_t& e : imgs)
         {
-            files.push_back(QUrl::fromLocalFile(i->fileInfo().absoluteFilePath()));
+            files.push_back(QUrl::fromLocalFile(SortedImageModel::image(e)->fileInfo().absoluteFilePath()));
         }
         
         QMimeData *mimeData = new QMimeData;
@@ -115,13 +115,18 @@ struct ThumbnailListView::Impl
     
     void openSelectionInternally()
     {
-        QList<QSharedPointer<Image>> imgs = q->selectedImages();
-        
-        if(imgs.size() == 1 && imgs[0]->fileInfo().isDir())
+        QList<Entry_t> imgs = q->selectedImages();
+        if(imgs.size() == 0)
         {
-            ANPV::globalInstance()->setCurrentDir(imgs[0]->fileInfo().absoluteFilePath());
+            return;
         }
-        else if(imgs.size() != 0)
+        
+        QFileInfo firstInf = SortedImageModel::image(imgs[0])->fileInfo();
+        if(imgs.size() == 1 && firstInf.isDir())
+        {
+            ANPV::globalInstance()->setCurrentDir(firstInf.absoluteFilePath());
+        }
+        else
         {
             ANPV::globalInstance()->openImages(imgs);
         }
@@ -141,9 +146,9 @@ struct ThumbnailListView::Impl
         
         auto imgs = q->selectedImages();
         QString filePaths;
-        for(QSharedPointer<Image>& i : imgs)
+        for(Entry_t& e : imgs)
         {
-            filePaths += QString(" '%1' ").arg(i->fileInfo().absoluteFilePath());
+            filePaths += QString(" '%1' ").arg(SortedImageModel::image(e)->fileInfo().absoluteFilePath());
         }
         
         QClipboard* cb = QApplication::clipboard();
@@ -306,22 +311,22 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     QListView::setModel(model);
 }
 
-QList<QSharedPointer<Image>> ThumbnailListView::selectedImages()
+QList<Entry_t> ThumbnailListView::selectedImages()
 {
     QModelIndexList selectedIdx = this->selectionModel()->selectedRows();
     return this->selectedImages(selectedIdx);
 }
 
-QList<QSharedPointer<Image>> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
+QList<Entry_t> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
 {
-    QList<QSharedPointer<Image>> images;
+    QList<Entry_t> entries;
     auto sourceModel = ANPV::globalInstance()->fileModel();
     auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
     for(int i=0; i<selectedIdx.size(); i++)
     {
-        images.push_back(sourceModel->image(proxyModel.mapToSource(selectedIdx[i])));
+        entries.push_back(sourceModel->entry(proxyModel.mapToSource(selectedIdx[i])));
     }
-    return images;
+    return entries;
 }
 
 void ThumbnailListView::moveSelectedFiles(QString&& destination)

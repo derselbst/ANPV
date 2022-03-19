@@ -65,9 +65,7 @@ struct DocumentView::Impl
     QFutureWatcher<DecodingState> taskFuture;
     
     // the latest image decoder, the same that displays the current image
-    // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
-    // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
-    std::unique_ptr<SmartImageDecoder> currentImageDecoder;
+    QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
     DecodingState latestDecodingState = DecodingState::Ready;
     
@@ -334,11 +332,8 @@ struct DocumentView::Impl
         WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
-            QSharedPointer<Image> newImg = this->model->goTo(this->currentImageDecoder->image(), i);
-            if(newImg)
-            {
-                p->loadImage(newImg);
-            }
+            Entry_t newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
+            p->loadImage(newEntry);
         }
     }
     
@@ -419,16 +414,13 @@ struct DocumentView::Impl
             {
                 if(o == p && p->hasFocus())
                 {
-                    QSharedPointer<Image> nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+                    Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
 
                     QString targetDir = act->data().toString();
                     QFileInfo source = this->currentImageDecoder->image()->fileInfo();
                     ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
 
-                    if(nextImg)
-                    {
-                        p->loadImage(nextImg);
-                    }
+                    p->loadImage(nextImg);
                     break;
                 }
             }
@@ -724,9 +716,23 @@ void DocumentView::loadImage(QString url)
     this->loadImage(DecoderFactory::globalInstance()->makeImage(info));
 }
 
+void DocumentView::loadImage(const Entry_t& e)
+{
+    auto& dec = SortedImageModel::decoder(e);
+    auto& img = SortedImageModel::image(e);
+    if(dec)
+    {
+        this->loadImage(dec);
+    }
+    else if(img)
+    {
+        this->loadImage(img);
+    }
+}
+
 void DocumentView::loadImage(QSharedPointer<Image> image)
 {
-    auto dec = DecoderFactory::globalInstance()->getDecoder(image);
+    auto dec = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
     if(!dec)
     {
         QString name = image->fileInfo().fileName();
@@ -737,7 +743,7 @@ void DocumentView::loadImage(QSharedPointer<Image> image)
     this->loadImage(std::move(dec));
 }
 
-void DocumentView::loadImage(std::unique_ptr<SmartImageDecoder>&& dec)
+void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
     d->currentImageDecoder = std::move(dec);

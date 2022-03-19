@@ -429,9 +429,9 @@ struct MainWindow::Impl
         {
             size_t count = imgs.size();
             size_t size = 0;
-            for(QSharedPointer<Image>& i : imgs)
+            for(Entry_t& e : imgs)
             {
-                size += i->fileInfo().size();
+                size += SortedImageModel::image(e)->fileInfo().size();
             }
             
             QString text = QString(
