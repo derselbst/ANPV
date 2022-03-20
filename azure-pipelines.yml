@@ -145,9 +145,7 @@ jobs:
         SourceFolder: 'build\$(configuration)'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
-      enabled: false
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
-      enabled: false
