@@ -17,6 +17,7 @@
 #include <cstdint>
 
 #include "DecodingState.hpp"
+#include "AfPointOverlay.hpp"
 
 class ExifWrapper;
 class QMetaMethod;
@@ -69,6 +70,8 @@ public:
     DecodingState decodingState() const;
     QImage decodedImage();
     QString errorMessage();
+
+    std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAutoFocusPoints();
 
 public slots:
     void lookupIconFromFileType();

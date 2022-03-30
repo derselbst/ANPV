@@ -753,18 +753,18 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     {
         this->setSceneRect(QRectF(QPointF(0,0), fullImgSize));
         
-        QSharedPointer<ExifWrapper> exif = img->exif();
-        if(exif && d->latestDecodingState < DecodingState::Metadata)
+        if(d->latestDecodingState < DecodingState::Metadata)
         {
             d->latestDecodingState = DecodingState::Metadata;
 
             d->alignImageAccordingToViewMode(img);
             
             auto viewFlags = ANPV::globalInstance()->viewFlags();
-            std::vector<AfPoint> afPoints;
-            QSize size;
-            if(exif->autoFocusPoints(afPoints,size))
+            auto afp = img->cachedAutoFocusPoints();
+            if(afp)
             {
+                std::vector<AfPoint>& afPoints = std::get<0>(*afp);
+                QSize& size = std::get<1>(*afp);
                 d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
                 d->afPointOverlay->setAfPoints(afPoints, size);
                 

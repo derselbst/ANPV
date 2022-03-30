@@ -208,6 +208,9 @@ void SmartImageDecoder::init()
             this->image()->setThumbnail(thumb);
         }
         
+        // initialize cache
+        (void)this->image()->cachedAutoFocusPoints();
+
         this->setDecodingState(DecodingState::Metadata);
     }
     catch(const std::exception& e)
