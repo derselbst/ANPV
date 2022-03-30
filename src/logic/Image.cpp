@@ -273,7 +273,11 @@ std::optional<std::tuple<std::vector<AfPoint>, QSize>> Image::cachedAutoFocusPoi
         return std::nullopt;
     }
     
-    d->cachedAfPoints = exif->autoFocusPoints();
+    // unlock while doing potentially expensive processing
+    lck.unlock();
+    auto temp = exif->autoFocusPoints();
+    lck.lock();
+    d->cachedAfPoints = std::move(temp);
     return d->cachedAfPoints;
 }
 
