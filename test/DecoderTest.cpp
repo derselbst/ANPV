@@ -15,6 +15,9 @@
 #include <QFuture>
 #include <QFutureWatcher>
 
+#include <thread>
+#include <chrono>
+
 QTEST_MAIN(DecoderTest)
 #include "DecoderTest.moc"
 
@@ -27,6 +30,7 @@ class ImageDecoderUnderTest : public SmartImageDecoder
     friend class DecoderTest;
     bool decodeHeaderFail = false;
     bool decodingLoopFail = false;
+    int sleepMs = 0;
 public:
     void setDecodeHeaderFail(bool b)
     {
@@ -36,6 +40,11 @@ public:
     void setDecodingLoopFail(bool b)
     {
         this->decodingLoopFail = b;
+    }
+    
+    void setSleep(int ms)
+    {
+        this->sleepMs = ms;
     }
     
     ImageDecoderUnderTest(QSharedPointer<Image> image) : SmartImageDecoder(image)
@@ -50,6 +59,7 @@ protected:
 
     QImage decodingLoop(QSize desiredResolution, QRect roiRect) override
     {
+        std::this_thread::sleep_for(std::chrono::milliseconds(this->sleepMs));
         if(this->decodingLoopFail)
             throw std::runtime_error(errDec);
         
