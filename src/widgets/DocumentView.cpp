@@ -100,7 +100,6 @@ struct DocumentView::Impl
         if(currentImageDecoder)
         {
             currentImageDecoder->image()->disconnect(p);
-            currentImageDecoder->reset();
             currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
         }
