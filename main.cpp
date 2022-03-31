@@ -95,6 +95,14 @@ int main(int argc, char *argv[])
     break;
     }
     
-    int r = app.exec();
-    return r;
+    try
+    {
+        int r = app.exec();
+        return r;
+    }
+    catch(const std::exception& e)
+    {
+        QMessageBox::critical(nullptr, "Unhandled Exception", e.what());
+    }
+    return -1;
 }
