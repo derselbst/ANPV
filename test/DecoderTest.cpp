@@ -30,7 +30,6 @@ class ImageDecoderUnderTest : public SmartImageDecoder
     friend class DecoderTest;
     bool decodeHeaderFail = false;
     bool decodingLoopFail = false;
-    int sleepMs = 0;
 public:
     void setDecodeHeaderFail(bool b)
     {
@@ -40,11 +39,6 @@ public:
     void setDecodingLoopFail(bool b)
     {
         this->decodingLoopFail = b;
-    }
-    
-    void setSleep(int ms)
-    {
-        this->sleepMs = ms;
     }
     
     ImageDecoderUnderTest(QSharedPointer<Image> image) : SmartImageDecoder(image)
@@ -59,7 +53,6 @@ protected:
 
     QImage decodingLoop(QSize desiredResolution, QRect roiRect) override
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(this->sleepMs));
         if(this->decodingLoopFail)
             throw std::runtime_error(errDec);
         
@@ -256,7 +249,23 @@ void DecoderTest::testFinishBeforeSettingFutureWatcher()
     
     QCOMPARE(spyStartedAfterFinished.count(), 1);
     QCOMPARE(spyFinishedAfterFinished.count(), 1);
+}
+
+void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
+{
+    MySleepyImageDecoder* dec = new MySleepyImageDecoder();
+    dec->setAutoDelete(true);
+    dec->setSleep(10*1000);
     
+    QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+    
+    QVERIFY(fut.isStarted());
+    QThread::msleep(1);
+    QVERIFY(fut.isRunning());
+    
+    dec->reset();
+    QVERIFY(fut.isFinished());
+    QVERIFY(!fut.isRunning());
 }
 
 void DecoderTest::testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted()
@@ -270,6 +279,7 @@ void DecoderTest::testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted()
     {
         MySleepyImageDecoder* dec = new MySleepyImageDecoder();
         dec->setAutoDelete(false);
+        dec->setSleep(100*1000);
         
         // start the decoder
         dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
