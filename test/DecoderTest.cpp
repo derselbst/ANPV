@@ -259,8 +259,8 @@ void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
     
     QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
     
-    QVERIFY(fut.isStarted());
     QThread::msleep(1);
+    QVERIFY(fut.isStarted());
     QVERIFY(fut.isRunning());
     
     dec->reset();
