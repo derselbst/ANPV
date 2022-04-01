@@ -643,7 +643,7 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
 void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 oldState)
 {
     auto& dec = d->currentImageDecoder;
-    if(img != dec->image().data())
+    if(dec && img != dec->image().data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
