@@ -159,7 +159,8 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
     
-    mem = this->allocateImageBuffer<uint32_t>(cinfo.output_width, cinfo.output_height);
+    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+    mem = reinterpret_cast<uint32_t*>(image.bits());
 
     bufferSetup.resize(cinfo.output_height);
     for(JDIMENSION i=0; i < cinfo.output_height; i++)
@@ -216,11 +217,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
             
-            this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                    cinfo.output_width,
-                                    std::min(totalLinesRead, cinfo.output_height),
-                                    rowStride,
-                                    QImage::Format_RGB32));
+            //this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
+            //                        cinfo.output_width,
+            //                        std::min(totalLinesRead, cinfo.output_height),
+            //                        rowStride,
+            //                        QImage::Format_RGB32));
         }
         
         /* terminate output pass */
@@ -235,7 +236,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     jpeg_finish_decompress(&cinfo);
     
-    image = QImage(reinterpret_cast<uint8_t*>(mem), cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
     image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
