@@ -75,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs2"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs3"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -107,8 +107,8 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
-        vcpkg install qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
+        vcpkg install qtbase[concurrent,core,dbus,default-features,doubleconversion,gui,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install qtbase[concurrent,core,dbus,default-features,doubleconversion,gui,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
