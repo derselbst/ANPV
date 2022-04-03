@@ -51,7 +51,7 @@ protected:
 
     void cancelCallback();
     void assertNotDecoding();
-    void updatePreviewImage(QImage&& img);
+    void updatePreviewImage(const QRect& r);
 
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
 

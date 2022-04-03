@@ -36,6 +36,7 @@ public:
 public slots:
     void zoomIn();
     void zoomOut();
+    void onPreviewImageUpdated(Image* img, QRect r);
     void onImageRefinement(Image* self, QImage img);
     void onDecodingStateChanged(Image* self, quint32 newState, quint32 oldState);
 

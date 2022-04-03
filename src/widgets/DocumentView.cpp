@@ -633,6 +633,15 @@ void DocumentView::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
+void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
+{
+    if (img != this->d->currentImageDecoder->image().data() || !d->currentPixmapOverlay)
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    d->currentPixmapOverlay->update(r);
+}
 
 void DocumentView::onImageRefinement(Image* img, QImage image)
 {
@@ -643,10 +652,8 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
     }
     
     d->removeSmoothPixmap();
-    d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
+    d->currentDocumentPixmap = QPixmap::fromImage(image);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
-
-    d->scene->invalidate();
 }
 
 void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 oldState)
@@ -806,8 +813,9 @@ void DocumentView::showImage(QSharedPointer<Image> img)
 void DocumentView::loadImage()
 {
     this->showImage(d->currentImageDecoder->image());
-    
+
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
+    QObject::connect(d->currentImageDecoder->image().data(), &Image::previewImageUpdated, this, &DocumentView::onPreviewImageUpdated);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->screen()->geometry().size());

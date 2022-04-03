@@ -426,6 +426,12 @@ void Image::setDecodedImage(QImage img)
     emit this->decodedImageChanged(this, d->decodedImage);
 }
 
+void Image::updatePreviewImage(const QRect& r)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    emit this->previewImageUpdated(this, r);
+}
+
 void Image::connectNotify(const QMetaMethod& signal)
 {
     if (signal.name() == QStringLiteral("decodingStateChanged"))

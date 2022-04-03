@@ -134,7 +134,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // the entire jpeg() section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
-    uint32_t* mem;
     QImage image;
     
     auto& cinfo = d->cinfo;
@@ -160,12 +159,12 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_calc_output_dimensions(&cinfo);
     
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
-    mem = reinterpret_cast<uint32_t*>(image.bits());
+    this->image()->setDecodedImage(image);
 
     bufferSetup.resize(cinfo.output_height);
     for(JDIMENSION i=0; i < cinfo.output_height; i++)
     {
-        bufferSetup[i] = reinterpret_cast<JSAMPLE*>(mem + i * cinfo.output_width);
+        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i)));
     }
     
     this->cancelCallback();
@@ -214,14 +213,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         
         while (cinfo.output_scanline < cinfo.output_height)
         {
-            totalLinesRead += jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
+            auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
             
-            //this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-            //                        cinfo.output_width,
-            //                        std::min(totalLinesRead, cinfo.output_height),
-            //                        rowStride,
-            //                        QImage::Format_RGB32));
+            this->updatePreviewImage(QRect(0, totalLinesRead, cinfo.output_width, linesRead));
+            totalLinesRead += linesRead;
         }
         
         /* terminate output pass */
