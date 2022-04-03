@@ -636,14 +636,21 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
     xThreadGuard g(this);
 
-    this->beginRemoveRows(QModelIndex(), 0, rowCount());
+    auto rowCount = this->rowCount();
+    if (rowCount != 0)
+    {
+        this->beginRemoveRows(QModelIndex(), 0, rowCount);
+    }
+
     d->clear();
-    
     d->currentDir = QDir(dir);
-    this->endRemoveRows();
+
+    if (rowCount != 0)
+    {
+        this->endRemoveRows();
+    }
 
     QThreadPool::globalInstance()->start(this, static_cast<int>(Priority::Normal));
-
     return d->directoryWorker->future();
 }
 
