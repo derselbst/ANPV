@@ -53,6 +53,10 @@ jobs:
     cancelTimeoutInMinutes: 2
     strategy:
       matrix:
+        Win10:
+          toolset: 'v142'
+          generator: 'Visual Studio 16 2019'
+          poo: 'windows-2019'
         Win11:
           toolset: 'v143'
           generator: 'Visual Studio 17 2022'
@@ -60,7 +64,7 @@ jobs:
     pool:
       vmImage: $(poo)
     variables:
-      configuration: 'Debug'
+      configuration: 'Release'
       VCPKG_REVISION: 'b86c0c35b88e2bf3557ff49dc831689c2f085090'
       platform: 'x64'
       cmake_platform: 'x64'
@@ -137,7 +141,7 @@ jobs:
     - task: CopyFiles@2
       continueOnError: true
       inputs:
-        SourceFolder: 'build'
+        SourceFolder: 'build\$(configuration)'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
