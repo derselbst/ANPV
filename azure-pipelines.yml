@@ -107,8 +107,8 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtbase[concurrent,core,dbus,default-features,doubleconversion,gui,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows qtsvg:$(platform)-windows
-        vcpkg install qtbase[concurrent,core,dbus,default-features,doubleconversion,gui,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows-static qtsvg:$(platform)-windows-static
+        vcpkg install qtbase[concurrent,core,default-features,doubleconversion,gui,harfbuzz,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install qtbase[concurrent,core,default-features,doubleconversion,gui,harfbuzz,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
