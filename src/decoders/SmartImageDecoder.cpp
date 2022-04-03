@@ -42,9 +42,6 @@ struct SmartImageDecoder::Impl
     // It does for embedded JPEG preview in CR2
     QByteArray encodedInputFile;
     
-    // buffer that holds the data of the image (want to manage this resource myself, and not rely on the shared buffer by QImage; also QImage poorly handles out-of-memory situations)
-    std::unique_ptr<unsigned char[]> backingImageBuffer;
-    
     // DO NOT STORE THE QFILE DIRECTLY!
     // QFile is a QObject! It has thread affinity! Creating it by the worker thread and destrorying it by the UI thread will lead to memory corruption!
     QScopedPointer<QFile> file;
@@ -73,15 +70,9 @@ struct SmartImageDecoder::Impl
         return q->image()->decodingState();
     }
 
-    void setDecodedImage(QImage img)
-    {
-        q->image()->setDecodedImage(img);
-    }
-    
     void releaseFullImage()
     {
-        setDecodedImage(QImage());
-        backingImageBuffer.reset();
+        q->image()->setDecodedImage(QImage());
     }
     
     void setErrorMessage(const QString& err)
@@ -208,6 +199,9 @@ void SmartImageDecoder::init()
             this->image()->setThumbnail(thumb);
         }
         
+        // initialize cache
+        (void)this->image()->cachedAutoFocusPoints();
+
         this->setDecodingState(DecodingState::Metadata);
     }
     catch(const std::exception& e)
@@ -276,7 +270,6 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
                 QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
-                d->setDecodedImage(decodedImg);
                 
                 // if thumbnail is still null and no roi has been given, set it
                 if (this->image()->thumbnail().isNull() && !roiRect.isValid())
@@ -354,15 +347,15 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     }
 }
 
-void SmartImageDecoder::updatePreviewImage(QImage&& img)
+void SmartImageDecoder::updatePreviewImage(const QRect& r)
 {
     constexpr int DecodePreviewImageRefreshDuration = 100;
     
     auto now = std::chrono::steady_clock::now();
     auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
-    if(durationMs.count() > DecodePreviewImageRefreshDuration)
+    //if(durationMs.count() > DecodePreviewImageRefreshDuration)
     {
-        this->image()->setDecodedImage(std::move(img));
+        this->image()->updatePreviewImage(r);
         d->lastPreviewImageUpdate = now;
     }
 }
@@ -402,28 +395,25 @@ void SmartImageDecoder::assertNotDecoding()
     }
 }
 
-template<typename T>
-T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
+QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
 {
-    d->releaseFullImage();
-
-    size_t needed = size_t(width) * height * sizeof(T);
+    const size_t needed = size_t(width) * height;
+    const size_t rowStride = width * sizeof(uint32_t);
     try
     {
         this->setDecodingMessage("Allocating image output buffer");
 
-        std::unique_ptr<unsigned char[]> mem(new unsigned char[needed]);
+        std::unique_ptr<uint32_t[]> mem(new uint32_t[needed]);
+        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, [](void* p) { delete[](static_cast<uint32_t*>(p)); }, mem.get());
+        mem.release();
 
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
         
-        d->backingImageBuffer = std::move(mem);
-        return reinterpret_cast<T*>(d->backingImageBuffer.get());
+        return std::move(image);
     }
     catch (const std::bad_alloc&)
     {
-        throw std::runtime_error(Formatter() << "Unable to allocate " << needed / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
+        throw std::runtime_error(Formatter() << "Unable to allocate " << (needed * sizeof(uint32_t)) / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
     }
 }
-
-template uint32_t* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);

@@ -412,8 +412,8 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
     
-    uint32_t* mem = this->allocateImageBuffer<uint32_t>(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height);
-    QImage image(reinterpret_cast<uint8_t*>(mem), d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+    QImage image = this->allocateImageBuffer(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+    this->image()->setDecodedImage(image);
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
     return image;
@@ -442,12 +442,10 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &planar);
     
     this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
-    
+
+    uint32_t* buf = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(image.constBits()));
     if(TIFFIsTiled(d->tiff))
-    {
-        uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
-        auto* buf = mem;
-        
+    {   
         uint32_t tw,tl;
         TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw);
         TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl);
@@ -479,11 +477,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                         d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
-                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                            width,
-                                            height,
-                                            width * sizeof(uint32_t),
-                                            d->format(imagePageToDecode)));
+                    this->updatePreviewImage(tile);
                     
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
@@ -548,9 +542,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         else
         {
 gehtnich:
-            uint32_t* mem = reinterpret_cast<uint32_t*>(image.bits());
-            auto* buf = mem;
-            
             std::vector<uint32_t> stripBuf(width * rowsperstrip);
             std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
             for (tstrip_t strip = 0; strip < stripCount; strip++)
@@ -577,11 +568,7 @@ gehtnich:
                     
                     buf += pixelsToCpy;
                     
-                    this->updatePreviewImage(QImage(reinterpret_cast<const uint8_t*>(mem),
-                                            width,
-                                            std::min(strip*rowsperstrip, height),
-                                            width * sizeof(uint32_t),
-                                            d->format(imagePageToDecode)));
+                    this->updatePreviewImage(QRect(0, 0, width, std::min((strip+1) * rowsperstrip, height)));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);

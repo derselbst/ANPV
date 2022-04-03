@@ -40,7 +40,7 @@ public:
     QSize sizeTransposed(QSize size);
     QString comment();
     QImage thumbnail();
-    bool autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& sizeOut);
+    std::optional<std::tuple<std::vector<AfPoint>, QSize>> autoFocusPoints();
     
     QString aperture();
     bool aperture(double& quot);

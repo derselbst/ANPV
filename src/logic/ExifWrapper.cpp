@@ -276,7 +276,7 @@ QImage ExifWrapper::thumbnail()
     return image;
 }
 
-bool ExifWrapper::autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& sizeOut)
+std::optional<std::tuple<std::vector<AfPoint>, QSize>> ExifWrapper::autoFocusPoints()
 {
     long afValidPoints, imageWidth, imageHeight;
     if (d->mExivHandle.getExifTagLong("Exif.Canon.AFValidPoints",      afValidPoints) &&
@@ -298,7 +298,13 @@ bool ExifWrapper::autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& size
             else
             {
                 qInfo() << "Canon image contains AF point information, but camera model '" << model << "' is unknown.";
-                return false;
+                return std::nullopt;
+            }
+            
+            if(afValidPoints <= 0)
+            {
+                qInfo() << "A negative number of valid AF point is not allowed.";
+                return std::nullopt;
             }
             
             std::vector<AfPoint> points;
@@ -350,17 +356,15 @@ bool ExifWrapper::autoFocusPoints(std::vector<AfPoint>& afPointsOut, QSize& size
                 else
                 {
                     qWarning() << "Error while parsing Canon AF";
-                    return false;
+                    return std::nullopt;
                 }
             }
             
-            sizeOut = QSize(imageWidth, imageHeight);
-            afPointsOut = points;
-            return true;
+            return std::optional(std::tuple(points, QSize(imageWidth, imageHeight)));
         }
     }
     
-    return false;
+    return std::nullopt;
 }
 
 bool ExifWrapper::aperture(double& quot)

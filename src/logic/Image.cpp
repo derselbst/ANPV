@@ -48,6 +48,8 @@ struct Image::Impl
     
     QString errorMessage;
     
+    std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAfPoints;
+    
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
     
@@ -236,6 +238,7 @@ void Image::setExif(QSharedPointer<ExifWrapper> e)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     d->exifWrapper = e;
+    d->cachedAfPoints = std::nullopt;
 }
 
 QColorSpace Image::colorSpace()
@@ -256,6 +259,27 @@ void Image::setColorSpace(QColorSpace cs)
     d->colorSpace = cs;
 }
 
+std::optional<std::tuple<std::vector<AfPoint>, QSize>> Image::cachedAutoFocusPoints()
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    if(d->cachedAfPoints)
+    {
+        return d->cachedAfPoints;
+    }
+    
+    QSharedPointer<ExifWrapper> exif = this->exif();
+    if(!exif)
+    {
+        return std::nullopt;
+    }
+    
+    // unlock while doing potentially expensive processing
+    lck.unlock();
+    auto temp = exif->autoFocusPoints();
+    lck.lock();
+    d->cachedAfPoints = std::move(temp);
+    return d->cachedAfPoints;
+}
 
 QString Image::formatInfoString()
 {
@@ -400,6 +424,12 @@ void Image::setDecodedImage(QImage img)
     d->decodedImage = img;
     lck.unlock();
     emit this->decodedImageChanged(this, d->decodedImage);
+}
+
+void Image::updatePreviewImage(const QRect& r)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    emit this->previewImageUpdated(this, r);
 }
 
 void Image::connectNotify(const QMetaMethod& signal)

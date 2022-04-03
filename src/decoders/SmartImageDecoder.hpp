@@ -51,10 +51,9 @@ protected:
 
     void cancelCallback();
     void assertNotDecoding();
-    void updatePreviewImage(QImage&& img);
+    void updatePreviewImage(const QRect& r);
 
-    template<typename T>
-    T* allocateImageBuffer(uint32_t width, uint32_t height);
+    QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
 
     void setDecodingState(DecodingState state);
     void setDecodingMessage(QString&& msg);
