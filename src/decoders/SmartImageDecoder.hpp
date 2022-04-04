@@ -44,6 +44,7 @@ public:
     void reset();
     
     void run() override;
+    void releaseFullImage();
 
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;

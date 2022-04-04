@@ -778,7 +778,12 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
 
             // decode asynchronously
-            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight)).then(
+                [=](DecodingState result)
+                {
+                    decoder->releaseFullImage();
+                    return result;
+                });
             watcher->setFuture(fut);
 
             d->backgroundTasks.push_back(watcher);

@@ -325,7 +325,12 @@ void SmartImageDecoder::reset()
         this->setDecodingState(DecodingState::Ready);
         return;
     }
+    this->releaseFullImage();
+}
 
+void SmartImageDecoder::releaseFullImage()
+{
+    std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
     this->setDecodingState(DecodingState::Metadata);
 }
