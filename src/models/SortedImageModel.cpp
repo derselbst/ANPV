@@ -382,7 +382,7 @@ struct SortedImageModel::Impl
     void onDirectoryLoaded()
     {
         xThreadGuard g(q);
-        q->beginInsertRows(QModelIndex(), 0, entries.size());
+        q->beginInsertRows(QModelIndex(), 0, entries.size()-1);
         q->endInsertRows();
     }
     
@@ -639,7 +639,7 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
     auto rowCount = this->rowCount();
     if (rowCount != 0)
     {
-        this->beginRemoveRows(QModelIndex(), 0, rowCount);
+        this->beginRemoveRows(QModelIndex(), 0, rowCount-1);
     }
 
     d->clear();
