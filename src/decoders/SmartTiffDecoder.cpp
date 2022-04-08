@@ -605,6 +605,7 @@ gehtnich:
 
     image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
+    // FIXME: convertToColorSpace copies the entire image...
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
 
     this->setDecodingMessage("TIFF decoding completed successfully.");

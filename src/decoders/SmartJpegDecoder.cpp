@@ -234,7 +234,9 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
+    // FIXME: convertToColorSpace copies the entire image...
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+    this->image()->setDecodedImage(image);
     
     // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("JPEG decoding completed successfully.");
