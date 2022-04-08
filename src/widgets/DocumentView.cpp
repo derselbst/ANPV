@@ -652,7 +652,7 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
     }
     
     d->removeSmoothPixmap();
-    d->currentDocumentPixmap = QPixmap::fromImage(image);
+    d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
 }
 
