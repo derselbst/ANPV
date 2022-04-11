@@ -52,7 +52,7 @@ struct Image::Impl
     std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAfPoints;
     
     QPointer<QTimer> updateRectTimer;
-    std::atomic<QRect> cachedUpdateRect;
+    QRect cachedUpdateRect;
     
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
@@ -96,8 +96,10 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
     connect(d->updateRectTimer.data(), &QTimer::timeout, this,
         [&]()
         {
+            std::unique_lock<std::recursive_mutex> lck(d->m);
             QRect updateRect = d->cachedUpdateRect;
             d->cachedUpdateRect = QRect();
+            lck.unlock();
             emit this->previewImageUpdated(this, updateRect);
         });
 }
@@ -443,10 +445,11 @@ void Image::setDecodedImage(QImage img)
 
 void Image::updatePreviewImage(const QRect& r)
 {
-    // no lock required
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     QRect updateRect = d->cachedUpdateRect;
     updateRect = updateRect.united(r);
     d->cachedUpdateRect = updateRect;
+    lck.unlock();
 
     QMetaObject::invokeMethod(this, [&]()
         {
