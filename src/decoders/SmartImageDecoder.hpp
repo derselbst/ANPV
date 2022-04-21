@@ -39,11 +39,12 @@ public:
     // they are virtual for the purpose of unit testing.
     virtual void open();
     virtual void init();
-    virtual void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     virtual void close();
+    void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     void reset();
     
     void run() override;
+    void cancelOrTake(QFuture<DecodingState> taskFuture);
     void releaseFullImage();
 
 protected:

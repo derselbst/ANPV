@@ -28,8 +28,11 @@ struct SmartImageDecoder::Impl
     mutable std::recursive_mutex asyncApiMtx;
     
     QScopedPointer<QPromise<DecodingState>> promise;
+    // the targetState requested by decodeAsync() (not the final state reached!)
     DecodingState targetState;
+    // the resolution requested by decodeAsync() (not the final resolution reached!)
     QSize desiredResolution;
+    // the ROI requested by decodeAsync() (not the final ROI reached!)
     QRect roiRect;
     QString decodingMessage;
     int decodingProgress=0;
@@ -210,11 +213,55 @@ void SmartImageDecoder::init()
     }
 }
 
+// Do not wait for finished()
+void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
+{
+    Q_ASSERT(!d->promise.isNull());
+
+    bool isFinished = taskFuture.isFinished();
+    bool taken = QThreadPool::globalInstance()->tryTake(this);
+    if(!isFinished)
+    {
+        if(!taken)
+        {
+            taskFuture.cancel();
+        }
+        else
+        {
+            // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
+            d->promise->start();
+            d->promise->finish();
+        }
+    }
+}
+
+// FIXME This function may not be called concurrently by multiple threads
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
-    this->assertNotDecoding();
+    if(!(targetState == DecodingState::Metadata || targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage))
+    {
+        throw std::invalid_argument(Formatter() << "DecodingState '" << targetState << "' cannot be requested");
+    }
+
+    if(d->promise)
+    {
+        QFuture<DecodingState> taskFuture = d->promise->future();
+        DecodingState imageState = this->image()->decodingState();
+        
+        if(targetState != DecodingState::PreviewImage && targetState == d->targetState && targetState == imageState)
+        {
+            // return already decoded stuff
+            qDebug() << "Skipping decoding of image " << this->image()->fileInfo().fileName() << " and returning what we already have.";
+            return taskFuture;
+        }
+        
+        this->cancelOrTake(taskFuture);
+        taskFuture.waitForFinished();
+        this->reset();
+    }
+
     std::lock_guard g(d->asyncApiMtx);
-    
+
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
     d->roiRect = roiRect;
