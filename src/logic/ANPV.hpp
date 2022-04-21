@@ -95,8 +95,6 @@ signals:
     
 public slots:
     void about();
-//     void loadImage(QFileInfo str);
-//     void loadImage(QSharedPointer<SmartImageDecoder> dec);
     
 private:
     struct Impl;

@@ -183,7 +183,7 @@ public:
     }
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override
     {
-        QThread::msleep(this->sleep/2);
+        QThread::msleep(this->sleep);
         this->cancelCallback();
     }
     QImage decodingLoop(QSize desiredResolution, QRect roiRect) override
@@ -263,15 +263,17 @@ void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
 {
     std::unique_ptr<MySleepyImageDecoder> dec(new MySleepyImageDecoder());
     dec->setAutoDelete(false);
-    dec->setSleep(10*1000);
+    dec->setSleep(5*1000);
     
     QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
     
-    QThread::msleep(1000);
+    QThread::msleep(100);
     QVERIFY(fut.isStarted());
     QVERIFY(fut.isRunning());
     QVERIFY(!fut.isCanceled());
     
+    // fake the decodingState to Metadata, so that it will be propagated to dec->image(), to make the decodeAsync call below work as expected
+    dec->setDecodingState(DecodingState::Metadata);
     // decoding a second time will return the same future
     QFuture<DecodingState> fut2 = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
     QVERIFY(fut.isStarted()); QVERIFY(fut2.isStarted());
@@ -283,7 +285,7 @@ void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
     QVERIFY(fut.isStarted()); QVERIFY(fut2.isStarted());
     QVERIFY(!fut.isRunning()); QVERIFY(!fut2.isRunning());
     QVERIFY(fut.isCanceled()); QVERIFY(fut2.isCanceled());
-    QThread::msleep(1);
+    QThread::msleep(100);
     QVERIFY(fut3.isStarted());
     QVERIFY(fut3.isRunning());
     QVERIFY(!fut3.isCanceled());
