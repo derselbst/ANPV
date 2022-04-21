@@ -177,16 +177,25 @@ public:
     
     void open() override {}
     void close() override {}
-    void init() override {}
-    void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect()) override
+    void init() override
     {
-        QThread::msleep(this->sleep);
+        this->decodeHeader(nullptr, 0);
+    }
+    void decodeHeader(const unsigned char* buffer, qint64 nbytes) override
+    {
+        QThread::msleep(this->sleep/2);
+        this->cancelCallback();
+    }
+    QImage decodingLoop(QSize desiredResolution, QRect roiRect) override
+    {
+        // do not return a NULL image
+        return QImage(1,1,QImage::Format_ARGB32);
     }
 };
 
 void DecoderTest::testResettingWhileDecoding()
 {
-    MySleepyImageDecoder* dec = new MySleepyImageDecoder();
+    std::unique_ptr<MySleepyImageDecoder> dec(new MySleepyImageDecoder());
     dec->setAutoDelete(false);
     dec->setSleep(2000);
     QFutureWatcher<DecodingState> watcher;
@@ -212,7 +221,6 @@ void DecoderTest::testResettingWhileDecoding()
     QVERIFY(!fut.isRunning());
     QVERIFY(!watcher.isRunning());
     QCOMPARE(spy.count(), 1);
-    delete dec;
 }
 
 void DecoderTest::testFinishBeforeSettingFutureWatcher()
@@ -253,19 +261,37 @@ void DecoderTest::testFinishBeforeSettingFutureWatcher()
 
 void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
 {
-    MySleepyImageDecoder* dec = new MySleepyImageDecoder();
-    dec->setAutoDelete(true);
+    std::unique_ptr<MySleepyImageDecoder> dec(new MySleepyImageDecoder());
+    dec->setAutoDelete(false);
     dec->setSleep(10*1000);
     
     QFuture<DecodingState> fut = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
     
-    QThread::msleep(1);
+    QThread::msleep(1000);
     QVERIFY(fut.isStarted());
     QVERIFY(fut.isRunning());
+    QVERIFY(!fut.isCanceled());
     
-    dec->reset();
-    QVERIFY(fut.isFinished());
-    QVERIFY(!fut.isRunning());
+    // decoding a second time will return the same future
+    QFuture<DecodingState> fut2 = dec->decodeAsync(DecodingState::Metadata, Priority::Normal);
+    QVERIFY(fut.isStarted()); QVERIFY(fut2.isStarted());
+    QVERIFY(fut.isRunning()); QVERIFY(fut2.isRunning());
+    QVERIFY(!fut.isCanceled()); QVERIFY(!fut2.isCanceled());
+    
+    // decoding a third time with a different targetState will cancel the previous decoding
+    QFuture<DecodingState> fut3 = dec->decodeAsync(DecodingState::PreviewImage, Priority::Normal);
+    QVERIFY(fut.isStarted()); QVERIFY(fut2.isStarted());
+    QVERIFY(!fut.isRunning()); QVERIFY(!fut2.isRunning());
+    QVERIFY(fut.isCanceled()); QVERIFY(fut2.isCanceled());
+    QThread::msleep(1);
+    QVERIFY(fut3.isStarted());
+    QVERIFY(fut3.isRunning());
+    QVERIFY(!fut3.isCanceled());
+    
+    // will block until decoding done
+    dec->releaseFullImage();
+    QVERIFY(fut3.isFinished());
+    QVERIFY(!fut3.isRunning());
 }
 
 void DecoderTest::testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted()
