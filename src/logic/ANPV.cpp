@@ -650,12 +650,14 @@ void ANPV::setClipboardDataCut(QMimeData *mimeData, bool cut)
 {
     const QByteArray cutSelectionData = cut ? "1" : "0";
     mimeData->setData(Impl::kdeCutMime(), cutSelectionData);
-}
 
-bool ANPV::isClipboardDataCut(const QMimeData *mimeData)
-{
-    const QByteArray a = mimeData->data(Impl::kdeCutMime());
-    return (!a.isEmpty() && a.at(0) == '1');
+    // Windows specific implementation: https://stackoverflow.com/a/47445073
+    const int dropEffect = cut ? 2 : 5; // 2 for cut and 5 for copy
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream << dropEffect;
+    mimeData->setData("Preferred DropEffect", data);
 }
 
 void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)

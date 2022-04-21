@@ -37,7 +37,6 @@ public:
     static ANPV* globalInstance();
     static QString formatByteHtmlString(float fsize);
     static void setClipboardDataCut(QMimeData *mimeData, bool cut);
-    static bool isClipboardDataCut(const QMimeData *mimeData);
     static void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
 
     ANPV();

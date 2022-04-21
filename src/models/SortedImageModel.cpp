@@ -381,7 +381,7 @@ struct SortedImageModel::Impl
     void onDirectoryLoaded()
     {
         xThreadGuard g(q);
-        q->beginInsertRows(QModelIndex(), 0, entries.size());
+        q->beginInsertRows(QModelIndex(), 0, entries.size()-1);
         q->endInsertRows();
     }
     
@@ -638,7 +638,7 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
     auto rowCount = this->rowCount();
     if (rowCount != 0)
     {
-        this->beginRemoveRows(QModelIndex(), 0, rowCount);
+        this->beginRemoveRows(QModelIndex(), 0, rowCount-1);
     }
 
     d->clear();
@@ -777,7 +777,12 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
 
             // decode asynchronously
-            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight)).then(
+                [=](DecodingState result)
+                {
+                    decoder->releaseFullImage();
+                    return result;
+                });
             watcher->setFuture(fut);
 
             d->backgroundTasks.push_back(watcher);

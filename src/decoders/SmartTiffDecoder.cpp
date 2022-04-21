@@ -546,7 +546,7 @@ gehtnich:
             std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
             for (tstrip_t strip = 0; strip < stripCount; strip++)
             {
-                uint32_t rowsDecoded = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
                 auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
                 if(ret == 0)
                 {
@@ -554,11 +554,11 @@ gehtnich:
                 }
                 else
                 {
-                    d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsDecoded, width);
+                    d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsToDecode, width);
 
                     QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
                                     width,
-                                    rowsDecoded,
+                                    rowsToDecode,
                                     width * sizeof(uint32_t),
                                     d->format(imagePageToDecode));
                     stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
@@ -568,7 +568,7 @@ gehtnich:
                     
                     buf += pixelsToCpy;
                     
-                    this->updatePreviewImage(QRect(0, 0, width, std::min((strip+1) * rowsperstrip, height)));
+                    this->updatePreviewImage(QRect(0, strip * rowsperstrip, width, std::min((strip+1) * rowsperstrip, height)));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);
@@ -605,6 +605,7 @@ gehtnich:
 
     image.setColorSpace(this->image()->colorSpace());
     this->setDecodingMessage("Transforming colorspace...");
+    // FIXME: convertToColorSpace copies the entire image...
     image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
 
     this->setDecodingMessage("TIFF decoding completed successfully.");

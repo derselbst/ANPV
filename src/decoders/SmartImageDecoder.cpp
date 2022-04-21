@@ -33,8 +33,6 @@ struct SmartImageDecoder::Impl
     QRect roiRect;
     QString decodingMessage;
     int decodingProgress=0;
-
-    std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
     QSharedPointer<Image> image;
     
@@ -325,7 +323,12 @@ void SmartImageDecoder::reset()
         this->setDecodingState(DecodingState::Ready);
         return;
     }
+    this->releaseFullImage();
+}
 
+void SmartImageDecoder::releaseFullImage()
+{
+    std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
     this->setDecodingState(DecodingState::Metadata);
 }
@@ -349,15 +352,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 
 void SmartImageDecoder::updatePreviewImage(const QRect& r)
 {
-    constexpr int DecodePreviewImageRefreshDuration = 100;
-    
-    auto now = std::chrono::steady_clock::now();
-    auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
-    //if(durationMs.count() > DecodePreviewImageRefreshDuration)
-    {
-        this->image()->updatePreviewImage(r);
-        d->lastPreviewImageUpdate = now;
-    }
+    this->image()->updatePreviewImage(r);
 }
 
 // Actually, this is gives no guarantee; e.g. it could be that the worker thread has just finished and calls QPromise::finished(). In there,

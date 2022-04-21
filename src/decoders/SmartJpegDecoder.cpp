@@ -159,6 +159,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_calc_output_dimensions(&cinfo);
     
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+    auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
 
     bufferSetup.resize(cinfo.output_height);
@@ -215,7 +216,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         {
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
             this->cancelCallback();
-            
             this->updatePreviewImage(QRect(0, totalLinesRead, cinfo.output_width, linesRead));
             totalLinesRead += linesRead;
         }
@@ -231,16 +231,35 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
     
     jpeg_finish_decompress(&cinfo);
-    
-    image.setColorSpace(this->image()->colorSpace());
-    this->setDecodingMessage("Transforming colorspace...");
-    image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+
+    Q_ASSERT(image.constBits() == dataPtrBackup);
+    Q_ASSERT(dataPtrBackup == &bufferSetup[0][0]);
+
+    QColorSpace csp = this->image()->colorSpace();
+    if (csp.primaries() != QColorSpace::Primaries::SRgb)
+    {
+        this->setDecodingMessage("Transforming colorspace...");
+        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
+        for (JDIMENSION y = 0; y < cinfo.output_height; y++)
+        {
+            for (JDIMENSION i = 0; i < cinfo.output_width; i++)
+            {
+                auto& destPixel = const_cast<QRgb*>(reinterpret_cast<const QRgb*>(dataPtrBackup))[y * cinfo.output_width + i];
+                QRgb rgb = destPixel;
+                rgb = colorTransform.map(rgb);
+                destPixel = rgb;
+            }
+            this->cancelCallback();
+            this->updatePreviewImage(QRect(0, y, cinfo.output_width, 1));
+        }
+    }
     
     // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("JPEG decoding completed successfully.");
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
     
+    Q_ASSERT(image.constBits() == dataPtrBackup);
     return image;
 }
 

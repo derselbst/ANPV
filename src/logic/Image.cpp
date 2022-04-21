@@ -14,6 +14,7 @@
 #include <QAbstractFileIconProvider>
 #include <QPainter>
 #include <QMetaMethod>
+#include <QTimer>
 #include <KDCRAW/KDcraw>
 #include <mutex>
 
@@ -50,6 +51,9 @@ struct Image::Impl
     
     std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAfPoints;
     
+    QPointer<QTimer> updateRectTimer;
+    QRect cachedUpdateRect;
+    
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
     
@@ -85,6 +89,19 @@ struct Image::Impl
 
 Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
 {
+    d->updateRectTimer = new QTimer(this);
+    d->updateRectTimer->setInterval(100);
+    d->updateRectTimer->setSingleShot(true);
+    d->updateRectTimer->setTimerType(Qt::CoarseTimer);
+    connect(d->updateRectTimer.data(), &QTimer::timeout, this,
+        [&]()
+        {
+            std::unique_lock<std::recursive_mutex> lck(d->m);
+            QRect updateRect = d->cachedUpdateRect;
+            d->cachedUpdateRect = QRect();
+            lck.unlock();
+            emit this->previewImageUpdated(this, updateRect);
+        });
 }
 
 Image::~Image()
@@ -429,7 +446,18 @@ void Image::setDecodedImage(QImage img)
 void Image::updatePreviewImage(const QRect& r)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
-    emit this->previewImageUpdated(this, r);
+    QRect updateRect = d->cachedUpdateRect;
+    updateRect = updateRect.united(r);
+    d->cachedUpdateRect = updateRect;
+    lck.unlock();
+
+    QMetaObject::invokeMethod(this, [&]()
+        {
+            if (!d->updateRectTimer->isActive())
+            {
+                d->updateRectTimer->start();
+            }
+        }, Qt::QueuedConnection);
 }
 
 void Image::connectNotify(const QMetaMethod& signal)

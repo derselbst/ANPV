@@ -34,17 +34,23 @@ void MoveFileCommand::redo()
 
 void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destinationFolder)
 {
-    const fs::path targetFolder(destinationFolder.toStdString());
+    static_assert(sizeof(char16_t) == sizeof(ushort), "ushort must be 2 bytes in size for this code to work");
+    static_assert(alignof(char16_t) == alignof(ushort), "ushort must have same alignment as char16 for this code to work");
+
+    fs::path targetFolder(fs::u8path(destinationFolder.toStdString()));
+    targetFolder.make_preferred();
     
     QList<QPair<QString, QString>> failedMoves;
-    
     for(auto it=filesToMove.begin(); it != filesToMove.end(); )
     {
-        fs::path src(sourceFolder.toStdString());
-        src /= it->toStdString();
+        fs::path destFileName(reinterpret_cast<const char16_t*>(it->utf16()));
+
+        fs::path src(reinterpret_cast<const char16_t*>(sourceFolder.utf16()));
+        src.make_preferred();
+        src /= destFileName;
         
         fs::path dest(targetFolder);
-        dest /= it->toStdString();
+        dest /= destFileName;
         
         if(!fs::exists(src))
         {
