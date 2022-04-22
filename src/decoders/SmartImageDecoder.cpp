@@ -230,6 +230,8 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
         {
             // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
             d->promise->start();
+            this->setDecodingState(DecodingState::Cancelled);
+            d->promise->addResult(d->decodingState());
             d->promise->finish();
         }
     }
