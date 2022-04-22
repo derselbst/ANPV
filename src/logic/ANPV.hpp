@@ -10,6 +10,7 @@
 
 #include "DecodingState.hpp"
 #include "SortedImageModel.hpp"
+#include "types.hpp"
 
 class MoveFileCommand;
 class QSplashScreen;
@@ -25,24 +26,6 @@ class QAction;
 
 template<typename T>
 class QFuture;
-
-enum class ViewMode : int
-{
-    Unknown,
-    None,
-    Fit,
-};
-
-using ViewFlags_t = unsigned int;
-enum class ViewFlag : ViewFlags_t
-{
-    None = 0,
-    CombineRawJpg = 1 << 0,
-    ShowAfPoints =  1 << 1,
-    RespectExifOrientation = 1 << 2,
-    CenterAf = 1 << 3,
-    ShowScrollBars = 1 << 4,
-};
 
 
 class ANPV : public QObject
@@ -60,7 +43,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void openImages(const QList<QSharedPointer<Image>>&);
+    void openImages(const QList<Entry_t>&);
     void showThumbnailView();
     void showThumbnailView(QSplashScreen*);
     
@@ -112,8 +95,6 @@ signals:
     
 public slots:
     void about();
-//     void loadImage(QFileInfo str);
-//     void loadImage(QSharedPointer<SmartImageDecoder> dec);
     
 private:
     struct Impl;

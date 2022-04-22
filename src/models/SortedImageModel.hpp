@@ -2,6 +2,7 @@
 #pragma once
 
 #include "DecodingState.hpp"
+#include "types.hpp"
 
 #include <QAbstractListModel>
 #include <QRunnable>
@@ -38,6 +39,8 @@ public:
         CameraModel,
         Count // must be last!
     };
+    static const QSharedPointer<Image>& image(const Entry_t& e);
+    static const QSharedPointer<SmartImageDecoder>& decoder(const Entry_t& e);
 
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
@@ -50,11 +53,9 @@ public:
     QModelIndex index(const QSharedPointer<Image>& img);
     QModelIndex index(const Image* img);
     QFileInfo fileInfo(const QModelIndex& idx) const;
-    QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
-    QSharedPointer<Image> image(const QModelIndex& idx) const;
-    QSharedPointer<Image> image(unsigned int row) const;
-    QSharedPointer<SmartImageDecoder> decoder(const QModelIndex& idx) const;
-    QSharedPointer<SmartImageDecoder> decoder(unsigned int row) const;
+    Entry_t goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
+    Entry_t entry(const QModelIndex& idx) const;
+    Entry_t entry(unsigned int row) const;
 
     void sort(Column column);
     void sort(Qt::SortOrder order);

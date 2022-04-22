@@ -240,17 +240,22 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     {
         this->setDecodingMessage("Transforming colorspace...");
         QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
-        for (JDIMENSION y = 0; y < cinfo.output_height; y++)
+
+        const auto yStride = static_cast<JDIMENSION>(std::ceil((384 * 1024.0) / cinfo.output_width));
+        for (JDIMENSION y = 0; y < cinfo.output_height; y+=yStride)
         {
-            for (JDIMENSION i = 0; i < cinfo.output_width; i++)
-            {
-                auto& destPixel = const_cast<QRgb*>(reinterpret_cast<const QRgb*>(dataPtrBackup))[y * cinfo.output_width + i];
-                QRgb rgb = destPixel;
-                rgb = colorTransform.map(rgb);
-                destPixel = rgb;
-            }
+            auto& destPixel = const_cast<uchar*>(dataPtrBackup)[y * cinfo.output_width * sizeof(QRgb) + 0];
+            auto linesToConvertNow = std::min(cinfo.output_height - y, yStride);
+
+            // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
+            // Rather than using the private QColorTransform::apply() method, create QImage instances which contain a small part of the entire image
+            // and use applyColorTransform in small chunks.
+            // This also allows cancelling the transformation.
+            QImage tempImg(&destPixel, cinfo.output_width, linesToConvertNow, image.format(), nullptr, nullptr);
+            tempImg.applyColorTransform(colorTransform);
+
             this->cancelCallback();
-            this->updatePreviewImage(QRect(0, y, cinfo.output_width, 1));
+            this->updatePreviewImage(QRect(0, y, cinfo.output_width, yStride));
         }
     }
     

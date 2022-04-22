@@ -12,5 +12,6 @@ private slots:
     void testInitialize();
     void testResettingWhileDecoding();
     void testFinishBeforeSettingFutureWatcher();
+    void testAccessingDecoderWhileStillDecodingOngoing();
     void testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted();
 };
