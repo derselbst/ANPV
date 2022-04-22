@@ -440,6 +440,25 @@ void ANPV::fixupAndSetCurrentDir(QString str)
     }
     else
     {
+        QString absoluteWantedPath = wantedDir.absolutePath();
+        while(true)
+        {
+            absoluteWantedPath += "/..";
+            QDir parent(absoluteWantedPath);
+            absoluteWantedPath = parent.absolutePath();
+            // we must clean up the QDir before asking whether it exists
+            parent = QDir(absoluteWantedPath);
+            if(parent.exists())
+            {
+                fixedDir = parent;
+                goto ok;
+            }
+            if(parent.isRoot())
+            {
+                break;
+            }
+        }
+
         wantedDir = QDir::home();
         if (wantedDir.exists() && wantedDir.isReadable())
         {
@@ -449,6 +468,7 @@ void ANPV::fixupAndSetCurrentDir(QString str)
         {
             fixedDir = QDir::root();
         }
+ok:
         QString text = QStringLiteral(
             "ANPV was unable to access the last opened directory:\n\n"
             "%1\n\n"

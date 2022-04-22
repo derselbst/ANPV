@@ -809,6 +809,7 @@ void DocumentView::showImage(QSharedPointer<Image> img)
 void DocumentView::loadImage()
 {
     this->showImage(d->currentImageDecoder->image());
+    d->fovChangedTimer.stop();
 
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::previewImageUpdated, this, &DocumentView::onPreviewImageUpdated);
