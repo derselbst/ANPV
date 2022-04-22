@@ -235,29 +235,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     Q_ASSERT(image.constBits() == dataPtrBackup);
     Q_ASSERT(dataPtrBackup == &bufferSetup[0][0]);
 
-    QColorSpace csp = this->image()->colorSpace();
-    if (csp.primaries() != QColorSpace::Primaries::SRgb)
-    {
-        this->setDecodingMessage("Transforming colorspace...");
-        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
-
-        const auto yStride = static_cast<JDIMENSION>(std::ceil((384 * 1024.0) / cinfo.output_width));
-        for (JDIMENSION y = 0; y < cinfo.output_height; y+=yStride)
-        {
-            auto& destPixel = const_cast<uchar*>(dataPtrBackup)[y * cinfo.output_width * sizeof(QRgb) + 0];
-            auto linesToConvertNow = std::min(cinfo.output_height - y, yStride);
-
-            // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
-            // Rather than using the private QColorTransform::apply() method, create QImage instances which contain a small part of the entire image
-            // and use applyColorTransform in small chunks.
-            // This also allows cancelling the transformation.
-            QImage tempImg(&destPixel, cinfo.output_width, linesToConvertNow, image.format(), nullptr, nullptr);
-            tempImg.applyColorTransform(colorTransform);
-
-            this->cancelCallback();
-            this->updatePreviewImage(QRect(0, y, cinfo.output_width, yStride));
-        }
-    }
+    this->convertColorSpace(image);
     
     // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("JPEG decoding completed successfully.");

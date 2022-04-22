@@ -413,6 +413,34 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
     
     QImage image = this->allocateImageBuffer(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+
+    // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
+    float resX = 0;
+    float resY = 0;
+    uint16_t resUnit;
+    if (!TIFFGetField(d->tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
+        resUnit = RESUNIT_INCH;
+
+    if (TIFFGetField(d->tiff, TIFFTAG_XRESOLUTION, &resX)
+        && TIFFGetField(d->tiff, TIFFTAG_YRESOLUTION, &resY))
+    {
+        switch(resUnit)
+        {
+        case RESUNIT_CENTIMETER:
+            image.setDotsPerMeterX(qRound(resX * 100));
+            image.setDotsPerMeterY(qRound(resY * 100));
+            break;
+        case RESUNIT_INCH:
+            image.setDotsPerMeterX(qRound(resX * (100 / 2.54)));
+            image.setDotsPerMeterY(qRound(resY * (100 / 2.54)));
+            break;
+        default:
+            // do nothing as defaults have already
+            // been set within the QImage class
+            break;
+        }
+    }
+
     this->image()->setDecodedImage(image);
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
@@ -443,7 +471,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
     this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
 
-    uint32_t* buf = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(image.constBits()));
+    auto* dataPtrBackup = image.constBits();
+    uint32_t* buf = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(dataPtrBackup));
     if(TIFFIsTiled(d->tiff))
     {   
         uint32_t tw,tl;
@@ -484,6 +513,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 }
             }
         }
+        Q_ASSERT(image.constBits() == dataPtrBackup);
     }
     else
     {
@@ -574,39 +604,11 @@ gehtnich:
                     this->setDecodingProgress(progress);
                 }
             }
+            Q_ASSERT(image.constBits() == dataPtrBackup);
         }
     }
 
-    float resX = 0;
-    float resY = 0;
-    uint16_t resUnit;
-    if (!TIFFGetField(d->tiff, TIFFTAG_RESOLUTIONUNIT, &resUnit))
-        resUnit = RESUNIT_INCH;
-
-    if (TIFFGetField(d->tiff, TIFFTAG_XRESOLUTION, &resX)
-        && TIFFGetField(d->tiff, TIFFTAG_YRESOLUTION, &resY))
-    {
-        switch(resUnit)
-        {
-        case RESUNIT_CENTIMETER:
-            image.setDotsPerMeterX(qRound(resX * 100));
-            image.setDotsPerMeterY(qRound(resY * 100));
-            break;
-        case RESUNIT_INCH:
-            image.setDotsPerMeterX(qRound(resX * (100 / 2.54)));
-            image.setDotsPerMeterY(qRound(resY * (100 / 2.54)));
-            break;
-        default:
-            // do nothing as defaults have already
-            // been set within the QImage class
-            break;
-        }
-    }
-
-    image.setColorSpace(this->image()->colorSpace());
-    this->setDecodingMessage("Transforming colorspace...");
-    // FIXME: convertToColorSpace copies the entire image...
-    image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+    this->convertColorSpace(image);
 
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);

@@ -56,6 +56,7 @@ protected:
     void updatePreviewImage(const QRect& r);
 
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
+    void convertColorSpace(QImage& image);
 
     void setDecodingState(DecodingState state);
     void setDecodingMessage(QString&& msg);

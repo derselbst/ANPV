@@ -430,7 +430,7 @@ void Image::setErrorMessage(const QString& err)
 
 QImage Image::decodedImage()
 {
-    xThreadGuard g(this);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->decodedImage;
 }
 

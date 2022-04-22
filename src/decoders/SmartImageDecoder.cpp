@@ -318,6 +318,10 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             {
                 QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
                 
+                // if this assert fails, either an unintended QImage::copy() happened, or an intended QImage::copy() happend but a call to this->image()->setDecodedImage() is missing,
+                // or multiple decoders are concurrently decoding the same image.
+                Q_ASSERT(this->image()->decodedImage().constBits() == decodedImg.constBits());
+                
                 // if thumbnail is still null and no roi has been given, set it
                 if (this->image()->thumbnail().isNull() && !roiRect.isValid())
                 {
@@ -346,6 +350,41 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     {
         d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Error);
+    }
+}
+
+void SmartImageDecoder::convertColorSpace(QImage& image)
+{
+    if(image.depth() != 32)
+    {
+        throw std::logic_error("SmartImageDecoder::convertColorSpace(): case not implemented");
+    }
+    
+    QColorSpace csp = this->image()->colorSpace();
+    if (csp.primaries() != QColorSpace::Primaries::SRgb)
+    {
+        this->setDecodingMessage("Transforming colorspace...");
+        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
+
+        auto* dataPtr = image.constBits();
+        const size_t width = image.width();
+        const size_t height = image.height();
+        const size_t yStride = static_cast<size_t>(std::ceil((384 * 1024.0) / width));
+        for (size_t y = 0; y < height; y+=yStride)
+        {
+            auto& destPixel = const_cast<uchar*>(dataPtr)[y * width * sizeof(QRgb) + 0];
+            auto linesToConvertNow = std::min(height - y, yStride);
+
+            // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
+            // Rather than using the private QColorTransform::apply() method, create QImage instances which contain a small part of the entire image
+            // and use applyColorTransform in small chunks.
+            // This also allows cancelling the transformation.
+            QImage tempImg(&destPixel, width, linesToConvertNow, image.format(), nullptr, nullptr);
+            tempImg.applyColorTransform(colorTransform);
+
+            this->cancelCallback();
+            this->updatePreviewImage(QRect(0, y, width, yStride));
+        }
     }
 }
 
