@@ -28,13 +28,14 @@ struct SmartImageDecoder::Impl
     mutable std::recursive_mutex asyncApiMtx;
     
     QScopedPointer<QPromise<DecodingState>> promise;
+    // the targetState requested by decodeAsync() (not the final state reached!)
     DecodingState targetState;
+    // the resolution requested by decodeAsync() (not the final resolution reached!)
     QSize desiredResolution;
+    // the ROI requested by decodeAsync() (not the final ROI reached!)
     QRect roiRect;
     QString decodingMessage;
     int decodingProgress=0;
-
-    std::chrono::time_point<std::chrono::steady_clock> lastPreviewImageUpdate = std::chrono::steady_clock::now();
     
     QSharedPointer<Image> image;
     
@@ -70,14 +71,9 @@ struct SmartImageDecoder::Impl
         return q->image()->decodingState();
     }
 
-    void setDecodedImage(QImage img)
-    {
-        q->image()->setDecodedImage(img);
-    }
-    
     void releaseFullImage()
     {
-        setDecodedImage(QImage());
+        q->image()->setDecodedImage(QImage());
     }
     
     void setErrorMessage(const QString& err)
@@ -204,6 +200,9 @@ void SmartImageDecoder::init()
             this->image()->setThumbnail(thumb);
         }
         
+        // initialize cache
+        (void)this->image()->cachedAutoFocusPoints();
+
         this->setDecodingState(DecodingState::Metadata);
     }
     catch(const std::exception& e)
@@ -214,11 +213,57 @@ void SmartImageDecoder::init()
     }
 }
 
+// Do not wait for finished()
+void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
+{
+    Q_ASSERT(!d->promise.isNull());
+
+    bool isFinished = taskFuture.isFinished();
+    bool taken = QThreadPool::globalInstance()->tryTake(this);
+    if(!isFinished)
+    {
+        if(!taken)
+        {
+            taskFuture.cancel();
+        }
+        else
+        {
+            // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
+            d->promise->start();
+            this->setDecodingState(DecodingState::Cancelled);
+            d->promise->addResult(d->decodingState());
+            d->promise->finish();
+        }
+    }
+}
+
+// FIXME This function may not be called concurrently by multiple threads
 QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState, Priority prio, QSize desiredResolution, QRect roiRect)
 {
-    this->assertNotDecoding();
+    if(!(targetState == DecodingState::Metadata || targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage))
+    {
+        throw std::invalid_argument(Formatter() << "DecodingState '" << targetState << "' cannot be requested");
+    }
+
+    if(d->promise)
+    {
+        QFuture<DecodingState> taskFuture = d->promise->future();
+        DecodingState imageState = this->image()->decodingState();
+        
+        if(targetState != DecodingState::PreviewImage && targetState == d->targetState && targetState == imageState)
+        {
+            // return already decoded stuff
+            qDebug() << "Skipping decoding of image " << this->image()->fileInfo().fileName() << " and returning what we already have.";
+            return taskFuture;
+        }
+        
+        this->cancelOrTake(taskFuture);
+        taskFuture.waitForFinished();
+        this->reset();
+    }
+
     std::lock_guard g(d->asyncApiMtx);
-    
+
     d->targetState = targetState;
     d->desiredResolution = desiredResolution;
     d->roiRect = roiRect;
@@ -272,7 +317,10 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
             if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
                 QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
-                d->setDecodedImage(decodedImg);
+                
+                // if this assert fails, either an unintended QImage::copy() happened, or an intended QImage::copy() happend but a call to this->image()->setDecodedImage() is missing,
+                // or multiple decoders are concurrently decoding the same image.
+                Q_ASSERT(this->image()->decodedImage().constBits() == decodedImg.constBits());
                 
                 // if thumbnail is still null and we've decoded not just a part of the image
                 if (this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
@@ -303,6 +351,41 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
 }
 
+void SmartImageDecoder::convertColorSpace(QImage& image)
+{
+    if(image.depth() != 32)
+    {
+        throw std::logic_error("SmartImageDecoder::convertColorSpace(): case not implemented");
+    }
+    
+    QColorSpace csp = this->image()->colorSpace();
+    if (csp.primaries() != QColorSpace::Primaries::SRgb)
+    {
+        this->setDecodingMessage("Transforming colorspace...");
+        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
+
+        auto* dataPtr = image.constBits();
+        const size_t width = image.width();
+        const size_t height = image.height();
+        const size_t yStride = static_cast<size_t>(std::ceil((384 * 1024.0) / width));
+        for (size_t y = 0; y < height; y+=yStride)
+        {
+            auto& destPixel = const_cast<uchar*>(dataPtr)[y * width * sizeof(QRgb) + 0];
+            auto linesToConvertNow = std::min(height - y, yStride);
+
+            // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
+            // Rather than using the private QColorTransform::apply() method, create QImage instances which contain a small part of the entire image
+            // and use applyColorTransform in small chunks.
+            // This also allows cancelling the transformation.
+            QImage tempImg(&destPixel, width, linesToConvertNow, image.format(), nullptr, nullptr);
+            tempImg.applyColorTransform(colorTransform);
+
+            this->cancelCallback();
+            this->updatePreviewImage(QRect(0, y, width, yStride));
+        }
+    }
+}
+
 void SmartImageDecoder::close()
 {
     d->encodedInputBufferSize = 0;
@@ -326,7 +409,12 @@ void SmartImageDecoder::reset()
         this->setDecodingState(DecodingState::Ready);
         return;
     }
+    this->releaseFullImage();
+}
 
+void SmartImageDecoder::releaseFullImage()
+{
+    std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
     this->setDecodingState(DecodingState::Metadata);
 }
@@ -348,17 +436,9 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     }
 }
 
-void SmartImageDecoder::updatePreviewImage(QImage&& img)
+void SmartImageDecoder::updatePreviewImage(const QRect& r)
 {
-    constexpr int DecodePreviewImageRefreshDuration = 100;
-    
-    auto now = std::chrono::steady_clock::now();
-    auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - d->lastPreviewImageUpdate);
-    if(durationMs.count() > DecodePreviewImageRefreshDuration)
-    {
-        d->setDecodedImage(std::move(img));
-        d->lastPreviewImageUpdate = now;
-    }
+    this->image()->updatePreviewImage(r);
 }
 
 // Actually, this is gives no guarantee; e.g. it could be that the worker thread has just finished and calls QPromise::finished(). In there,
@@ -396,32 +476,25 @@ void SmartImageDecoder::assertNotDecoding()
     }
 }
 
-template<typename T>
-T* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height)
+QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
 {
-    size_t needed = size_t(width) * height * sizeof(T);
+    const size_t needed = size_t(width) * height;
+    const size_t rowStride = width * sizeof(uint32_t);
     try
     {
         this->setDecodingMessage("Allocating image output buffer");
 
-        std::unique_ptr<unsigned char[]> mem(new unsigned char[needed]);
+        std::unique_ptr<uint32_t[]> mem(new uint32_t[needed]);
+        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, [](void* p) { delete[](static_cast<uint32_t*>(p)); }, mem.get());
+        mem.release();
 
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
-        
-        return reinterpret_cast<T*>(mem.release());
+
+        return std::move(image);
     }
     catch (const std::bad_alloc&)
     {
-        throw std::runtime_error(Formatter() << "Unable to allocate " << needed / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
+        throw std::runtime_error(Formatter() << "Unable to allocate " << (needed * sizeof(uint32_t)) / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
     }
 }
-
-template uint32_t* SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height);
-
-template<typename T>
-void SmartImageDecoder::deallocateImageBuffer(void* mem)
-{
-    delete [] reinterpret_cast<T*>(mem);
-}
-template void SmartImageDecoder::deallocateImageBuffer<uint32_t>(void*);

@@ -167,7 +167,7 @@ src/models/SortedImageModel.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KF5::KExiv2 KF5::KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models)
 
@@ -193,7 +193,7 @@ set_target_properties(anpv anpv-lib
 if(WIN32)
   if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
     pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
-    target_link_libraries(anpv PRIVATE PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
     
     pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
     target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
@@ -206,7 +206,7 @@ if(WIN32)
   endif()
   
   target_link_libraries(anpv-lib PRIVATE "Shlwapi") # StrCmpLogicalW()
-  target_link_libraries(anpv PRIVATE "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
+  target_link_libraries(KExiv2 PUBLIC "Psapi") # exiv2.lib(version.cpp.obj) : error LNK2019: unresolved external symbol EnumProcessModules referenced in function
   set_target_properties(anpv PROPERTIES WIN32_EXECUTABLE TRUE)
 else()
     install(

@@ -178,11 +178,11 @@ struct ANPV::Impl
                 {
                     QList<QString> files = q->getExistingFile(QApplication::focusWidget(), lastOpenImageDir);
                     
-                    QList<QSharedPointer<Image>> images;
+                    QList<Entry_t> images;
                     images.reserve(files.size());
                     for(auto& f : files)
                     {
-                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)));
+                        images.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)), nullptr));
                     }
                     q->openImages(images);
                 });
@@ -440,6 +440,25 @@ void ANPV::fixupAndSetCurrentDir(QString str)
     }
     else
     {
+        QString absoluteWantedPath = wantedDir.absolutePath();
+        while(true)
+        {
+            absoluteWantedPath += "/..";
+            QDir parent(absoluteWantedPath);
+            absoluteWantedPath = parent.absolutePath();
+            // we must clean up the QDir before asking whether it exists
+            parent = QDir(absoluteWantedPath);
+            if(parent.exists())
+            {
+                fixedDir = parent;
+                goto ok;
+            }
+            if(parent.isRoot())
+            {
+                break;
+            }
+        }
+
         wantedDir = QDir::home();
         if (wantedDir.exists() && wantedDir.isReadable())
         {
@@ -449,6 +468,7 @@ void ANPV::fixupAndSetCurrentDir(QString str)
         {
             fixedDir = QDir::root();
         }
+ok:
         QString text = QStringLiteral(
             "ANPV was unable to access the last opened directory:\n\n"
             "%1\n\n"
@@ -577,7 +597,7 @@ void ANPV::showThumbnailView(QSplashScreen* splash)
     splash->finish(d->mainWindow.get());
 }
 
-void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
+void ANPV::openImages(const QList<Entry_t>& image)
 {
     xThreadGuard g(this);
     if(image.isEmpty())
@@ -650,12 +670,14 @@ void ANPV::setClipboardDataCut(QMimeData *mimeData, bool cut)
 {
     const QByteArray cutSelectionData = cut ? "1" : "0";
     mimeData->setData(Impl::kdeCutMime(), cutSelectionData);
-}
 
-bool ANPV::isClipboardDataCut(const QMimeData *mimeData)
-{
-    const QByteArray a = mimeData->data(Impl::kdeCutMime());
-    return (!a.isEmpty() && a.at(0) == '1');
+    // Windows specific implementation: https://stackoverflow.com/a/47445073
+    const int dropEffect = cut ? 2 : 5; // 2 for cut and 5 for copy
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream << dropEffect;
+    mimeData->setData("Preferred DropEffect", data);
 }
 
 void ANPV::setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls)

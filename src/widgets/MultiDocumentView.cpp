@@ -2,6 +2,7 @@
 
 #include "DocumentView.hpp"
 #include "Image.hpp"
+#include "SortedImageModel.hpp"
 
 #include <QTabWidget>
 #include <QGuiApplication>
@@ -77,14 +78,14 @@ MultiDocumentView::MultiDocumentView(QMainWindow *parent)
 
 MultiDocumentView::~MultiDocumentView() = default;
 
-void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model)
+void MultiDocumentView::addImages(const QList<Entry_t>& image, QSharedPointer<SortedImageModel> model)
 {
     if(image.empty())
     {
         return;
     }
     
-    for(auto& i : image)
+    for(auto& e : image)
     {
         DocumentView* dv = new DocumentView(d->tw);
 
@@ -106,7 +107,16 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
 
         d->tw->addTab(dv, "");
         dv->setModel(model);
-        dv->loadImage(i);
+        auto& dec = SortedImageModel::decoder(e);
+        auto& img = SortedImageModel::image(e);
+        if(dec)
+        {
+            dv->loadImage(dec);
+        }
+        else
+        {
+            dv->loadImage(img);
+        }
         dv->setAttribute(Qt::WA_DeleteOnClose);
     }
     d->tw->currentWidget()->setFocus(Qt::PopupFocusReason);

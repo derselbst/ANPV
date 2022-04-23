@@ -49,7 +49,7 @@ jobs:
         cmakeArgs: --build . --target check --parallel
         workingDirectory: 'build'
   - job: Windows
-    timeoutInMinutes: 300
+    timeoutInMinutes: 360
     cancelTimeoutInMinutes: 2
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
       vmImage: $(poo)
     variables:
       configuration: 'Release'
-      VCPKG_REVISION: '63e935d967a3410e26bf4a708efa39d8384d2bbb'
+      VCPKG_REVISION: 'b86c0c35b88e2bf3557ff49dc831689c2f085090'
       platform: 'x64'
       cmake_platform: 'x64'
     steps:
@@ -75,7 +75,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs2"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs3"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -107,8 +107,8 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
-        vcpkg install qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
+        vcpkg install qtbase[concurrent,core,default-features,doubleconversion,gui,harfbuzz,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install qtbase[concurrent,core,default-features,doubleconversion,gui,harfbuzz,icu,jpeg,pcre2,png,testlib,widgets]:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
@@ -135,7 +135,7 @@ jobs:
         mkdir build
         cd build
         export PKG_CONFIG_PATH=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/lib/pkgconfig
-        cmake -Werror=dev -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
+        cmake -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
     - task: CopyFiles@2

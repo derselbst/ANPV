@@ -65,9 +65,7 @@ struct DocumentView::Impl
     QFutureWatcher<DecodingState> taskFuture;
     
     // the latest image decoder, the same that displays the current image
-    // we need to keep a "backup" of this to avoid it being deleted when its deocing task finishes
-    // deleting the image decoder would invalidate the Pixmap, but the user may still want to navigate within it
-    std::unique_ptr<SmartImageDecoder> currentImageDecoder;
+    QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
     DecodingState latestDecodingState = DecodingState::Ready;
     
@@ -85,29 +83,14 @@ struct DocumentView::Impl
         this->clearScene();
     }
     
-    void cancelCurrentDecoding()
-    {
-        bool isFinished = taskFuture.isFinished();
-        bool taken = QThreadPool::globalInstance()->tryTake(currentImageDecoder.get());
-        if(!isFinished)
-        {
-            if(!taken)
-            {
-                taskFuture.cancel();
-                taskFuture.waitForFinished();
-            }
-            taskFuture.setFuture(QFuture<DecodingState>());
-        }
-    }
-    
     void clearScene()
     {
-        this->cancelCurrentDecoding();
-        
         if(currentImageDecoder)
         {
+            currentImageDecoder->cancelOrTake(taskFuture.future());
+            taskFuture.waitForFinished();
+            currentImageDecoder->releaseFullImage();
             currentImageDecoder->image()->disconnect(p);
-            currentImageDecoder->reset();
             currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
             // this makes ensures that the if clause will be entered next time we enter onViewportChanged(),
@@ -254,8 +237,9 @@ struct DocumentView::Impl
             this->createSmoothPixmap();
             return;
         }
-        
-        this->cancelCurrentDecoding();
+
+        currentImageDecoder->cancelOrTake(taskFuture.future());
+        taskFuture.waitForFinished();
 
         // get the area of what the user sees
         QRect viewportRect = p->viewport()->rect();
@@ -392,11 +376,8 @@ struct DocumentView::Impl
         WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
-            QSharedPointer<Image> newImg = this->model->goTo(this->currentImageDecoder->image(), i);
-            if(newImg)
-            {
-                p->loadImage(newImg);
-            }
+            Entry_t newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
+            p->loadImage(newEntry);
         }
     }
     
@@ -477,16 +458,13 @@ struct DocumentView::Impl
             {
                 if(o == p && p->hasFocus())
                 {
-                    QSharedPointer<Image> nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+                    Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
 
                     QString targetDir = act->data().toString();
                     QFileInfo source = this->currentImageDecoder->image()->fileInfo();
                     ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
 
-                    if(nextImg)
-                    {
-                        p->loadImage(nextImg);
-                    }
+                    p->loadImage(nextImg);
                     break;
                 }
             }
@@ -691,6 +669,15 @@ void DocumentView::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
+void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
+{
+    if (img != this->d->currentImageDecoder->image().data() || !d->currentPixmapOverlay)
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    d->currentPixmapOverlay->update(r);
+}
 
 void DocumentView::onImageRefinement(Image* img, QImage image)
 {
@@ -714,7 +701,7 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
 void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 oldState)
 {
     auto& dec = d->currentImageDecoder;
-    if(img != dec->image().data())
+    if(dec && img != dec->image().data())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
@@ -775,9 +762,23 @@ void DocumentView::loadImage(QString url)
     this->loadImage(DecoderFactory::globalInstance()->makeImage(info));
 }
 
+void DocumentView::loadImage(const Entry_t& e)
+{
+    auto& dec = SortedImageModel::decoder(e);
+    auto& img = SortedImageModel::image(e);
+    if(dec)
+    {
+        this->loadImage(dec);
+    }
+    else if(img)
+    {
+        this->loadImage(img);
+    }
+}
+
 void DocumentView::loadImage(QSharedPointer<Image> image)
 {
-    auto dec = DecoderFactory::globalInstance()->getDecoder(image);
+    auto dec = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
     if(!dec)
     {
         QString name = image->fileInfo().fileName();
@@ -788,7 +789,7 @@ void DocumentView::loadImage(QSharedPointer<Image> image)
     this->loadImage(std::move(dec));
 }
 
-void DocumentView::loadImage(std::unique_ptr<SmartImageDecoder>&& dec)
+void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
     d->currentImageDecoder = std::move(dec);
@@ -804,18 +805,18 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     {
         this->setSceneRect(QRectF(QPointF(0,0), fullImgSize));
         
-        QSharedPointer<ExifWrapper> exif = img->exif();
-        if(exif && d->latestDecodingState < DecodingState::Metadata)
+        if(d->latestDecodingState < DecodingState::Metadata)
         {
             d->latestDecodingState = DecodingState::Metadata;
 
             d->alignImageAccordingToViewMode(img);
             
             auto viewFlags = ANPV::globalInstance()->viewFlags();
-            std::vector<AfPoint> afPoints;
-            QSize size;
-            if(exif->autoFocusPoints(afPoints,size))
+            auto afp = img->cachedAutoFocusPoints();
+            if(afp)
             {
+                std::vector<AfPoint>& afPoints = std::get<0>(*afp);
+                QSize& size = std::get<1>(*afp);
                 d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
                 d->afPointOverlay->setAfPoints(afPoints, size);
                 
@@ -857,8 +858,10 @@ void DocumentView::showImage(QSharedPointer<Image> img)
 void DocumentView::loadImage()
 {
     this->showImage(d->currentImageDecoder->image());
-    
+    d->fovChangedTimer.stop();
+
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
+    QObject::connect(d->currentImageDecoder->image().data(), &Image::previewImageUpdated, this, &DocumentView::onPreviewImageUpdated);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
 
     emit this->imageChanged(d->currentImageDecoder->image());

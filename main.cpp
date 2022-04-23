@@ -2,6 +2,7 @@
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
 #include "Formatter.hpp"
+#include "types.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -40,6 +41,8 @@ int main(int argc, char *argv[])
     
     // set UI Thread to high prio
     QThread::currentThread()->setPriority(QThread::HighestPriority);
+
+    QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount() / 2);
 
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
@@ -81,10 +84,10 @@ int main(int argc, char *argv[])
     }
     default:
     {
-        QList<QSharedPointer<Image>> files;
+        QList<Entry_t> files;
         for(int i=1; i<argc;i++)
         {
-            files.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString(argv[i]))));
+            files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString(argv[i]))), nullptr));
         }
         
         splash.showMessage("Starting the image decoding task...");
@@ -94,6 +97,14 @@ int main(int argc, char *argv[])
     break;
     }
     
-    int r = app.exec();
-    return r;
+    try
+    {
+        int r = app.exec();
+        return r;
+    }
+    catch(const std::exception& e)
+    {
+        QMessageBox::critical(nullptr, "Unhandled Exception", e.what());
+    }
+    return -1;
 }

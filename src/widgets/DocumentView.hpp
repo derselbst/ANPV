@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "types.hpp"
 #include <memory>
 #include <QGraphicsView>
 #include <QImage>
@@ -29,13 +30,15 @@ public:
 
     void setModel(QSharedPointer<SortedImageModel>);
     QFileInfo currentFile();
+    void loadImage(const Entry_t& e);
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
-    void loadImage(std::unique_ptr<SmartImageDecoder>&& dec);
+    void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
     
 public slots:
     void zoomIn();
     void zoomOut();
+    void onPreviewImageUpdated(Image* img, QRect r);
     void onImageRefinement(Image* self, QImage img);
     void onDecodingStateChanged(Image* self, quint32 newState, quint32 oldState);
 
