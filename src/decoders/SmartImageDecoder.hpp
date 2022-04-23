@@ -58,9 +58,6 @@ protected:
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
     void convertColorSpace(QImage& image);
 
-    template<typename T>
-    static void deallocateImageBuffer(void* mem);
-
     void setDecodingState(DecodingState state);
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);
