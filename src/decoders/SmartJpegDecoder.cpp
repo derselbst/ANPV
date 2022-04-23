@@ -169,10 +169,10 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
 
-    bufferSetup.resize(cinfo.output_height * cinfo.rec_outbuf_height);
+    bufferSetup.resize(cinfo.output_height / cinfo.rec_outbuf_height);
     for(JDIMENSION i=0; i < bufferSetup.size(); i++)
     {
-        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i)));
+        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i * cinfo.rec_outbuf_height)));
     }
     
     this->cancelCallback();
@@ -221,7 +221,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         
         while (cinfo.output_scanline < cinfo.output_height)
         {
-            auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, 1);
+            auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
 
             this->updatePreviewImage(QRect(0, totalLinesRead, cinfo.output_width, linesRead));
