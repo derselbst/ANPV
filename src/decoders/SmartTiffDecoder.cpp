@@ -568,6 +568,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                             QImage::Format_RGBA8888);
             image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            this->image()->setDecodedImage(image);
         }
         else
         {
