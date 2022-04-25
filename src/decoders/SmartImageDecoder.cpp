@@ -192,11 +192,11 @@ void SmartImageDecoder::init()
         if(thumb.isNull())
         {
             thumb = exifWrapper->thumbnail();
-        }
-        if(!thumb.isNull())
-        {
-            this->convertColorSpace(thumb, true);
-            this->image()->setThumbnail(thumb);
+            if(!thumb.isNull())
+            {
+                this->convertColorSpace(thumb, true);
+                this->image()->setThumbnail(thumb);
+            }
         }
         
         // initialize cache

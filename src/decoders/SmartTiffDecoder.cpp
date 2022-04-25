@@ -367,6 +367,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
             QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
             this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
 
+            this->convertColorSpace(thumb, true);
             this->image()->setThumbnail(thumb);
         }
         catch(const std::exception& e)
