@@ -47,6 +47,8 @@ public:
     void showThumbnailView();
     void showThumbnailView(QSplashScreen*);
     
+    enum FileOperation { Move, Copy, HardLink, Delete };
+    Q_ENUM(FileOperation);
     void hardLinkFiles(QList<QString>&& files, QString&& source, QString&& destination);
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
     

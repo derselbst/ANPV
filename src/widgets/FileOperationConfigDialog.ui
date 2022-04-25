@@ -67,14 +67,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check the box to copy files, uncheck for moving files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+      <widget class="QComboBox" name="comboBox"/>
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit"/>
@@ -98,14 +91,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox_2">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check the box to copy files, uncheck for moving files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+      <widget class="QComboBox" name="comboBox_2"/>
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit_2"/>
@@ -129,14 +115,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox_3">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check the box to copy files, uncheck for moving files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+      <widget class="QComboBox" name="comboBox_3"/>
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit_3"/>
@@ -160,14 +139,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox_4">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check the box to copy files, uncheck for moving files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+      <widget class="QComboBox" name="comboBox_4"/>
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit_4"/>

@@ -31,6 +31,7 @@
 
 #include "AfPointOverlay.hpp"
 #include "SmartImageDecoder.hpp"
+#include "FileOperationConfigDialog.hpp"
 #include "ANPV.hpp"
 #include "Image.hpp"
 #include "DecoderFactory.hpp"
@@ -53,15 +54,14 @@ struct ThumbnailListView::Impl
     QAction* actionCopy=nullptr;
     QAction* actionDelete=nullptr;
     
-    enum Operation { Move, Copy, Delete };
     QString lastTargetDirectory;
-    void onFileOperation(Operation op)
+    void onFileOperation(ANPV::FileOperation op)
     {
         QString dir = ANPV::globalInstance()->getExistingDirectory(q, lastTargetDirectory);
         this->startFileOperation(op, std::move(dir));
     }
     
-    void startFileOperation(Operation op, QString&& dest)
+    void startFileOperation(ANPV::FileOperation op, QString&& dest)
     {
         if(dest.isEmpty())
         {
@@ -83,17 +83,19 @@ struct ThumbnailListView::Impl
         
         switch(op)
         {
-            case Move:
+            case ANPV::FileOperation::Move:
                 ANPV::globalInstance()->moveFiles(std::move(files), currentDir.absolutePath(), std::move(dest));
                 break;
-            case Copy:
-            case Delete:
+            case ANPV::FileOperation::HardLink:
+                ANPV::globalInstance()->hardLinkFiles(std::move(files), currentDir.absolutePath(), std::move(dest));
+                break;
+            default:
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
         }
     }
     
-    void onCopyToClipboard(Operation op)
+    void onCopyToClipboard(ANPV::FileOperation op)
     {
         QList<Entry_t> imgs = q->selectedImages();
         QList<QUrl> files;
@@ -104,7 +106,7 @@ struct ThumbnailListView::Impl
         
         QMimeData *mimeData = new QMimeData;
         ANPV::setUrls(mimeData, files);
-        ANPV::setClipboardDataCut(mimeData, op == Operation::Move);
+        ANPV::setClipboardDataCut(mimeData, op == ANPV::FileOperation::Move);
         QGuiApplication::clipboard()->setMimeData(mimeData);
     }
 
@@ -197,22 +199,22 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     connect(d->actionCopyToFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
     
     d->actionMoveTo = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
-    connect(d->actionMoveTo, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Move); });
+    connect(d->actionMoveTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Move); });
     
-    d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "Copy to", this);
-    connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Copy); });
+    d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "HardLink to", this);
+    connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::HardLink); });
     
     d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
     d->actionMove->setShortcuts(QKeySequence::Cut);
-    connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(Impl::Operation::Move); });
+    connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
     
-    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
+    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "HardLink", this);
     d->actionCopy->setShortcuts(QKeySequence::Copy);
-    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(Impl::Operation::Copy); });
+    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::HardLink); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
-    connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(Impl::Operation::Delete); });
+    connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Delete); });
     
     this->addAction(d->actionOpenSelectionInternally);
     this->addAction(d->actionOpenSelectionExternally);
@@ -329,7 +331,9 @@ QList<Entry_t> ThumbnailListView::selectedImages(const QModelIndexList& selected
     return entries;
 }
 
-void ThumbnailListView::moveSelectedFiles(QString&& destination)
+void ThumbnailListView::fileOperationOnSelectedFiles(QAction* action)
 {
-    d->startFileOperation(Impl::Operation::Move, std::move(destination));
+    ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(action);
+    QString targetDir = action->data().toString();
+    d->startFileOperation(op, std::move(targetDir));
 }

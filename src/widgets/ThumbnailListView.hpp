@@ -13,6 +13,7 @@
 class QAbstractItemModel;
 class QWheelEvent;
 class QWidget;
+class QAction;
 class SortedImageModel;
 class ThumbnailView;
 class Image;
@@ -27,7 +28,7 @@ public:
     ~ThumbnailListView() override;
     void setModel(QAbstractItemModel *model) override;
 
-    void moveSelectedFiles(QString&& destination);
+    void fileOperationOnSelectedFiles(QAction*);
     QList<Entry_t> selectedImages();
     QList<Entry_t> selectedImages(const QModelIndexList& selectedIdx);
         

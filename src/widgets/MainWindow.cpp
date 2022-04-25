@@ -237,8 +237,7 @@ struct MainWindow::Impl
             {
                 if((o == ui->thumbnailListView && ui->thumbnailListView->hasFocus()) || (o == ui->menuEdit && ui->menuEdit->hasFocus()))
                 {
-                    QString targetDir = act->data().toString();
-                    ui->thumbnailListView->moveSelectedFiles(std::move(targetDir));
+                    ui->thumbnailListView->fileOperationOnSelectedFiles(act);
                     break;
                 }
             }
@@ -255,7 +254,6 @@ struct MainWindow::Impl
             
             dia->open();
         });
-        this->refreshCopyMoveActions();
 
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
@@ -309,6 +307,8 @@ struct MainWindow::Impl
         q->restoreGeometry(settings.value("geometry").toByteArray());
         q->restoreState(settings.value("windowState").toByteArray());
         settings.endGroup();
+        
+        this->refreshCopyMoveActions();
     }
     
     void onDirectoryTreeLoaded(const QString& s)
