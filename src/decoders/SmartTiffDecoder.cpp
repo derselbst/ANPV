@@ -245,11 +245,11 @@ struct SmartTiffDecoder::Impl
         return ret;
     }
     
-    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, QSize size)
+    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, int highResPage)
     {
         int ret = -1;
-        const auto fullImgAspect = size.width() * 1.0 / size.height();
-        uint64_t res = size.width() * size.height();
+        const auto fullImgAspect = pageInfo[highResPage].width * 1.0 / pageInfo[highResPage].height;
+        auto res = pageInfo[highResPage].nPix();
         for(size_t i=0; i<pageInfo.size(); i++)
         {
             auto len = pageInfo[i].nPix();
@@ -354,10 +354,9 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         cs = QColorSpace::fromIccProfile(iccProfile);
     }
     
-    QSize size(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height);
-    this->image()->setSize(size);
+    this->image()->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
     this->image()->setColorSpace(cs);
-    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, size);
+    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, highResPage);
     
     if(thumbnailPageToDecode >= 0)
     {
