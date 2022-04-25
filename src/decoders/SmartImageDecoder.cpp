@@ -195,8 +195,7 @@ void SmartImageDecoder::init()
         }
         if(!thumb.isNull())
         {
-            thumb.setColorSpace(this->image()->colorSpace());
-            thumb.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+            this->convertColorSpace(thumb, true);
             this->image()->setThumbnail(thumb);
         }
         
@@ -353,7 +352,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
 }
 
-void SmartImageDecoder::convertColorSpace(QImage& image)
+void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
 {
     if(image.depth() != 32)
     {
@@ -383,7 +382,10 @@ void SmartImageDecoder::convertColorSpace(QImage& image)
             tempImg.applyColorTransform(colorTransform);
 
             this->cancelCallback();
-            this->updatePreviewImage(QRect(0, y, width, yStride));
+            if (!silent)
+            {
+                this->updatePreviewImage(QRect(0, y, width, yStride));
+            }
         }
     }
 }
