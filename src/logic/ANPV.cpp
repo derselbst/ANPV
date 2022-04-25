@@ -634,7 +634,6 @@ QUndoStack* ANPV::undoStack()
     return d->undoStack;
 }
 
-
 void ANPV::hardLinkFiles(QList<QString>&& fileNames, QString&& source, QString&& destination)
 {
     xThreadGuard g(this);
@@ -646,7 +645,7 @@ void ANPV::hardLinkFiles(QList<QString>&& fileNames, QString&& source, QString&&
                     "Hardlink operation failed",
                     "Some files could not be hardlinked to the destination folder. See details below.",
                     QMessageBox::Ok,
-                    d->mainWindow.get());
+                    QApplication::focusWidget());
         
         QString details;
         for(int i=0; i<failedFilesWithReason.size(); i++)
@@ -679,7 +678,7 @@ void ANPV::moveFiles(QList<QString>&& fileNames, QString&& source, QString&& des
                     "Move operation failed",
                     "Some files could not be moved to the destination folder. See details below.",
                     QMessageBox::Ok,
-                    d->mainWindow.get());
+                    QApplication::focusWidget());
         
         QString details;
         for(int i=0; i<failedFilesWithReason.size(); i++)
