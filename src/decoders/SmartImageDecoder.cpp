@@ -488,8 +488,8 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
     {
         this->setDecodingMessage("Allocating image output buffer");
 
-        std::unique_ptr<uint32_t[]> mem(new uint32_t[needed]);
-        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, [](void* p) { delete[](static_cast<uint32_t*>(p)); }, mem.get());
+        std::unique_ptr<uint32_t, decltype(&free)> mem(static_cast<uint32_t*>(calloc(needed, sizeof(uint32_t))), &::free);
+        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
         mem.release();
 
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
