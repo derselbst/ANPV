@@ -27,7 +27,7 @@ QRectF AfPointOverlay::boundingRect() const
     return QRectF(QPointF(0, 0), d->imageSize);
 }
 
-void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     auto pen = painter->pen();
     

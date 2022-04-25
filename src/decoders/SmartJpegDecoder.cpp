@@ -205,7 +205,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    const size_t rowStride = cinfo.output_width * sizeof(uint32_t);
     auto totalLinesRead = cinfo.output_scanline;
     while (!jpeg_input_complete(&cinfo))
     {
