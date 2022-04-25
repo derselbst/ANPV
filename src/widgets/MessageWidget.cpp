@@ -266,7 +266,7 @@ bool MessageWidget::isCloseButtonVisible() const
 {
     return false;
 }
-void MessageWidget::setCloseButtonVisible(bool show)
+void MessageWidget::setCloseButtonVisible(bool)
 {
     updateGeometry();
 }

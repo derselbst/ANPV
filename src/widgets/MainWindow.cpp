@@ -311,7 +311,7 @@ struct MainWindow::Impl
         this->refreshCopyMoveActions();
     }
     
-    void onDirectoryTreeLoaded(const QString& s)
+    void onDirectoryTreeLoaded(const QString&)
     {
     }
     
@@ -347,7 +347,7 @@ struct MainWindow::Impl
         q->setWindowTitle(newDir + " :: ANPV");
     }
     
-    void onIconHeightChanged(int h, int old)
+    void onIconHeightChanged(int h, int)
     {
         if(!ui->iconSizeSlider->isSliderDown())
         {
@@ -417,7 +417,7 @@ struct MainWindow::Impl
         this->ui->infoBox->setText("");
     }
     
-    void onThumbnailListViewSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+    void onThumbnailListViewSelectionChanged(const QItemSelection &, const QItemSelection &)
     {
         auto imgs = this->ui->thumbnailListView->selectedImages();
         
@@ -514,7 +514,7 @@ void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
     d->ui->cancellableWidget->show();
 }
 
-void MainWindow::hideProgressWidget(CancellableProgressWidget* w)
+void MainWindow::hideProgressWidget(CancellableProgressWidget*)
 {
     xThreadGuard g(this);
 
