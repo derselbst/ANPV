@@ -495,7 +495,7 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
         
-        return std::move(image);
+        return image;
     }
     catch (const std::bad_alloc&)
     {
