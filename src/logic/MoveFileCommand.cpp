@@ -79,7 +79,7 @@ void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destina
     
     if(!failedMoves.empty())
     {
-        emit moveFailed(failedMoves);
+        emit failed(failedMoves);
     }
     
     if(filesToMove.empty())
@@ -88,6 +88,6 @@ void MoveFileCommand::doMove(const QString& sourceFolder, const QString& destina
     }
     else
     {
-        emit moveSucceeded(filesToMove);
+        emit succeeded(filesToMove);
     }
 }

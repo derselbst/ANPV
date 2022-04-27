@@ -21,6 +21,7 @@
 #include <QActionGroup>
 #include <QtConcurrent/QtConcurrent>
 #include <QColorDialog>
+#include <QMessageBox>
 
 #include <vector>
 #include <algorithm>
@@ -28,6 +29,7 @@
 #include "AfPointOverlay.hpp"
 #include "ExifOverlay.hpp"
 #include "SmartImageDecoder.hpp"
+#include "FileOperationConfigDialog.hpp"
 #include "ANPV.hpp"
 #include "Image.hpp"
 #include "DecoderFactory.hpp"
@@ -460,11 +462,22 @@ struct DocumentView::Impl
                 {
                     Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
 
+                    ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
                     QFileInfo source = this->currentImageDecoder->image()->fileInfo();
-                    ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
-
-                    p->loadImage(nextImg);
+                    switch(op)
+                    {
+                        case ANPV::FileOperation::Move:
+                            ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            p->loadImage(nextImg);
+                            break;
+                        case ANPV::FileOperation::HardLink:
+                            ANPV::globalInstance()->hardLinkFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            break;
+                        default:
+                            QMessageBox::information(p, "Not yet implemented", "not yet impl");
+                            break;
+                    }
                     break;
                 }
             }
