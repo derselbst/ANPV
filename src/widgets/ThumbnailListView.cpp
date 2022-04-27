@@ -97,6 +97,10 @@ struct ThumbnailListView::Impl
     
     void onCopyToClipboard(ANPV::FileOperation op)
     {
+        if (!(op == ANPV::FileOperation::Move || op == ANPV::FileOperation::Copy))
+        {
+            throw std::logic_error("Unsupported mode when copying to clipboard");
+        }
         QList<Entry_t> imgs = q->selectedImages();
         QList<QUrl> files;
         for(Entry_t& e : imgs)
@@ -208,9 +212,9 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionMove->setShortcuts(QKeySequence::Cut);
     connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
     
-    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "HardLink", this);
+    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
     d->actionCopy->setShortcuts(QKeySequence::Copy);
-    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::HardLink); });
+    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
