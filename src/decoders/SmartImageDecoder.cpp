@@ -216,7 +216,10 @@ void SmartImageDecoder::init()
 // Do not wait for finished()
 void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
 {
-    Q_ASSERT(!d->promise.isNull());
+    if (d->promise.isNull())
+    {
+        qDebug() << "There isn't anything to cancel.";
+    }
 
     bool isFinished = taskFuture.isFinished();
     bool taken = QThreadPool::globalInstance()->tryTake(this);
