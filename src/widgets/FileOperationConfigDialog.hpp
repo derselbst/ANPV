@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include "ANPV.hpp"
 
 
 namespace Ui
@@ -10,6 +11,7 @@ namespace Ui
 
 class QActionGroup;
 class QLineEdit;
+class QAction;
 
 class FileOperationConfigDialog : public QDialog
 {
@@ -19,6 +21,7 @@ class FileOperationConfigDialog : public QDialog
     explicit FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, QWidget *parent = nullptr);
     ~FileOperationConfigDialog() override;
 
+    static ANPV::FileOperation operationFromAction(QAction*);
     void accept() override;
     
 private:

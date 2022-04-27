@@ -149,6 +149,8 @@ src/decoders/SmartTiffDecoder.hpp
 src/logic/ExifWrapper.cpp
 src/logic/ExifWrapper.hpp
 src/logic/Formatter.hpp
+src/logic/HardLinkFileCommand.cpp
+src/logic/HardLinkFileCommand.hpp
 src/logic/Image.cpp
 src/logic/Image.hpp
 src/logic/MoonPhase.cpp

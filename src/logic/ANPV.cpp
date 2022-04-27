@@ -42,6 +42,7 @@
 #include "Formatter.hpp"
 #include "SortedImageModel.hpp"
 #include "SmartImageDecoder.hpp"
+#include "HardLinkFileCommand.hpp"
 #include "MoveFileCommand.hpp"
 #include "FileOperationConfigDialog.hpp"
 #include "CancellableProgressWidget.hpp"
@@ -633,18 +634,51 @@ QUndoStack* ANPV::undoStack()
     return d->undoStack;
 }
 
-void ANPV::moveFiles(QList<QString>&& files, QString&& source, QString&& destination)
+void ANPV::hardLinkFiles(QList<QString>&& fileNames, QString&& source, QString&& destination)
 {
     xThreadGuard g(this);
-    MoveFileCommand* cmd = new MoveFileCommand(std::move(files), std::move(source), std::move(destination));
+    HardLinkFileCommand* cmd = new HardLinkFileCommand(std::move(fileNames), std::move(source), std::move(destination));
     
-    connect(cmd, &MoveFileCommand::moveFailed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
+    connect(cmd, &HardLinkFileCommand::failed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
+    {
+        QMessageBox box(QMessageBox::Critical,
+                    "Hardlink operation failed",
+                    "Some files could not be hardlinked to the destination folder. See details below.",
+                    QMessageBox::Ok,
+                    QApplication::focusWidget());
+        
+        QString details;
+        for(int i=0; i<failedFilesWithReason.size(); i++)
+        {
+            QPair<QString, QString>& p = failedFilesWithReason[i];
+            details += p.first;
+            
+            if(!p.second.isEmpty())
+            {
+                details += QString(": ") + p.second;
+                details += "\n";
+            }
+        }
+        box.setDetailedText(details);
+        box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+        box.exec();
+    });
+    
+    this->undoStack()->push(cmd);
+}
+
+void ANPV::moveFiles(QList<QString>&& fileNames, QString&& source, QString&& destination)
+{
+    xThreadGuard g(this);
+    MoveFileCommand* cmd = new MoveFileCommand(std::move(fileNames), std::move(source), std::move(destination));
+    
+    connect(cmd, &MoveFileCommand::failed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
     {
         QMessageBox box(QMessageBox::Critical,
                     "Move operation failed",
                     "Some files could not be moved to the destination folder. See details below.",
                     QMessageBox::Ok,
-                    d->mainWindow.get());
+                    QApplication::focusWidget());
         
         QString details;
         for(int i=0; i<failedFilesWithReason.size(); i++)
