@@ -363,7 +363,7 @@ struct DocumentView::Impl
         this->actionShowScrollBars->setChecked(showScrollBar);
     }
     
-    void onViewModeChanged(ViewMode neu)
+    void onViewModeChanged(ViewMode)
     {
         if(this->currentImageDecoder)
         {

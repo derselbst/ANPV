@@ -58,7 +58,7 @@ public:
     
     // The default implementation of this function is so horribly slow. It spams the UI thread with a bunch of useless events.
     // Disable this, to make it use the icon(QAbstractFileIconProvider::IconType type) overload.
-    QIcon icon(const QFileInfo &info) const override
+    QIcon icon(const QFileInfo &) const override
     {
         return QIcon();
     }

@@ -192,12 +192,11 @@ void SmartImageDecoder::init()
         if(thumb.isNull())
         {
             thumb = exifWrapper->thumbnail();
-        }
-        if(!thumb.isNull())
-        {
-            thumb.setColorSpace(this->image()->colorSpace());
-            thumb.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
-            this->image()->setThumbnail(thumb);
+            if(!thumb.isNull())
+            {
+                this->convertColorSpace(thumb, true);
+                this->image()->setThumbnail(thumb);
+            }
         }
         
         // initialize cache
@@ -354,7 +353,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
 }
 
-void SmartImageDecoder::convertColorSpace(QImage& image)
+void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
 {
     if(image.depth() != 32)
     {
@@ -384,7 +383,10 @@ void SmartImageDecoder::convertColorSpace(QImage& image)
             tempImg.applyColorTransform(colorTransform);
 
             this->cancelCallback();
-            this->updatePreviewImage(QRect(0, y, width, yStride));
+            if (!silent)
+            {
+                this->updatePreviewImage(QRect(0, y, width, yStride));
+            }
         }
     }
 }
@@ -487,14 +489,13 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
     {
         this->setDecodingMessage("Allocating image output buffer");
 
-        std::unique_ptr<uint32_t[]> mem(new uint32_t[needed]);
-        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, [](void* p) { delete[](static_cast<uint32_t*>(p)); }, mem.get());
+        std::unique_ptr<uint32_t, decltype(&free)> mem(static_cast<uint32_t*>(calloc(needed, sizeof(uint32_t))), &::free);
+        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
         mem.release();
 
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
-
-        return std::move(image);
+        return image;
     }
     catch (const std::bad_alloc&)
     {

@@ -165,7 +165,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
 
-    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_RGB32);
+    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
 
@@ -212,7 +212,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    const size_t rowStride = cinfo.output_width * sizeof(uint32_t);
     auto totalLinesRead = cinfo.output_scanline;
     while (!jpeg_input_complete(&cinfo))
     {

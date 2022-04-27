@@ -245,11 +245,11 @@ struct SmartTiffDecoder::Impl
         return ret;
     }
     
-    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, QSize size)
+    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, int highResPage)
     {
         int ret = -1;
-        const auto fullImgAspect = size.width() * 1.0 / size.height();
-        uint64_t res = static_cast<size_t>(size.width()) * size.height();
+        const auto fullImgAspect = pageInfo[highResPage].width * 1.0 / pageInfo[highResPage].height;
+        auto res = pageInfo[highResPage].nPix();
         for(size_t i=0; i<pageInfo.size(); i++)
         {
             auto len = pageInfo[i].nPix();
@@ -269,7 +269,7 @@ struct SmartTiffDecoder::Impl
         return ret;
     }
     
-    QImage::Format format(int page)
+    QImage::Format format(int)
     {
         // If there's no alpha channel in the original TIFF, progpagate this information to Qt.
         // This'll allow a performance gain for QPixmap::mask() which may be called by Qt internally.
@@ -356,10 +356,9 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         cs = QColorSpace::fromIccProfile(iccProfile);
     }
     
-    QSize size(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height);
-    this->image()->setSize(size);
+    this->image()->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
     this->image()->setColorSpace(cs);
-    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, size);
+    auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, highResPage);
     
     if(thumbnailPageToDecode >= 0)
     {
@@ -370,6 +369,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
             QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
             this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
 
+            this->convertColorSpace(thumb, true);
             this->image()->setThumbnail(thumb);
         }
         catch(const std::exception& e)
@@ -404,7 +404,6 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     desiredDecodeResolution = desiredDecodeResolution.boundedTo(targetImageRect.size());
     
     double desiredScaleX = targetImageRect.width() * 1.0f / desiredDecodeResolution.width();
-    double desiredScaleY = targetImageRect.height() * 1.0f / desiredDecodeResolution.height();
 
     int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, fullImageRect.size());
 
@@ -586,6 +585,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                             QImage::Format_RGBA8888);
             image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            this->image()->setDecodedImage(image);
         }
         else
         {
