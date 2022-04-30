@@ -36,6 +36,7 @@ Q_OBJECT
 friend class SmartImageDecoder;
 friend class SmartJpegDecoder;
 friend class SmartTiffDecoder;
+friend class MySleepyImageDecoder;
 
 public:
     Image(const QFileInfo&);

@@ -189,7 +189,9 @@ public:
     QImage decodingLoop(QSize desiredResolution, QRect roiRect) override
     {
         // do not return a NULL image
-        return QImage(1,1,QImage::Format_ARGB32);
+        QImage img(1,1,QImage::Format_ARGB32);
+        this->image()->setDecodedImage(img);
+        return img;
     }
 };
 
