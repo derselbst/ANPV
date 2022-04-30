@@ -1,11 +1,14 @@
 
 #include "CancellableProgressDialog.hpp"
 #include "CancellableProgressWidget.hpp"
+#include "ProgressIndicatorHelper.hpp"
 #include "DecodingState.hpp"
+#include "ANPV.hpp"
 
 #include <chrono>
 #include <thread>
 
+#include <QLabel>
 #include <QDebug>
 #include <QFuture>
 #include <QPromise>
@@ -39,9 +42,12 @@ public:
     }
 };
 
+
 int main(int argc, char **argv)
 {
+    Q_INIT_RESOURCE(ANPV);
     QApplication app(argc, argv);
+    ANPV anpv;
 
     QScopedPointer<QMainWindow> mainWindow(new QMainWindow());
     
@@ -56,6 +62,33 @@ int main(int argc, char **argv)
     progWid->setFuture(fut);
     mainWindow->setCentralWidget(progWid);
     mainWindow->show();
+    
+    QLabel spinningIcon;
+    QFutureWatcher<DecodingState> wat(&spinningIcon);
+    wat.setFuture(fut);
+    spinningIcon.resize(200,200);
+    spinningIcon.show();
+    
+    ProgressIndicatorHelper spinner(&spinningIcon);
+    QObject::connect(&spinner, &ProgressIndicatorHelper::needsRepaint, &spinningIcon,
+                     [&]()
+                     {
+                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         spinningIcon.setPixmap(frame);
+                     });
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::progressValueChanged, &spinningIcon,
+                     [&]()
+                     {
+                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         spinningIcon.setPixmap(frame);
+                     });
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::started, &spinningIcon, [&](){ spinner.startRendering(); });
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::finished, &spinningIcon, [&](){ spinner.stopRendering(); });
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::canceled, &spinningIcon,
+                     [&](){
+                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         spinningIcon.setPixmap(frame);
+                         spinner.stopRendering(); });
     
     return app.exec();
 }

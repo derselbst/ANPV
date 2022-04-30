@@ -135,6 +135,8 @@ src/widgets/MainWindow.ui
 src/widgets/PreviewAllImagesDialog.cpp
 src/widgets/PreviewAllImagesDialog.hpp
 src/widgets/PreviewAllImagesDialog.ui
+src/widgets/ProgressIndicatorHelper.cpp
+src/widgets/ProgressIndicatorHelper.hpp
 src/widgets/ThumbnailListView.cpp
 src/widgets/ThumbnailListView.hpp
 src/decoders/DecoderFactory.hpp
