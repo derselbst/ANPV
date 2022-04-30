@@ -17,9 +17,11 @@ Q_OBJECT
 public:
     ProgressIndicatorHelper(QObject* parent = nullptr);
     ~ProgressIndicatorHelper();
+    QPixmap getProgressIndicator(const QFutureWatcher<DecodingState>& future);
+
+public slots:
     void startRendering();
     void stopRendering();
-    QPixmap getProgressIndicator(const QFutureWatcher<DecodingState>& future);
 
 signals:
     void needsRepaint();

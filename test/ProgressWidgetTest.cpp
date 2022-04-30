@@ -76,15 +76,15 @@ int main(int argc, char **argv)
                          QPixmap frame = spinner.getProgressIndicator(wat);
                          spinningIcon.setPixmap(frame);
                      });
-    QObject::connect(&wat, &QFutureWatcher<DecodingState>::progressValueChanged, &spinningIcon,
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::progressValueChanged, &spinner,
                      [&]()
                      {
                          QPixmap frame = spinner.getProgressIndicator(wat);
                          spinningIcon.setPixmap(frame);
                      });
-    QObject::connect(&wat, &QFutureWatcher<DecodingState>::started, &spinningIcon, [&](){ spinner.startRendering(); });
-    QObject::connect(&wat, &QFutureWatcher<DecodingState>::finished, &spinningIcon, [&](){ spinner.stopRendering(); });
-    QObject::connect(&wat, &QFutureWatcher<DecodingState>::canceled, &spinningIcon,
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::started,  &spinner, &ProgressIndicatorHelper::startRendering);
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::finished, &spinner, &ProgressIndicatorHelper::stopRendering);
+    QObject::connect(&wat, &QFutureWatcher<DecodingState>::canceled, &spinner,
                      [&](){
                          QPixmap frame = spinner.getProgressIndicator(wat);
                          spinningIcon.setPixmap(frame);
