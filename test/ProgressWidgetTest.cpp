@@ -56,7 +56,6 @@ int main(int argc, char **argv)
     
     CancellableProgressDialog<DecodingState>* dialog = new CancellableProgressDialog<DecodingState>(fut, "Async Test Operation", mainWindow.data());
     QObject::connect(dialog, &QObject::destroyed, &app, &QCoreApplication::quit, Qt::QueuedConnection);
-    dialog->show();
 
     CancellableProgressWidget *progWid = new CancellableProgressWidget(mainWindow.data());
     progWid->setFuture(fut);
@@ -65,7 +64,6 @@ int main(int argc, char **argv)
     
     QLabel spinningIcon;
     QFutureWatcher<DecodingState> wat(&spinningIcon);
-    wat.setFuture(fut);
     spinningIcon.resize(200,200);
     spinningIcon.show();
     
@@ -89,6 +87,7 @@ int main(int argc, char **argv)
                          QPixmap frame = spinner.getProgressIndicator(wat);
                          spinningIcon.setPixmap(frame);
                          spinner.stopRendering(); });
+    wat.setFuture(fut);
     
     return app.exec();
 }
