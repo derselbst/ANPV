@@ -55,11 +55,16 @@ ProgressIndicatorHelper::~ProgressIndicatorHelper() = default;
 
 void ProgressIndicatorHelper::startRendering()
 {
-    d->renderingConnection = connect(d->renderer, &QSvgRenderer::repaintNeeded, this, [&](){ d->renderSvg(); });
+    xThreadGuard(this);
+    if (!d->renderingConnection)
+    {
+        d->renderingConnection = connect(d->renderer, &QSvgRenderer::repaintNeeded, this, [&]() { d->renderSvg(); });
+    }
 }
 
 void ProgressIndicatorHelper::stopRendering()
 {
+    xThreadGuard(this);
     disconnect(d->renderingConnection);
 }
 
