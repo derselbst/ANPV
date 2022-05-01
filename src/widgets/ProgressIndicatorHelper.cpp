@@ -16,10 +16,6 @@
 struct ProgressIndicatorHelper::Impl
 {
     ProgressIndicatorHelper* q;
-    QFutureWatcher<DecodingState> future;
-    // https://bugreports.qt.io/browse/QTBUG-91048
-    // the behaviour of QFutureWatcher::isFinished() changed with QT6.2: now there is no reyable way to detect if the finished event has already been sent out :/
-    bool futureFinishedEventReceived = false;
     
     QMetaObject::Connection renderingConnection;
     QPointer<QSvgRenderer> renderer;

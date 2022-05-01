@@ -31,7 +31,7 @@
 #include "WaitCursor.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
-
+#include "ProgressIndicatorHelper.hpp"
 
 struct SortedImageModel::Impl
 {
