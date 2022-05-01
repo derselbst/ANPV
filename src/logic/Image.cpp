@@ -366,8 +366,8 @@ QString Image::formatInfoString()
 // whether the Image looks like a RAW from its file extension
 bool Image::isRaw() const
 {
-    const QByteArray formatHint = this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
-    bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint));
+    const QString formatHint = this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
+    bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(formatHint);
     return isRaw;
 }
 
