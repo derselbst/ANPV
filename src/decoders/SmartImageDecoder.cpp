@@ -436,6 +436,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 {
     if(d->promise && d->decodingProgress != prog)
     {
+        d->decodingProgress = prog;
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
     }
 }
