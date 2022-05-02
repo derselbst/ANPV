@@ -38,16 +38,18 @@ struct ProgressIndicatorHelper::Impl
     {
         QSize imgSize = this->renderer->defaultSize().scaled(neu, neu, Qt::KeepAspectRatio);
         QImage image(imgSize, QImage::Format_ARGB32);
+        this->painter->end();
         this->currentFrame = image;
-        this->painter = std::make_unique<QPainter>(&this->currentFrame);
+        bool ok = this->painter->begin(&this->currentFrame);
+        Q_ASSERT(ok);
     }
 };
 
 ProgressIndicatorHelper::ProgressIndicatorHelper(QObject* parent) : QObject(parent), d(std::make_unique<Impl>(this))
 {
     d->renderer = new QSvgRenderer(QStringLiteral(":/images/decoding.svg"), this);
-    
-    d->onIconHeightChanged(ANPV::globalInstance()->iconHeight());
+    d->painter = std::make_unique<QPainter>();
+
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int neu, int){ d->onIconHeightChanged(neu); });
 }
 
