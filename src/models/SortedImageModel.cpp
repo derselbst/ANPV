@@ -831,13 +831,14 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [=]() { d->onBackgroundTaskStarted(watcher, decoder); });
 
             // decode asynchronously
-            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight)).then(
+            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            watcher->setFuture(fut);
+            fut.then(
                 [=](DecodingState result)
                 {
                     decoder->releaseFullImage();
                     return result;
                 });
-            watcher->setFuture(fut);
 
             d->backgroundTasks[decoder] = (watcher);
         }
