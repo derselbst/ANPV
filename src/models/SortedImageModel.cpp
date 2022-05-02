@@ -819,7 +819,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
                 qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
             }
             QImage thumb = image->thumbnail();
-            if (state == DecodingState::PreviewImage && !thumb.isNull() && thumb.height() >= imageHeight)
+            if (state == DecodingState::PreviewImage && !thumb.isNull())
             {
                 qDebug() << "Skipping preview decoding of " << image->fileInfo().fileName() << " as it already has a thumbnail of sufficient size.";
                 continue;
