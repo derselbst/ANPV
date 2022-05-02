@@ -809,6 +809,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
     }
     for(Entry_t& e : d->entries)
     {
+        const QSharedPointer<Image>& image = SortedImageModel::image(e);
         const QSharedPointer<SmartImageDecoder>& decoder = SortedImageModel::decoder(e);
         if(decoder)
         {
@@ -817,6 +818,13 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             {
                 qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
             }
+            QImage thumb = image->thumbnail();
+            if (state == DecodingState::PreviewImage && !thumb.isNull() && thumb.height() >= imageHeight)
+            {
+                qDebug() << "Skipping preview decoding of " << image->fileInfo().fileName() << " as it already has a thumbnail of sufficient size.";
+                continue;
+            }
+
             QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
             connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
             connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
