@@ -351,6 +351,7 @@ struct MainWindow::Impl
     {
         if(!ui->iconSizeSlider->isSliderDown())
         {
+            QSignalBlocker(ui->iconSizeSlider);
             // this is the initial change event, set the value of the slider
             ui->iconSizeSlider->setValue(h);
         }
