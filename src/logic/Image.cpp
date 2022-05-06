@@ -230,6 +230,7 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     else
     {
+        QSize currentSize = d->thumbnailTransformed.size();
         int currentHeight = d->thumbnailTransformed.height();
         if(!d->thumbnailTransformed.isNull() && currentHeight >= height)
         {
@@ -237,7 +238,9 @@ QPixmap Image::thumbnailTransformed(int height)
             return currentHeight == height ? d->thumbnailTransformed : d->thumbnailTransformed.scaledToHeight(height, Qt::FastTransformation);
         }
         
-        t.setInfo("no matching thumbnail cached, transforming and scaling it");
+        int currentWidth = thumb.width();
+        currentHeight = thumb.height();
+        t.setInfo(Formatter() << "no matching thumbnail cached, transforming and scaling a thumbnail with an original size of " << currentWidth << "x" << currentHeight << "px to height " << height << "px");
         pix = thumb.transformed(d->transformMatrixOrIdentity());
     }
     pix = pix.scaledToHeight(height, Qt::FastTransformation);

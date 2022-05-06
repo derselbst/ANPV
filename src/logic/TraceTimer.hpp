@@ -2,6 +2,7 @@
 
 #include <version>
 #include <memory>
+#include <string>
 
 #if defined(__cpp_lib_source_location) && (__cpp_lib_source_location == 201907L)
 #include <source_location>
@@ -23,6 +24,7 @@ public:
     TraceTimer(TraceTimer&&) = delete;
 
     void setInfo(const char* str);
+    void setInfo(std::string&& str);
 
 private:
     struct Impl;
