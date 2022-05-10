@@ -457,7 +457,7 @@ struct SortedImageModel::Impl
         }
     }
     
-    void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>> watcher, const QSharedPointer<SmartImageDecoder>& dec)
+    void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
     {
         std::lock_guard<std::mutex> l(m);
         auto& watcher2 = this->backgroundTasks[dec];
@@ -472,7 +472,7 @@ struct SortedImageModel::Impl
         }
     }
 
-    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>> watcher, const QSharedPointer<SmartImageDecoder>& dec)
+    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
     {
         QModelIndex idx = q->index(dec->image());
         Q_ASSERT(idx.isValid());
@@ -572,10 +572,10 @@ struct SortedImageModel::Impl
         q->beginResetModel();
         for(auto it = entries.begin(); it != entries.end();)
         {
-            QFileInfo eInfo = SortedImageModel::image(*it)->fileInfo();
+            const QFileInfo& eInfo = SortedImageModel::image(*it)->fileInfo();
             auto result = std::find_if(fileInfoList.begin(),
                                     fileInfoList.end(),
-                                    [=](QFileInfo& other)
+                                    [&](const QFileInfo& other)
                                     { return eInfo == other; });
             
             if(result == fileInfoList.end())
