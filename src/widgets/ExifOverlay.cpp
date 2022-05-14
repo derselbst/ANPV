@@ -33,6 +33,7 @@ ExifOverlay::ExifOverlay(QWidget* parent)
     this->setCloseButtonVisible(false);
     this->setWordWrap(false);
     this->setAttribute(Qt::WA_Hover);
+    this->setFocusPolicy(Qt::NoFocus);
     d->transparentEffect(this);
     this->hide();
 }

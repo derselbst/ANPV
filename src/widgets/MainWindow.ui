@@ -54,6 +54,9 @@
           <height>0</height>
          </size>
         </property>
+        <property name="cursor">
+         <cursorShape>SizeHorCursor</cursorShape>
+        </property>
         <property name="contextMenuPolicy">
          <enum>Qt::NoContextMenu</enum>
         </property>
