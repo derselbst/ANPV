@@ -962,27 +962,65 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
         Entry_t e = this->entry(index);
         const QSharedPointer<Image>& i = this->image(e);
         const QSharedPointer<SmartImageDecoder>& dec = this->decoder(e);
-        QSharedPointer<QFutureWatcher<DecodingState>> watcher;
-        {
-            std::lock_guard<std::mutex> l(d->m);
-            if (d->backgroundTasks.contains(dec))
-            {
-                watcher = d->backgroundTasks[dec];
-            }
-        }
+        const QFileInfo fi = i->fileInfo();
+        int column = index.column();
         switch (role)
         {
         case Qt::DisplayRole:
-            return i->fileInfo().fileName();
-
+            switch (column)
+            {
+            case Column::FileName:
+                return fi.fileName();
+            case Column::FileSize:
+                return QString::number(fi.size());
+            case Column::DateModified:
+                return fi.lastModified();
+            default:
+            {
+                auto exif = i->exif();
+                if (!exif.isNull())
+                {
+                    switch (column)
+                    {
+                    case Column::DateRecorded:
+                        return exif->dateRecorded();
+                    case Column::Resolution:
+                        return exif->size();
+                    case Column::Aperture:
+                        return exif->aperture();
+                    case Column::Exposure:
+                        return exif->exposureTime();
+                    case Column::Iso:
+                        return exif->iso();
+                    case Column::FocalLength:
+                        return exif->focalLength();
+                    case Column::Lens:
+                        return exif->lens();
+                    case Column::CameraModel:
+                        throw std::logic_error("not yet implemented");
+                    }
+                }
+                break;
+            }
+            }
+            break;
         case Qt::DecorationRole:
+        {
+            QSharedPointer<QFutureWatcher<DecodingState>> watcher;
+            {
+                std::lock_guard<std::mutex> l(d->m);
+                if (d->backgroundTasks.contains(dec))
+                {
+                    watcher = d->backgroundTasks[dec];
+                }
+            }
             if (watcher && watcher->isRunning())
             {
                 QPixmap frame = d->spinningIconHelper->getProgressIndicator(*watcher);
                 return frame;
             }
             return i->thumbnailTransformed(d->cachedIconHeight);
-
+        }
         case Qt::ToolTipRole:
             switch(i->decodingState())
             {
