@@ -183,7 +183,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->setResizeMode(QListView::Adjust);
     this->setWordWrap(true);
     this->setWrapping(true);
-    this->setSpacing(2);
+    this->setSpacing(5);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
     d->q = this;

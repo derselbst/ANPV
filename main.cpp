@@ -3,6 +3,7 @@
 #include "Image.hpp"
 #include "Formatter.hpp"
 #include "types.hpp"
+#include "CenteredBoxProxyStyle.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -21,6 +22,7 @@
 #include <QDir>
 #include <QMessageBox>
 #include <QThread>
+#include <QStyleFactory>
 
 #include <chrono>
 #include <thread>
@@ -46,6 +48,9 @@ int main(int argc, char *argv[])
 
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
+
+    splash.showMessage("Setting application-wide style");
+    app.setStyle(new CenteredBoxProxyStyle(QStyleFactory::create("Fusion")));
 
     ANPV anpv(&splash);
     

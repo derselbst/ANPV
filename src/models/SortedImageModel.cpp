@@ -1064,6 +1064,9 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
         }
         case Qt::CheckStateRole:
             return i->checked();
+        case CheckAlignmentRole:
+            return { Qt::AlignLeft | Qt::AlignTop };
+        case DecorationAlignmentRole:
         case Qt::EditRole:
         case Qt::StatusTipRole:
         case Qt::WhatsThisRole:
