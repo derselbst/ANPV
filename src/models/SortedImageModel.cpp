@@ -919,6 +919,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
     xThreadGuard g(this);
 
     Qt::ItemFlags f = this->QAbstractTableModel::flags(index);
+    f |= Qt::ItemIsUserCheckable;
     
     if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
     {
@@ -950,6 +951,27 @@ int SortedImageModel::rowCount(const QModelIndex&) const
     {
         return 0;
     }
+}
+
+bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    xThreadGuard g(this);
+
+    if (index.isValid())
+    {
+        d->waitForDirectoryWorker();
+        Entry_t e = this->entry(index);
+        const QSharedPointer<Image>& i = this->image(e);
+        int column = index.column();
+        switch (role)
+        {
+        case Qt::CheckStateRole:
+            i->setChecked(static_cast<Qt::CheckState>(value.toInt()));
+            emit this->dataChanged(index, index, { role });
+            return true;
+        }
+    }
+    return false;
 }
 
 QVariant SortedImageModel::data(const QModelIndex& index, int role) const
@@ -1036,12 +1058,12 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             }
 
         case Qt::TextAlignmentRole:
-            if (index.column() == Column::FileName)
-            {
-                const Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
-                return int(alignment);
-            }
-            [[fallthrough]];
+        {
+            constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
+            return int(alignment);
+        }
+        case Qt::CheckStateRole:
+            return i->checked();
         case Qt::EditRole:
         case Qt::StatusTipRole:
         case Qt::WhatsThisRole:

@@ -52,6 +52,9 @@ public:
     
     QTransform userTransform() const;
     void setUserTransform(QTransform);
+
+    Qt::CheckState checked();
+    void setChecked(Qt::CheckState b);
     
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);

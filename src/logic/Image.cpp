@@ -53,6 +53,9 @@ struct Image::Impl
     
     QPointer<QTimer> updateRectTimer;
     QRect cachedUpdateRect;
+
+    // indicates whether this instance has been marked by the user
+    Qt::CheckState checked = Qt::Unchecked;
     
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
@@ -429,6 +432,18 @@ void Image::setErrorMessage(const QString& err)
         lck.unlock();
         d->errorMessage = err;
     }
+}
+
+Qt::CheckState Image::checked()
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    return d->checked;
+}
+
+void Image::setChecked(Qt::CheckState b)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    d->checked = b;
 }
 
 QImage Image::decodedImage()
