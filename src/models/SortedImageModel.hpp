@@ -4,7 +4,7 @@
 #include "DecodingState.hpp"
 #include "types.hpp"
 
-#include <QAbstractListModel>
+#include <QAbstractTableModel>
 #include <QRunnable>
 #include <QModelIndex>
 #include <QFileInfo>
@@ -16,7 +16,7 @@ class ImageDecodeTask;
 class Image;
 class SmartImageDecoder;
 
-class SortedImageModel : public QAbstractListModel, public QRunnable
+class SortedImageModel : public QAbstractTableModel, public QRunnable
 {
     Q_OBJECT
     
@@ -49,7 +49,7 @@ public:
     void run() override;
     void decodeAllImages(DecodingState state, int imageHeight);
     
-    using QAbstractListModel::index; // don't hide base member
+    using QAbstractTableModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
     QModelIndex index(const Image* img);
     QFileInfo fileInfo(const QModelIndex& idx) const;

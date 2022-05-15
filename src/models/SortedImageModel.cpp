@@ -619,7 +619,7 @@ struct SortedImageModel::Impl
     }
 };
 
-SortedImageModel::SortedImageModel(QObject* parent) : QAbstractListModel(parent), d(std::make_unique<Impl>(this))
+SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent), d(std::make_unique<Impl>(this))
 {
     this->setAutoDelete(false);
     
@@ -918,7 +918,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
 {
     xThreadGuard g(this);
 
-    Qt::ItemFlags f = this->QAbstractListModel::flags(index);
+    Qt::ItemFlags f = this->QAbstractTableModel::flags(index);
     
     if(index.isValid() && (d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
     {
