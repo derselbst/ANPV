@@ -359,11 +359,12 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
         throw std::logic_error("SmartImageDecoder::convertColorSpace(): case not implemented");
     }
     
+    static const QColorSpace srgbSpace(QColorSpace::SRgb);
     QColorSpace csp = this->image()->colorSpace();
-    if (csp.isValid() && csp.primaries() != QColorSpace::Primaries::SRgb)
+    if (csp.isValid() && csp != srgbSpace)
     {
         this->setDecodingMessage("Transforming colorspace...");
-        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
+        QColorTransform colorTransform = csp.transformationToColorSpace(srgbSpace);
 
         auto* dataPtr = image.constBits();
         const size_t width = image.width();
