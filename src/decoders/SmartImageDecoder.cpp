@@ -360,7 +360,7 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
     }
     
     QColorSpace csp = this->image()->colorSpace();
-    if (csp.primaries() != QColorSpace::Primaries::SRgb)
+    if (csp.isValid() && csp.primaries() != QColorSpace::Primaries::SRgb)
     {
         this->setDecodingMessage("Transforming colorspace...");
         QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
