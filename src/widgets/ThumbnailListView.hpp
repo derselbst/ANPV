@@ -31,6 +31,8 @@ public:
     void fileOperationOnSelectedFiles(QAction*);
     QList<Entry_t> selectedImages();
     QList<Entry_t> selectedImages(const QModelIndexList& selectedIdx);
+
+    void keyPressEvent(QKeyEvent* event) override;
         
 protected:
     void wheelEvent(QWheelEvent *event) override;
