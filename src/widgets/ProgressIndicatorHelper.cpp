@@ -28,21 +28,29 @@ struct ProgressIndicatorHelper::Impl
     
     void renderSvg()
     {
-        this->currentFrame.fill(0);
-        this->renderer->render(this->painter.get());
-        
-        emit q->needsRepaint();
+        if(this->painter->isActive())
+        {
+            this->currentFrame.fill(0);
+            this->renderer->render(this->painter.get());
+            
+            emit q->needsRepaint();
+        }
     }
     
     void onIconHeightChanged(int neu)
     {
-        QSize imgSize = this->renderer->defaultSize().scaled(neu, neu, Qt::KeepAspectRatio);
-        QImage image(imgSize, QImage::Format_ARGB32);
-        if (this->painter->isActive())
+        if(this->painter->isActive())
         {
             this->painter->end();
         }
+        QSize imgSize = this->renderer->defaultSize().scaled(neu, neu, Qt::KeepAspectRatio);
+        QImage image(imgSize, QImage::Format_ARGB32);
         this->currentFrame = image;
+        
+        if(image.isNull())
+        {
+            return;
+        }
         bool ok = this->painter->begin(&this->currentFrame);
         Q_ASSERT(ok);
     }
