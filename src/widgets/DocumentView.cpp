@@ -50,9 +50,6 @@ struct DocumentView::Impl
     QPointer<MessageWidget> messageWidget;
     QPointer<QCheckBox> isSelectedBox;
     
-    QPointer<QAction> actionCopyTransform;
-    QPointer<QAction> actionPaste;
-    
     // a smoothly scaled version of the full resolution image
     QGraphicsPixmapItem* smoothPixmapOverlay = nullptr;
     
