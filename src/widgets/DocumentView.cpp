@@ -41,7 +41,7 @@
 
 struct DocumentView::Impl
 {
-    DocumentView* p = nullptr;
+    DocumentView* q = nullptr;
     
     QTimer fovChangedTimer;
     QTransform previousFovTransform;
@@ -61,7 +61,7 @@ struct DocumentView::Impl
 
     AfPointOverlay* afPointOverlay = nullptr;
     
-    std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(p);
+    std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(q);
     
     QFutureWatcher<DecodingState> taskFuture;
     
@@ -76,7 +76,7 @@ struct DocumentView::Impl
     // the model for the current directory needed for navigating back and forth
     QSharedPointer<SortedImageModel> model;
 
-    Impl(DocumentView* parent) : p(parent)
+    Impl(DocumentView* parent) : q(parent)
     {}
     
     ~Impl()
@@ -91,7 +91,7 @@ struct DocumentView::Impl
             currentImageDecoder->cancelOrTake(taskFuture.future());
             taskFuture.waitForFinished();
             currentImageDecoder->releaseFullImage();
-            currentImageDecoder->image()->disconnect(p);
+            currentImageDecoder->image()->disconnect(q);
             currentImageDecoder.reset();
             latestDecodingState = DecodingState::Ready;
         }
@@ -131,12 +131,12 @@ struct DocumentView::Impl
         auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
-            p->resetTransform();
+            q->resetTransform();
             if(exif)
             {
-                p->setTransform(exif->transformMatrix(), true);
+                q->setTransform(exif->transformMatrix(), true);
             }
-            p->fitInView(p->sceneRect(), Qt::KeepAspectRatio);
+            q->fitInView(q->sceneRect(), Qt::KeepAspectRatio);
         }
         else if(viewMode == ViewMode::None)
         {
@@ -155,7 +155,7 @@ struct DocumentView::Impl
     
     void createSmoothPixmap()
     {
-        xThreadGuard g(p);
+        xThreadGuard g(q);
         if (currentDocumentPixmap.isNull())
         {
             return;
@@ -163,10 +163,10 @@ struct DocumentView::Impl
         WaitCursor w;
 
         // get the area of what the user sees
-        QRect viewportRect = p->viewport()->rect();
+        QRect viewportRect = q->viewport()->rect();
 
         // and map that rect to scene coordinates
-        QRectF viewportRectScene = p->mapToScene(viewportRect).boundingRect();
+        QRectF viewportRectScene = q->mapToScene(viewportRect).boundingRect();
 
         // the user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void
         QRectF visPixRect = viewportRectScene.intersected(currentPixmapOverlay->sceneBoundingRect());
@@ -239,7 +239,7 @@ struct DocumentView::Impl
         messageWidget->setMessageType(MessageWidget::MessageType::Error);
         messageWidget->setIcon(QIcon::fromTheme("dialog-error"));
         messageWidget->show();
-        this->centerMessageWidget(p->size());
+        this->centerMessageWidget(q->size());
     }
     
     void centerMessageWidget(QSize wndSize)
@@ -258,9 +258,9 @@ struct DocumentView::Impl
         {
             QDataStream out(&b, QIODeviceBase::WriteOnly);
             out.setVersion(QDataStream::Qt_6_2);
-            out << p->transform();
-            out << p->horizontalScrollBar()->value();
-            out << p->verticalScrollBar()->value();
+            out << q->transform();
+            out << q->horizontalScrollBar()->value();
+            out << q->verticalScrollBar()->value();
         }
         
         QMimeData* mime = new QMimeData;
@@ -284,13 +284,13 @@ struct DocumentView::Impl
             QTransform t;
             int v;
             in >> t;
-            p->setTransform(t);
+            q->setTransform(t);
             
             in >> v;
-            p->horizontalScrollBar()->setValue(v);
+            q->horizontalScrollBar()->setValue(v);
             
             in >> v;
-            p->verticalScrollBar()->setValue(v);
+            q->verticalScrollBar()->setValue(v);
         }
     }
     
@@ -305,8 +305,8 @@ struct DocumentView::Impl
         bool showScrollBar = (v & static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)) != 0;
         auto policy = showScrollBar ? Qt::ScrollBarAlwaysOn : Qt::ScrollBarAlwaysOff;
         // Qt::ScrollBarAsNeeded causes many resizeEvents to be delivered
-        p->setHorizontalScrollBarPolicy(policy);
-        p->setVerticalScrollBarPolicy(policy);
+        q->setHorizontalScrollBarPolicy(policy);
+        q->setVerticalScrollBarPolicy(policy);
         this->actionShowScrollBars->setChecked(showScrollBar);
     }
     
@@ -324,7 +324,7 @@ struct DocumentView::Impl
         if(this->currentImageDecoder && this->model)
         {
             Entry_t newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
-            p->loadImage(newEntry);
+            q->loadImage(newEntry);
         }
     }
     
@@ -336,9 +336,9 @@ struct DocumentView::Impl
         {
             currentColor = Qt::white;
         }
-        QColorDialog colDiag(currentColor, p);
+        QColorDialog colDiag(currentColor, q);
         colDiag.setOptions(QColorDialog::ShowAlphaChannel);
-        QObject::connect(&colDiag, &QColorDialog::currentColorChanged, p, [&](const QColor& col){ this->scene->setBackgroundBrush(QBrush(col)); });
+        QObject::connect(&colDiag, &QColorDialog::currentColorChanged, q, [&](const QColor& col){ this->scene->setBackgroundBrush(QBrush(col)); });
         int ret = colDiag.exec();
         if(ret == QDialog::Rejected)
         {
@@ -350,50 +350,50 @@ struct DocumentView::Impl
     {
         QAction* act;
         
-        act = new QAction(QIcon::fromTheme("go-next"), "Go Next", p);
+        act = new QAction(QIcon::fromTheme("go-next"), "Go Next", q);
         act->setShortcuts({{Qt::Key_Space}, {Qt::Key_Right}});
         act->setShortcutContext(Qt::WidgetShortcut);
-        connect(act, &QAction::triggered, p, [&](){ this->goTo(+1); });
-        p->addAction(act);
+        connect(act, &QAction::triggered, q, [&](){ this->goTo(+1); });
+        q->addAction(act);
         
-        act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", p);
+        act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", q);
         act->setShortcuts({{Qt::Key_Backspace}, {Qt::Key_Left}});
         act->setShortcutContext(Qt::WidgetShortcut);
-        connect(act, &QAction::triggered, p, [&](){ this->goTo(-1); });
-        p->addAction(act);
+        connect(act, &QAction::triggered, q, [&](){ this->goTo(-1); });
+        q->addAction(act);
 
-        act = new QAction(p);
+        act = new QAction(q);
         act->setSeparator(true);
-        p->addAction(act);
+        q->addAction(act);
         
-        this->actionShowScrollBars = new QAction("Show Scroll Bars", p);
+        this->actionShowScrollBars = new QAction("Show Scroll Bars", q);
         this->actionShowScrollBars->setCheckable(true);
-        connect(this->actionShowScrollBars, &QAction::toggled, p, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
-        p->addAction(this->actionShowScrollBars);
+        connect(this->actionShowScrollBars, &QAction::toggled, q, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
+        q->addAction(this->actionShowScrollBars);
         
-        act = new QAction("Set Background Color", p);
-        connect(act, &QAction::triggered, p, [&](){ this->onSetBackgroundColor(); });
-        p->addAction(act);
+        act = new QAction("Set Background Color", q);
+        connect(act, &QAction::triggered, q, [&](){ this->onSetBackgroundColor(); });
+        q->addAction(act);
 
-        act = new QAction(p);
+        act = new QAction(q);
         act->setSeparator(true);
-        p->addAction(act);
+        q->addAction(act);
         
-        act = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", p);
-        connect(act, &QAction::triggered, p, [&](){ this->onCopyViewTransform(); });
-        p->addAction(act);
+        act = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", q);
+        connect(act, &QAction::triggered, q, [&](){ this->onCopyViewTransform(); });
+        q->addAction(act);
         
-        act = new QAction(QIcon::fromTheme("edit-paste"), "Paste", p);
-        connect(act, &QAction::triggered, p, [&](){ this->onClipboardPaste(); });
-        p->addAction(act);
+        act = new QAction(QIcon::fromTheme("edit-paste"), "Paste", q);
+        connect(act, &QAction::triggered, q, [&](){ this->onClipboardPaste(); });
+        q->addAction(act);
         
-        act = new QAction(p);
+        act = new QAction(q);
         act->setSeparator(true);
-        p->addAction(act);
+        q->addAction(act);
         
         QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
-        p->addActions(fileActions->actions());
-        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, p, [&](QAction* act)
+        q->addActions(fileActions->actions());
+        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction* act)
         {
             if(!this->currentImageDecoder)
             {
@@ -403,7 +403,7 @@ struct DocumentView::Impl
             QList<QObject*> objs = act->associatedObjects();
             for(QObject* o : objs)
             {
-                if(o == p && p->hasFocus())
+                if(o == q && q->hasFocus())
                 {
                     Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
 
@@ -414,13 +414,13 @@ struct DocumentView::Impl
                     {
                         case ANPV::FileOperation::Move:
                             ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
-                            p->loadImage(nextImg);
+                            q->loadImage(nextImg);
                             break;
                         case ANPV::FileOperation::HardLink:
                             ANPV::globalInstance()->hardLinkFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
                             break;
                         default:
-                            QMessageBox::information(p, "Not yet implemented", "not yet impl");
+                            QMessageBox::information(q, "Not yet implemented", "not yet impl");
                             break;
                     }
                     break;
