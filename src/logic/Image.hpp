@@ -85,6 +85,7 @@ signals:
     void thumbnailChanged(Image* self, QImage);
     void decodedImageChanged(Image* self, QImage img);
     void previewImageUpdated(Image* self, QRect r);
+    void checkStateChanged(Image* self, int newState, int oldState);
 
 protected:
     void connectNotify(const QMetaMethod& signal) override;

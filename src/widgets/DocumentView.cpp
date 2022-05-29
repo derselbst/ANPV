@@ -22,6 +22,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QColorDialog>
 #include <QMessageBox>
+#include <QCheckBox>
 
 #include <vector>
 #include <algorithm>
@@ -47,6 +48,7 @@ struct DocumentView::Impl
     
     QPointer<QGraphicsScene> scene;
     QPointer<MessageWidget> messageWidget;
+    QPointer<QCheckBox> isSelectedBox;
     
     QPointer<QAction> actionCopyTransform;
     QPointer<QAction> actionPaste;
@@ -466,6 +468,17 @@ DocumentView::DocumentView(QWidget *parent)
     d->messageWidget->setWordWrap(true);
     d->messageWidget->hide();
     
+    d->isSelectedBox = new QCheckBox(this);
+    d->isSelectedBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+    connect(d->isSelectedBox.get(), &QCheckBox::stateChanged, this, [&](int state)
+        {
+            auto& dec = d->currentImageDecoder;
+            if (dec)
+            {
+                dec->image()->setChecked(static_cast<Qt::CheckState>(state));
+            }
+        });
+
     d->createActions();
 
     d->fovChangedTimer.setInterval(1000);
@@ -479,7 +492,6 @@ DocumentView::DocumentView(QWidget *parent)
     d->onViewModeChanged(ANPV::globalInstance()->viewMode());
     connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
             [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
-    
 }
 
 DocumentView::~DocumentView() = default;
@@ -550,6 +562,9 @@ void DocumentView::resizeEvent(QResizeEvent *event)
 {
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
+
+    QPoint bottomLeftCheckPoint(0, wndSize.height() - d->isSelectedBox->size().height());
+    d->isSelectedBox->move(bottomLeftCheckPoint);
     if(d->currentImageDecoder)
     {
         d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
@@ -704,6 +719,17 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     }
 }
 
+void DocumentView::onCheckStateChanged(Image* img, int state, int old)
+{
+    auto& dec = d->currentImageDecoder;
+    if (dec && img != dec->image().data())
+    {
+        // ignore events from a previous decoder that might still be running in the background
+        return;
+    }
+    d->isSelectedBox->setCheckState(static_cast<Qt::CheckState>(state));
+}
+
 void DocumentView::loadImage(QString url)
 {
     d->clearScene();
@@ -827,6 +853,7 @@ void DocumentView::loadImage()
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::previewImageUpdated, this, &DocumentView::onPreviewImageUpdated);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodingStateChanged, this, &DocumentView::onDecodingStateChanged);
+    QObject::connect(d->currentImageDecoder->image().data(), &Image::checkStateChanged, this, &DocumentView::onCheckStateChanged);
 
     auto fut = d->currentImageDecoder->decodeAsync(DecodingState::FullImage, Priority::Important, this->screen()->geometry().size());
     d->taskFuture.setFuture(fut);

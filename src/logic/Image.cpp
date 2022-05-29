@@ -443,7 +443,13 @@ Qt::CheckState Image::checked()
 void Image::setChecked(Qt::CheckState b)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
-    d->checked = b;
+    auto old = d->checked;
+    if (old != b)
+    {
+        d->checked = b;
+        lck.unlock();
+        emit this->checkStateChanged(this, b, old);
+    }
 }
 
 QImage Image::decodedImage()
@@ -500,6 +506,11 @@ void Image::connectNotify(const QMetaMethod& signal)
         {
             emit this->decodedImageChanged(this, img);
         }
+    }
+    else if (signal.name() == QStringLiteral("checkStateChanged"))
+    {
+        Qt::CheckState s = this->checked();
+        emit this->checkStateChanged(this, s, s);
     }
 
     QObject::connectNotify(signal);
