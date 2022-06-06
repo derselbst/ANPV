@@ -6,7 +6,7 @@
 resources:
   containers:
   - container: qt6Container
-    image: mdevriesdekimo/qt6:ubuntu2104
+    image: ubuntu:22.10
     options: '-v /usr/bin/sudo:/usr/bin/sudo -v /usr/lib/sudo/libsudo_util.so.0:/usr/lib/sudo/libsudo_util.so.0 -v /usr/lib/sudo/sudoers.so:/usr/lib/sudo/sudoers.so -v /etc/sudoers:/etc/sudoers'
 
 parameters:
@@ -17,22 +17,23 @@ parameters:
 
 jobs:
   - job: Linux
+    variables:
+      DEBIAN_FRONTEND: 'noninteractive'
     pool:
       vmImage: 'ubuntu-20.04'
     container: qt6Container
     steps:
     - checkout: self
       submodules: true
-    - task: Bash@3
+    - bash: |
+          sudo apt-get update
       displayName: 'apt-get update'
-      inputs:
-        targetType: 'inline'
-        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update'
-    - task: Bash@3
+    - bash: |
+          sudo apt-get install -y qt6-base-dev qt6-image-formats-plugins
+      displayName: 'apt-get install qt6'
+    - bash: |
+          sudo apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev
       displayName: 'apt-get install'
-      inputs:
-        targetType: 'inline'
-        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev'
     - task: CMake@1
       displayName: 'CMake configure'
       inputs:
