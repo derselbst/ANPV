@@ -32,7 +32,7 @@ jobs:
       displayName: 'apt-get install'
       inputs:
         targetType: 'inline'
-        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kio-dev'
+        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev'
     - task: CMake@1
       displayName: 'CMake configure'
       inputs:
