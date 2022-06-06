@@ -32,7 +32,7 @@ jobs:
           sudo apt-get install -y qt6-base-dev qt6-image-formats-plugins
       displayName: 'apt-get install qt6'
     - bash: |
-          sudo apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev
+          sudo apt-get install -y cmake build-essential libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev
       displayName: 'apt-get install'
     - task: CMake@1
       displayName: 'CMake configure'
