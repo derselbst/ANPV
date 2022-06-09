@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  anpv:
+    image: qt6-kf6:latest
+    build: docker/
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/root/.Xauthority
+      - .:/anpv
+    network_mode: host
