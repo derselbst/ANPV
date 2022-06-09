@@ -34,6 +34,7 @@
 #include <QSortFilterProxyModel>
 #include <QCloseEvent>
 #include <QWhatsThis>
+#include <KUrlNavigator>
 
 #include "DocumentView.hpp"
 #include "PreviewAllImagesDialog.hpp"
@@ -329,11 +330,19 @@ struct MainWindow::Impl
         ANPV::globalInstance()->setCurrentDir(info.absoluteFilePath());
     }
     
+    QDir rememberedUrlNavigatorActivatedDir;
+    void onUrlNavigatorNavigationTriggered(const QUrl& url)
+    {
+        QString path = url.path();
+        rememberedUrlNavigatorActivatedDir = path;
+        ANPV::globalInstance()->setCurrentDir(path);
+    }
+    
     void onCurrentDirChanged(QString& newDir, QString&)
     {
         QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir);
         ui->fileSystemTreeView->setCurrentIndex(mo);
-        
+
         // if the newDir was triggered by an activiation in the treeView, do not scroll around
         if(QDir(newDir) != rememberedActivatedDir)
         {
@@ -342,7 +351,14 @@ struct MainWindow::Impl
             // and make sure we do not scroll to center horizontally
             ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
+
+        if(QDir(newDir) != rememberedUrlNavigatorActivatedDir)
+        {
+            // avoid infinite recursion
+            ui->urlNavigator->setLocationUrl(QUrl::fromLocalFile(newDir));
+        }
         rememberedActivatedDir = QDir();
+        rememberedUrlNavigatorActivatedDir = QDir();
 
         q->setWindowTitle(newDir + " :: ANPV");
     }
@@ -496,6 +512,8 @@ MainWindow::MainWindow(QSplashScreen *splash)
     {
         d->onThumbnailListViewSelectionChanged(selected, deselected);
     });
+    
+    connect(d->ui->urlNavigator, &KUrlNavigator::urlChanged, this, [&](const QUrl& url){ d->onUrlNavigatorNavigationTriggered(url); });
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
 }
 

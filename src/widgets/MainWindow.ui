@@ -29,6 +29,9 @@
      </widget>
     </item>
     <item>
+     <widget class="KUrlNavigator" name="urlNavigator" native="true"/>
+    </item>
+    <item>
      <widget class="ThumbnailListView" name="thumbnailListView">
       <property name="contextMenuPolicy">
        <enum>Qt::ActionsContextMenu</enum>
@@ -403,6 +406,12 @@
    <class>CancellableProgressWidget</class>
    <extends>QWidget</extends>
    <header>CancellableProgressWidget.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>KUrlNavigator</class>
+   <extends>QWidget</extends>
+   <header>KUrlNavigator</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
