@@ -348,6 +348,21 @@ void ThumbnailListView::keyPressEvent(QKeyEvent* event)
     this->QListView::keyPressEvent(event);
 }
 
+void ThumbnailListView::mousePressEvent(QMouseEvent *event)
+{
+    auto button = event->button();
+    switch(button)
+    {
+        case Qt::BackButton:
+        case Qt::ForwardButton:
+            event->ignore();
+            return;
+        default:
+            break;
+    }
+    QListView::mousePressEvent(event);
+}
+
 QList<Entry_t> ThumbnailListView::selectedImages()
 {
     QModelIndexList selectedIdx = this->selectionModel()->selectedRows();

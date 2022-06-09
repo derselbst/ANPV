@@ -34,7 +34,10 @@ public:
 public slots:
     void hideProgressWidget(CancellableProgressWidget* w);
     void setCurrentIndex(QSharedPointer<Image>);
-    
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

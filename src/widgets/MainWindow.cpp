@@ -68,6 +68,9 @@ struct MainWindow::Impl
     QAction *actionFileOperationConfigDialog = nullptr;
     QAction *actionExit = nullptr;
     
+    QPointer<QAction> actionBack = nullptr;
+    QPointer<QAction> actionForward = nullptr;
+    
     Impl(MainWindow* parent) : q(parent)
     {
     }
@@ -258,12 +261,25 @@ struct MainWindow::Impl
 
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
+        
+        actionBack = new QAction(QIcon::fromTheme("go-previous"), "Previous Folder", q);
+        actionBack->setShortcuts({QKeySequence(Qt::Key_Back)});
+        actionBack->setShortcutContext(Qt::WidgetShortcut);
+        connect(actionBack, &QAction::triggered, q, [&](bool){ this->ui->urlNavigator->goBack(); });
+
+        actionForward = new QAction(QIcon::fromTheme("go-next"), "Next Folder", q);
+        actionForward->setShortcuts({QKeySequence(Qt::Key_Forward)});
+        actionForward->setShortcutContext(Qt::WidgetShortcut);
+        connect(actionForward, &QAction::triggered, q, [&](bool){ this->ui->urlNavigator->goForward(); });
+    
     }
     
     void createMenus()
     {
         ui->menuFile->addAction(ANPV::globalInstance()->actionOpen());
         ui->menuFile->addSeparator();
+        ui->menuFile->addAction(actionBack);
+        ui->menuFile->addAction(actionForward);
         ui->menuFile->addAction(ANPV::globalInstance()->actionExit());
         
         ui->menuEdit->addAction(actionUndo);
@@ -523,6 +539,25 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     d->writeSettings();
     QMainWindow::closeEvent(event);
+}
+
+void MainWindow::mousePressEvent(QMouseEvent *event)
+{
+    auto button = event->button();
+    switch(button)
+    {
+        case Qt::BackButton:
+            d->actionBack->trigger();
+            event->accept();
+            return;
+        case Qt::ForwardButton:
+            d->actionForward->trigger();
+            event->accept();
+            return;
+        default:
+            break;
+    }
+    QMainWindow::mousePressEvent(event);
 }
 
 void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
