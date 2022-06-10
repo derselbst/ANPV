@@ -288,9 +288,10 @@ void SmartImageDecoder::run()
 
         this->open();
         this->decode(d->targetState, d->desiredResolution, d->roiRect);
-        // Immediately close ourself once done. This is important to avoid resource leaks, when the 
-        // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
-        this->close();
+    }
+    catch (const UserCancellation&)
+    {
+        this->setDecodingState(DecodingState::Cancelled);
     }
     catch(...)
     {
@@ -301,6 +302,10 @@ void SmartImageDecoder::run()
         qCritical() << err;
         this->setDecodingState(DecodingState::Fatal);
     }
+
+    // Immediately close ourself once done. This is important to avoid resource leaks, when the 
+    // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
+    this->close();
 
     // this will not store the result if the future has been canceled already!
     d->promise->addResult(d->decodingState());
