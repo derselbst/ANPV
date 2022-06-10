@@ -63,6 +63,17 @@ public:
     {
         return QIcon();
     }
+
+    QString type(const QFileInfo& info) const override
+    {
+        if (info.isFile())
+        {
+            // The base implementation would try to determine the mime type in this case, which means, that it has to open the file,
+            // which in turn is incredibly slow when performed on Windows on a network share.
+            return QGuiApplication::translate("QAbstractFileIconProvider", "File");
+        }
+        return this->QAbstractFileIconProvider::type(info);
+    }
 };
 
 // Calling QFileIconProvider from multiple threads concurrently leads to the famous "corrputed double linked list" in malloc and free
