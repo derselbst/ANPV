@@ -283,6 +283,9 @@ void SmartImageDecoder::run()
 
     try
     {
+        // Before opening a file potentially located on a slow network drive, check whether we have already been cancelled.
+        this->cancelCallback();
+
         this->open();
         this->decode(d->targetState, d->desiredResolution, d->roiRect);
         // Immediately close ourself once done. This is important to avoid resource leaks, when the 
