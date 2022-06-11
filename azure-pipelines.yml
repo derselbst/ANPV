@@ -25,15 +25,6 @@ jobs:
     steps:
     - checkout: self
       submodules: true
-    - bash: |
-          sudo apt-get update
-      displayName: 'apt-get update'
-    - bash: |
-          sudo apt-get install -y qt6-base-dev qt6-image-formats-plugins libqt6svg6-dev libqt6core5compat6-dev
-      displayName: 'apt-get install qt6'
-    - bash: |
-          sudo apt-get install -y cmake pkg-config build-essential libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libexiv2-dev libkf5kio-dev
-      displayName: 'apt-get install'
     - task: CMake@1
       displayName: 'CMake configure'
       inputs:
