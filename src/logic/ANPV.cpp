@@ -292,11 +292,13 @@ struct ANPV::Impl
 
         QSize imgSize = renderer.defaultSize().scaled(this->iconHeight, this->iconHeight, Qt::KeepAspectRatio);
         QImage image(imgSize, QImage::Format_ARGB32);
-        image.fill(0);
+        if (!image.isNull())
+        {
+            image.fill(0);
 
-        QPainter painter(&image);
-        renderer.render(&painter);
-
+            QPainter painter(&image);
+            renderer.render(&painter);
+        }
         return QPixmap::fromImage(image);
     }
     
