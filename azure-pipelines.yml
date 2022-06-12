@@ -86,7 +86,10 @@ jobs:
         git remote -v
         git fetch --tags --prune --progress origin
         git checkout --force $(VCPKG_REVISION)
+        git config --global user.email "you@example.com"
+        git config --global user.name "Your Name"
         git am $(System.DefaultWorkingDirectory)/0001-Compile-KDE-Framework-against-Qt6.patch
+        git am $(System.DefaultWorkingDirectory)/0002-Update-kf5-to-5.94.0.patch
         ./bootstrap-vcpkg.sh
         # wait $chocoTask
         which pkg-config
