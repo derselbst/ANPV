@@ -93,8 +93,8 @@ jobs:
         which pkg-config
       displayName: 'Update vcpkg'
     - script: |
-        git -C $VCPKG_INSTALLATION_ROOT am 0001-Compile-KDE-Framework-against-Qt6.patch
-        git -C $VCPKG_INSTALLATION_ROOT am 0002-Update-kf5-to-5.94.0.patch
+        git -C %VCPKG_INSTALLATION_ROOT% am 0001-Compile-KDE-Framework-against-Qt6.patch
+        git -C %VCPKG_INSTALLATION_ROOT% am 0002-Update-kf5-to-5.94.0.patch
       displayName: 'patch vcpkg'
     - bash: |
         set -ex
