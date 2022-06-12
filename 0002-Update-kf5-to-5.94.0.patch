@@ -1,0 +1,69 @@
+From bf26a3810862941607c132dd8a07362977fe0e01 Mon Sep 17 00:00:00 2001
+From: "Moebert, Tom" <tom.moebert@zeiss.com>
+Date: Sun, 12 Jun 2022 23:49:15 +0200
+Subject: [PATCH 2/2] Update kf5 to 5.94.0
+
+---
+ ports/ecm/portfile.cmake          | 4 ++--
+ ports/ecm/vcpkg.json              | 2 +-
+ ports/kf5itemviews/portfile.cmake | 4 ++--
+ ports/kf5itemviews/vcpkg.json     | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/ports/ecm/portfile.cmake b/ports/ecm/portfile.cmake
+index 63ab654f9..f3a42ece6 100644
+--- a/ports/ecm/portfile.cmake
++++ b/ports/ecm/portfile.cmake
+@@ -1,8 +1,8 @@
+ vcpkg_from_github(
+     OUT_SOURCE_PATH SOURCE_PATH
+     REPO KDE/extra-cmake-modules
+-    REF v5.89.0
+-    SHA512 1c3f6ad5dbe1485d1602e297989d6cd53e7646aa99dc28ac1159d0aa22134c97efd74b2c01923e74732f59c861ce05486adb7cff7de050237a35b0980e92cbcf
++    REF v5.94.0
++    SHA512 ace5f500ef6bfeb653ea85fc054e5e3335c82284c32f80592b79ad062b4f10b63e23db6a1f8ad8160773318ca778c856a9a4a3740da0abe935ba940cbe9c0e22
+     HEAD_REF master
+     PATCHES
+         fix_canberra.patch         # https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/187
+diff --git a/ports/ecm/vcpkg.json b/ports/ecm/vcpkg.json
+index a744a9bcf..0fd9566c5 100644
+--- a/ports/ecm/vcpkg.json
++++ b/ports/ecm/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "ecm",
+-  "version": "5.89.0",
++  "version": "5.94.0",
+   "description": "Extra CMake Modules (ECM), extra modules and scripts for CMake",
+   "homepage": "https://github.com/KDE/extra-cmake-modules",
+   "dependencies": [
+diff --git a/ports/kf5itemviews/portfile.cmake b/ports/kf5itemviews/portfile.cmake
+index 3240034cf..9035ce845 100644
+--- a/ports/kf5itemviews/portfile.cmake
++++ b/ports/kf5itemviews/portfile.cmake
+@@ -1,8 +1,8 @@
+ vcpkg_from_github(
+     OUT_SOURCE_PATH SOURCE_PATH
+     REPO KDE/kitemviews
+-    REF v5.89.0
+-    SHA512 c96cb1204d5e9d0b1206eac93f36b06c94b7fcf63c7a75938e50783af1e7d3fe48617fadd264f55f2ac31c3d316a062b9200053a582ccf2e7c927659b7e1b442
++    REF v5.94.0
++    SHA512 e7ac8fd18b0a32ab5c475d3342012deb2a0c6876bdcd802904396cb1085da75ab190da75e8863b58ef3f883763035678c40796a0c24b7aa9ea1a1ba2ab8b57fb
+ )
+ 
+ # Prevent KDEClangFormat from writing to source effectively blocking parallel configure
+diff --git a/ports/kf5itemviews/vcpkg.json b/ports/kf5itemviews/vcpkg.json
+index c7f4f728d..557969739 100644
+--- a/ports/kf5itemviews/vcpkg.json
++++ b/ports/kf5itemviews/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5itemviews",
+-  "version": "5.89.0",
++  "version": "5.94.0",
+   "description": "Widget addons for Qt Model/View",
+   "homepage": "https://api.kde.org/frameworks/kitemviews/html/index.html",
+   "dependencies": [
+-- 
+2.25.1.windows.1
+
