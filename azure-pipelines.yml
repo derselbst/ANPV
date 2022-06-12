@@ -57,7 +57,7 @@ jobs:
       vmImage: $(poo)
     variables:
       configuration: 'Release'
-      VCPKG_REVISION: 'b86c0c35b88e2bf3557ff49dc831689c2f085090'
+      VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
       platform: 'x64'
       cmake_platform: 'x64'
     steps:
