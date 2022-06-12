@@ -86,7 +86,7 @@ jobs:
         git remote -v
         git fetch --tags --prune --progress origin
         git checkout --force $(VCPKG_REVISION)
-        sed -i 's/arm64/arm/g' ports/glib/portfile.cmake
+        git am $(System.DefaultWorkingDirectory)/0001-Compile-KDE-Framework-against-Qt6.patch
         ./bootstrap-vcpkg.sh
         # wait $chocoTask
         which pkg-config
