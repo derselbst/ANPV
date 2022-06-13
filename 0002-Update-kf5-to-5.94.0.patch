@@ -1,14 +1,14 @@
-From bf26a3810862941607c132dd8a07362977fe0e01 Mon Sep 17 00:00:00 2001
+From 9e8f5e197ceae7a4b60b1028803630c316e863a7 Mon Sep 17 00:00:00 2001
 From: "Moebert, Tom" <tom.moebert@zeiss.com>
 Date: Sun, 12 Jun 2022 23:49:15 +0200
 Subject: [PATCH 2/2] Update kf5 to 5.94.0
 
 ---
- ports/ecm/portfile.cmake          | 4 ++--
- ports/ecm/vcpkg.json              | 2 +-
- ports/kf5itemviews/portfile.cmake | 4 ++--
- ports/kf5itemviews/vcpkg.json     | 2 +-
- 4 files changed, 6 insertions(+), 6 deletions(-)
+ ports/ecm/portfile.cmake          |  4 ++--
+ ports/ecm/vcpkg.json              |  2 +-
+ ports/kf5itemviews/portfile.cmake |  4 ++--
+ ports/kf5itemviews/vcpkg.json     | 10 ++++++++--
+ 4 files changed, 13 insertions(+), 7 deletions(-)
 
 diff --git a/ports/ecm/portfile.cmake b/ports/ecm/portfile.cmake
 index 63ab654f9..f3a42ece6 100644
@@ -53,10 +53,10 @@ index 3240034cf..9035ce845 100644
  
  # Prevent KDEClangFormat from writing to source effectively blocking parallel configure
 diff --git a/ports/kf5itemviews/vcpkg.json b/ports/kf5itemviews/vcpkg.json
-index c7f4f728d..557969739 100644
+index c7f4f728d..1e51c14af 100644
 --- a/ports/kf5itemviews/vcpkg.json
 +++ b/ports/kf5itemviews/vcpkg.json
-@@ -1,6 +1,6 @@
+@@ -1,12 +1,18 @@
  {
    "name": "kf5itemviews",
 -  "version": "5.89.0",
@@ -64,6 +64,19 @@ index c7f4f728d..557969739 100644
    "description": "Widget addons for Qt Model/View",
    "homepage": "https://api.kde.org/frameworks/kitemviews/html/index.html",
    "dependencies": [
+     "ecm",
+     "qtbase",
+-    "qttools",
++    {
++      "name": "qttools",
++      "default-features": false,
++      "features": [
++        "linguist"
++      ]
++    },
+     {
+       "name": "vcpkg-cmake",
+       "host": true
 -- 
 2.25.1.windows.1
 
