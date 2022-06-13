@@ -1,7 +1,7 @@
-From 5758bdf5bede8df1ee20d1bb30564d4427060619 Mon Sep 17 00:00:00 2001
+From ce9aef7071ade35943f4dae55fc29486a0953819 Mon Sep 17 00:00:00 2001
 From: derselbst <tom.mbrt@googlemail.com>
 Date: Sun, 12 Jun 2022 18:57:38 +0200
-Subject: [PATCH] Compile KDE Framework against Qt6
+Subject: [PATCH 1/2] Compile KDE Framework against Qt6
 
 ---
  ports/harfbuzz/portfile.cmake              |  2 +-
@@ -30,17 +30,17 @@ Subject: [PATCH] Compile KDE Framework against Qt6
  ports/kf5declarative/portfile.cmake        |  2 ++
  ports/kf5declarative/vcpkg.json            |  4 ++--
  ports/kf5diagram/portfile.cmake            |  4 +++-
- ports/kf5diagram/vcpkg.json                |  2 +-
+ ports/kf5diagram/vcpkg.json                |  4 ++--
  ports/kf5globalaccel/portfile.cmake        |  2 ++
  ports/kf5globalaccel/vcpkg.json            |  8 ++------
  ports/kf5guiaddons/portfile.cmake          |  2 ++
- ports/kf5guiaddons/vcpkg.json              | 10 +---------
+ ports/kf5guiaddons/vcpkg.json              | 12 ++----------
  ports/kf5holidays/portfile.cmake           |  2 ++
  ports/kf5holidays/vcpkg.json               |  4 ++--
  ports/kf5i18n/portfile.cmake               |  2 ++
- ports/kf5i18n/vcpkg.json                   |  2 +-
+ ports/kf5i18n/vcpkg.json                   |  4 ++--
  ports/kf5iconthemes/portfile.cmake         |  2 ++
- ports/kf5iconthemes/vcpkg.json             |  4 ++--
+ ports/kf5iconthemes/vcpkg.json             |  6 +++---
  ports/kf5itemmodels/portfile.cmake         |  2 ++
  ports/kf5itemmodels/vcpkg.json             |  4 ++--
  ports/kf5itemviews/portfile.cmake          |  2 ++
@@ -77,7 +77,7 @@ Subject: [PATCH] Compile KDE Framework against Qt6
  ports/kf5windowsystem/vcpkg.json           | 10 +---------
  ports/kf5xmlgui/portfile.cmake             |  2 ++
  ports/kf5xmlgui/vcpkg.json                 |  4 ++--
- 73 files changed, 136 insertions(+), 112 deletions(-)
+ 73 files changed, 140 insertions(+), 116 deletions(-)
 
 diff --git a/ports/harfbuzz/portfile.cmake b/ports/harfbuzz/portfile.cmake
 index 6e618698b..86120fdf5 100644
@@ -445,18 +445,20 @@ index 06278643c..b87cae96f 100644
 \ No newline at end of file
 +file(INSTALL "${SOURCE_PATH}/LICENSE.GPL.txt" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}/copyright")
 diff --git a/ports/kf5diagram/vcpkg.json b/ports/kf5diagram/vcpkg.json
-index 0388001e5..dc0851cb4 100644
+index 0388001e5..b5abe0573 100644
 --- a/ports/kf5diagram/vcpkg.json
 +++ b/ports/kf5diagram/vcpkg.json
-@@ -5,7 +5,7 @@
+@@ -5,8 +5,8 @@
    "homepage": "https://api.kde.org/kdiagram/index.html",
    "dependencies": [
      "ecm",
 -    "qt5-base",
+-    "qt5-svg",
 +    "qtbase",
-     "qt5-svg",
++    "qtsvg",
      {
        "name": "vcpkg-cmake",
+       "host": true
 diff --git a/ports/kf5globalaccel/portfile.cmake b/ports/kf5globalaccel/portfile.cmake
 index 3b0b1d070..ca1ba5386 100644
 --- a/ports/kf5globalaccel/portfile.cmake
@@ -503,7 +505,7 @@ index 07048be6d..628f1117f 100644
          ${FEATURE_OPTIONS}
      MAYBE_UNUSED_VARIABLES
 diff --git a/ports/kf5guiaddons/vcpkg.json b/ports/kf5guiaddons/vcpkg.json
-index ca00997c9..5d948ef96 100644
+index ca00997c9..2d997d6ea 100644
 --- a/ports/kf5guiaddons/vcpkg.json
 +++ b/ports/kf5guiaddons/vcpkg.json
 @@ -5,15 +5,7 @@
@@ -523,6 +525,15 @@ index ca00997c9..5d948ef96 100644
      {
        "name": "vcpkg-cmake",
        "host": true
+@@ -42,7 +34,7 @@
+     "wayland": {
+       "description": "Linux-only. Build with support for KeySequenceEditor inhibiting shortcuts on Wayland",
+       "dependencies": [
+-        "qt5-wayland"
++        "qtwayland"
+       ]
+     }
+   }
 diff --git a/ports/kf5holidays/portfile.cmake b/ports/kf5holidays/portfile.cmake
 index df9d162c8..7c2704970 100644
 --- a/ports/kf5holidays/portfile.cmake
@@ -565,14 +576,16 @@ index 078c5a5ad..c8111579d 100644
          -DKDE_INSTALL_QMLDIR=qml
          -DPYTHON_EXECUTABLE=${PYTHON3}
 diff --git a/ports/kf5i18n/vcpkg.json b/ports/kf5i18n/vcpkg.json
-index 6aeeada80..9fc7a5ff0 100644
+index 6aeeada80..cd44e2e22 100644
 --- a/ports/kf5i18n/vcpkg.json
 +++ b/ports/kf5i18n/vcpkg.json
-@@ -15,7 +15,7 @@
+@@ -14,8 +14,8 @@
+       ]
      },
      "libiconv",
-     "qt5-declarative",
+-    "qt5-declarative",
 -    "qt5-tools",
++    "qtdeclarative",
 +    "qttools",
      {
        "name": "vcpkg-cmake",
@@ -591,7 +604,7 @@ index 9486d26fb..6b8dd4acc 100644
          -DKDE_INSTALL_QTPLUGINDIR=plugins
          ${FEATURE_OPTIONS}
 diff --git a/ports/kf5iconthemes/vcpkg.json b/ports/kf5iconthemes/vcpkg.json
-index a7e496cd0..5ed9902eb 100644
+index a7e496cd0..8b54eea0a 100644
 --- a/ports/kf5iconthemes/vcpkg.json
 +++ b/ports/kf5iconthemes/vcpkg.json
 @@ -20,9 +20,9 @@
@@ -599,9 +612,10 @@ index a7e496cd0..5ed9902eb 100644
      "kf5itemviews",
      "kf5widgetsaddons",
 -    "qt5-base",
-+    "qtbase",
-     "qt5-svg",
+-    "qt5-svg",
 -    "qt5-tools",
++    "qtbase",
++    "qtsvg",
 +    "qttools",
      {
        "name": "vcpkg-cmake",
@@ -1137,5 +1151,5 @@ index 72fe1dcd7..ea9f30a85 100644
        "name": "vcpkg-cmake",
        "host": true
 -- 
-2.35.3
+2.25.1.windows.1
 
