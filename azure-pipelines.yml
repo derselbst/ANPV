@@ -119,7 +119,6 @@ jobs:
         vcpkg install kf5itemviews:$(platform)-windows
         vcpkg install kf5itemviews:$(platform)-windows-static
       displayName: 'vcpkg build kf5itemviews'
-      enabled: false
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
@@ -141,16 +140,13 @@ jobs:
         cmake -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
-      enabled: false
     - task: CopyFiles@2
       continueOnError: true
-      enabled: false
       inputs:
         SourceFolder: 'build\$(configuration)'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
-      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
