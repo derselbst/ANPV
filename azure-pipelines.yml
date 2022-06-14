@@ -130,6 +130,10 @@ jobs:
         vcpkg install kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
     - bash: |
+        cat  C:/vcpkg/buildtrees/kf5archive/config-*.log
+      displayName: 'kfkio build log'
+      condition: failed()
+    - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
