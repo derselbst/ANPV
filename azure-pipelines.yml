@@ -131,8 +131,8 @@ jobs:
         vcpkg install kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
     - bash: |
-        cat  C:/vcpkg/buildtrees/kf5auth/config-*.log
-      displayName: 'kf5auth build log'
+        cat  C:/vcpkg/buildtrees/kf5codecs/config-*.log
+      displayName: 'kf5codecs build log'
       condition: failed()
     - bash: |
         set -ex
