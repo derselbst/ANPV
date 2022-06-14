@@ -1,7 +1,7 @@
-From ce9aef7071ade35943f4dae55fc29486a0953819 Mon Sep 17 00:00:00 2001
+From dcc69cd2e658672fdd4291718bd05aa2bb183d06 Mon Sep 17 00:00:00 2001
 From: derselbst <tom.mbrt@googlemail.com>
 Date: Sun, 12 Jun 2022 18:57:38 +0200
-Subject: [PATCH 1/2] Compile KDE Framework against Qt6
+Subject: [PATCH 1/3] Compile KDE Framework against Qt6
 
 ---
  ports/harfbuzz/portfile.cmake              |  2 +-
@@ -14,7 +14,7 @@ Subject: [PATCH 1/2] Compile KDE Framework against Qt6
  ports/kf5bookmarks/portfile.cmake          |  2 ++
  ports/kf5bookmarks/vcpkg.json              |  4 ++--
  ports/kf5codecs/portfile.cmake             |  2 ++
- ports/kf5codecs/vcpkg.json                 |  4 ++--
+ ports/kf5codecs/vcpkg.json                 |  5 +++--
  ports/kf5completion/portfile.cmake         |  2 ++
  ports/kf5completion/vcpkg.json             |  2 +-
  ports/kf5config/portfile.cmake             |  2 ++
@@ -77,7 +77,7 @@ Subject: [PATCH 1/2] Compile KDE Framework against Qt6
  ports/kf5windowsystem/vcpkg.json           | 10 +---------
  ports/kf5xmlgui/portfile.cmake             |  2 ++
  ports/kf5xmlgui/vcpkg.json                 |  4 ++--
- 73 files changed, 140 insertions(+), 116 deletions(-)
+ 73 files changed, 141 insertions(+), 116 deletions(-)
 
 diff --git a/ports/harfbuzz/portfile.cmake b/ports/harfbuzz/portfile.cmake
 index 6e618698b..86120fdf5 100644
@@ -216,10 +216,10 @@ index 26713a368..4c9e380f7 100644
  )
  
 diff --git a/ports/kf5codecs/vcpkg.json b/ports/kf5codecs/vcpkg.json
-index 7ffe07cc4..21261f396 100644
+index 7ffe07cc4..647cffa08 100644
 --- a/ports/kf5codecs/vcpkg.json
 +++ b/ports/kf5codecs/vcpkg.json
-@@ -10,8 +10,8 @@
+@@ -10,8 +10,9 @@
        "name": "gperf",
        "host": true
      },
@@ -227,6 +227,7 @@ index 7ffe07cc4..21261f396 100644
 -    "qt5-tools",
 +    "qtbase",
 +    "qttools",
++    "qt5compat",
      {
        "name": "vcpkg-cmake",
        "host": true
@@ -1151,5 +1152,5 @@ index 72fe1dcd7..ea9f30a85 100644
        "name": "vcpkg-cmake",
        "host": true
 -- 
-2.25.1.windows.1
+2.35.3
 
