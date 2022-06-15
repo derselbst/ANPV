@@ -94,7 +94,7 @@ jobs:
       displayName: 'Update vcpkg'
     - bash: |
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0001-Compile-KDE-Framework-against-Qt6.patch
-        git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0002-Update-kf5-to-5.94.0.patch
+        git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0002-Update-kf5-to-5.95.0.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0003-Compile-kf5configwidgets-without-kf5auth-on-Windows.patch
       displayName: 'patch vcpkg'
     - bash: |
@@ -122,17 +122,13 @@ jobs:
       displayName: 'vcpkg build kf5itemviews'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
-        cat C:/vcpkg/buildtrees/kf5itemviews/config-x64-windows-*.log
-      displayName: 'kf5itemview error log'
-      condition: failed()
-    - bash: |
         set -ex
         vcpkg install kf5kio:$(platform)-windows
         vcpkg install kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
     - bash: |
-        cat  C:/vcpkg/buildtrees/kf5i18n/config-*.log
-      displayName: 'kf5i18n build log'
+        cat  C:/vcpkg/buildtrees/kf5*/config-*.log
+      displayName: 'build logs'
       condition: failed()
     - bash: |
         set -ex

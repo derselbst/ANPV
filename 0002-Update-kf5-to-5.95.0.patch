@@ -1,7 +1,7 @@
-From 63236a495d819ab61762b1888b14f2124e75dea8 Mon Sep 17 00:00:00 2001
+From 83824d2622ce3ee7fa2865c047eb3d7fea72da98 Mon Sep 17 00:00:00 2001
 From: "Moebert, Tom" <tom.moebert@zeiss.com>
 Date: Sun, 12 Jun 2022 23:49:15 +0200
-Subject: [PATCH 2/2] Update kf5 to 5.94.0
+Subject: [PATCH 2/3] Update kf5 to 5.95.0
 
 ---
  ports/ecm/portfile.cmake                   |  4 +--
@@ -49,7 +49,7 @@ Subject: [PATCH 2/2] Update kf5 to 5.94.0
  delete mode 100644 ports/kf5solid/fix-libmount.patch
 
 diff --git a/ports/ecm/portfile.cmake b/ports/ecm/portfile.cmake
-index 63ab654f9..f3a42ece6 100644
+index 63ab654f9..45845bbf3 100644
 --- a/ports/ecm/portfile.cmake
 +++ b/ports/ecm/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -58,8 +58,8 @@ index 63ab654f9..f3a42ece6 100644
      REPO KDE/extra-cmake-modules
 -    REF v5.89.0
 -    SHA512 1c3f6ad5dbe1485d1602e297989d6cd53e7646aa99dc28ac1159d0aa22134c97efd74b2c01923e74732f59c861ce05486adb7cff7de050237a35b0980e92cbcf
-+    REF v5.94.0
-+    SHA512 ace5f500ef6bfeb653ea85fc054e5e3335c82284c32f80592b79ad062b4f10b63e23db6a1f8ad8160773318ca778c856a9a4a3740da0abe935ba940cbe9c0e22
++    REF v5.95.0
++    SHA512 a50bb6fe3435ee8e3f5232a67c3b249f62edc75b22f05344aef87819f2716a5b3657b401ab185fd162d2fc9463f88db83e18df5d243fdb7f4d2830e34389e4a7
      HEAD_REF master
      PATCHES
          fix_canberra.patch         # https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/187
@@ -76,7 +76,7 @@ index a744a9bcf..0fd9566c5 100644
    "homepage": "https://github.com/KDE/extra-cmake-modules",
    "dependencies": [
 diff --git a/ports/kf5archive/portfile.cmake b/ports/kf5archive/portfile.cmake
-index 10d34825c..704ba61c2 100644
+index 10d34825c..10b5c76e3 100644
 --- a/ports/kf5archive/portfile.cmake
 +++ b/ports/kf5archive/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -85,13 +85,13 @@ index 10d34825c..704ba61c2 100644
      REPO KDE/karchive
 -    REF v5.89.0
 -    SHA512 e77d5233b6549332f180be3dcf0459688d6565c24e1af409814aab92d415ebb2b8a04ad720dfa9ed6f017f3ab86fab766b909e30a860bb83c5ddd51def7c3e5f
-+    REF v5.94.0
-+    SHA512 37f4a8681e378dfbbeb58274a28ea0966e31f1ed2d30c25d07d1552b79f33790a0d8b4bb1dae879293bde466160200f501eea8ab948fbd57933fc0c07d8b6681
++    REF v5.95.0
++    SHA512 b58df5610f1b1e8a8a7adbc25c79ab570c85868aa2ecd8549b6d16f5c32b67b34e460301725fbe21fa3b4dfa2bcf364c01db164f7503bf083fdaeda73f3f78e2
      HEAD_REF master
      PATCHES
          control-dependencies.patch
 diff --git a/ports/kf5attica/portfile.cmake b/ports/kf5attica/portfile.cmake
-index 9e7d5cedb..ced3d522f 100644
+index 9e7d5cedb..ba25cc6cb 100644
 --- a/ports/kf5attica/portfile.cmake
 +++ b/ports/kf5attica/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -99,12 +99,12 @@ index 9e7d5cedb..ced3d522f 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/attica
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 46f4cb550a13032da2e48861916356f3dfa47de0e1c0672ffeea19bad813dfb5cdf1b45b1a25ff35adc07e622486b37d7a65ddf3d39c2b214114d916f09577bb
      HEAD_REF master
  )
 diff --git a/ports/kf5auth/portfile.cmake b/ports/kf5auth/portfile.cmake
-index 6b9c2f1b2..b3d693ce9 100644
+index 6b9c2f1b2..465e836c4 100644
 --- a/ports/kf5auth/portfile.cmake
 +++ b/ports/kf5auth/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -113,13 +113,13 @@ index 6b9c2f1b2..b3d693ce9 100644
      REPO KDE/kauth
 -    REF v5.89.0
 -    SHA512 815672fc572b22c51761476da9c82bc128a6a66ede39b5b9e09592c415908064d2b2f0c39674b702f503eeb48f33d0d4443d200bc2830b63b5f4468db66b0d8f
-+    REF v5.94.0
-+    SHA512 f2ee447d853a2e137a180b85af0bf505836675b6f381b5b73dee2bcc9a4fbca3a9c7eb7cb00fbb6b923f056022a5b33c0d03e56637cd650880e10a9ae7e192ff
++    REF v5.95.0
++    SHA512 9d3270f2bbc511e96f1ed32d6e39c5f386418be40e4de81280b11a88d9e5ff2e49403e64265b4dfc1804aac465d6447cd9b0b2653c49d39988bdc56d3c6f8681
      HEAD_REF master
  )
  
 diff --git a/ports/kf5bookmarks/portfile.cmake b/ports/kf5bookmarks/portfile.cmake
-index fdb8bac5f..3c48c547c 100644
+index fdb8bac5f..ba45c34c3 100644
 --- a/ports/kf5bookmarks/portfile.cmake
 +++ b/ports/kf5bookmarks/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -128,13 +128,13 @@ index fdb8bac5f..3c48c547c 100644
      REPO KDE/kbookmarks
 -    REF v5.89.0
 -    SHA512 590b95c049600745995c76c2c7b8033eb591f8b7c1a2b832068a0e0d668858e04b1ed4a1fc8d2ef3c7fe43c5f3b7b311a7d0626a1053706fd46cbc5506c222b8
-+    REF v5.94.0
-+    SHA512 2a302747338e5d36ef3bcace0bd8dd584aa1a2ae3ecd42deb7b3eae625a6946285d21b2f7663c595d6e1790665323bdb4b4d9763e594a94666a99c05a857650a
++    REF v5.95.0
++    SHA512 b0ff7553cb28700bfef213e0d2e08befff7787c8b7da54042877a5af9dfab5777f7814eca338d959f0b0a99134cce518ef827c751088c13c230ea7c8c945946a
      HEAD_REF master
  )
  
 diff --git a/ports/kf5codecs/portfile.cmake b/ports/kf5codecs/portfile.cmake
-index 4c9e380f7..53820bc8e 100644
+index 4c9e380f7..9fd992f0d 100644
 --- a/ports/kf5codecs/portfile.cmake
 +++ b/ports/kf5codecs/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -143,13 +143,13 @@ index 4c9e380f7..53820bc8e 100644
      REPO KDE/kcodecs
 -    REF v5.89.0
 -    SHA512 77104ab234d0b0baf00c2d3a37d366dc36c6f831c0fa011cb5ad965310e5317bbca3b569d9202123ed23b70137fe61ffec1689f51cccf8d60cc750913d36856f
-+    REF v5.94.0
-+    SHA512 eac8b78ba3f283f58c979ea6f7bdbbfe2f78d803b5a41b2396bb1b76ac64cbbeca9a30dca23b88239a0ab536750b4b29e7fa5ce4f1601d675b584084fb8fd92f
++    REF v5.95.0
++    SHA512 e04c85929e84ada28e93e55d9566c67b7e98fb4d4aa60050bc71edcda049c963fa174b32836e266659d5c4eb14b540a225b173fd55e12debeb42891d55861eff
      HEAD_REF master
  )
  
 diff --git a/ports/kf5completion/portfile.cmake b/ports/kf5completion/portfile.cmake
-index 10959e09d..6e513980d 100644
+index 10959e09d..875f27012 100644
 --- a/ports/kf5completion/portfile.cmake
 +++ b/ports/kf5completion/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -158,13 +158,13 @@ index 10959e09d..6e513980d 100644
      REPO KDE/kcompletion
 -    REF v5.89.0
 -    SHA512 26211e45497bfc324503213fdc31acc062fca9c203a192b92e06cd41385df6d207c592fb84bbed1e55627418685ff99347129704f09f98302d03e9ef57c4ed78
-+    REF v5.94.0
-+    SHA512 f5ed5c73fd0ec4a9e3d7bd0be6b5f3f84295dffc30cc59a084c5a21e75d71d3559b311d90f6a9d9e026b3411a1e3575dee93e46c374ed409d4a79af1e93651f9
++    REF v5.95.0
++    SHA512 0d2bfed3e798ee763a1c545dda2f76972030fe8581739b7361eca239617afa255ac28f2485d9545ce9e05fefa802eb402534639ec043fd5687fb2cb6bdeb496e
      HEAD_REF master
  )
  
 diff --git a/ports/kf5config/portfile.cmake b/ports/kf5config/portfile.cmake
-index 5cc0e6ed6..657d5b836 100644
+index 5cc0e6ed6..9349993ac 100644
 --- a/ports/kf5config/portfile.cmake
 +++ b/ports/kf5config/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -173,13 +173,13 @@ index 5cc0e6ed6..657d5b836 100644
      REPO KDE/kconfig
 -    REF v5.89.0
 -    SHA512 5b61812cd8b1d4cbbcc97e4ae350f5e46de9e7d73e3c68e3fbea3a2bad6a6be104c111ddcab9696593b60d34f74f3d4d7f828f54ad8d1f7b3408925b4bc51640
-+    REF v5.94.0
-+    SHA512 d56d8c2ae40204b432d0c2e701bbac5e806490d366f64dc37ef51e6ce80f8a70749ee3bb809d746ff461fa2e4bcc8561d2edc812c7da7e4bfe02131ede7dc051
++    REF v5.95.0
++    SHA512 e37ed51da01b030aa1b556626d5a46dd126177724404ed3600fb60f0db4d9d748cfb62b64bebfe9f88b851789f144255bb63fc870a6bf34ef4020ceb4ecd5744
      HEAD_REF master
  )
  
 diff --git a/ports/kf5configwidgets/portfile.cmake b/ports/kf5configwidgets/portfile.cmake
-index d7630c96f..b676f3863 100644
+index d7630c96f..37b35c64d 100644
 --- a/ports/kf5configwidgets/portfile.cmake
 +++ b/ports/kf5configwidgets/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -188,13 +188,13 @@ index d7630c96f..b676f3863 100644
      REPO KDE/kconfigwidgets
 -    REF v5.89.0
 -    SHA512 4dfc69c9b6126509df95d89172da0dfaaaa38cb497a3fda34b96a9fd25503998ab8124308a11e6894aed08feab4a122af775c2d375d0cac0736f85779e4d772e
-+    REF v5.94.0
-+    SHA512 a5b6d34db506a57206c53191aec7637d9c97888b2a9abd7c0b9846fc3e30d56c53c1cef1dfff1e3419eec1b0d1bdca57e8af5adcf11bda70b0dbff6d014962b1
++    REF v5.95.0
++    SHA512 f2fa151c570956e48fbc072cdd4b7fb260a64137363ea90ddba206351a56758c23ce31c95a1d2eb7f2d71f41a0c322136e2df3d5611d0be55d7c7d48aca9893f
      HEAD_REF master
  )
  
 diff --git a/ports/kf5coreaddons/portfile.cmake b/ports/kf5coreaddons/portfile.cmake
-index 8831ed78e..3dbe8547e 100644
+index 8831ed78e..0f0751c22 100644
 --- a/ports/kf5coreaddons/portfile.cmake
 +++ b/ports/kf5coreaddons/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -203,13 +203,13 @@ index 8831ed78e..3dbe8547e 100644
      REPO KDE/kcoreaddons
 -    REF v5.89.0
 -    SHA512 60b3ffdc69ff39e9d7edf23458d5ed5d063a55cae90d63ced18dc5db16eab027aa39d14a3a8507e7330dfc768e5ab8f77c1770874ad76807ec31a9ee4e0491a4
-+    REF v5.94.0
-+    SHA512 e4ab0e8b5f2a0aea4b88bb76f2aa4ff930a924f35290153b45a426e1479b93be4dc2dc61784688fea584db1b43dc49b9f3e834552e7fbb0a16733cd7608d1420
++    REF v5.95.0
++    SHA512 0cce2f85677ffd6c8bea25ae59120248c48034ae4aa8577a4ca516bb77b000a54382b2245bcccd19838813d2e6265832a2fafee8475fcbc78bd761d56835719b
      PATCHES
          fix_cmake_config.patch # https://invent.kde.org/frameworks/kcoreaddons/-/merge_requests/129
  )
 diff --git a/ports/kf5crash/portfile.cmake b/ports/kf5crash/portfile.cmake
-index f6a435569..0cbffc9b7 100644
+index f6a435569..8b9f4f0c9 100644
 --- a/ports/kf5crash/portfile.cmake
 +++ b/ports/kf5crash/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -218,13 +218,13 @@ index f6a435569..0cbffc9b7 100644
      REPO KDE/kcrash
 -    REF v5.89.0
 -    SHA512 8493f9264e7844eefadd7bfa1700fa25baec2db9fd3cc8c85069d8a3c6452982d00ec1bb8e870ff9011391866e94cf63dfc8207d27d87b1b9b76e14b6ad5943d
-+    REF v5.94.0
-+    SHA512 918042b9c8f380dba3b58133db101a1a1e8386dd8aaf8450acf90035335c20201e2a2e5a54c6798b9ea0007e69108e3d7bb638bfdd7887d81b53d39452c860dd
++    REF v5.95.0
++    SHA512 2fbf3ff204e632e714dd2de1c753d55b63695d11049a56d398b6d2bf4c4aaec09cb4110c00ea92b476342a004aeb3847ce1a8be52d62bc3cd8609649c6fd00d1
      HEAD_REF master
  )
  
 diff --git a/ports/kf5dbusaddons/portfile.cmake b/ports/kf5dbusaddons/portfile.cmake
-index 00906a16b..83ff41b3f 100644
+index 00906a16b..a5e2a856a 100644
 --- a/ports/kf5dbusaddons/portfile.cmake
 +++ b/ports/kf5dbusaddons/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -233,13 +233,13 @@ index 00906a16b..83ff41b3f 100644
      REPO KDE/kdbusaddons
 -    REF v5.89.0
 -    SHA512 83f748690efe8024f603057cc97ab713f82ba6fbdb4462bb6052a8e89945e4117d6b1f030e0064120ae7e34a9b06860ba77d56617d5663578f0ac11a74dba2db
-+    REF v5.94.0
-+    SHA512 58d338d08b9e8a3b50c671b3259449e51d569c1aa7e8e9cd49bc7f0623226c6486b5dacf9a0c98e35d69e4d6f4a484ac07b3d531b4420da974cab50c308ffdf9
++    REF v5.95.0
++    SHA512 1e0cd6bbbbedfd7082a5aef066ed3e2681e39d838127eb15c15181d3a8df319495e6bb5ef48717ab78e06711623ee3bf23777b87c895b923ce06909d4dd45d52
      HEAD_REF master
  )
  
 diff --git a/ports/kf5declarative/portfile.cmake b/ports/kf5declarative/portfile.cmake
-index c9352566e..3a80ec300 100644
+index c9352566e..034d87d5b 100644
 --- a/ports/kf5declarative/portfile.cmake
 +++ b/ports/kf5declarative/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -247,12 +247,12 @@ index c9352566e..3a80ec300 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kdeclarative
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 baad15ef1288e215a269c7b69d2de3659508ce16f91e7f20ec9255ed07810b22ea7e04f7446c50715f7b4abe2809c22d9911f03a5cc0791f7b9e5298f9e2ac59
      HEAD_REF master
  )
 diff --git a/ports/kf5globalaccel/portfile.cmake b/ports/kf5globalaccel/portfile.cmake
-index ca1ba5386..7b3ca373c 100644
+index ca1ba5386..8061f8085 100644
 --- a/ports/kf5globalaccel/portfile.cmake
 +++ b/ports/kf5globalaccel/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -261,8 +261,8 @@ index ca1ba5386..7b3ca373c 100644
      REPO KDE/kglobalaccel
 -    REF v5.89.0
 -    SHA512 824e4d6204189290dcc542ef3004ad2e2e2f83620dbf381ab78edbef996f412996709b9b49b72aad7c23deeeb6be274906b4cbbbd49498be081330e89c5674de
-+    REF v5.94.0
-+    SHA512 38f63c3fe14616c985085386073ba67245b4d1aec621f9d1c24ca0eeb2e1a9b3531a9e790f841f2fea2bf153b0b58f7103379353216f143b5df8eb773215902d
++    REF v5.95.0
++    SHA512 6f640ec861f569a6c0a096e681df23b6494d8e6a2b36de6f54c6b7733b72cdf86c5ce31b177084dffc3ea0004d605262e4fe8ad5e8c44343c6c68c14fd44bd15
      HEAD_REF master
  )
  
@@ -305,7 +305,7 @@ index 93b2bc4f5..bd606c7d5 100644
 +2.35.3
 +
 diff --git a/ports/kf5guiaddons/portfile.cmake b/ports/kf5guiaddons/portfile.cmake
-index 628f1117f..54b32cf9f 100644
+index 628f1117f..30e245bd6 100644
 --- a/ports/kf5guiaddons/portfile.cmake
 +++ b/ports/kf5guiaddons/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -314,13 +314,13 @@ index 628f1117f..54b32cf9f 100644
      REPO KDE/kguiaddons
 -    REF v5.89.0
 -    SHA512 062a8da3a5d3f9da3288031f8e694fd6adb5b4f404071f2d66c7f4d5b15cbf10fedff58d9db928e45a052b69abbe38d7de57349638d8bb9a229798a553e3b9ed
-+    REF v5.94.0
-+    SHA512 698fa7560ee4a68fd31ebdeaf74e6f4a2696a72c035dc2128e3cd55a308fb157fd9b62465a3b4b5fe24ae00ebdc9d66ac7771377831175f57f44227110d040ea
++    REF v5.95.0
++    SHA512 de014e148248fcb5620138576c5290cba66f4ec5c13a41bbc8e9b97218bae763bd3909083f9fd7b1b03acb532789c28ad91be29907ecaa28bc07395b33200dc1
      HEAD_REF master
      PATCHES
          fix_cmake.patch # https://github.com/microsoft/vcpkg/issues/17607#issuecomment-831518812
 diff --git a/ports/kf5holidays/portfile.cmake b/ports/kf5holidays/portfile.cmake
-index 7c2704970..92a81037c 100644
+index 7c2704970..a5cad0831 100644
 --- a/ports/kf5holidays/portfile.cmake
 +++ b/ports/kf5holidays/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -328,7 +328,7 @@ index 7c2704970..92a81037c 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kholidays
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 df5a68c9faf2c05b30b161f2e9f363f252be2efd9ec89787a88952fecb91d36b0187e9c88bdedde6887086f5ead4aa5d6ff627c9ea267cd447d5d7ad938b5d65
      HEAD_REF master
  )
@@ -406,7 +406,7 @@ index c8111579d..78284152f 100644
  )
  
 diff --git a/ports/kf5iconthemes/portfile.cmake b/ports/kf5iconthemes/portfile.cmake
-index 6b8dd4acc..a953ad0e2 100644
+index 6b8dd4acc..5297060a9 100644
 --- a/ports/kf5iconthemes/portfile.cmake
 +++ b/ports/kf5iconthemes/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -415,13 +415,13 @@ index 6b8dd4acc..a953ad0e2 100644
      REPO KDE/kiconthemes
 -    REF v5.89.0
 -    SHA512 d876f4a67d667a881820280c51fac8ddcdb99414f8c810422dd20be370173c036abcec3168495009242d479520a379be0c8ee4bea637023584e52c9452d9b3b7
-+    REF v5.94.0
-+    SHA512 34500aa61d631ecf518ae56c4c985dfe4ce8e7a1cb5b659569ff4e7c4d30c3b21e56c8ce3454fae1ecb95be2aa8a838e89dd8a4d7b244931323f670b143a4119
++    REF v5.95.0
++    SHA512 90fb6f2227751717b789b673cfd5612005b877894dcf939286ad8ddb493b26f5ad3522532166a180d06cba07dc74e938d115a14514b511b9040d560899454c33
      HEAD_REF master
  )
  
 diff --git a/ports/kf5itemmodels/portfile.cmake b/ports/kf5itemmodels/portfile.cmake
-index 41964bea9..ce186df37 100644
+index 41964bea9..fd5995de6 100644
 --- a/ports/kf5itemmodels/portfile.cmake
 +++ b/ports/kf5itemmodels/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -429,12 +429,12 @@ index 41964bea9..ce186df37 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kitemmodels
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 4d7730994f935bd0929e8ceacfaed945e784cebdc86642c6148ce21108c4ffe792774196613c8b3215354069db85d276a30c6608445961f67aeb1b420a579007
  )
  
 diff --git a/ports/kf5itemviews/portfile.cmake b/ports/kf5itemviews/portfile.cmake
-index 3240034cf..9035ce845 100644
+index 3240034cf..8a43c8f52 100644
 --- a/ports/kf5itemviews/portfile.cmake
 +++ b/ports/kf5itemviews/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -443,8 +443,8 @@ index 3240034cf..9035ce845 100644
      REPO KDE/kitemviews
 -    REF v5.89.0
 -    SHA512 c96cb1204d5e9d0b1206eac93f36b06c94b7fcf63c7a75938e50783af1e7d3fe48617fadd264f55f2ac31c3d316a062b9200053a582ccf2e7c927659b7e1b442
-+    REF v5.94.0
-+    SHA512 e7ac8fd18b0a32ab5c475d3342012deb2a0c6876bdcd802904396cb1085da75ab190da75e8863b58ef3f883763035678c40796a0c24b7aa9ea1a1ba2ab8b57fb
++    REF v5.95.0
++    SHA512 7580ec5442580b4901b81dd552dd61d9831b1e1459d276569600eab85a42c5efaaef21b56f17a9f91a0063dfea7765f839441040318ddc395eac9ec960e93d5e
  )
  
  # Prevent KDEClangFormat from writing to source effectively blocking parallel configure
@@ -474,7 +474,7 @@ index c7f4f728d..1e51c14af 100644
        "name": "vcpkg-cmake",
        "host": true
 diff --git a/ports/kf5jobwidgets/portfile.cmake b/ports/kf5jobwidgets/portfile.cmake
-index 56296e188..d84c7d238 100644
+index 56296e188..97d7d8dc3 100644
 --- a/ports/kf5jobwidgets/portfile.cmake
 +++ b/ports/kf5jobwidgets/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -483,13 +483,13 @@ index 56296e188..d84c7d238 100644
      REPO KDE/kjobwidgets
 -    REF v5.89.0
 -    SHA512 6fcc1fbef4de8adde1577739a28b5a3671829b24d4d8885a6b22f7b99662f058502183ab7d4f8c47f2c69f02a1932ac94a55be93bd6245fe97d8819644b1e708
-+    REF v5.94.0
-+    SHA512 c36ce2f44474ff195b924b9b0605b5c13cc1c7e7300bad7058d5237fd79e9f0f44645c4053a73b09886a0bc6a79d54e338324e60e3b528f476212cf7d6826fcc
++    REF v5.95.0
++    SHA512 6883fcd29e5e65b846b87ac939cce683bb86da4bec71f9d6ce20923fd02884aa3f27de845b8cc64a52494821e59209b89e051838ec47a698cc58f73f11bece20
      HEAD_REF master
  )
  
 diff --git a/ports/kf5kcmutils/portfile.cmake b/ports/kf5kcmutils/portfile.cmake
-index 6baa0fd1f..aefde8e84 100644
+index 6baa0fd1f..53b5c144e 100644
 --- a/ports/kf5kcmutils/portfile.cmake
 +++ b/ports/kf5kcmutils/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -497,12 +497,12 @@ index 6baa0fd1f..aefde8e84 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kcmutils
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 9f12e906d9bd763906d6c9a0ebbefec1b7d1e958a217de5ed7ea418c8fcda1dbaccd8df89a849019aa81303fc4540b26872d205e7215285c4f312e8bbfcb97d0
      HEAD_REF master
  )
 diff --git a/ports/kf5kio/portfile.cmake b/ports/kf5kio/portfile.cmake
-index a91ba7309..a571eeb35 100644
+index a91ba7309..797c28bf5 100644
 --- a/ports/kf5kio/portfile.cmake
 +++ b/ports/kf5kio/portfile.cmake
 @@ -5,8 +5,8 @@ endif()
@@ -511,13 +511,13 @@ index a91ba7309..a571eeb35 100644
      REPO KDE/kio
 -    REF v5.89.0-rc2
 -    SHA512 08df36c08b028998884983fa233aad5bfc05d4e9e5899ed85390015daa7e0703272edabc59189579957e9971435887c4486796061878ce0f252ac2259b78a799
-+    REF v5.94.0
-+    SHA512 609b1a71a2e7b4bf8d17bf522123cbbb3219e8af49366e6809fadaba8e734e0256321bd5c21ce0c51213f6819f693f255151d8f13bfbf9ea6ceb5ea56f5ee243
++    REF v5.95.0
++    SHA512 67bc7bacdd34145f548722d2c85ddb57b392ea8764ab137865c3019616472109215058e1e0235e63acb33dc8dfd6c9bdd9b1cde40f110a0ea542eff97d7fb1f6
      HEAD_REF master
      PATCHES
          ${PATCHES}
 diff --git a/ports/kf5newstuff/portfile.cmake b/ports/kf5newstuff/portfile.cmake
-index dad1bb785..96c21eec5 100644
+index dad1bb785..0d30285d7 100644
 --- a/ports/kf5newstuff/portfile.cmake
 +++ b/ports/kf5newstuff/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -525,12 +525,12 @@ index dad1bb785..96c21eec5 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/knewstuff
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 e031fc985ad29be177b438667c624c6706a45edd7029b8144d712e04b9b3f5c8bc7aebea9e2a09afe2a2f28db078f58969cb63bf7dccd5d2e1e05dcbc456766b
      HEAD_REF master
  )
 diff --git a/ports/kf5notifications/portfile.cmake b/ports/kf5notifications/portfile.cmake
-index 8b35928c9..652306aa5 100644
+index 8b35928c9..2cc78c995 100644
 --- a/ports/kf5notifications/portfile.cmake
 +++ b/ports/kf5notifications/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -538,12 +538,12 @@ index 8b35928c9..652306aa5 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/knotifications
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 58e9fe34b29e0f6d7507a3a783918bcfbc8a191ddc7bb287c793628a97a2a203347971849100ae9a98d9f8a23c27ba184b509c11caf00517d8c6422ae91ac310
      HEAD_REF master
  )
 diff --git a/ports/kf5package/portfile.cmake b/ports/kf5package/portfile.cmake
-index c80f2977d..2906a0a81 100644
+index c80f2977d..114a2d472 100644
 --- a/ports/kf5package/portfile.cmake
 +++ b/ports/kf5package/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -551,12 +551,12 @@ index c80f2977d..2906a0a81 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kpackage
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 0f008129d2675fb8faa274bc9d1389be6a4acee0be95eb06973762933a7306749742e852a83144c54523aacdd10e5a808c8c06834ff533719a6e66ccc62f7186
      HEAD_REF master
  )
 diff --git a/ports/kf5plotting/portfile.cmake b/ports/kf5plotting/portfile.cmake
-index 62a541968..fcdbd9600 100644
+index 62a541968..84d297eb8 100644
 --- a/ports/kf5plotting/portfile.cmake
 +++ b/ports/kf5plotting/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -564,12 +564,12 @@ index 62a541968..fcdbd9600 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kplotting
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 4499f1820d2314041d78e48130f5f8ee30c677302c9a34a1f7e797d4ebd0ba4286278622c113907d9c224e753c528adc85cb55abd2d3132187553a5d7fbe382a
      HEAD_REF master
  )
 diff --git a/ports/kf5service/portfile.cmake b/ports/kf5service/portfile.cmake
-index 0f99c8c58..f9a04b6f3 100644
+index 0f99c8c58..6e59bdd46 100644
 --- a/ports/kf5service/portfile.cmake
 +++ b/ports/kf5service/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -578,8 +578,8 @@ index 0f99c8c58..f9a04b6f3 100644
      REPO KDE/kservice
 -    REF v5.89.0
 -    SHA512 9809b7cb05b3164575e4f92cc979b34dad63945648e054621248fd92ce1c5885a048704ed11b1292446bb55940ed2c11e982a434bb0983c25de9938514b53c6d
-+    REF v5.94.0
-+    SHA512 29eed125e72dc5a8afd279d9b3935af9f39d34ef319f032c862028b0241e7b586b79b2ab556979329dc25258b9f09b7daf7fee6ea6fbfcc30dd68cb7d7256c0c
++    REF v5.95.0
++    SHA512 5e1d7f8b81fcd3e0888d4bd401e746d8a7ade81d0afcd7b8147b10d19dffa04cd03202d2b3c1750c4517a95a22d4221f59711a87ebc8fad1b6888646ebdb3888
      HEAD_REF master
  )
  
@@ -605,7 +605,7 @@ index 592f96ce9..000000000
 -         find_dependency(Qt5DBus @REQUIRED_QT_VERSION@)
 -     endif()
 diff --git a/ports/kf5solid/portfile.cmake b/ports/kf5solid/portfile.cmake
-index 5d3c518ec..394582a3e 100644
+index 5d3c518ec..8cc84737e 100644
 --- a/ports/kf5solid/portfile.cmake
 +++ b/ports/kf5solid/portfile.cmake
 @@ -1,11 +1,9 @@
@@ -614,8 +614,8 @@ index 5d3c518ec..394582a3e 100644
      REPO KDE/solid
 -    REF v5.89.0
 -    SHA512 18d3c709756476870b6495bd5a99d70ec291a71a2f79dae954ce434953fb6299033c2dc85c68adf81031b03b70bf2e4798b7428da99c2ac28ddd6070cc413592
-+    REF v5.94.0
-+    SHA512 567df1d6bd14727e5c7a747b6e207e6b750e3d406d977874500fdda230b3eafc770ca758d60a43aa1bee98c6bec3181ae9a55617658cfcc3469048aa245d1841
++    REF v5.95.0
++    SHA512 0cdfed6d72209bd3ba3ea7b14a2cc046fb77fbb8cacde5976376fa18ff0762d77f8f6e30b56944c141054f9415567f0970c89da9453ff90cb05417f0e1de55ee
      HEAD_REF master
 -    PATCHES
 -        fix-libmount.patch
@@ -623,7 +623,7 @@ index 5d3c518ec..394582a3e 100644
  
  if(VCPKG_TARGET_IS_OSX)
 diff --git a/ports/kf5sonnet/portfile.cmake b/ports/kf5sonnet/portfile.cmake
-index 96e5b8180..0bbc3a232 100644
+index 96e5b8180..a66b1a0c9 100644
 --- a/ports/kf5sonnet/portfile.cmake
 +++ b/ports/kf5sonnet/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -632,13 +632,13 @@ index 96e5b8180..0bbc3a232 100644
      REPO KDE/sonnet
 -    REF v5.89.0
 -    SHA512 18e2b9f9553229853952e2b0e3e6fac9c87417014f607144419bfe10b9d40cf5b542b253a43e5305d75ccef525f8cce36c112e1bad9398365847d5ec2996e8e4
-+    REF v5.94.0
-+    SHA512 51e960cbef8314e2d7d0a471500b7014b89e8bdcef96c4145c1b11052ebbe405a51e62f19869a5b2bce6828cc3fc8577c013b7afbf6da58f21ed2c89f8b5a2de
++    REF v5.95.0
++    SHA512 ea64178953461c506c6ba914dd514ffed5b9632133451a5fd27fe32d1ec0ae8ffae66253aa35a0e88b5a1994b76b793037f422124e7488352d25a3888a10b94a
      HEAD_REF master
  )
  
 diff --git a/ports/kf5syntaxhighlighting/portfile.cmake b/ports/kf5syntaxhighlighting/portfile.cmake
-index f20769536..748876f8a 100644
+index f20769536..61e62eaa4 100644
 --- a/ports/kf5syntaxhighlighting/portfile.cmake
 +++ b/ports/kf5syntaxhighlighting/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -646,12 +646,12 @@ index f20769536..748876f8a 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/syntax-highlighting
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 c92df10d236d736f3f944f25efac796636ef857049732c0359edb900a1686839c55303917ab2286935024e7e6f19a0797fc38b417a1bd60d5dfb8c9c45ca6e66
      HEAD_REF master
  )
 diff --git a/ports/kf5textwidgets/portfile.cmake b/ports/kf5textwidgets/portfile.cmake
-index 6b4b11ee0..63712f0af 100644
+index 6b4b11ee0..ad9e169de 100644
 --- a/ports/kf5textwidgets/portfile.cmake
 +++ b/ports/kf5textwidgets/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -660,13 +660,13 @@ index 6b4b11ee0..63712f0af 100644
      REPO KDE/ktextwidgets
 -    REF v5.89.0
 -    SHA512 5f57e20bc2e865499b4ef5c701baa17f492c5cd48b89f3add4e9fec29664a87ad6e69496c4e91f3a1192fbc4d244758a753ee250731a79b464f6af63f9abbde0
-+    REF v5.94.0
-+    SHA512 95baa04f7e3c444508772bdf64392a325e749561c16eb3a16158629cb5f08181607c3e48b7adf804510d45b4982c7249604bcae238141679abfb8f7c2281742a
++    REF v5.95.0
++    SHA512 a630528b2143957ac760ff6d73194074203000dbc205cdbf44519a516f57a3b1e8027c5662069c6fa163449f8692924a5ee9c07eb1c6f961b8c66ae83549c58c
      HEAD_REF master
  )
  
 diff --git a/ports/kf5wallet/portfile.cmake b/ports/kf5wallet/portfile.cmake
-index ad62314be..40c322b00 100644
+index ad62314be..2f962f4e6 100644
 --- a/ports/kf5wallet/portfile.cmake
 +++ b/ports/kf5wallet/portfile.cmake
 @@ -1,7 +1,7 @@
@@ -674,12 +674,12 @@ index ad62314be..40c322b00 100644
      OUT_SOURCE_PATH SOURCE_PATH
      REPO KDE/kwallet
 -    REF v5.89.0
-+    REF v5.94.0
++    REF v5.95.0
      SHA512 83bf40e5bfa9129ecfdaecebaf16c289542867337daf29be664aeb562e7c6bc32af4c59b71fcfae3cbbf70438872426b5981844c3c275b311340e5b48deac021
      HEAD_REF master
  )
 diff --git a/ports/kf5widgetsaddons/portfile.cmake b/ports/kf5widgetsaddons/portfile.cmake
-index 3ebf6c337..11d9aa649 100644
+index 3ebf6c337..f2f870532 100644
 --- a/ports/kf5widgetsaddons/portfile.cmake
 +++ b/ports/kf5widgetsaddons/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -688,13 +688,13 @@ index 3ebf6c337..11d9aa649 100644
      REPO KDE/kwidgetsaddons
 -    REF v5.89.0
 -    SHA512 5e83ffeefe3130f3a43768cbc777a81be9e43c029598f12ee48353f787e5ab4a97d0a92f6f3c41987fe021f1e92ac01a05601c642bbd508fbbd780925dd6c03b
-+    REF v5.94.0
-+    SHA512 3a0db28087ca4126540b670a1ba6bcad40403852cb10a766cc88e338cfccd0628b3474ab18f6cc368796b81deea46fa4354465d32a7691cc869d1f5f4fa1b54e
++    REF v5.95.0
++    SHA512 d8a304dedca8423d481467ba58db3434e11e6f8b9e2051714b071093ac40b720ff88350b0ee56b1947ec3bd7a931835016b4afc8260e59fda08002232cb34a5e
      HEAD_REF master
  )
  
 diff --git a/ports/kf5windowsystem/portfile.cmake b/ports/kf5windowsystem/portfile.cmake
-index 1fb2c7cf2..6b7d8c0df 100644
+index 1fb2c7cf2..986215387 100644
 --- a/ports/kf5windowsystem/portfile.cmake
 +++ b/ports/kf5windowsystem/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -703,13 +703,13 @@ index 1fb2c7cf2..6b7d8c0df 100644
      REPO KDE/kwindowsystem
 -    REF v5.89.0
 -    SHA512 8cdb177b5dff487c0039f6243a8652e8e0aaae5cd55f299f8ad4cd2c66651fc0be36328998807398b53803989881b511f0ee472359c6129ff809e9b50283b66a
-+    REF v5.94.0
-+    SHA512 84a866cc36e2951f2d511b2e41b6db93bfcdc633401e9bd602988ea1c3451761b56f6caf67b7e6d70f877fb7b0d1d6250c7b755019b45b228180ad79b80b6356
++    REF v5.95.0
++    SHA512 f85d9fd189314b683ab8b318eb25a86e14d7f31669e2eb0b33da979b6d3945ace050fe4fdf0532bbe6eab85d5739cd3941db39730f1659ae8aaba6d4bdc4da0e
  )
  
  if (VCPKG_TARGET_IS_LINUX)
 diff --git a/ports/kf5xmlgui/portfile.cmake b/ports/kf5xmlgui/portfile.cmake
-index ab616f917..9f8675a19 100644
+index ab616f917..efc016aa8 100644
 --- a/ports/kf5xmlgui/portfile.cmake
 +++ b/ports/kf5xmlgui/portfile.cmake
 @@ -1,8 +1,8 @@
@@ -718,8 +718,8 @@ index ab616f917..9f8675a19 100644
      REPO KDE/kxmlgui
 -    REF v5.89.0
 -    SHA512 6180089ff84456830ceddec564014c75127be1bcb996dd5458f86e5d1dfaa3e3b0267e0605dc8a799abe9aa3d3c0f48c805e5f58e754e19a44a20637dbb95044
-+    REF v5.94.0
-+    SHA512 cd79891d4b6f4d747d29aec9b73ef5972ed2725657701ef9f337c67892382b8f39aa3f4eb1ca006a7f953e15782041ab47af999146391bb1a43654f56fcc8bb5
++    REF v5.95.0
++    SHA512 b3605cdf861603401116fe508c5c044e310f0588d7c67443bc1fe3bc3c8bcfd767484e43827610ac04d59f67aa856fc963d9865c196da36f326a8edaa32fdaf3
      HEAD_REF master
  )
  
