@@ -1,4 +1,4 @@
-From 83824d2622ce3ee7fa2865c047eb3d7fea72da98 Mon Sep 17 00:00:00 2001
+From f5db4ca02c50a8412b7acd4ccce9bf49bd4ada1b Mon Sep 17 00:00:00 2001
 From: "Moebert, Tom" <tom.moebert@zeiss.com>
 Date: Sun, 12 Jun 2022 23:49:15 +0200
 Subject: [PATCH 2/3] Update kf5 to 5.95.0
@@ -7,45 +7,79 @@ Subject: [PATCH 2/3] Update kf5 to 5.95.0
  ports/ecm/portfile.cmake                   |  4 +--
  ports/ecm/vcpkg.json                       |  2 +-
  ports/kf5archive/portfile.cmake            |  4 +--
+ ports/kf5archive/vcpkg.json                |  2 +-
  ports/kf5attica/portfile.cmake             |  2 +-
+ ports/kf5attica/vcpkg.json                 |  2 +-
  ports/kf5auth/portfile.cmake               |  4 +--
+ ports/kf5auth/vcpkg.json                   |  2 +-
  ports/kf5bookmarks/portfile.cmake          |  4 +--
+ ports/kf5bookmarks/vcpkg.json              |  2 +-
  ports/kf5codecs/portfile.cmake             |  4 +--
+ ports/kf5codecs/vcpkg.json                 |  2 +-
  ports/kf5completion/portfile.cmake         |  4 +--
+ ports/kf5completion/vcpkg.json             |  2 +-
  ports/kf5config/portfile.cmake             |  4 +--
+ ports/kf5config/vcpkg.json                 |  2 +-
  ports/kf5configwidgets/portfile.cmake      |  4 +--
+ ports/kf5configwidgets/vcpkg.json          |  2 +-
  ports/kf5coreaddons/portfile.cmake         |  4 +--
+ ports/kf5coreaddons/vcpkg.json             |  2 +-
  ports/kf5crash/portfile.cmake              |  4 +--
+ ports/kf5crash/vcpkg.json                  |  2 +-
  ports/kf5dbusaddons/portfile.cmake         |  4 +--
+ ports/kf5dbusaddons/vcpkg.json             |  2 +-
  ports/kf5declarative/portfile.cmake        |  2 +-
+ ports/kf5declarative/vcpkg.json            |  2 +-
  ports/kf5globalaccel/portfile.cmake        |  4 +--
+ ports/kf5globalaccel/vcpkg.json            |  2 +-
  ports/kf5guiaddons/fix_cmake.patch         | 26 +++++++++++++++----
  ports/kf5guiaddons/portfile.cmake          |  4 +--
+ ports/kf5guiaddons/vcpkg.json              |  2 +-
  ports/kf5holidays/portfile.cmake           |  2 +-
+ ports/kf5holidays/vcpkg.json               |  2 +-
  ports/kf5i18n/fix_static_builds.patch      | 30 +++++++++++++++++-----
  ports/kf5i18n/portfile.cmake               |  4 +--
+ ports/kf5i18n/vcpkg.json                   |  2 +-
  ports/kf5iconthemes/portfile.cmake         |  4 +--
+ ports/kf5iconthemes/vcpkg.json             |  2 +-
  ports/kf5itemmodels/portfile.cmake         |  2 +-
+ ports/kf5itemmodels/vcpkg.json             |  2 +-
  ports/kf5itemviews/portfile.cmake          |  4 +--
  ports/kf5itemviews/vcpkg.json              | 10 ++++++--
  ports/kf5jobwidgets/portfile.cmake         |  4 +--
+ ports/kf5jobwidgets/vcpkg.json             |  2 +-
  ports/kf5kcmutils/portfile.cmake           |  2 +-
+ ports/kf5kcmutils/vcpkg.json               |  2 +-
  ports/kf5kio/portfile.cmake                |  4 +--
+ ports/kf5kio/vcpkg.json                    |  2 +-
  ports/kf5newstuff/portfile.cmake           |  2 +-
+ ports/kf5newstuff/vcpkg.json               |  2 +-
  ports/kf5notifications/portfile.cmake      |  2 +-
+ ports/kf5notifications/vcpkg.json          |  2 +-
  ports/kf5package/portfile.cmake            |  2 +-
+ ports/kf5package/vcpkg.json                |  2 +-
  ports/kf5plotting/portfile.cmake           |  2 +-
+ ports/kf5plotting/vcpkg.json               |  2 +-
  ports/kf5service/portfile.cmake            |  4 +--
+ ports/kf5service/vcpkg.json                |  2 +-
  ports/kf5solid/fix-libmount.patch          | 15 -----------
  ports/kf5solid/portfile.cmake              |  6 ++---
+ ports/kf5solid/vcpkg.json                  |  2 +-
  ports/kf5sonnet/portfile.cmake             |  4 +--
+ ports/kf5sonnet/vcpkg.json                 |  2 +-
  ports/kf5syntaxhighlighting/portfile.cmake |  2 +-
+ ports/kf5syntaxhighlighting/vcpkg.json     |  2 +-
  ports/kf5textwidgets/portfile.cmake        |  4 +--
+ ports/kf5textwidgets/vcpkg.json            |  2 +-
  ports/kf5wallet/portfile.cmake             |  2 +-
+ ports/kf5wallet/vcpkg.json                 |  2 +-
  ports/kf5widgetsaddons/portfile.cmake      |  4 +--
+ ports/kf5widgetsaddons/vcpkg.json          |  2 +-
  ports/kf5windowsystem/portfile.cmake       |  4 +--
+ ports/kf5windowsystem/vcpkg.json           |  2 +-
  ports/kf5xmlgui/portfile.cmake             |  4 +--
- 41 files changed, 114 insertions(+), 93 deletions(-)
+ ports/kf5xmlgui/vcpkg.json                 |  2 +-
+ 75 files changed, 148 insertions(+), 127 deletions(-)
  delete mode 100644 ports/kf5solid/fix-libmount.patch
 
 diff --git a/ports/ecm/portfile.cmake b/ports/ecm/portfile.cmake
@@ -64,14 +98,14 @@ index 63ab654f9..45845bbf3 100644
      PATCHES
          fix_canberra.patch         # https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/187
 diff --git a/ports/ecm/vcpkg.json b/ports/ecm/vcpkg.json
-index a744a9bcf..0fd9566c5 100644
+index a744a9bcf..5abfaba38 100644
 --- a/ports/ecm/vcpkg.json
 +++ b/ports/ecm/vcpkg.json
 @@ -1,6 +1,6 @@
  {
    "name": "ecm",
 -  "version": "5.89.0",
-+  "version": "5.94.0",
++  "version": "5.95.0",
    "description": "Extra CMake Modules (ECM), extra modules and scripts for CMake",
    "homepage": "https://github.com/KDE/extra-cmake-modules",
    "dependencies": [
@@ -90,6 +124,18 @@ index 10d34825c..10b5c76e3 100644
      HEAD_REF master
      PATCHES
          control-dependencies.patch
+diff --git a/ports/kf5archive/vcpkg.json b/ports/kf5archive/vcpkg.json
+index e08f263b1..40fff250a 100644
+--- a/ports/kf5archive/vcpkg.json
++++ b/ports/kf5archive/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5archive",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "port-version": 1,
+   "description": "File compression",
+   "homepage": "https://api.kde.org/frameworks/karchive/html/index.html",
 diff --git a/ports/kf5attica/portfile.cmake b/ports/kf5attica/portfile.cmake
 index 9e7d5cedb..ba25cc6cb 100644
 --- a/ports/kf5attica/portfile.cmake
@@ -103,6 +149,18 @@ index 9e7d5cedb..ba25cc6cb 100644
      SHA512 46f4cb550a13032da2e48861916356f3dfa47de0e1c0672ffeea19bad813dfb5cdf1b45b1a25ff35adc07e622486b37d7a65ddf3d39c2b214114d916f09577bb
      HEAD_REF master
  )
+diff --git a/ports/kf5attica/vcpkg.json b/ports/kf5attica/vcpkg.json
+index ced7d2c00..235c915ef 100644
+--- a/ports/kf5attica/vcpkg.json
++++ b/ports/kf5attica/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5attica",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "port-version": 1,
+   "description": "A Qt library that implements the Open Collaboration Services API",
+   "homepage": "https://api.kde.org/frameworks/attica/html/index.html",
 diff --git a/ports/kf5auth/portfile.cmake b/ports/kf5auth/portfile.cmake
 index 6b9c2f1b2..465e836c4 100644
 --- a/ports/kf5auth/portfile.cmake
@@ -118,6 +176,18 @@ index 6b9c2f1b2..465e836c4 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5auth/vcpkg.json b/ports/kf5auth/vcpkg.json
+index ca8af9358..0cd94e991 100644
+--- a/ports/kf5auth/vcpkg.json
++++ b/ports/kf5auth/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5auth",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Execute actions as privileged user",
+   "homepage": "https://api.kde.org/frameworks/kauth/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5bookmarks/portfile.cmake b/ports/kf5bookmarks/portfile.cmake
 index fdb8bac5f..ba45c34c3 100644
 --- a/ports/kf5bookmarks/portfile.cmake
@@ -133,6 +203,18 @@ index fdb8bac5f..ba45c34c3 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5bookmarks/vcpkg.json b/ports/kf5bookmarks/vcpkg.json
+index 22cf14a43..3507fa1be 100644
+--- a/ports/kf5bookmarks/vcpkg.json
++++ b/ports/kf5bookmarks/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5bookmarks",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Bookmarks management library",
+   "homepage": "https://api.kde.org/frameworks/kbookmarks/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5codecs/portfile.cmake b/ports/kf5codecs/portfile.cmake
 index 4c9e380f7..9fd992f0d 100644
 --- a/ports/kf5codecs/portfile.cmake
@@ -148,6 +230,18 @@ index 4c9e380f7..9fd992f0d 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5codecs/vcpkg.json b/ports/kf5codecs/vcpkg.json
+index 647cffa08..537eb1fcf 100644
+--- a/ports/kf5codecs/vcpkg.json
++++ b/ports/kf5codecs/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5codecs",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "port-version": 1,
+   "description": "String encoding library",
+   "homepage": "https://api.kde.org/frameworks/kcodecs/html/index.html",
 diff --git a/ports/kf5completion/portfile.cmake b/ports/kf5completion/portfile.cmake
 index 10959e09d..875f27012 100644
 --- a/ports/kf5completion/portfile.cmake
@@ -163,6 +257,18 @@ index 10959e09d..875f27012 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5completion/vcpkg.json b/ports/kf5completion/vcpkg.json
+index f1b07a289..f0581b2d3 100644
+--- a/ports/kf5completion/vcpkg.json
++++ b/ports/kf5completion/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5completion",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Text completion helpers and widgets",
+   "homepage": "https://api.kde.org/frameworks/kcompletion/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5config/portfile.cmake b/ports/kf5config/portfile.cmake
 index 5cc0e6ed6..9349993ac 100644
 --- a/ports/kf5config/portfile.cmake
@@ -178,6 +284,18 @@ index 5cc0e6ed6..9349993ac 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5config/vcpkg.json b/ports/kf5config/vcpkg.json
+index f3f71282d..4b96774cf 100644
+--- a/ports/kf5config/vcpkg.json
++++ b/ports/kf5config/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5config",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Configuration system",
+   "homepage": "https://api.kde.org/frameworks/kconfig/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5configwidgets/portfile.cmake b/ports/kf5configwidgets/portfile.cmake
 index d7630c96f..37b35c64d 100644
 --- a/ports/kf5configwidgets/portfile.cmake
@@ -193,6 +311,18 @@ index d7630c96f..37b35c64d 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5configwidgets/vcpkg.json b/ports/kf5configwidgets/vcpkg.json
+index 4ec5df88c..ddca9a839 100644
+--- a/ports/kf5configwidgets/vcpkg.json
++++ b/ports/kf5configwidgets/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5configwidgets",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Widgets for configuration dialogs",
+   "homepage": "https://api.kde.org/frameworks/kconfigwidgets/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5coreaddons/portfile.cmake b/ports/kf5coreaddons/portfile.cmake
 index 8831ed78e..0f0751c22 100644
 --- a/ports/kf5coreaddons/portfile.cmake
@@ -208,6 +338,18 @@ index 8831ed78e..0f0751c22 100644
      PATCHES
          fix_cmake_config.patch # https://invent.kde.org/frameworks/kcoreaddons/-/merge_requests/129
  )
+diff --git a/ports/kf5coreaddons/vcpkg.json b/ports/kf5coreaddons/vcpkg.json
+index 78175c5b6..39958a650 100644
+--- a/ports/kf5coreaddons/vcpkg.json
++++ b/ports/kf5coreaddons/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5coreaddons",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Addons to QtCore",
+   "homepage": "https://api.kde.org/frameworks/kcoreaddons/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5crash/portfile.cmake b/ports/kf5crash/portfile.cmake
 index f6a435569..8b9f4f0c9 100644
 --- a/ports/kf5crash/portfile.cmake
@@ -223,6 +365,18 @@ index f6a435569..8b9f4f0c9 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5crash/vcpkg.json b/ports/kf5crash/vcpkg.json
+index 851d2dbd8..de7e44460 100644
+--- a/ports/kf5crash/vcpkg.json
++++ b/ports/kf5crash/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5crash",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "KCrash provides support for intercepting and handling application crashes.",
+   "homepage": "https://api.kde.org/frameworks/kcrash/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5dbusaddons/portfile.cmake b/ports/kf5dbusaddons/portfile.cmake
 index 00906a16b..a5e2a856a 100644
 --- a/ports/kf5dbusaddons/portfile.cmake
@@ -238,6 +392,18 @@ index 00906a16b..a5e2a856a 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5dbusaddons/vcpkg.json b/ports/kf5dbusaddons/vcpkg.json
+index 4f4ef9923..d7cd0a4cc 100644
+--- a/ports/kf5dbusaddons/vcpkg.json
++++ b/ports/kf5dbusaddons/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5dbusaddons",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Convenience classes for D-Bus",
+   "homepage": "https://api.kde.org/frameworks/kdbusaddons/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5declarative/portfile.cmake b/ports/kf5declarative/portfile.cmake
 index c9352566e..034d87d5b 100644
 --- a/ports/kf5declarative/portfile.cmake
@@ -251,6 +417,18 @@ index c9352566e..034d87d5b 100644
      SHA512 baad15ef1288e215a269c7b69d2de3659508ce16f91e7f20ec9255ed07810b22ea7e04f7446c50715f7b4abe2809c22d9911f03a5cc0791f7b9e5298f9e2ac59
      HEAD_REF master
  )
+diff --git a/ports/kf5declarative/vcpkg.json b/ports/kf5declarative/vcpkg.json
+index e0e99e42a..642731d92 100644
+--- a/ports/kf5declarative/vcpkg.json
++++ b/ports/kf5declarative/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5declarative",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Integration of QML and KDE work spaces",
+   "homepage": "https://api.kde.org/frameworks/kdeclarative/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5globalaccel/portfile.cmake b/ports/kf5globalaccel/portfile.cmake
 index ca1ba5386..8061f8085 100644
 --- a/ports/kf5globalaccel/portfile.cmake
@@ -266,6 +444,18 @@ index ca1ba5386..8061f8085 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5globalaccel/vcpkg.json b/ports/kf5globalaccel/vcpkg.json
+index 35715ac6e..c38b75852 100644
+--- a/ports/kf5globalaccel/vcpkg.json
++++ b/ports/kf5globalaccel/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5globalaccel",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "lobal desktop keyboard shortcuts",
+   "homepage": "https://api.kde.org/frameworks/kglobalaccel/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5guiaddons/fix_cmake.patch b/ports/kf5guiaddons/fix_cmake.patch
 index 93b2bc4f5..bd606c7d5 100644
 --- a/ports/kf5guiaddons/fix_cmake.patch
@@ -319,6 +509,18 @@ index 628f1117f..30e245bd6 100644
      HEAD_REF master
      PATCHES
          fix_cmake.patch # https://github.com/microsoft/vcpkg/issues/17607#issuecomment-831518812
+diff --git a/ports/kf5guiaddons/vcpkg.json b/ports/kf5guiaddons/vcpkg.json
+index 2d997d6ea..ab31d93a3 100644
+--- a/ports/kf5guiaddons/vcpkg.json
++++ b/ports/kf5guiaddons/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5guiaddons",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Addons to QtGui",
+   "homepage": "https://api.kde.org/frameworks/kguiaddons/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5holidays/portfile.cmake b/ports/kf5holidays/portfile.cmake
 index 7c2704970..a5cad0831 100644
 --- a/ports/kf5holidays/portfile.cmake
@@ -332,6 +534,18 @@ index 7c2704970..a5cad0831 100644
      SHA512 df5a68c9faf2c05b30b161f2e9f363f252be2efd9ec89787a88952fecb91d36b0187e9c88bdedde6887086f5ead4aa5d6ff627c9ea267cd447d5d7ad938b5d65
      HEAD_REF master
  )
+diff --git a/ports/kf5holidays/vcpkg.json b/ports/kf5holidays/vcpkg.json
+index dac52b89d..88c87fdeb 100644
+--- a/ports/kf5holidays/vcpkg.json
++++ b/ports/kf5holidays/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5holidays",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Holiday calculation library",
+   "dependencies": [
+     "ecm",
 diff --git a/ports/kf5i18n/fix_static_builds.patch b/ports/kf5i18n/fix_static_builds.patch
 index 517e2e376..3ed9d3c5d 100644
 --- a/ports/kf5i18n/fix_static_builds.patch
@@ -405,6 +619,18 @@ index c8111579d..78284152f 100644
      PATCHES ${PATCHES}
  )
  
+diff --git a/ports/kf5i18n/vcpkg.json b/ports/kf5i18n/vcpkg.json
+index cd44e2e22..401490800 100644
+--- a/ports/kf5i18n/vcpkg.json
++++ b/ports/kf5i18n/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5i18n",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Advanced internationalization framework",
+   "homepage": "https://api.kde.org/frameworks/ki18n/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5iconthemes/portfile.cmake b/ports/kf5iconthemes/portfile.cmake
 index 6b8dd4acc..5297060a9 100644
 --- a/ports/kf5iconthemes/portfile.cmake
@@ -420,6 +646,18 @@ index 6b8dd4acc..5297060a9 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5iconthemes/vcpkg.json b/ports/kf5iconthemes/vcpkg.json
+index 8b54eea0a..03f7445fe 100644
+--- a/ports/kf5iconthemes/vcpkg.json
++++ b/ports/kf5iconthemes/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5iconthemes",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Icon GUI utilities",
+   "homepage": "https://api.kde.org/frameworks/kiconthemes/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5itemmodels/portfile.cmake b/ports/kf5itemmodels/portfile.cmake
 index 41964bea9..fd5995de6 100644
 --- a/ports/kf5itemmodels/portfile.cmake
@@ -433,6 +671,18 @@ index 41964bea9..fd5995de6 100644
      SHA512 4d7730994f935bd0929e8ceacfaed945e784cebdc86642c6148ce21108c4ffe792774196613c8b3215354069db85d276a30c6608445961f67aeb1b420a579007
  )
  
+diff --git a/ports/kf5itemmodels/vcpkg.json b/ports/kf5itemmodels/vcpkg.json
+index 2f5e27944..fff4f00db 100644
+--- a/ports/kf5itemmodels/vcpkg.json
++++ b/ports/kf5itemmodels/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5itemmodels",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Models for Qt Model/View system",
+   "homepage": "https://api.kde.org/frameworks/kitemmodels/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5itemviews/portfile.cmake b/ports/kf5itemviews/portfile.cmake
 index 3240034cf..8a43c8f52 100644
 --- a/ports/kf5itemviews/portfile.cmake
@@ -488,6 +738,18 @@ index 56296e188..97d7d8dc3 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5jobwidgets/vcpkg.json b/ports/kf5jobwidgets/vcpkg.json
+index ae98496d4..b474049ea 100644
+--- a/ports/kf5jobwidgets/vcpkg.json
++++ b/ports/kf5jobwidgets/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5jobwidgets",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Widgets for showing progress of asynchronous jobs",
+   "homepage": "https://api.kde.org/frameworks/kjobwidgets/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5kcmutils/portfile.cmake b/ports/kf5kcmutils/portfile.cmake
 index 6baa0fd1f..53b5c144e 100644
 --- a/ports/kf5kcmutils/portfile.cmake
@@ -501,6 +763,18 @@ index 6baa0fd1f..53b5c144e 100644
      SHA512 9f12e906d9bd763906d6c9a0ebbefec1b7d1e958a217de5ed7ea418c8fcda1dbaccd8df89a849019aa81303fc4540b26872d205e7215285c4f312e8bbfcb97d0
      HEAD_REF master
  )
+diff --git a/ports/kf5kcmutils/vcpkg.json b/ports/kf5kcmutils/vcpkg.json
+index 73b6f4075..4c8127192 100644
+--- a/ports/kf5kcmutils/vcpkg.json
++++ b/ports/kf5kcmutils/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5kcmutils",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Utilities for KDE System Settings modules",
+   "homepage": "https://api.kde.org/frameworks/kcmutils/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5kio/portfile.cmake b/ports/kf5kio/portfile.cmake
 index a91ba7309..797c28bf5 100644
 --- a/ports/kf5kio/portfile.cmake
@@ -516,6 +790,18 @@ index a91ba7309..797c28bf5 100644
      HEAD_REF master
      PATCHES
          ${PATCHES}
+diff --git a/ports/kf5kio/vcpkg.json b/ports/kf5kio/vcpkg.json
+index b39fe8338..422c24acb 100644
+--- a/ports/kf5kio/vcpkg.json
++++ b/ports/kf5kio/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5kio",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Network transparent access to files and data",
+   "homepage": "https://api.kde.org/frameworks/kio/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5newstuff/portfile.cmake b/ports/kf5newstuff/portfile.cmake
 index dad1bb785..0d30285d7 100644
 --- a/ports/kf5newstuff/portfile.cmake
@@ -529,6 +815,18 @@ index dad1bb785..0d30285d7 100644
      SHA512 e031fc985ad29be177b438667c624c6706a45edd7029b8144d712e04b9b3f5c8bc7aebea9e2a09afe2a2f28db078f58969cb63bf7dccd5d2e1e05dcbc456766b
      HEAD_REF master
  )
+diff --git a/ports/kf5newstuff/vcpkg.json b/ports/kf5newstuff/vcpkg.json
+index d04d16fb3..c72e85cd8 100644
+--- a/ports/kf5newstuff/vcpkg.json
++++ b/ports/kf5newstuff/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5newstuff",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Framework for downloading and sharing additional application data",
+   "homepage": "https://api.kde.org/frameworks/knewstuff/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5notifications/portfile.cmake b/ports/kf5notifications/portfile.cmake
 index 8b35928c9..2cc78c995 100644
 --- a/ports/kf5notifications/portfile.cmake
@@ -542,6 +840,18 @@ index 8b35928c9..2cc78c995 100644
      SHA512 58e9fe34b29e0f6d7507a3a783918bcfbc8a191ddc7bb287c793628a97a2a203347971849100ae9a98d9f8a23c27ba184b509c11caf00517d8c6422ae91ac310
      HEAD_REF master
  )
+diff --git a/ports/kf5notifications/vcpkg.json b/ports/kf5notifications/vcpkg.json
+index 6c85b6838..5ca676682 100644
+--- a/ports/kf5notifications/vcpkg.json
++++ b/ports/kf5notifications/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5notifications",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Desktop notifications",
+   "homepage": "https://api.kde.org/frameworks/knotifications/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5package/portfile.cmake b/ports/kf5package/portfile.cmake
 index c80f2977d..114a2d472 100644
 --- a/ports/kf5package/portfile.cmake
@@ -555,6 +865,18 @@ index c80f2977d..114a2d472 100644
      SHA512 0f008129d2675fb8faa274bc9d1389be6a4acee0be95eb06973762933a7306749742e852a83144c54523aacdd10e5a808c8c06834ff533719a6e66ccc62f7186
      HEAD_REF master
  )
+diff --git a/ports/kf5package/vcpkg.json b/ports/kf5package/vcpkg.json
+index e83cb3966..9e7f0297d 100644
+--- a/ports/kf5package/vcpkg.json
++++ b/ports/kf5package/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5package",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Installation and loading of additional content (ex: scripts, images...) as packages",
+   "homepage": "https://api.kde.org/frameworks/kpackage/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5plotting/portfile.cmake b/ports/kf5plotting/portfile.cmake
 index 62a541968..84d297eb8 100644
 --- a/ports/kf5plotting/portfile.cmake
@@ -568,6 +890,18 @@ index 62a541968..84d297eb8 100644
      SHA512 4499f1820d2314041d78e48130f5f8ee30c677302c9a34a1f7e797d4ebd0ba4286278622c113907d9c224e753c528adc85cb55abd2d3132187553a5d7fbe382a
      HEAD_REF master
  )
+diff --git a/ports/kf5plotting/vcpkg.json b/ports/kf5plotting/vcpkg.json
+index 8925c5990..b526c8035 100644
+--- a/ports/kf5plotting/vcpkg.json
++++ b/ports/kf5plotting/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5plotting",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Lightweight plotting framework",
+   "homepage": "https://api.kde.org/frameworks/kplotting/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5service/portfile.cmake b/ports/kf5service/portfile.cmake
 index 0f99c8c58..6e59bdd46 100644
 --- a/ports/kf5service/portfile.cmake
@@ -583,6 +917,18 @@ index 0f99c8c58..6e59bdd46 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5service/vcpkg.json b/ports/kf5service/vcpkg.json
+index 075e46210..09f64fb43 100644
+--- a/ports/kf5service/vcpkg.json
++++ b/ports/kf5service/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5service",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Plugin framework for desktop services",
+   "homepage": "https://api.kde.org/frameworks/kservice/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5solid/fix-libmount.patch b/ports/kf5solid/fix-libmount.patch
 deleted file mode 100644
 index 592f96ce9..000000000
@@ -622,6 +968,18 @@ index 5d3c518ec..8cc84737e 100644
  )
  
  if(VCPKG_TARGET_IS_OSX)
+diff --git a/ports/kf5solid/vcpkg.json b/ports/kf5solid/vcpkg.json
+index 1adbd4c8a..6694ff475 100644
+--- a/ports/kf5solid/vcpkg.json
++++ b/ports/kf5solid/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5solid",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Desktop hardware abstraction",
+   "homepage": "https://api.kde.org/frameworks/solid/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5sonnet/portfile.cmake b/ports/kf5sonnet/portfile.cmake
 index 96e5b8180..a66b1a0c9 100644
 --- a/ports/kf5sonnet/portfile.cmake
@@ -637,6 +995,18 @@ index 96e5b8180..a66b1a0c9 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5sonnet/vcpkg.json b/ports/kf5sonnet/vcpkg.json
+index 6d710cb3d..93e9a04d7 100644
+--- a/ports/kf5sonnet/vcpkg.json
++++ b/ports/kf5sonnet/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5sonnet",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Multi-language spell checker",
+   "homepage": "https://api.kde.org/frameworks/sonnet/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5syntaxhighlighting/portfile.cmake b/ports/kf5syntaxhighlighting/portfile.cmake
 index f20769536..61e62eaa4 100644
 --- a/ports/kf5syntaxhighlighting/portfile.cmake
@@ -650,6 +1020,18 @@ index f20769536..61e62eaa4 100644
      SHA512 c92df10d236d736f3f944f25efac796636ef857049732c0359edb900a1686839c55303917ab2286935024e7e6f19a0797fc38b417a1bd60d5dfb8c9c45ca6e66
      HEAD_REF master
  )
+diff --git a/ports/kf5syntaxhighlighting/vcpkg.json b/ports/kf5syntaxhighlighting/vcpkg.json
+index c6a320aea..873bf8c32 100644
+--- a/ports/kf5syntaxhighlighting/vcpkg.json
++++ b/ports/kf5syntaxhighlighting/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5syntaxhighlighting",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Syntax highlighting engine for Kate syntax definitions",
+   "homepage": "https://github.com/KDE/syntax-highlighting",
+   "dependencies": [
 diff --git a/ports/kf5textwidgets/portfile.cmake b/ports/kf5textwidgets/portfile.cmake
 index 6b4b11ee0..ad9e169de 100644
 --- a/ports/kf5textwidgets/portfile.cmake
@@ -665,6 +1047,18 @@ index 6b4b11ee0..ad9e169de 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5textwidgets/vcpkg.json b/ports/kf5textwidgets/vcpkg.json
+index 15f8a30fb..7c5e54198 100644
+--- a/ports/kf5textwidgets/vcpkg.json
++++ b/ports/kf5textwidgets/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5textwidgets",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Text editing widgets",
+   "homepage": "https://api.kde.org/frameworks/ktextwidgets/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5wallet/portfile.cmake b/ports/kf5wallet/portfile.cmake
 index ad62314be..2f962f4e6 100644
 --- a/ports/kf5wallet/portfile.cmake
@@ -678,6 +1072,18 @@ index ad62314be..2f962f4e6 100644
      SHA512 83bf40e5bfa9129ecfdaecebaf16c289542867337daf29be664aeb562e7c6bc32af4c59b71fcfae3cbbf70438872426b5981844c3c275b311340e5b48deac021
      HEAD_REF master
  )
+diff --git a/ports/kf5wallet/vcpkg.json b/ports/kf5wallet/vcpkg.json
+index 930bbc3b1..3af494b66 100644
+--- a/ports/kf5wallet/vcpkg.json
++++ b/ports/kf5wallet/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5wallet",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Safe desktop-wide storage for passwords",
+   "homepage": "https://api.kde.org/frameworks/kwallet/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5widgetsaddons/portfile.cmake b/ports/kf5widgetsaddons/portfile.cmake
 index 3ebf6c337..f2f870532 100644
 --- a/ports/kf5widgetsaddons/portfile.cmake
@@ -693,6 +1099,18 @@ index 3ebf6c337..f2f870532 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5widgetsaddons/vcpkg.json b/ports/kf5widgetsaddons/vcpkg.json
+index 207dfad8d..683a81d11 100644
+--- a/ports/kf5widgetsaddons/vcpkg.json
++++ b/ports/kf5widgetsaddons/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5widgetsaddons",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Addons to QtWidgets",
+   "homepage": "https://api.kde.org/frameworks/kwidgetsaddons/html/index.html",
+   "dependencies": [
 diff --git a/ports/kf5windowsystem/portfile.cmake b/ports/kf5windowsystem/portfile.cmake
 index 1fb2c7cf2..986215387 100644
 --- a/ports/kf5windowsystem/portfile.cmake
@@ -708,6 +1126,18 @@ index 1fb2c7cf2..986215387 100644
  )
  
  if (VCPKG_TARGET_IS_LINUX)
+diff --git a/ports/kf5windowsystem/vcpkg.json b/ports/kf5windowsystem/vcpkg.json
+index f3f8c3046..692a84264 100644
+--- a/ports/kf5windowsystem/vcpkg.json
++++ b/ports/kf5windowsystem/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5windowsystem",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "port-version": 1,
+   "description": "Access to the windowing system",
+   "homepage": "https://api.kde.org/frameworks/kwindowsystem/html/",
 diff --git a/ports/kf5xmlgui/portfile.cmake b/ports/kf5xmlgui/portfile.cmake
 index ab616f917..efc016aa8 100644
 --- a/ports/kf5xmlgui/portfile.cmake
@@ -723,6 +1153,18 @@ index ab616f917..efc016aa8 100644
      HEAD_REF master
  )
  
+diff --git a/ports/kf5xmlgui/vcpkg.json b/ports/kf5xmlgui/vcpkg.json
+index ea9f30a85..c12f117e0 100644
+--- a/ports/kf5xmlgui/vcpkg.json
++++ b/ports/kf5xmlgui/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5xmlgui",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Framework for managing menu and toolbar actions",
+   "homepage": "https://api.kde.org/frameworks/kxmlgui/html/index.html",
+   "dependencies": [
 -- 
 2.35.3
 
