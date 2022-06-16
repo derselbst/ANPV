@@ -141,24 +141,21 @@ jobs:
         vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
       enabled: false
-    - bash: |
-        cat C:/vcpkg/buildtrees/kf5*/config-*.log
-        cat C:/vcpkg/buildtrees/qtdeclarative/install-*-out.log
-      displayName: 'print logs'
-      condition: failed()
     - task: CopyFiles@2
       condition: succeededOrFailed()
       continueOnError: true
+      displayName: 'Copy logs to artifact dir'
       inputs:
         SourceFolder: ' C:\vcpkg\buildtrees'
         Contents: '**\*.log'
         TargetFolder: '$(Build.ArtifactStagingDirectory)\logs'
     - task: PublishBuildArtifacts@1
+      displayName: 'Publish installed libs'
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed
           artifactName: vcpkg-deps-$(platform)-$(poo)
       condition: succeededOrFailed()
-      enabled: true
+      enabled: false
     - bash: |
         set -ex
         mkdir build
@@ -171,6 +168,7 @@ jobs:
     - task: CopyFiles@2
       enabled: false
       continueOnError: true
+      displayName: 'Copy ANPV binaries to artifact dir'
       inputs:
         SourceFolder: 'build\$(configuration)'
         Contents: '**'
