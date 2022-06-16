@@ -96,6 +96,7 @@ jobs:
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0001-Compile-KDE-Framework-against-Qt6.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0002-Update-kf5-to-5.95.0.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0003-Compile-kf5configwidgets-without-kf5auth-on-Windows.patch
+        git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0004-Fix-KF5-dependencies.patch
       displayName: 'patch vcpkg'
     - bash: |
         set -ex
@@ -129,6 +130,13 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
+        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
+      displayName: 'Cleanup vcpkg dir'
+    - bash: |
+        set -ex
         vcpkg install                     --keep-going kf5kio:$(platform)-windows
         vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
@@ -145,13 +153,6 @@ jobs:
         SourceFolder: ' C:\vcpkg\buildtrees'
         Contents: '**\*.log'
         TargetFolder: '$(Build.ArtifactStagingDirectory)\logs'
-    - bash: |
-        set -ex
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
-      displayName: 'Cleanup vcpkg dir'
     - task: PublishBuildArtifacts@1
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed
