@@ -1,0 +1,32 @@
+From 910db9e3af75ca15462b85d69d8c007f551cf0f7 Mon Sep 17 00:00:00 2001
+From: "Moebert, Tom" <tom.moebert@zeiss.com>
+Date: Thu, 16 Jun 2022 23:01:21 +0200
+Subject: [PATCH 4/4] Fix KF5 dependencies
+
+---
+ ports/kf5configwidgets/vcpkg.json | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/ports/kf5configwidgets/vcpkg.json b/ports/kf5configwidgets/vcpkg.json
+index ec9843b8f..68f605e0b 100644
+--- a/ports/kf5configwidgets/vcpkg.json
++++ b/ports/kf5configwidgets/vcpkg.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "kf5configwidgets",
+-  "version": "5.89.0",
++  "version": "5.95.0",
+   "description": "Widgets for configuration dialogs",
+   "homepage": "https://api.kde.org/frameworks/kconfigwidgets/html/index.html",
+   "dependencies": [
+@@ -18,6 +18,7 @@
+     },
+     "kf5codecs",
+     "kf5config",
++    "kf5coreaddons",
+     "kf5guiaddons",
+     "kf5i18n",
+     "kf5widgetsaddons",
+-- 
+2.25.1.windows.1
+
