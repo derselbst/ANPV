@@ -127,6 +127,7 @@ jobs:
         vcpkg install qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+      enabled: false
     - bash: |
         set -ex
         vcpkg install kf5kio:$(platform)-windows
@@ -134,9 +135,17 @@ jobs:
       displayName: 'vcpkg build kf5kio'
       enabled: false
     - bash: |
-        cat  C:/vcpkg/buildtrees/kf5*/config-*.log
-      displayName: 'build logs'
+        cat C:/vcpkg/buildtrees/kf5*/config-*.log
+        cat C:/vcpkg/buildtrees/qtdeclarative/install-*-out.log
+      displayName: 'print logs'
       condition: failed()
+    - task: CopyFiles@2
+      condition: failed()
+      continueOnError: true
+      inputs:
+        SourceFolder: ' C:\vcpkg\buildtrees'
+        Contents: '**\*.log'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)\logs'
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
@@ -167,7 +176,6 @@ jobs:
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
-      enabled: false
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
