@@ -49,10 +49,10 @@ jobs:
           toolset: 'v142'
           generator: 'Visual Studio 16 2019'
           poo: 'windows-2019'
-        Win11:
-          toolset: 'v143'
-          generator: 'Visual Studio 17 2022'
-          poo: 'windows-2022'
+ #       Win11:
+ #         toolset: 'v143'
+ #         generator: 'Visual Studio 17 2022'
+ #         poo: 'windows-2022'
     pool:
       vmImage: $(poo)
     variables:
@@ -126,21 +126,19 @@ jobs:
         vcpkg install qt5compat:$(platform)-windows
         vcpkg install qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
-      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
-      enabled: false
+#      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
         vcpkg install kf5kio:$(platform)-windows
         vcpkg install kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
-      enabled: false
     - bash: |
         cat C:/vcpkg/buildtrees/kf5*/config-*.log
         cat C:/vcpkg/buildtrees/qtdeclarative/install-*-out.log
       displayName: 'print logs'
       condition: failed()
     - task: CopyFiles@2
-      condition: failed()
+      condition: succeededOrFailed()
       continueOnError: true
       inputs:
         SourceFolder: ' C:\vcpkg\buildtrees'
@@ -157,7 +155,7 @@ jobs:
       inputs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed
           artifactName: vcpkg-deps-$(platform)-$(poo)
-      condition: or(succeeded(), failed())
+      condition: succeededOrFailed()
       enabled: false
     - bash: |
         set -ex
@@ -176,6 +174,7 @@ jobs:
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
     - task: PublishBuildArtifacts@1
+      condition: succeededOrFailed()
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: ANPV-standalone-$(platform)-$(poo)
