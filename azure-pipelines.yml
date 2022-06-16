@@ -67,7 +67,7 @@ jobs:
       displayName: "Cache vcpkg's packages"
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
-        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs5"
+        key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs6"
         path: '$(VCPKG_INSTALLATION_ROOT)\installed'
         cacheHitVar: CACHE_RESTORED
     - bash: |
@@ -99,39 +99,40 @@ jobs:
       displayName: 'patch vcpkg'
     - bash: |
         set -ex
-        vcpkg install libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows
-        vcpkg install libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
+        vcpkg install                     libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows
+        vcpkg install --clean-after-build libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtbase:$(platform)-windows qtsvg:$(platform)-windows
-        vcpkg install qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
+        vcpkg install                     qtbase:$(platform)-windows qtsvg:$(platform)-windows
+        vcpkg install --clean-after-build qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qtimageformats:$(platform)-windows
-        vcpkg install qtimageformats:$(platform)-windows-static
+        vcpkg install                     qtimageformats:$(platform)-windows
+        vcpkg install --clean-after-build qtimageformats:$(platform)-windows-static
       displayName: 'vcpkg build QtImageformats'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install kf5itemviews:$(platform)-windows
-        vcpkg install kf5itemviews:$(platform)-windows-static
+        vcpkg install                     kf5itemviews:$(platform)-windows
+        vcpkg install --clean-after-build kf5itemviews:$(platform)-windows-static
       displayName: 'vcpkg build kf5itemviews'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install qt5compat:$(platform)-windows
-        vcpkg install qt5compat:$(platform)-windows-static
+        vcpkg install                     qt5compat:$(platform)-windows
+        vcpkg install --clean-after-build qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
-#      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install kf5kio:$(platform)-windows
-        vcpkg install kf5kio:$(platform)-windows-static
+        vcpkg install                     --keep-going kf5kio:$(platform)-windows
+        vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
+      enabled: false
     - bash: |
         cat C:/vcpkg/buildtrees/kf5*/config-*.log
         cat C:/vcpkg/buildtrees/qtdeclarative/install-*-out.log
@@ -156,7 +157,7 @@ jobs:
           pathtoPublish: $(VCPKG_INSTALLATION_ROOT)/installed
           artifactName: vcpkg-deps-$(platform)-$(poo)
       condition: succeededOrFailed()
-      enabled: false
+      enabled: true
     - bash: |
         set -ex
         mkdir build
