@@ -49,10 +49,10 @@ jobs:
           toolset: 'v142'
           generator: 'Visual Studio 16 2019'
           poo: 'windows-2019'
- #       Win11:
- #         toolset: 'v143'
- #         generator: 'Visual Studio 17 2022'
- #         poo: 'windows-2022'
+        Win11:
+          toolset: 'v143'
+          generator: 'Visual Studio 17 2022'
+          poo: 'windows-2022'
     pool:
       vmImage: $(poo)
     variables:
@@ -112,31 +112,28 @@ jobs:
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install                     qtimageformats:$(platform)-windows
-        vcpkg install --clean-after-build qtimageformats:$(platform)-windows-static
-      displayName: 'vcpkg build QtImageformats'
-      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
-    - bash: |
-        set -ex
-        vcpkg install                     kf5itemviews:$(platform)-windows
-        vcpkg install --clean-after-build kf5itemviews:$(platform)-windows-static
-      displayName: 'vcpkg build kf5itemviews'
-      condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
-    - bash: |
-        set -ex
+        df -h
         vcpkg install                     qt5compat:$(platform)-windows
         vcpkg install --clean-after-build qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/doc
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/tools/meson
-        rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows/doc
-      displayName: 'Cleanup vcpkg dir'
+        df -h
+        vcpkg install                     qtimageformats:$(platform)-windows
+        vcpkg install --clean-after-build qtimageformats:$(platform)-windows-static
+      displayName: 'vcpkg build QtImageformats'
+      enabled: false
     - bash: |
         set -ex
+        df -h
+        vcpkg install                     kf5itemviews:$(platform)-windows
+        vcpkg install --clean-after-build kf5itemviews:$(platform)-windows-static
+      displayName: 'vcpkg build kf5itemviews'
+      enabled: false
+    - bash: |
+        set -ex
+        df -h
         vcpkg install                     --keep-going kf5kio:$(platform)-windows
         vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
