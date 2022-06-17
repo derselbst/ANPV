@@ -96,7 +96,7 @@ jobs:
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0001-Compile-KDE-Framework-against-Qt6.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0002-Update-kf5-to-5.95.0.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0003-Compile-kf5configwidgets-without-kf5auth-on-Windows.patch
-        git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0004-Fix-KF5-dependencies.patch
+        #git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0004-Fix-KF5-dependencies.patch
       displayName: 'patch vcpkg'
     - bash: |
         set -ex
