@@ -100,42 +100,36 @@ jobs:
       displayName: 'patch vcpkg'
     - bash: |
         set -ex
-        vcpkg install                     libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows
-        vcpkg install --clean-after-build libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
+        vcpkg install --clean-after-build libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
-        vcpkg install                     qtbase:$(platform)-windows qtsvg:$(platform)-windows
-        vcpkg install --clean-after-build qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
+        vcpkg install --clean-after-build qtbase:$(platform)-windows qtsvg:$(platform)-windows qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
         df -h
-        vcpkg install                     qt5compat:$(platform)-windows
-        vcpkg install --clean-after-build qt5compat:$(platform)-windows-static
+        vcpkg install --clean-after-build qt5compat:$(platform)-windows qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
     - bash: |
         set -ex
         df -h
-        vcpkg install                     qtimageformats:$(platform)-windows
-        vcpkg install --clean-after-build qtimageformats:$(platform)-windows-static
+        vcpkg install --clean-after-build qtimageformats:$(platform)-windows qtimageformats:$(platform)-windows-static
       displayName: 'vcpkg build QtImageformats'
       enabled: false
     - bash: |
         set -ex
         df -h
-        vcpkg install                     kf5itemviews:$(platform)-windows
-        vcpkg install --clean-after-build kf5itemviews:$(platform)-windows-static
+        vcpkg install --clean-after-build kf5itemviews:$(platform)-windows kf5itemviews:$(platform)-windows-static
       displayName: 'vcpkg build kf5itemviews'
       enabled: false
     - bash: |
         set -ex
         df -h
-        vcpkg install                     --keep-going kf5kio:$(platform)-windows
-        vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows-static
+        vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
       enabled: false
     - task: CopyFiles@2
