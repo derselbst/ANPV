@@ -58,6 +58,7 @@ jobs:
     variables:
       configuration: 'Release'
       VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
+      VCPKG_MAX_CONCURRENCY: 1
       platform: 'x64'
       cmake_platform: 'x64'
     steps:
