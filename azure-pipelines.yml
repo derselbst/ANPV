@@ -5,9 +5,12 @@
 
 resources:
   containers:
-  - container: qt6Container
+  - container: qt6Container-linux
     endpoint: 'myDockerHub'
-    image: tommoebert332/ubuntu-qt6-kf6:latest
+    image: tommoebert332/qt6-kf6:latest-linux
+  - container: qt6Container-win
+    endpoint: 'myDockerHub'
+    image: tommoebert332/qt6-kf6:latest-win
 
 parameters:
 - name: UseCache
@@ -21,7 +24,7 @@ jobs:
       DEBIAN_FRONTEND: 'noninteractive'
     pool:
       vmImage: 'ubuntu-20.04'
-    container: qt6Container
+    container: qt6Container-linux
     steps:
     - checkout: self
       submodules: true
@@ -55,6 +58,7 @@ jobs:
           poo: 'windows-2022'
     pool:
       vmImage: $(poo)
+    container: qt6Container-win
     variables:
       configuration: 'Release'
       VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
@@ -66,6 +70,7 @@ jobs:
       submodules: true
     - task: Cache@2
       displayName: "Cache vcpkg's packages"
+      enabled: false
       condition: and(not(in(variables['Build.Reason'], 'Schedule')), ${{ parameters.useCache }})
       inputs:
         key: $(VCPKG_REVISION) | "$(platform)" | "$(poo)" | "withstaticlibs6"
@@ -93,6 +98,12 @@ jobs:
         # wait $chocoTask
         which pkg-config
       displayName: 'Update vcpkg'
+      enabled: false
+    - script: |
+        setx path "%path%;C:\Program Files\Git\bin"
+        echo %PATH%
+        bash -c "df -h"
+      displayName: 'add bash to PATH'
     - bash: |
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0001-Compile-KDE-Framework-against-Qt6.patch
         git -C "$VCPKG_INSTALLATION_ROOT" am $(pwd)/0002-Update-kf5-to-5.95.0.patch
@@ -104,17 +115,20 @@ jobs:
         vcpkg install --clean-after-build libjpeg-turbo:$(platform)-windows tiff:$(platform)-windows exiv2:$(platform)-windows libraw:$(platform)-windows ecm:$(platform)-windows libjpeg-turbo:$(platform)-windows-static tiff:$(platform)-windows-static exiv2:$(platform)-windows-static libraw:$(platform)-windows-static ecm:$(platform)-windows-static
       displayName: 'vcpkg build Dependencies'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+      enabled: false
     - bash: |
         set -ex
         vcpkg install --clean-after-build qtbase:$(platform)-windows qtsvg:$(platform)-windows qtbase:$(platform)-windows-static qtsvg:$(platform)-windows-static
       displayName: 'vcpkg build Qt6'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+      enabled: false
     - bash: |
         set -ex
         df -h
         vcpkg install --clean-after-build qt5compat:$(platform)-windows qt5compat:$(platform)-windows-static
       displayName: 'vcpkg build Qt5Compat'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+      enabled: false
     - bash: |
         set -ex
         df -h
@@ -126,13 +140,11 @@ jobs:
         df -h
         vcpkg install --clean-after-build kf5itemviews:$(platform)-windows kf5itemviews:$(platform)-windows-static
       displayName: 'vcpkg build kf5itemviews'
-      enabled: false
     - bash: |
         set -ex
         df -h
         vcpkg install --clean-after-build --keep-going kf5kio:$(platform)-windows kf5kio:$(platform)-windows-static
       displayName: 'vcpkg build kf5kio'
-      enabled: false
     - task: CopyFiles@2
       condition: succeededOrFailed()
       continueOnError: true
@@ -156,7 +168,6 @@ jobs:
         cmake -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
         cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
-      enabled: false
     - task: CopyFiles@2
       enabled: false
       continueOnError: true
