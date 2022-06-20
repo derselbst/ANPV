@@ -100,7 +100,7 @@ jobs:
       displayName: 'Update vcpkg'
       enabled: false
     - script: |
-        setx path "%path%;C:\Program Files\Git\bin"
+        setx path "%path%;C:\Program Files\Git\bin;%VCPKG_INSTALLATION_ROOT%"
       displayName: 'add bash to PATH'
     - script: |
         echo %PATH%
