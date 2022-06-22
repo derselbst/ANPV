@@ -64,13 +64,15 @@ jobs:
     steps:
     - checkout: self
       submodules: true
-    - cmd: |
-        mkdir build
-        cd build
-        set VCPKG_INSTALLATION_ROOT=C:/vcpkg
-        set PKG_CONFIG_PATH=%VCPKG_INSTALLATION_ROOT%/installed/$(platform)-windows-static/lib/pkgconfig
-        cmake -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
-        cmake --build . --config $(configuration) --parallel 3 --target anpv
+    - task: CmdLine@2
+      inputs:
+        script: |
+          mkdir build
+          cd build
+          set VCPKG_INSTALLATION_ROOT=C:/vcpkg
+          set PKG_CONFIG_PATH=%VCPKG_INSTALLATION_ROOT%/installed/$(platform)-windows-static/lib/pkgconfig
+          cmake -G "$(generator)" -A "$(cmake_platform)" -T "$(toolset)" -DCMAKE_BUILD_TYPE=$(configuration) -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
+          cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
     - task: CopyFiles@2
       continueOnError: true
