@@ -10,7 +10,7 @@ resources:
     image: tommoebert332/qt6-kf6:latest-linux
   - container: qt6Container-win
     endpoint: 'myDockerHub'
-    image: tommoebert332/qt6-kf6:latest-win
+    image: tommoebert332/qt6-kf6:pwsh
 
 parameters:
 - name: UseCache
