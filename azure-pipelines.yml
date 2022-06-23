@@ -64,9 +64,7 @@ jobs:
     steps:
     - checkout: self
       submodules: true
-    - task: CmdLine@2
-      inputs:
-        script: |
+    - script: |
           mkdir build
           cd build
           set VCPKG_INSTALLATION_ROOT=C:/vcpkg
