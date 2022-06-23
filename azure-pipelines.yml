@@ -73,7 +73,7 @@ jobs:
           cmake --build . --config $(configuration) --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
       continueOnError: true
-    - script: |
+    - bash: |
           mkdir build
           cd build
       displayName: 'test bash'
