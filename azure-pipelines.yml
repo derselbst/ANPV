@@ -59,6 +59,9 @@ jobs:
       configuration: 'Release'
       VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
       VCPKG_MAX_CONCURRENCY: 1
+      VS170COMNTOOLS: 'C:\BuildTools\Common7\Tools\'
+      VSINSTALLDIR: 'C:\BuildTools\'
+      VCINSTALLDIR: 'C:\BuildTools\VC\'
       platform: 'x64'
       cmake_platform: 'x64'
     steps:
@@ -70,7 +73,6 @@ jobs:
       displayName: 'Set up environment for x64'
     - script: |
           @ECHO ON
-          \BuildTools\VC\Auxiliary\Build\vcvarsall.bat x64
           mkdir build
           cd build
           set VCPKG_INSTALLATION_ROOT=C:/vcpkg
@@ -80,7 +82,6 @@ jobs:
       displayName: 'Compile static ANPV'
       condition: succeededOrFailed()
     - powershell: |
-          \BuildTools\VC\Auxiliary\Build\vcvarsall.bat x64
           mkdir build2
           cd build2
           set VCPKG_INSTALLATION_ROOT=C:/vcpkg
@@ -90,7 +91,6 @@ jobs:
       displayName: 'Compile static ANPV'
       condition: succeededOrFailed()
     - bash: |
-          \BuildTools\VC\Auxiliary\Build\vcvarsall.bat x64 || true
           mkdir build3
           cd build3
           set VCPKG_INSTALLATION_ROOT=C:/vcpkg
