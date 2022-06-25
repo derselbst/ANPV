@@ -81,10 +81,6 @@ jobs:
           cmake --build . --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
       condition: succeededOrFailed()
-    - bash: |
-          cd build
-          which bash
-      displayName: 'test bash'
     - task: CopyFiles@2
       continueOnError: true
       displayName: 'Copy ANPV binaries to artifact dir'
