@@ -70,10 +70,7 @@ set(PROJECT_LOCAL_INCLUDE_DIRS
         ${CMAKE_SOURCE_DIR}/src/InputLibraryWrapper
         ${CMAKE_SOURCE_DIR}/src/AudioOutput)
 
-
-### Search in the `cmake' directory for additional CMake modules.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-include(FindPkgConfig)
+find_package(PkgConfig REQUIRED)
 include(GNUInstallDirs)
 
 #############################
@@ -204,8 +201,8 @@ set_target_properties(anpv anpv-lib
 
 if(WIN32)
   if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
-    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
-    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+    pkg_check_modules ( CMS2 REQUIRED lcms2 IMPORTED_TARGET )
+    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS2) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
     
     pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
     target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
