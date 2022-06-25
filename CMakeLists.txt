@@ -201,8 +201,8 @@ set_target_properties(anpv anpv-lib
 
 if(WIN32)
   if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
-    pkg_check_modules ( CMS2 REQUIRED lcms2 IMPORTED_TARGET )
-    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS2) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
+    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET GLOBAL )
+    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
     
     pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
     target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
