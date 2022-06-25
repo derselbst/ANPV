@@ -12,12 +12,6 @@ resources:
     endpoint: 'myDockerHub'
     image: tommoebert332/qt6-kf6:vcpkg-only
 
-parameters:
-- name: UseCache
-  displayName: Use Dependency Cache
-  type: boolean
-  default: true
-
 jobs:
   - job: Linux
     variables:
@@ -60,7 +54,8 @@ jobs:
       VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
       VCPKG_MAX_CONCURRENCY: 1
       platform: 'x64'
-      cmake_platform: 'x64'
+      VCPKG_INSTALLATION_ROOT: 'C:/vcpkg'
+      PKG_CONFIG_PATH: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static/lib/pkgconfig'
     steps:
     - checkout: self
       submodules: true
@@ -70,12 +65,14 @@ jobs:
           cd build
           call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
           @ECHO ON
-          set VCPKG_INSTALLATION_ROOT=C:/vcpkg
-          set PKG_CONFIG_PATH=%VCPKG_INSTALLATION_ROOT%/installed/$(platform)-windows-static/lib/pkgconfig
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$(configuration)  -DCMAKE_VERBOSE_MAKEFILE=ON -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DVCPKG_PLATFORM_TOOLSET=$(toolset) -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
           cmake --build . --parallel 3 --target anpv
       displayName: 'Compile static ANPV'
-      condition: succeededOrFailed()
+    - task: CMake@1
+      displayName: 'CMake Check'
+      inputs:
+        cmakeArgs: --build . --target check --parallel
+        workingDirectory: 'build'
     - task: CopyFiles@2
       continueOnError: true
       displayName: 'Copy ANPV binaries to artifact dir'
