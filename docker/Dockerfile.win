@@ -44,6 +44,7 @@ RUN C:\TEMP\Install.cmd C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --n
 ENV VCPKG_INSTALLATION_ROOT=C:\vcpkg
 ENV VCPKG_REVISION=e5ca2ac2c24fb7810d6241692e55f1fc243b7e54
 
+
 FROM buildtools AS vcpkg-builder
 
 RUN git config --global user.email "you@example.com"
@@ -100,16 +101,38 @@ RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows-static
 RUN  vcpkg install --editable qttools[core,designer,linguist]:%PLATFORM%-windows-static
 
 ENV VCPKG_MAX_CONCURRENCY=17
+# KF5I18nMacros.cmake.in looks for gettext and it's executable, which is by default only installed for x64-windows (non-static) and therefore not found
+RUN  vcpkg install --clean-after-build gettext[core,tools]:%PLATFORM%-windows-static
+
 RUN  vcpkg install --clean-after-build kf5itemviews:%PLATFORM%-windows-static
 RUN  vcpkg install --clean-after-build --keep-going kf5kio:%PLATFORM%-windows-static
 
-# Use developer command prompt and start PowerShell if no other command specified.
-#ENTRYPOINT C:\BuildTools\Common7\Tools\VsDevCmd.bat
-#CMD ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+RUN  vcpkg install --clean-after-build pkgconf:x64-windows-static
 
-FROM  mcr.microsoft.com/windows/nanoserver:ltsc2022
+FROM ${FROM_IMAGE} AS powershell-builder
+
+WORKDIR /
+USER "NT AUTHORITY\SYSTEM"
+ADD https://github.com/PowerShell/PowerShell/releases/download/v7.2.5/PowerShell-7.2.5-win-x64.zip C:\powershell.zip
+SHELL ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+RUN Expand-Archive C:\powershell.zip -DestinationPath C:\PowerShell
+SHELL ["cmd", "/S", "/C"]
+RUN copy PowerShell\pwsh.exe PowerShell\powershell.exe
+
+
+FROM  mcr.microsoft.com/windows/servercore:ltsc2022
+
 COPY --from=buildtools C:/BuildTools ./BuildTools
 COPY --from=buildtools ["C:/Program Files/Git", "C:/Program Files/Git"]
-COPY --from=vcpkg-builder ["C:/vcpkg/installed", "./vcpkg"]
-COPY --from=vcpkg-builder ["C:/vcpkg/downloads/tools/cmake-3.22.2-windows/cmake-3.22.2-windows-i386/bin", "./CMake"]
-RUN setx path "%path%;C:\Program Files\Git\bin;C:\CMake"
+COPY --from=powershell-builder ["C:/PowerShell", "C:/PowerShell"]
+COPY --from=vcpkg-builder ["C:/vcpkg/scripts", "./vcpkg/scripts"]
+COPY --from=vcpkg-builder ["C:/vcpkg/triplets", "./vcpkg/triplets"]
+COPY --from=vcpkg-builder ["C:/vcpkg/toolsrc", "./vcpkg/toolsrc"]
+COPY --from=vcpkg-builder ["C:/vcpkg/installed", "./vcpkg/installed"]
+COPY --from=vcpkg-builder ["C:/vcpkg/downloads/tools/cmake-3.22.2-windows/cmake-3.22.2-windows-i386", "./CMake"]
+COPY --from=vcpkg-builder ["C:/vcpkg/.vcpkg-root", "./vcpkg/.vcpkg-root"]
+COPY --from=vcpkg-builder ["C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0", "C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0"]
+RUN setx path "%path%;C:\Program Files\Git\bin;C:\CMake\bin;C:\PowerShell"
+
+# Use developer command prompt and start PowerShell if no other command specified.
+#ENTRYPOINT C:\BuildTools\Common7\Tools\VsDevCmd.bat
