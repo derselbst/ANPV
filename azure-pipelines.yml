@@ -69,6 +69,7 @@ jobs:
           cmake --build . --target anpv
       displayName: 'Compile static ANPV'
     - script: |
+          call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
           cmake --build build --target check
       displayName: 'Run unit tests'
     - task: CopyFiles@2
