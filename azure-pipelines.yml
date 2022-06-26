@@ -72,6 +72,7 @@ jobs:
           call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
           cmake --build build --target check
       displayName: 'Run unit tests'
+      enabled: false
     - task: CopyFiles@2
       continueOnError: true
       displayName: 'Copy ANPV binaries to artifact dir'
