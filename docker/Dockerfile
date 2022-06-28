@@ -21,3 +21,4 @@ RUN echo n | ./kdesrc-build --initial-setup
 COPY kdesrc-buildrc /root/.config/
 
 RUN ./kdesrc-build +anpv && rm -rf /root/kde
+WORKDIR /anpv

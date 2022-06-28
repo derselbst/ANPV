@@ -10,4 +10,5 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - $HOME/.Xauthority:/root/.Xauthority
       - .:/anpv
+      - /home:/home:ro
     network_mode: host
