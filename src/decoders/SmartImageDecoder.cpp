@@ -286,11 +286,15 @@ void SmartImageDecoder::run()
 
     try
     {
+        // Before opening a file potentially located on a slow network drive, check whether we have already been cancelled.
+        this->cancelCallback();
+
         this->open();
         this->decode(d->targetState, d->desiredResolution, d->roiRect);
-        // Immediately close ourself once done. This is important to avoid resource leaks, when the 
-        // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
-        this->close();
+    }
+    catch (const UserCancellation&)
+    {
+        this->setDecodingState(DecodingState::Cancelled);
     }
     catch(...)
     {
@@ -301,6 +305,10 @@ void SmartImageDecoder::run()
         qCritical() << err;
         this->setDecodingState(DecodingState::Fatal);
     }
+
+    // Immediately close ourself once done. This is important to avoid resource leaks, when the 
+    // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
+    this->close();
 
     // this will not store the result if the future has been canceled already!
     d->promise->addResult(d->decodingState());
@@ -360,11 +368,12 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
         throw std::logic_error("SmartImageDecoder::convertColorSpace(): case not implemented");
     }
     
+    static const QColorSpace srgbSpace(QColorSpace::SRgb);
     QColorSpace csp = this->image()->colorSpace();
-    if (csp.primaries() != QColorSpace::Primaries::SRgb)
+    if (csp.isValid() && csp != srgbSpace)
     {
         this->setDecodingMessage("Transforming colorspace...");
-        QColorTransform colorTransform = csp.transformationToColorSpace(QColorSpace::SRgb);
+        QColorTransform colorTransform = csp.transformationToColorSpace(srgbSpace);
 
         auto* dataPtr = image.constBits();
         const size_t width = image.width();
@@ -437,6 +446,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 {
     if(d->promise && d->decodingProgress != prog)
     {
+        d->decodingProgress = prog;
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
     }
 }

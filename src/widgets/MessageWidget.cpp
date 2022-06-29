@@ -87,7 +87,7 @@ void MessageWidgetPrivate::createLayout()
         layout->addWidget(textLabel, 0, 1);
         if (!buttons.isEmpty()) {
             // Use an additional layout in row 1 for the buttons.
-            QHBoxLayout *buttonLayout = new QHBoxLayout;
+            QHBoxLayout *buttonLayout = new QHBoxLayout(content);
             buttonLayout->addStretch();
             Q_FOREACH (QToolButton *button, buttons) {
                 // For some reason, calling show() is necessary if wordwrap is true,

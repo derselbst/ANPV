@@ -351,6 +351,7 @@ struct MainWindow::Impl
     {
         if(!ui->iconSizeSlider->isSliderDown())
         {
+            QSignalBlocker b(ui->iconSizeSlider);
             // this is the initial change event, set the value of the slider
             ui->iconSizeSlider->setValue(h);
         }
@@ -478,10 +479,10 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
 
     connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QString newD, QString old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
-    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::QueuedConnection);
+    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::DirectConnection);
     
-    connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::QueuedConnection);
-    connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::QueuedConnection);
+    connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::DirectConnection);
+    connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::DirectConnection);
 
     connect(d->ui->filterPatternLineEdit, &QLineEdit::textChanged,
             this, [&](){ d->filterRegularExpressionChanged(); });

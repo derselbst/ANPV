@@ -450,6 +450,16 @@ bool ExifWrapper::iso(long& num)
     return d->mExivHandle.getExifTagLong("Exif.Photo.ISOSpeedRatings", num);
 }
 
+QString ExifWrapper::iso()
+{
+    long i;
+    if (this->iso(i))
+    {
+        return QString::number(i);
+    }
+    return QString();
+}
+
 QString ExifWrapper::lens()
 {
     return d->mExivHandle.getExifTagString("Exif.Photo.LensModel");
@@ -466,6 +476,19 @@ bool ExifWrapper::focalLength(double& quot)
     else
     {
         return false;
+    }
+}
+
+QString ExifWrapper::focalLength()
+{
+    double foc;
+    if (this->focalLength(foc))
+    {
+        return QString(QStringLiteral("%1 mm").arg(QString::number(foc)));
+    }
+    else
+    {
+        return QString();
     }
 }
 

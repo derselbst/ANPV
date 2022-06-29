@@ -11,7 +11,7 @@ struct TraceTimer::Impl
     int maxDuration; // in miliseconds
     std::string className;
     QElapsedTimer tim;
-    const char* info = nullptr;
+    std::string info;
 };
 
 TraceTimer::TraceTimer(const std::type_info& ti, int maxMs, const source_loc& location) : d(std::make_unique<Impl>())
@@ -34,7 +34,7 @@ TraceTimer::~TraceTimer()
     
     f << d->className << "::" << d->location.function_name() << "()\n"
     << "\tElapsed time: " << elapsed << " ms\n";
-    if(d->info)
+    if(!d->info.empty())
     {
         f << "\tAdditional info: " << d->info;
     }
@@ -50,5 +50,10 @@ TraceTimer::~TraceTimer()
 
 void TraceTimer::setInfo(const char* str)
 {
-    d->info = str;
+    d->info = std::string(str ? str : "");
+}
+
+void TraceTimer::setInfo(std::string&& str)
+{
+    d->info = std::move(str);
 }

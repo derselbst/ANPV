@@ -39,6 +39,7 @@
 #include "MessageWidget.hpp"
 #include "SortedImageModel.hpp"
 #include "MoveFileCommand.hpp"
+#include "WaitCursor.hpp"
 
 struct ThumbnailListView::Impl
 {
@@ -183,7 +184,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->setResizeMode(QListView::Adjust);
     this->setWordWrap(true);
     this->setWrapping(true);
-    this->setSpacing(2);
+    this->setSpacing(5);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
     d->q = this;
@@ -315,6 +316,36 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     }
     connect(model, &QAbstractItemModel::layoutChanged, this, [&](const QList<QPersistentModelIndex>, QAbstractItemModel::LayoutChangeHint){ d->scrollToCurrentIdx(); }, Qt::QueuedConnection);
     QListView::setModel(model);
+}
+
+void ThumbnailListView::keyPressEvent(QKeyEvent* event)
+{
+    switch (event->key())
+    {
+    case Qt::Key_Space:
+    case Qt::Key_Select:
+    {
+        WaitCursor w;
+        QItemSelectionModel* selMod = this->selectionModel();
+        QModelIndexList selInd = selMod->selectedRows();
+        bool ok = false;
+        if (selMod && !selInd.isEmpty())
+        {
+            for (auto& i : selInd)
+            {
+                ok |= this->edit(i, AnyKeyPressed, event);
+            }
+            if (ok)
+            {
+                event->accept();
+                return;
+            }
+        }
+        break;
+    }
+    }
+
+    this->QListView::keyPressEvent(event);
 }
 
 QList<Entry_t> ThumbnailListView::selectedImages()

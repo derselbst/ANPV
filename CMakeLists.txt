@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV VERSION 0.2 LANGUAGES CXX)
+project (ANPV VERSION 0.3 LANGUAGES CXX)
 
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
@@ -135,6 +135,8 @@ src/widgets/MainWindow.ui
 src/widgets/PreviewAllImagesDialog.cpp
 src/widgets/PreviewAllImagesDialog.hpp
 src/widgets/PreviewAllImagesDialog.ui
+src/widgets/ProgressIndicatorHelper.cpp
+src/widgets/ProgressIndicatorHelper.hpp
 src/widgets/ThumbnailListView.cpp
 src/widgets/ThumbnailListView.hpp
 src/decoders/DecoderFactory.hpp
@@ -160,18 +162,21 @@ src/logic/MoveFileCommand.hpp
 src/logic/UserCancellation.hpp
 src/logic/WaitCursor.hpp
 src/logic/xThreadGuard.hpp
+src/logic/types.hpp
 src/logic/TraceTimer.cpp
 src/logic/TraceTimer.hpp
 src/logic/ANPV.cpp
 src/logic/ANPV.hpp
 src/models/SortedImageModel.cpp
 src/models/SortedImageModel.hpp
+src/styles/CenteredBoxProxyStyle.cpp
+src/styles/CenteredBoxProxyStyle.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
-target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models)
+target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
 target_link_libraries(anpv PRIVATE Qt6::Widgets anpv-lib)

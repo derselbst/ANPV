@@ -77,13 +77,26 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Ima
     const QFileInfo& info = image->fileInfo();
     if(info.isFile())
     {
-        QImageReader r(info.absoluteFilePath());
-        QByteArray format = r.format();
-        if(image->isRaw() || format == "jpeg")
+        const QString extension = image->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
+
+        QByteArray format;
+        if (extension.isEmpty())
+        {
+            qInfo() << "Could not determine file extension for file " << image->fileInfo().fileName();
+            QImageReader r(info.absoluteFilePath());
+            format = r.format();
+            qDebug() << "Determined format " << format << " for file " << image->fileInfo().fileName();
+        }
+        else
+        {
+            format = extension.toLocal8Bit();
+        }
+
+        if(image->isRaw() || format == "jpeg" || format == "jpg")
         {
             return std::make_unique<SmartJpegDecoder>(image);
         }
-        else if(format == "tiff")
+        else if(format == "tiff" || format == "tif")
         {
             return std::make_unique<SmartTiffDecoder>(image);
         }

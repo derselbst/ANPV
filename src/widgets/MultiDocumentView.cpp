@@ -15,7 +15,7 @@
 struct MultiDocumentView::Impl
 {
     MultiDocumentView* q;
-    QTabWidget* tw;
+    QTabWidget* tw = nullptr;
     
     Impl(MultiDocumentView* q) : q(q)
     {}
@@ -43,7 +43,6 @@ struct MultiDocumentView::Impl
         QSettings settings;
         settings.beginGroup("MultiDocumentView");
         settings.setValue("geometry", q->saveGeometry());
-        settings.setValue("windowState", q->saveState());
         settings.endGroup();
     }
 
@@ -53,8 +52,9 @@ struct MultiDocumentView::Impl
         settings.beginGroup("MultiDocumentView");
         // open the window on the primary screen
         // by moving and resize it explicitly
-        q->restoreGeometry(settings.value("geometry", parent->saveGeometry()).toByteArray());
-        q->restoreState(settings.value("windowState", parent->saveState()).toByteArray());
+        QByteArray parentGeo = parent->saveGeometry();
+        QByteArray settingsGeo = settings.value("geometry", parentGeo).toByteArray();
+        q->restoreGeometry(settingsGeo);
         settings.endGroup();
     }
 };

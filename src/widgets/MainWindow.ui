@@ -13,6 +13,29 @@
   <property name="windowTitle">
    <string>ANPV</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+QSlider::add-page:horizontal {
+border: 0px solid #777;
+border-radius: 10px;
+}
+
+QSlider::handle:horizontal {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #eee, stop:1 #ccc);
+border: 1px solid #777;
+border-radius: 7px;
+width: 14px;
+}
+
+QSlider::handle:horizontal:hover {
+background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+    stop:0 #fff, stop:1 #ddd);
+border: 1px solid #444;
+border-radius: 0px;
+}
+</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
@@ -53,6 +76,9 @@
           <width>140</width>
           <height>0</height>
          </size>
+        </property>
+        <property name="cursor">
+         <cursorShape>SizeHorCursor</cursorShape>
         </property>
         <property name="contextMenuPolicy">
          <enum>Qt::NoContextMenu</enum>

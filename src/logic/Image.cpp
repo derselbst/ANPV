@@ -53,6 +53,9 @@ struct Image::Impl
     
     QPointer<QTimer> updateRectTimer;
     QRect cachedUpdateRect;
+
+    // indicates whether this instance has been marked by the user
+    Qt::CheckState checked = Qt::Unchecked;
     
     Impl(const QFileInfo& url) : fileInfo(url)
     {}
@@ -235,6 +238,7 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     else
     {
+        QSize currentSize = d->thumbnailTransformed.size();
         int currentHeight = d->thumbnailTransformed.height();
         if(!d->thumbnailTransformed.isNull() && currentHeight >= height)
         {
@@ -242,7 +246,9 @@ QPixmap Image::thumbnailTransformed(int height)
             return currentHeight == height ? d->thumbnailTransformed : d->thumbnailTransformed.scaledToHeight(height, Qt::FastTransformation);
         }
         
-        t.setInfo("no matching thumbnail cached, transforming and scaling it");
+        int currentWidth = thumb.width();
+        currentHeight = thumb.height();
+        t.setInfo(Formatter() << "no matching thumbnail cached, transforming and scaling a thumbnail with an original size of " << currentWidth << "x" << currentHeight << "px to height " << height << "px");
         pix = thumb.transformed(d->transformMatrixOrIdentity());
     }
     pix = pix.scaledToHeight(height, Qt::FastTransformation);
@@ -371,8 +377,8 @@ QString Image::formatInfoString()
 // whether the Image looks like a RAW from its file extension
 bool Image::isRaw() const
 {
-    const QByteArray formatHint = this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLocal8Bit().toLower();
-    bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(QString::fromLatin1(formatHint));
+    const QString formatHint = this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
+    bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(formatHint);
     return isRaw;
 }
 
@@ -433,6 +439,24 @@ void Image::setErrorMessage(const QString& err)
     }
 }
 
+Qt::CheckState Image::checked()
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    return d->checked;
+}
+
+void Image::setChecked(Qt::CheckState b)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    auto old = d->checked;
+    if (old != b)
+    {
+        d->checked = b;
+        lck.unlock();
+        emit this->checkStateChanged(this, b, old);
+    }
+}
+
 QImage Image::decodedImage()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
@@ -487,6 +511,11 @@ void Image::connectNotify(const QMetaMethod& signal)
         {
             emit this->decodedImageChanged(this, img);
         }
+    }
+    else if (signal.name() == QStringLiteral("checkStateChanged"))
+    {
+        Qt::CheckState s = this->checked();
+        emit this->checkStateChanged(this, s, s);
     }
 
     QObject::connectNotify(signal);

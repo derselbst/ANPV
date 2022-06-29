@@ -36,6 +36,7 @@ Q_OBJECT
 friend class SmartImageDecoder;
 friend class SmartJpegDecoder;
 friend class SmartTiffDecoder;
+friend class MySleepyImageDecoder;
 
 public:
     Image(const QFileInfo&);
@@ -52,6 +53,9 @@ public:
     
     QTransform userTransform() const;
     void setUserTransform(QTransform);
+
+    Qt::CheckState checked();
+    void setChecked(Qt::CheckState b);
     
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
@@ -82,6 +86,7 @@ signals:
     void thumbnailChanged(Image* self, QImage);
     void decodedImageChanged(Image* self, QImage img);
     void previewImageUpdated(Image* self, QRect r);
+    void checkStateChanged(Image* self, int newState, int oldState);
 
 protected:
     void connectNotify(const QMetaMethod& signal) override;

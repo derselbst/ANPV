@@ -121,10 +121,14 @@ void HardLinkFileCommand::doLink(const QString& sourceFolder, const QString& des
         {
             try
             {
+                if(!fs::is_regular_file(src))
+                {
+                    throw std::runtime_error("Refusing to hardlink non-regular file.");
+                }
                 fs::create_hard_link(src, dest);
                 ++it;
             }
-            catch(const fs::filesystem_error& e)
+            catch(const std::runtime_error& e)
             {
                 failedLinks.append(QPair<QString,QString>(*it, e.what()));
                 it = this->filesToLink.erase(it);

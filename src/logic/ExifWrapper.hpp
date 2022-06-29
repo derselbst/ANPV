@@ -53,8 +53,9 @@ public:
     bool iso(long& num);
     
     QString lens();
-    
+
     bool focalLength(double& quot);
+    QString focalLength();
     
     QDateTime dateRecorded();
     QString darkFrameSubtraction();

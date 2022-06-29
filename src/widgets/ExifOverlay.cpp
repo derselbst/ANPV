@@ -9,21 +9,20 @@
 
 struct ExifOverlay::Impl
 {
-    void effect(ExifOverlay* e, double opa)
+    QGraphicsOpacityEffect* opaEffect = nullptr;
+    void effect(double opa)
     {
-        auto* eff = new QGraphicsOpacityEffect(e);
-        eff->setOpacity(opa);
-        e->setGraphicsEffect(eff);
+        opaEffect->setOpacity(opa);
     }
     
-    void opaqueEffect(ExifOverlay* e)
+    void opaqueEffect()
     {
-        effect(e, 1);
+        effect(1);
     }
     
-    void transparentEffect(ExifOverlay* e)
+    void transparentEffect()
     {
-        effect(e, 0.35);
+        effect(0.35);
     }
 };
 
@@ -33,7 +32,10 @@ ExifOverlay::ExifOverlay(QWidget* parent)
     this->setCloseButtonVisible(false);
     this->setWordWrap(false);
     this->setAttribute(Qt::WA_Hover);
-    d->transparentEffect(this);
+    this->setFocusPolicy(Qt::NoFocus);
+    d->opaEffect = new QGraphicsOpacityEffect(this);
+    this->setGraphicsEffect(d->opaEffect);
+    d->transparentEffect();
     this->hide();
 }
 
@@ -58,12 +60,12 @@ void ExifOverlay::setMetadata(QSharedPointer<Image> dec)
 
 void ExifOverlay::enterEvent(QEnterEvent * event)
 {
-    d->opaqueEffect(this);
+    d->opaqueEffect();
     QWidget::enterEvent(event);
 }
 
 void ExifOverlay::leaveEvent(QEvent * event)
 {
-    d->transparentEffect(this);
+    d->transparentEffect();
     QWidget::leaveEvent(event);
 }
