@@ -215,7 +215,10 @@ void SmartImageDecoder::init()
 // Do not wait for finished()
 void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
 {
-    Q_ASSERT(!d->promise.isNull());
+    if (d->promise.isNull())
+    {
+        qDebug() << "There isn't anything to cancel.";
+    }
 
     bool isFinished = taskFuture.isFinished();
     bool taken = QThreadPool::globalInstance()->tryTake(this);
@@ -329,8 +332,8 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                 // or multiple decoders are concurrently decoding the same image.
                 Q_ASSERT(this->image()->decodedImage().constBits() == decodedImg.constBits());
                 
-                // if thumbnail is still null and no roi has been given, set it
-                if (this->image()->thumbnail().isNull() && !roiRect.isValid())
+                // if thumbnail is still null and we've decoded not just a part of the image
+                if (this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
                 {
                     QSize thumbnailSize;
                     static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
@@ -345,8 +348,6 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                     this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 }
             }
-
-            this->setDecodingState(targetState);
         } while(false);
     }
     catch(const UserCancellation&)
@@ -504,7 +505,6 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
 
         // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
         this->setDecodingState(DecodingState::PreviewImage);
-        
         return image;
     }
     catch (const std::bad_alloc&)

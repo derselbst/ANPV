@@ -136,6 +136,11 @@ void Image::setSize(QSize size)
     d->size = size;
 }
 
+QRect Image::fullResolutionRect() const
+{
+    return QRect(QPoint(0,0), this->size());
+}
+
 QTransform Image::userTransform() const
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);

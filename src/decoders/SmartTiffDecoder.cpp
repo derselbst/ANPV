@@ -269,9 +269,11 @@ struct SmartTiffDecoder::Impl
         return ret;
     }
     
-    QImage::Format format(int)
+    QImage::Format format(int page)
     {
-        return QImage::Format_ARGB32;
+        // If there's no alpha channel in the original TIFF, progpagate this information to Qt.
+        // This'll allow a performance gain for QPixmap::mask() which may be called by Qt internally.
+        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB32;
     }
     
     static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
@@ -281,7 +283,7 @@ struct SmartTiffDecoder::Impl
         
         for(size_t i=0; i<pageInfo.size(); i++)
         {
-            double scale  = size.width() / pageInfo[i].width;
+            double scale = size.width() / pageInfo[i].width;
             if(scale <= targetScale && scale >= prevScale)
             {
                 ret = i;
@@ -383,7 +385,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 
 QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
-    const QRect fullImageRect(QPoint(0,0), this->image()->size());
+    const QRect fullImageRect = this->image()->fullResolutionRect();
     
     QRect targetImageRect = fullImageRect;
     if(roiRect.isValid())
@@ -410,7 +412,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
-    
+
     QImage image = this->allocateImageBuffer(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
 
     // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
@@ -443,6 +445,15 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image);
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
+    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect)
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+    else
+    {
+        this->setDecodingState(DecodingState::PreviewImage);
+    }
+    
     return image;
 }
 
@@ -450,6 +461,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
 {
     const unsigned width = d->pageInfos[imagePageToDecode].width;
     const unsigned height = d->pageInfos[imagePageToDecode].height;
+    
+    bool skipColorTransform = false;
     
     if(!roi.isValid())
     {
@@ -480,6 +493,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
         std::vector<uint32_t> tileBuf(tw * tl);
         
+        // A rectangle covering the entire area that was decoded below
+        QRect decodedRoiRect;
         for (unsigned y = 0; y < height; y += tl)
         {
             for (unsigned x = 0; x < width; x += tw)
@@ -487,6 +502,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 QRect tile(x,y,tw,tl);
                 if(!tile.intersects(roi))
                 {
+                    skipColorTransform = true;
                     continue;
                 }
             
@@ -510,6 +526,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
                 }
+                
+                decodedRoiRect = decodedRoiRect.united(tile);
             }
         }
         Q_ASSERT(image.constBits() == dataPtrBackup);
@@ -608,8 +626,16 @@ gehtnich:
         }
     }
 
-    this->convertColorSpace(image);
+    if(skipColorTransform)
+    {
+        this->setDecodingMessage("Partial decoding finished, but color transforming is not yet supported for partial decoded images.");
+        // it would also transform the non-decoded surrounding void, which is very memory expensive...
+    }
+    else
+    {
+        this->convertColorSpace(image);
+        this->setDecodingMessage("TIFF decoding completed successfully.");
+    }
 
-    this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }

@@ -153,19 +153,26 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     cinfo.enable_2pass_quant = false;
     cinfo.do_block_smoothing = false;
     
-    cinfo.scale_num = 1;
-    cinfo.scale_denom = 1;
+    cinfo.scale_num = desiredResolution.width();
+    cinfo.scale_denom = roiRect.width();
+    
+    if(cinfo.scale_num * 1.0 / cinfo.scale_denom > 1.0)
+    {
+        // do not upscale the image while decoding
+        cinfo.scale_denom = cinfo.scale_num = 1;
+    }
+    
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
-    
+
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
 
-    bufferSetup.resize(cinfo.output_height);
-    for(JDIMENSION i=0; i < cinfo.output_height; i++)
+    bufferSetup.resize(cinfo.output_height / cinfo.rec_outbuf_height);
+    for(JDIMENSION i=0; i < bufferSetup.size(); i++)
     {
-        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i)));
+        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i * cinfo.rec_outbuf_height)));
     }
     
     this->cancelCallback();
@@ -205,16 +212,17 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    auto totalLinesRead = cinfo.output_scanline;
     while (!jpeg_input_complete(&cinfo))
     {
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
         
+        auto totalLinesRead = cinfo.output_scanline;
         while (cinfo.output_scanline < cinfo.output_height)
         {
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
+
             this->updatePreviewImage(QRect(0, totalLinesRead, cinfo.output_width, linesRead));
             totalLinesRead += linesRead;
         }
@@ -234,13 +242,25 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     Q_ASSERT(image.constBits() == dataPtrBackup);
     Q_ASSERT(dataPtrBackup == &bufferSetup[0][0]);
 
+// //     this->setDecodingMessage("Applying final smooth rescaling...");
+// //     image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
     this->convertColorSpace(image);
-    
+
     // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("JPEG decoding completed successfully.");
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
-    
+
+    if(cinfo.output_width == cinfo.image_width && cinfo.output_height == cinfo.image_height)
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+    else
+    {
+        this->setDecodingState(DecodingState::PreviewImage);
+    }
+
     Q_ASSERT(image.constBits() == dataPtrBackup);
     return image;
 }
