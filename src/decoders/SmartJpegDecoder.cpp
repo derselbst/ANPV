@@ -212,12 +212,12 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    auto totalLinesRead = cinfo.output_scanline;
     while (!jpeg_input_complete(&cinfo))
     {
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
         
+        auto totalLinesRead = cinfo.output_scanline;
         while (cinfo.output_scanline < cinfo.output_height)
         {
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
