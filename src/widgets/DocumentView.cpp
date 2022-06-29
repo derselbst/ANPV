@@ -232,6 +232,12 @@ struct DocumentView::Impl
     
     void startImageDecoding()
     {
+        if(!this->currentImageDecoder)
+        {
+            // error while loadImage()
+            return;
+        }
+        
         if(this->latestDecodingState == DecodingState::FullImage)
         {
             // full resolution image already decoded, only create a smooth pixmap
@@ -243,17 +249,17 @@ struct DocumentView::Impl
         taskFuture.waitForFinished();
 
         // get the area of what the user sees
-        QRect viewportRect = p->viewport()->rect();
+        QRect viewportRect = q->viewport()->rect();
 
         // and map that rect to scene coordinates
-        QRectF viewportRectScene = p->mapToScene(viewportRect).boundingRect();
+        QRectF viewportRectScene = q->mapToScene(viewportRect).boundingRect();
 
         // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
         QRectF visPixRect = viewportRectScene.intersected(this->currentImageDecoder->image()->fullResolutionRect());
 
         // the GraphicsView may have been scaled; we must translate the visible rectangle
         // (which is in scene coordinates) into the view's coordinates
-        QRectF visPixRectMappedToView = p->mapFromScene(visPixRect).boundingRect();
+        QRectF visPixRectMappedToView = q->mapFromScene(visPixRect).boundingRect();
 
         QSize desiredRes = visPixRectMappedToView.toAlignedRect().size();
         
