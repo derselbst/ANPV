@@ -52,7 +52,11 @@ struct MultiDocumentView::Impl
         settings.beginGroup("MultiDocumentView");
         // open the window on the primary screen
         // by moving and resize it explicitly
-        QByteArray parentGeo = parent->saveGeometry();
+        QByteArray parentGeo;
+        if (parent)
+        {
+            parentGeo = parent->saveGeometry();
+        }
         QByteArray settingsGeo = settings.value("geometry", parentGeo).toByteArray();
         q->restoreGeometry(settingsGeo);
         settings.endGroup();
@@ -60,7 +64,7 @@ struct MultiDocumentView::Impl
 };
 
 MultiDocumentView::MultiDocumentView(QMainWindow *parent)
- : QMainWindow(parent), d(std::make_unique<Impl>(this))
+ : QMainWindow(nullptr /* i.e. always treat it as new, independent Window */), d(std::make_unique<Impl>(this))
 {
     d->tw = new QTabWidget(this);
     d->tw->setTabBarAutoHide(true);
