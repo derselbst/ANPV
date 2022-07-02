@@ -117,8 +117,9 @@ struct DocumentView::Impl
         scene->invalidate();
     }
     
-    void onViewportChanged(QTransform newTransform)
+    void onViewportChanged()
     {
+        QTransform newTransform = q->viewportTransform();
         if(newTransform != this->previousFovTransform && this->taskFuture.isFinished())
         {
             if(this->latestDecodingState <= DecodingState::Metadata)
@@ -153,6 +154,7 @@ struct DocumentView::Impl
                 q->setTransform(exif->transformMatrix(), true);
             }
             q->fitInView(q->sceneRect(), Qt::KeepAspectRatio);
+            this->onViewportChanged();
         }
         else if(viewMode == ViewMode::None)
         {
@@ -561,11 +563,13 @@ void DocumentView::setModel(QSharedPointer<SortedImageModel> model)
 void DocumentView::zoomIn()
 {
     this->scale(1.2, 1.2);
+    d->onViewportChanged();
 }
 
 void DocumentView::zoomOut()
 {
     this->scale(1 / 1.2, 1 / 1.2);
+    d->onViewportChanged();
 }
 
 void DocumentView::wheelEvent(QWheelEvent *event)
@@ -604,10 +608,10 @@ void DocumentView::wheelEvent(QWheelEvent *event)
     QGraphicsView::wheelEvent(event);
 }
 
-bool DocumentView::viewportEvent(QEvent* event)
+void DocumentView::scrollContentsBy(int dx, int dy)
 {
-    d->onViewportChanged(this->viewportTransform());
-    return QGraphicsView::viewportEvent(event);
+    QGraphicsView::scrollContentsBy(dx, dy);
+    d->onViewportChanged();
 }
 
 void DocumentView::showEvent(QShowEvent* event)
@@ -895,12 +899,13 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     
     d->addThumbnailPreview(img);
     d->exifOverlay->setMetadata(img);
+    d->onViewportChanged();
 }
 
 void DocumentView::loadImage()
 {
-    this->showImage(d->currentImageDecoder->image());
     d->fovChangedTimer.stop();
+    this->showImage(d->currentImageDecoder->image());
 
     QObject::connect(d->currentImageDecoder->image().data(), &Image::decodedImageChanged, this, &DocumentView::onImageRefinement);
     QObject::connect(d->currentImageDecoder->image().data(), &Image::previewImageUpdated, this, &DocumentView::onPreviewImageUpdated);
