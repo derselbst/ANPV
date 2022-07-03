@@ -48,11 +48,11 @@ signals:
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
-    bool viewportEvent(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void showEvent(QShowEvent* event) override;
+    void scrollContentsBy(int dx, int dy) override;
 
     void loadImage();
     void showImage(QSharedPointer<Image> img);
