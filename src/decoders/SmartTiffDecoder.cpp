@@ -459,8 +459,8 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
 void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution)
 {
-    const unsigned width = d->pageInfos[imagePageToDecode].width;
-    const unsigned height = d->pageInfos[imagePageToDecode].height;
+    const auto& width = d->pageInfos[imagePageToDecode].width;
+    const auto& height = d->pageInfos[imagePageToDecode].height;
     
     bool skipColorTransform = false;
     
@@ -495,9 +495,9 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         
         // A rectangle covering the entire area that was decoded below
         QRect decodedRoiRect;
-        for (unsigned y = 0; y < height; y += tl)
+        for (uint32_t y = 0; y < height; y += tl)
         {
-            for (unsigned x = 0; x < width; x += tw)
+            for (uint32_t x = 0; x < width; x += tw)
             {
                 QRect tile(x,y,tw,tl);
                 if(!tile.intersects(roi))
@@ -518,7 +518,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     for (unsigned i = 0; i < linesToCopy; i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
+                        d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
                     this->updatePreviewImage(tile);
