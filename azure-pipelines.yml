@@ -5,9 +5,9 @@
 
 resources:
   containers:
-  - container: qt6Container
-    image: mdevriesdekimo/qt6:ubuntu2104
-    options: '-v /usr/bin/sudo:/usr/bin/sudo -v /usr/lib/sudo/libsudo_util.so.0:/usr/lib/sudo/libsudo_util.so.0 -v /usr/lib/sudo/sudoers.so:/usr/lib/sudo/sudoers.so -v /etc/sudoers:/etc/sudoers'
+  - container: qt6Container-linux
+    endpoint: 'myDockerHub'
+    image: tommoebert332/qt6-kf6:latest-linux
 
 parameters:
 - name: UseCache
