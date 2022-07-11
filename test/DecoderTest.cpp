@@ -212,8 +212,12 @@ void DecoderTest::testResettingWhileDecoding()
     QSignalSpy spy(&watcher, &QFutureWatcher<DecodingState>::started);
     
     watcher.setFuture(fut);
-    // manually run the event loop to get the events delivered
-    QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents, dec->sleep/4);
+    QDeadlineTimer deadline(10000);
+    while(spy.count() == 0 && !deadline.hasExpired())
+    {
+        // manually run the event loop to get the events delivered
+        QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents, dec->sleep/4);
+    }
     watcher.waitForFinished();
 
     QVERIFY(fut.isStarted());
