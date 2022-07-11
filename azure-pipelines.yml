@@ -19,7 +19,7 @@ jobs:
   - job: Linux
     pool:
       vmImage: 'ubuntu-20.04'
-    container: qt6Container
+    container: qt6Container-linux
     steps:
     - checkout: self
       submodules: true
