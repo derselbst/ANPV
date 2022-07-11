@@ -271,9 +271,9 @@ struct SmartTiffDecoder::Impl
     
     QImage::Format format(int page)
     {
-        // If there's no alpha channel in the original TIFF, progpagate this information to Qt.
-        // This'll allow a performance gain for QPixmap::mask() which may be called by Qt internally.
-        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB32;
+        // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
+        // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
+        return QImage::Format_ARGB32;
     }
     
     static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
