@@ -49,7 +49,6 @@ signals:
 protected:
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void showEvent(QShowEvent* event) override;
     void scrollContentsBy(int dx, int dy) override;
