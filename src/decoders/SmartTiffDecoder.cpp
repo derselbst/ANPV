@@ -388,9 +388,13 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     const QRect fullImageRect = this->image()->fullResolutionRect();
     
     QRect targetImageRect = fullImageRect;
-    if(roiRect.isValid())
+    if(!roiRect.isEmpty())
     {
-        targetImageRect = targetImageRect.intersected(roiRect);
+        QRect intersect = targetImageRect.intersected(roiRect);
+        if (!intersect.isEmpty())
+        {
+            targetImageRect = intersect;
+        }
     }
     
     if(!desiredResolution.isValid())
@@ -406,6 +410,10 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     double desiredScaleX = targetImageRect.width() * 1.0f / desiredDecodeResolution.width();
 
     int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, fullImageRect.size());
+    if (imagePageToDecode < 0)
+    {
+        throw std::runtime_error("Unable to find a suitable TIFF directory to decode.");
+    }
 
     double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
     double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();
