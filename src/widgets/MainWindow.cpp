@@ -350,6 +350,12 @@ struct MainWindow::Impl
     void onUrlNavigatorNavigationTriggered(const QUrl& url)
     {
         QString path = url.path();
+#ifdef Q_OS_WIN
+        if (path[0] == '/')
+        {
+            path.remove(0, 1);
+        }
+#endif
         rememberedUrlNavigatorActivatedDir = path;
         ANPV::globalInstance()->setCurrentDir(path);
     }
