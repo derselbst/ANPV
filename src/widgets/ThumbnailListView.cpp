@@ -48,6 +48,9 @@ struct ThumbnailListView::Impl
     QAction *actionOpenSelectionInternally=nullptr;
     QAction *actionOpenSelectionExternally=nullptr;
     QAction* actionOpenFolder=nullptr;
+    QAction* actionToggle = nullptr;
+    QAction* actionCheck = nullptr;
+    QAction* actionUncheck = nullptr;
     QAction* actionMoveTo=nullptr;
     QAction* actionCopyTo=nullptr;
     QAction* actionCopyToFilePath=nullptr;
@@ -173,6 +176,53 @@ struct ThumbnailListView::Impl
         
         q->scrollTo(cur, QAbstractItemView::PositionAtCenter);
     }
+
+    static Qt::CheckState toggleCheckState(Qt::CheckState state, const Qt::ItemFlags& flags)
+    {
+        if (flags & Qt::ItemIsUserTristate)
+        {
+            state = ((Qt::CheckState)((state + 1) % 3));
+        }
+        else
+        {
+            state = (state == Qt::Checked) ? Qt::Unchecked : Qt::Checked;
+        }
+        return state;
+    }
+
+    static Qt::CheckState checkCheckState(Qt::CheckState state, const Qt::ItemFlags& flags)
+    {
+        return Qt::Checked;
+    }
+
+    static Qt::CheckState uncheckCheckState(Qt::CheckState state, const Qt::ItemFlags& flags)
+    {
+        return Qt::Unchecked;
+    }
+
+    void checkSelectedImages(Qt::CheckState (*getNewState)(Qt::CheckState state, const Qt::ItemFlags& flags))
+    {
+        WaitCursor w;
+        QItemSelectionModel* selMod = q->selectionModel();
+        QModelIndexList selInd = selMod->selectedRows();
+        bool ok = false;
+        if (selMod && !selInd.isEmpty())
+        {
+            for (auto& i : selInd)
+            {
+                // borrowed from QStyledItemDelegate::editorEvent()
+
+                QVariant value = i.data(Qt::CheckStateRole);
+                Qt::ItemFlags flags = q->model()->flags(i);
+                if (!(flags & Qt::ItemIsUserCheckable) || !(flags & Qt::ItemIsEnabled) || !value.isValid())
+                    continue;
+
+                Qt::CheckState state = static_cast<Qt::CheckState>(value.toInt());
+                state = getNewState(state, flags);
+                ok |= q->model()->setData(i, state, Qt::CheckStateRole);
+            }
+        }
+    }
 };
 
 ThumbnailListView::ThumbnailListView(QWidget *parent)
@@ -200,6 +250,20 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
     connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
     
+    d->actionToggle = new QAction("Toggle selected images", this);
+    d->actionToggle->setShortcut(Qt::Key_Space);
+    d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(d->actionToggle, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->toggleCheckState); });
+
+    d->actionCheck = new QAction("Check selected images", this);
+    d->actionCheck->setShortcut(Qt::Key_Select);
+    d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(d->actionCheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->checkCheckState); });
+
+    d->actionUncheck = new QAction("Uncheck selected images", this);
+    d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(d->actionUncheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->uncheckCheckState); });
+
     d->actionCopyToFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
     connect(d->actionCopyToFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
     
@@ -231,6 +295,14 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     
     this->addAction(d->actionCopyToFilePath);
     
+    sep = new QAction(this);
+    sep->setSeparator(true);
+    this->addAction(sep);
+    
+    this->addAction(d->actionToggle);
+    this->addAction(d->actionCheck);
+    this->addAction(d->actionUncheck);
+
     sep = new QAction(this);
     sep->setSeparator(true);
     this->addAction(sep);
@@ -316,36 +388,6 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     }
     connect(model, &QAbstractItemModel::layoutChanged, this, [&](const QList<QPersistentModelIndex>, QAbstractItemModel::LayoutChangeHint){ d->scrollToCurrentIdx(); }, Qt::QueuedConnection);
     QListView::setModel(model);
-}
-
-void ThumbnailListView::keyPressEvent(QKeyEvent* event)
-{
-    switch (event->key())
-    {
-    case Qt::Key_Space:
-    case Qt::Key_Select:
-    {
-        WaitCursor w;
-        QItemSelectionModel* selMod = this->selectionModel();
-        QModelIndexList selInd = selMod->selectedRows();
-        bool ok = false;
-        if (selMod && !selInd.isEmpty())
-        {
-            for (auto& i : selInd)
-            {
-                ok |= this->edit(i, AnyKeyPressed, event);
-            }
-            if (ok)
-            {
-                event->accept();
-                return;
-            }
-        }
-        break;
-    }
-    }
-
-    this->QListView::keyPressEvent(event);
 }
 
 void ThumbnailListView::mousePressEvent(QMouseEvent *event)

@@ -1060,12 +1060,17 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
         case Qt::TextAlignmentRole:
         {
             constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
-            return int(alignment);
+            constexpr int a = alignment;
+            return a;
         }
         case Qt::CheckStateRole:
             return i->checked();
         case CheckAlignmentRole:
-            return { Qt::AlignLeft | Qt::AlignTop };
+        {
+            constexpr Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignTop;
+            constexpr int a = alignment;
+            return a;
+        }
         case DecorationAlignmentRole:
         case Qt::EditRole:
         case Qt::StatusTipRole:

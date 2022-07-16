@@ -363,9 +363,10 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
 
 void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
 {
-    if(image.depth() != 32)
+    auto depth = image.depth();
+    if(depth != 32)
     {
-        throw std::logic_error("SmartImageDecoder::convertColorSpace(): case not implemented");
+        throw std::logic_error(Formatter() << "SmartImageDecoder::convertColorSpace(): case not implemented for images with depth " << depth << " bits");
     }
     
     static const QColorSpace srgbSpace(QColorSpace::SRgb);

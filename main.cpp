@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
         break;
     case 2:
     {
-        QString arg(argv[1]);
+        QString arg = QString::fromLocal8Bit(argv[1]);
         QFileInfo info(arg);
         if(info.exists())
         {
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
         QList<Entry_t> files;
         for(int i=1; i<argc;i++)
         {
-            files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString(argv[i]))), nullptr));
+            files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))), nullptr));
         }
         
         splash.showMessage("Starting the image decoding task...");

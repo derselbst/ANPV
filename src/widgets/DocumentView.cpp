@@ -427,7 +427,17 @@ struct DocumentView::Impl
         act = new QAction(q);
         act->setSeparator(true);
         q->addAction(act);
-        
+
+        QList<QAction*> parentActions = q->parentWidget()->actions();
+        for (QAction* a : parentActions)
+        {
+            q->addAction(a);
+        }
+
+        act = new QAction(q);
+        act->setSeparator(true);
+        q->addAction(act);
+
         this->actionShowScrollBars = new QAction("Show Scroll Bars", q);
         this->actionShowScrollBars->setCheckable(true);
         connect(this->actionShowScrollBars, &QAction::toggled, q, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
@@ -632,27 +642,6 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     }
 
     QGraphicsView::resizeEvent(event);
-}
-
-void DocumentView::keyPressEvent(QKeyEvent *event)
-{
-    WaitCursor w;
-    switch(event->key())
-    {
-        case Qt::Key_Escape:
-            // intentionally ignore the event, so that it can be processed by the parent view (MultiDocumentView)
-            event->ignore();
-            if(ANPV::globalInstance()->currentDir().isEmpty() && d->currentImageDecoder)
-            {
-                ANPV::globalInstance()->setCurrentDir(d->currentImageDecoder->image()->fileInfo().dir().absolutePath());
-            }
-            ANPV::globalInstance()->showThumbnailView();
-            this->close();
-            break;
-        default:
-            QGraphicsView::keyPressEvent(event);
-            break;
-    }
 }
 
 void DocumentView::mouseMoveEvent(QMouseEvent *event)

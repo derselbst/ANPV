@@ -271,9 +271,9 @@ struct SmartTiffDecoder::Impl
     
     QImage::Format format(int page)
     {
-        // If there's no alpha channel in the original TIFF, progpagate this information to Qt.
-        // This'll allow a performance gain for QPixmap::mask() which may be called by Qt internally.
-        return this->pageInfos[page].spp == 4 ? QImage::Format_ARGB32 : QImage::Format_RGB32;
+        // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
+        // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
+        return QImage::Format_ARGB32;
     }
     
     static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
@@ -388,9 +388,13 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     const QRect fullImageRect = this->image()->fullResolutionRect();
     
     QRect targetImageRect = fullImageRect;
-    if(roiRect.isValid())
+    if(!roiRect.isEmpty())
     {
-        targetImageRect = targetImageRect.intersected(roiRect);
+        QRect intersect = targetImageRect.intersected(roiRect);
+        if (!intersect.isEmpty())
+        {
+            targetImageRect = intersect;
+        }
     }
     
     if(!desiredResolution.isValid())
@@ -406,6 +410,10 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     double desiredScaleX = targetImageRect.width() * 1.0f / desiredDecodeResolution.width();
 
     int imagePageToDecode = d->findSuitablePage(d->pageInfos, desiredScaleX, fullImageRect.size());
+    if (imagePageToDecode < 0)
+    {
+        throw std::runtime_error("Unable to find a suitable TIFF directory to decode.");
+    }
 
     double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
     double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();
@@ -459,8 +467,8 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
 void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution)
 {
-    const unsigned width = d->pageInfos[imagePageToDecode].width;
-    const unsigned height = d->pageInfos[imagePageToDecode].height;
+    const auto& width = d->pageInfos[imagePageToDecode].width;
+    const auto& height = d->pageInfos[imagePageToDecode].height;
     
     bool skipColorTransform = false;
     
@@ -495,9 +503,9 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         
         // A rectangle covering the entire area that was decoded below
         QRect decodedRoiRect;
-        for (unsigned y = 0; y < height; y += tl)
+        for (uint32_t y = 0; y < height; y += tl)
         {
-            for (unsigned x = 0; x < width; x += tw)
+            for (uint32_t x = 0; x < width; x += tw)
             {
                 QRect tile(x,y,tw,tl);
                 if(!tile.intersects(roi))
@@ -518,7 +526,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     for (unsigned i = 0; i < linesToCopy; i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
+                        d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
                     this->updatePreviewImage(tile);

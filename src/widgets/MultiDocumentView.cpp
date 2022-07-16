@@ -3,6 +3,8 @@
 #include "DocumentView.hpp"
 #include "Image.hpp"
 #include "SortedImageModel.hpp"
+#include "WaitCursor.hpp"
+#include "ANPV.hpp"
 
 #include <QTabWidget>
 #include <QGuiApplication>
@@ -11,11 +13,13 @@
 #include <QSharedPointer>
 #include <QKeyEvent>
 #include <QSettings>
+#include <QAction>
+#include <QPointer>
 
 struct MultiDocumentView::Impl
 {
     MultiDocumentView* q;
-    QTabWidget* tw = nullptr;
+    QPointer<QTabWidget> tw = nullptr;
     
     Impl(MultiDocumentView* q) : q(q)
     {}
@@ -61,6 +65,23 @@ struct MultiDocumentView::Impl
         q->restoreGeometry(settingsGeo);
         settings.endGroup();
     }
+
+    void openThumbnailView()
+    {
+        WaitCursor w;
+        if (ANPV::globalInstance()->currentDir().isEmpty())
+        {
+            auto* dv = qobject_cast<DocumentView*>(this->tw->currentWidget());
+            if (dv)
+            {
+                QFileInfo inf = dv->currentFile();
+                ANPV::globalInstance()->setCurrentDir(inf.dir().absolutePath());
+            }
+        }
+
+        ANPV::globalInstance()->showThumbnailView();
+        q->close();
+    }
 };
 
 MultiDocumentView::MultiDocumentView(QMainWindow *parent)
@@ -78,6 +99,12 @@ MultiDocumentView::MultiDocumentView(QMainWindow *parent)
     
     connect(d->tw, &QTabWidget::currentChanged, this, [&](int index) { d->onCurrentTabChanged(index); });
     connect(d->tw, &QTabWidget::tabCloseRequested, this, [&](int index) { d->onTabCloseRequested(index); });
+
+    QAction* closeAction = new QAction("Open ThumbnailView", this);
+    closeAction->setShortcuts({ {Qt::Key_Escape} });
+    closeAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(closeAction, &QAction::triggered, this, [&]() { d->openThumbnailView(); });
+    this->addAction(closeAction);
 }
 
 MultiDocumentView::~MultiDocumentView() = default;
@@ -91,7 +118,7 @@ void MultiDocumentView::addImages(const QList<Entry_t>& image, QSharedPointer<So
     
     for(auto& e : image)
     {
-        DocumentView* dv = new DocumentView(d->tw);
+        DocumentView* dv = new DocumentView(this);
 
         connect(dv, &DocumentView::imageChanged, this,
         [=](QSharedPointer<Image> img)
