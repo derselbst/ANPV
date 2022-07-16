@@ -42,7 +42,7 @@ ANPV::FileOperation FileOperationConfigDialog::operationFromAction(QAction* a)
     }
     QMetaEnum metaEnumOperation = QMetaEnum::fromType<ANPV::FileOperation>();
     bool ok;
-    auto result = static_cast<ANPV::FileOperation>(metaEnumOperation.keyToValue(words[0].toLatin1().constData(), &ok));
+    auto result = static_cast<ANPV::FileOperation>(metaEnumOperation.keyToValue(words[0].remove('&').toLatin1().constData(), &ok));
     if(!ok)
     {
         throw std::runtime_error("Unable to determine FileOperation type");
@@ -96,7 +96,8 @@ void FileOperationConfigDialog::accept()
             QString title = comboBox->currentText();
             title += " to ";
             title += targetDir;
-            action = new QAction(title, ANPV::globalInstance());
+            action = new QAction(ANPV::globalInstance());
+            action->setText(title);
             action->setShortcut(seq);
             action->setData(targetDir);
             action->setShortcutContext(Qt::WidgetShortcut);
