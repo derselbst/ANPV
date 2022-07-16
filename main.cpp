@@ -109,7 +109,11 @@ int main(int argc, char *argv[])
     }
     catch(const std::exception& e)
     {
-        QMessageBox::critical(nullptr, "Unhandled Exception", e.what());
+        Formatter f;
+        f << "An unexpected error caused ANPV to terminate.\n"
+            "Error Type: " << typeid(e).name() << "\n"
+            "Error Message: \n" << e.what();
+        QMessageBox::critical(nullptr, "Unexpected error", f.str().c_str());
     }
     return -1;
 }
