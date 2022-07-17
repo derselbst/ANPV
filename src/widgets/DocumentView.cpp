@@ -441,7 +441,7 @@ struct DocumentView::Impl
         connect(act, &QAction::triggered, q, [&]() { this->goTo(-1); });
         q->addAction(act);
 
-        act = new QAction("Toggle selection of current image", q);
+        act = new QAction("Toggle check state of current image", q);
         act->setShortcuts({ {Qt::Key_Space} });
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&]() { this->onToggleSelect(); });

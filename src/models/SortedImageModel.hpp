@@ -56,6 +56,7 @@ public:
     Entry_t goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
     Entry_t entry(const QModelIndex& idx) const;
     Entry_t entry(unsigned int row) const;
+    QList<Entry_t> checkedEntries();
 
     void sort(Column column);
     void sort(Qt::SortOrder order);

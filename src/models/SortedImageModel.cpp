@@ -1185,3 +1185,19 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
     
     return QFileInfo();
 }
+
+QList<Entry_t> SortedImageModel::checkedEntries()
+{
+    QList<Entry_t> results;
+    results.reserve(this->rowCount());
+    for (Entry_t& e : d->entries)
+    {
+        auto img = this->image(e);
+        Qt::CheckState chk = img->checked();
+        if (chk != Qt::CheckState::Unchecked)
+        {
+            results.push_back(e);
+        }
+    }
+    return results;
+}
