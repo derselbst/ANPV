@@ -389,6 +389,23 @@ struct DocumentView::Impl
             q->loadImage(newEntry);
         }
     }
+
+    void onToggleSelect()
+    {
+        if (this->currentImageDecoder)
+        {
+            auto img = this->currentImageDecoder->image();
+            if (img)
+            {
+                Qt::CheckState chk = img->checked();
+                if (chk == Qt::CheckState::PartiallyChecked)
+                {
+                    return;
+                }
+                img->setChecked(chk == Qt::CheckState::Checked ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
+            }
+        }
+    }
     
     void onSetBackgroundColor()
     {
@@ -413,15 +430,21 @@ struct DocumentView::Impl
         QAction* act;
         
         act = new QAction(QIcon::fromTheme("go-next"), "Go Next", q);
-        act->setShortcuts({{Qt::Key_Space}, {Qt::Key_Right}});
+        act->setShortcuts({{Qt::Key_Right}});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->goTo(+1); });
         q->addAction(act);
-        
+
         act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", q);
-        act->setShortcuts({{Qt::Key_Backspace}, {Qt::Key_Left}});
+        act->setShortcuts({ {Qt::Key_Left} });
         act->setShortcutContext(Qt::WidgetShortcut);
-        connect(act, &QAction::triggered, q, [&](){ this->goTo(-1); });
+        connect(act, &QAction::triggered, q, [&]() { this->goTo(-1); });
+        q->addAction(act);
+
+        act = new QAction("Toggle selection of current image", q);
+        act->setShortcuts({ {Qt::Key_Space} });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { this->onToggleSelect(); });
         q->addAction(act);
 
         act = new QAction(q);
