@@ -657,7 +657,8 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
 
-    QPoint bottomLeftCheckPoint(0, wndSize.height() - d->isSelectedBox->size().height());
+    QSize i = d->isSelectedBox->iconSize();
+    QPoint bottomLeftCheckPoint(0, wndSize.height() - i.height());
     d->isSelectedBox->move(bottomLeftCheckPoint);
     if(d->currentImageDecoder)
     {
