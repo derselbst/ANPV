@@ -495,6 +495,7 @@ struct DocumentView::Impl
                 return;
             }
 
+            WaitCursor w;
             QList<QObject*> objs = act->associatedObjects();
             for(QObject* o : objs)
             {
@@ -508,6 +509,9 @@ struct DocumentView::Impl
                     switch(op)
                     {
                         case ANPV::FileOperation::Move:
+                            // cancel any pending decoding to release the file handle and avoid a "File being used by other process" error on Windows
+                            this->currentImageDecoder->cancelOrTake(this->taskFuture.future());
+                            this->taskFuture.waitForFinished();
                             ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
                             q->loadImage(nextImg);
                             break;
