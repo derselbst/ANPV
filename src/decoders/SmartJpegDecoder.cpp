@@ -212,7 +212,8 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    while (!jpeg_input_complete(&cinfo))
+    int progressiveGuard;
+    for (progressiveGuard = 0; (!jpeg_input_complete(&cinfo)) && progressiveGuard < 1000; progressiveGuard++)
     {
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
@@ -247,8 +248,16 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     this->convertColorSpace(image);
 
-    // call the progress monitor for a last time to report 100% to GUI
-    this->setDecodingMessage("JPEG decoding completed successfully.");
+    if (progressiveGuard >= 1000)
+    {
+        // see https://libjpeg-turbo.org/pmwiki/uploads/About/TwoIssueswiththeJPEGStandard.pdf
+        this->setDecodingMessage("Progressive JPEG decoding was aborted after decoding 1000 scans");
+    }
+    else
+    {
+        // call the progress monitor for a last time to report 100% to GUI
+        this->setDecodingMessage("JPEG decoding completed successfully.");
+    }
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
 
