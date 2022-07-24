@@ -542,7 +542,9 @@ struct SortedImageModel::Impl
             }
             catch(const std::exception& e)
             {
-                throw std::logic_error("todo: handle error, display error");
+                qCritical() << "Exception in SortedImageModel::Impl::addSingleFile()";
+                qCritical() << typeid(e).name() << " : " << e.what();
+                throw;
             }
             
             return true;
