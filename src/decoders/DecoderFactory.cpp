@@ -3,6 +3,7 @@
 
 #include "SmartImageDecoder.hpp"
 #include "SmartJpegDecoder.hpp"
+#include "SmartPngDecoder.hpp"
 #include "SmartTiffDecoder.hpp"
 #include "DocumentView.hpp"
 #include "Image.hpp"
@@ -96,9 +97,13 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Ima
         {
             return std::make_unique<SmartJpegDecoder>(image);
         }
-        else if(format == "tiff" || format == "tif")
+        else if (format == "tiff" || format == "tif")
         {
             return std::make_unique<SmartTiffDecoder>(image);
+        }
+        else if (format == "png")
+        {
+            return std::make_unique<SmartPngDecoder>(image);
         }
     }
     
