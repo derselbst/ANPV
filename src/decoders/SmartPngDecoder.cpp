@@ -178,6 +178,13 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         Q_ASSERT(compression_type == PNG_COMPRESSION_TYPE_BASE);
         iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<char*>(profile), proflen));
     }
+
+    uint32_t num_exif;
+    unsigned char* exif;
+    if (png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
+    {
+        qDebug() << "Cool, we've got exif data in PNG!";
+    }
     
     this->image()->setSize(QSize(width, height));
     this->image()->setColorSpace(iccProfile);
@@ -197,7 +204,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image);
 
     std::vector<unsigned char*> bufferSetup;
-    bufferSetup.resize(png_get_image_height(cinfo, d->info_ptr));
+    bufferSetup.resize(height);
     for (size_t i = 0; i < bufferSetup.size(); i++)
     {
         bufferSetup[i] = const_cast<unsigned char*>(image.constScanLine(i));
@@ -217,22 +224,36 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         numPasses = png_set_interlace_handling(cinfo);
     }
 
+    desiredResolution = QSize (width, height).scaled(desiredResolution, Qt::KeepAspectRatio);
+    double scale = desiredResolution.width() * 1.0 / width;
+    scale = std::min(scale, 1.0);
+
+    numPasses = std::round(numPasses * scale);
+    numPasses = std::max(numPasses, 1);
+
     this->setDecodingMessage("Consuming and decoding PNG input file");
 
     for (int pass = 0; pass < numPasses; pass++)
     {
-        png_read_rows(cinfo, bufferSetup.data(), nullptr, png_get_image_height(cinfo, d->info_ptr));
+        png_read_rows(cinfo, bufferSetup.data(), nullptr, height);
         this->cancelCallback();
     }
 
     Q_ASSERT(image.constBits() == dataPtrBackup);
+
+    if (std::fabs(1 - scale) > 0.05)
+    {
+        image = image.scaledToWidth(width * scale, Qt::SmoothTransformation);
+        this->image()->setDecodedImage(image);
+    }
+    else
+    {
+        this->setDecodingState(DecodingState::FullImage);
+    }
+
     this->convertColorSpace(image);
 
-    // call the progress monitor for a last time to report 100% to GUI
     this->setDecodingMessage("PNG decoding completed successfully.");
-    this->setDecodingState(DecodingState::FullImage);
-
-    Q_ASSERT(image.constBits() == dataPtrBackup);
 
     return image;
 }
