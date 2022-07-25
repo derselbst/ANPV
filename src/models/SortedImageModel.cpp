@@ -542,6 +542,7 @@ struct SortedImageModel::Impl
             }
             catch(const std::exception& e)
             {
+                qCritical() << typeid(e).name() << " : " << e.what();
                 throw std::logic_error("todo: handle error, display error");
             }
             

@@ -134,6 +134,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
     QImage image;
+
+    if (!roiRect.isValid())
+    {
+        roiRect = this->image()->fullResolutionRect();
+    }
     
     auto& cinfo = d->cinfo;
     

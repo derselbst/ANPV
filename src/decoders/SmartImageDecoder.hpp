@@ -40,6 +40,9 @@ public:
     virtual void open();
     virtual void init();
     virtual void close();
+
+    // desiredResolution contains the requested size of the decoded image in pixels. The decoder may return an image of any size though, as it may or may not respect this.
+    // roiRect contains a rectangluar "region-of-interest" that the user wants to see. This rectangle is relative to the highest resolution page available (i.e. it's a subset of Image::fullImageRect()).
     void decode(DecodingState targetState, QSize desiredResolution = QSize(), QRect roiRect = QRect());
     void reset();
     
