@@ -27,6 +27,8 @@ struct SmartPngDecoder::Impl
     qint64 inputBufferLength = 0;
     const unsigned char* inputBufferPtr = nullptr;
 
+    int numPasses;
+
     Impl(SmartPngDecoder* parent) : q(parent)
     {
     }
@@ -70,12 +72,18 @@ struct SmartPngDecoder::Impl
     {
         auto* self = static_cast<SmartPngDecoder::Impl*>(png_get_io_ptr(png_ptr));
 
-        self->q->updatePreviewImage(QRect(0, row, png_get_image_width(png_ptr, self->info_ptr), 1));
+        auto width = png_get_image_width(png_ptr, self->info_ptr);
+        size_t height = png_get_image_height(png_ptr, self->info_ptr);
+        self->q->updatePreviewImage(QRect(0, row, width, 1));
         if (row % 16 == 0)
         {
             self->q->cancelCallback();
+
+            int total = self->numPasses * height * width;
+            double prog = row * width + pass * height * width;
+            prog /= total;
+            self->q->setDecodingProgress(prog * 100);
         }
-        /* TODO put your code here */
     }
 
     QImage::Format format()
@@ -95,7 +103,6 @@ SmartPngDecoder::~SmartPngDecoder()
 {
     this->assertNotDecoding();
 }
-
 
 void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
@@ -218,15 +225,16 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         throw std::runtime_error("Error while decoding the PNG image");
     }
     
-    int numPasses = 1, interlace_type = png_get_interlace_type(cinfo, d->info_ptr);
+    d->numPasses = 1;
+    int interlace_type = png_get_interlace_type(cinfo, d->info_ptr);
     if (interlace_type == PNG_INTERLACE_ADAM7)
     {
-        numPasses = png_set_interlace_handling(cinfo);
+        d->numPasses = png_set_interlace_handling(cinfo);
     }
 
     this->setDecodingMessage("Consuming and decoding PNG input file");
 
-    for (int pass = 0; pass < numPasses; pass++)
+    for (int pass = 0; pass < d->numPasses; pass++)
     {
         png_read_rows(cinfo, bufferSetup.data(), nullptr, height);
         this->cancelCallback();
