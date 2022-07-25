@@ -8,7 +8,6 @@
 #include <QDebug>
 #include <QColorSpace>
 #include <csetjmp>
-#include "libkexiv2/src/kexiv2previews.h"
 
 extern "C"
 {

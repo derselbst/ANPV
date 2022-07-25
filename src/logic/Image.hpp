@@ -35,6 +35,7 @@ Q_OBJECT
 
 friend class SmartImageDecoder;
 friend class SmartJpegDecoder;
+friend class SmartPngDecoder;
 friend class SmartTiffDecoder;
 friend class MySleepyImageDecoder;
 

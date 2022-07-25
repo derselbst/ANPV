@@ -32,7 +32,7 @@ jobs:
       displayName: 'apt-get install'
       inputs:
         targetType: 'inline'
-        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
+        script: 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libraw-dev libtiff-dev libjpeg-dev libpng-dev extra-cmake-modules libkf5kdcraw-dev libexiv2-dev'
     - task: CMake@1
       displayName: 'CMake configure'
       inputs:
@@ -117,6 +117,11 @@ jobs:
         vcpkg install qtimageformats:$(platform)-windows-static
       displayName: 'vcpkg build QtImageformats'
       condition: and(succeeded(), ne(variables.CACHE_RESTORED, 'true'))
+    - bash: |
+        set -ex
+        vcpkg install libpng:$(platform)-windows
+        vcpkg install libpng:$(platform)-windows-static
+      displayName: 'vcpkg build png'
     - bash: |
         set -ex
         rm -rf $VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static/tools/meson
