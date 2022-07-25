@@ -218,16 +218,10 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         throw std::runtime_error("Error while decoding the PNG image");
     }
     
-    desiredResolution = QSize(width, height).scaled(desiredResolution, Qt::KeepAspectRatio);
-    double scale = desiredResolution.width() * 1.0 / width;
-    scale = std::min(scale, 1.0);
-
     int numPasses = 1, interlace_type = png_get_interlace_type(cinfo, d->info_ptr);
     if (interlace_type == PNG_INTERLACE_ADAM7)
     {
         numPasses = png_set_interlace_handling(cinfo);
-        numPasses = std::round(numPasses * scale);
-        numPasses = std::max(numPasses, 2);
     }
 
     this->setDecodingMessage("Consuming and decoding PNG input file");
@@ -240,20 +234,12 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     Q_ASSERT(image.constBits() == dataPtrBackup);
 
-    if (interlace_type != PNG_INTERLACE_NONE && std::fabs(1 - scale) > 0.05)
-    {
-        image = image.scaledToWidth(width * scale, Qt::SmoothTransformation);
-        this->image()->setDecodedImage(image);
-    }
-    else
-    {
-        this->setDecodingState(DecodingState::FullImage);
-    }
-
     this->convertColorSpace(image);
 
     this->setDecodingMessage("PNG decoding completed successfully.");
-
+    this->setDecodingState(DecodingState::FullImage);
+    
+    Q_ASSERT(image.constBits() == dataPtrBackup);
     return image;
 }
 
