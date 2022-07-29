@@ -30,7 +30,8 @@ RUN C:\TEMP\git-setup.exe  /VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATI
 
 
 # Download and install Build Tools for Visual Studio 2022 for native desktop workload.
-ADD https://aka.ms/vs/17/release/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
+# https://docs.microsoft.com/de-de/visualstudio/releases/2022/release-history
+ADD https://aka.ms/vs/17/release.ltsc.17.2/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
 RUN C:\TEMP\Install.cmd C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
     --channelUri C:\TEMP\VisualStudio.chman `
     --installChannelUri C:\TEMP\VisualStudio.chman `
