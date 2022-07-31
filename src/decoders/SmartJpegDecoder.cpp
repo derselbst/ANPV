@@ -171,9 +171,9 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_calc_output_dimensions(&cinfo);
 
     // update the scale because output dimensions might be a bit different to what we requested
-    scale = cinfo.output_width * 1.0 / cinfo.image_width;
+    scale = std::min(cinfo.output_width * 1.0 / cinfo.image_width, cinfo.output_height * 1.0 / cinfo.image_height);
 
-    QRect scaledRoi(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::ceil(roiRect.width() * scale), std::ceil(roiRect.height() * scale));
+    QRect scaledRoi(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::floor(roiRect.width() * scale), std::floor(roiRect.height() * scale));
     Q_ASSERT(scaledRoi.isValid());
     Q_ASSERT(scaledRoi.width() <= cinfo.output_width);
     Q_ASSERT(scaledRoi.height() <= cinfo.output_height);
