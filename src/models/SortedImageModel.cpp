@@ -73,6 +73,7 @@ struct SortedImageModel::Impl
     {
         if (SortCol == Column::FileName ||
             SortCol == Column::FileSize ||
+            SortCol == Column::FileType ||
             SortCol == Column::DateModified)
         {
             return false;
@@ -114,6 +115,10 @@ struct SortedImageModel::Impl
         else if constexpr (SortCol == Column::FileSize)
         {
             return linfo.size() < rinfo.size();
+        }
+        else if constexpr (SortCol == Column::FileType)
+        {
+            return linfo.suffix().toUpper() < rinfo.suffix().toUpper();
         }
         else if constexpr (SortCol == Column::DateModified)
         {
@@ -298,6 +303,9 @@ struct SortedImageModel::Impl
         case Column::FileSize:
             return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileSize>(l, r); };
             
+        case Column::FileType:
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileType>(l, r); };
+
         case Column::DateModified:
             return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::DateModified>(l, r); };
             
@@ -995,6 +1003,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             {
             case Column::FileName:
                 return fi.fileName();
+            case Column::FileType:
+                return fi.suffix();
             case Column::FileSize:
                 return QString::number(fi.size());
             case Column::DateModified:
