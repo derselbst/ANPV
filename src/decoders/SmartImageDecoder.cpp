@@ -85,6 +85,33 @@ struct SmartImageDecoder::Impl
     {
         return this->decodingMessage;
     }
+    
+    template<typename T>
+    QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
+    {
+        const size_t needed = size_t(width) * height;
+        const size_t rowStride = width * sizeof(T);
+        try
+        {
+            q->setDecodingMessage("Allocating image output buffer");
+
+            std::unique_ptr<T, decltype(&free)> mem(static_cast<T*>(calloc(needed, sizeof(T))), &::free);
+            QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
+            if(image.isNull())
+            {
+                throw std::runtime_error("QImage ctor created a NULL image...");
+            }
+            mem.release();
+
+            // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
+            q->setDecodingState(DecodingState::PreviewImage);
+            return image;
+        }
+        catch (const std::bad_alloc&)
+        {
+            throw std::runtime_error(Formatter() << "Unable to allocate " << (needed * sizeof(T)) / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
+        }
+    }
 };
 
 SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_unique<Impl>(this, image))
@@ -492,28 +519,25 @@ void SmartImageDecoder::assertNotDecoding()
     }
 }
 
+
 QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
 {
-    const size_t needed = size_t(width) * height;
-    const size_t rowStride = width * sizeof(uint32_t);
-    try
+    switch(format)
     {
-        this->setDecodingMessage("Allocating image output buffer");
+        case QImage::Format_RGB32:
+        case QImage::Format_ARGB32:
+        case QImage::Format_ARGB32_Premultiplied:
+        case QImage::Format_RGBX8888:
+        case QImage::Format_RGBA8888:
+        case QImage::Format_RGBA8888_Premultiplied:
+            return d->allocateImageBuffer<uint32_t>(width, height, format);
 
-        std::unique_ptr<uint32_t, decltype(&free)> mem(static_cast<uint32_t*>(calloc(needed, sizeof(uint32_t))), &::free);
-        QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
-        if(image.isNull())
-        {
-            throw std::runtime_error("QImage ctor created a NULL image...");
-        }
-        mem.release();
+        case QImage::Format_RGBX64:
+        case QImage::Format_RGBA64:
+        case QImage::Format_RGBA64_Premultiplied:
+            return d->allocateImageBuffer<uint64_t>(width, height, format);
 
-        // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
-        this->setDecodingState(DecodingState::PreviewImage);
-        return image;
-    }
-    catch (const std::bad_alloc&)
-    {
-        throw std::runtime_error(Formatter() << "Unable to allocate " << (needed * sizeof(uint32_t)) / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
+        default:
+            throw std::logic_error(Formatter() << "QImage Format '" << format << "' not supported currently");
     }
 }
