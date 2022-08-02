@@ -446,19 +446,19 @@ void SmartImageDecoder::reset()
     std::lock_guard g(d->asyncApiMtx);
     
     d->setErrorMessage(QString());
-    if(d->decodingState() == DecodingState::Fatal)
-    {
-        this->setDecodingState(DecodingState::Ready);
-        return;
-    }
     this->releaseFullImage();
+    this->setDecodingState(DecodingState::Ready);
 }
 
 void SmartImageDecoder::releaseFullImage()
 {
     std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
-    this->setDecodingState(DecodingState::Metadata);
+    auto state = d->decodingState();
+    if(state == DecodingState::PreviewImage || state == DecodingState::FullImage)
+    {
+        this->setDecodingState(DecodingState::Metadata);
+    }
 }
 
 void SmartImageDecoder::setDecodingMessage(QString&& msg)
