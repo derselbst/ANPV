@@ -190,7 +190,7 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     unsigned char* exif;
     if (png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
     {
-        qDebug() << "Cool, we've got exif data in PNG!";
+        qDebug() << "Cool, we've got exif data in " << this->image()->fileInfo().fileName();
     }
     
     this->image()->setSize(QSize(width, height));
