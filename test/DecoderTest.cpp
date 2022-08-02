@@ -140,6 +140,8 @@ void DecoderTest::testInitialize()
     QCOMPARE(imageJpg->errorMessage(), QString(errHeader));
     dec.close();
     QCOMPARE(imageJpg->decodingState(), DecodingState::Fatal);
+    dec.releaseFullImage();
+    QCOMPARE(spy.count(), 0); // no state change
     dec.reset();
     verifyDecodingState(imageJpg, spy, DecodingState::Ready);
     QVERIFY(imageJpg->errorMessage().isEmpty());
@@ -155,8 +157,10 @@ void DecoderTest::testInitialize()
     dec.close();
     QCOMPARE(imageJpg->decodingState(), DecodingState::Error);
     QCOMPARE(imageJpg->errorMessage(), QString(errDec));
+    dec.releaseFullImage();
+    QCOMPARE(spy.count(), 0); // no state change
     dec.reset();
-    verifyDecodingState(imageJpg, spy, DecodingState::Metadata);
+    verifyDecodingState(imageJpg, spy, DecodingState::Ready);
     QVERIFY(imageJpg->errorMessage().isEmpty());
     
     QCOMPARE(spy.count(), 0);
