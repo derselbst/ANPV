@@ -29,6 +29,7 @@ public:
         FileName = FirstValid,
         FileSize,
         DateModified,
+        FileType,
         Resolution,
         DateRecorded,
         Aperture,
