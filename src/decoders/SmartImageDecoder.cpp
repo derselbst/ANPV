@@ -391,7 +391,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
 void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
 {
     auto depth = image.depth();
-    if(depth != 32)
+    if(depth != 32 && depth != 64)
     {
         throw std::logic_error(Formatter() << "SmartImageDecoder::convertColorSpace(): case not implemented for images with depth " << depth << " bits");
     }
@@ -405,11 +405,12 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
 
         auto* dataPtr = image.constBits();
         const size_t width = image.width();
+        const size_t rowStride = width * (depth == 64 ? sizeof(QRgba64) : sizeof(QRgb));
         const size_t height = image.height();
-        const size_t yStride = static_cast<size_t>(std::ceil((384 * 1024.0) / width));
+        const size_t yStride = static_cast<size_t>(std::ceil((384 * 1024.0) / width)); // convert 3 KiB at max
         for (size_t y = 0; y < height; y+=yStride)
         {
-            auto& destPixel = const_cast<uchar*>(dataPtr)[y * width * sizeof(QRgb) + 0];
+            auto& destPixel = const_cast<uchar*>(dataPtr)[y * rowStride + 0];
             auto linesToConvertNow = std::min(height - y, yStride);
 
             // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
@@ -422,7 +423,7 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updatePreviewImage(QRect(0, y, width, yStride));
+                this->updatePreviewImage(QRect(0, y, width, linesToConvertNow));
             }
         }
     }
