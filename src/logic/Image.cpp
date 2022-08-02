@@ -221,7 +221,8 @@ QPixmap Image::thumbnailTransformed(int height)
         if(pix.isNull())
         {
             t.setInfo("no icon found, drawing our own...");
-            if(this->hasDecoder())
+            auto state = this->decodingState();
+            if(this->hasDecoder() && state != DecodingState::Error && state != DecodingState::Fatal)
             {
                 pix = ANPV::globalInstance()->noPreviewPixmap();
             }
@@ -408,7 +409,6 @@ void Image::setDecodingState(DecodingState state)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     DecodingState old = d->state;
-    d->state = state;
     
     if(old == DecodingState::Fatal && (state == DecodingState::Error || state == DecodingState::Cancelled))
     {
@@ -418,6 +418,7 @@ void Image::setDecodingState(DecodingState state)
     
     if(old != state)
     {
+        d->state = state;
         lck.unlock();
         emit this->decodingStateChanged(this, state, old);
     }
