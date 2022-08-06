@@ -95,6 +95,10 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     jpeg_mem_src(&cinfo, buffer, nbytes);
 
     this->setDecodingMessage("Reading JPEG Header");
+
+    // section below clobbered by setjmp()/longjmp(); declare all non-trivially destroyable types here
+    std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
+    QColorSpace iccProfile{ QColorSpace::SRgb };
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
@@ -109,9 +113,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
     
     JOCTET *ptr;
-    std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
     unsigned int icc_len;
-    QColorSpace iccProfile{QColorSpace::SRgb};
     if(jpeg_read_icc_profile(&cinfo, &ptr, &icc_len))
     {
         icc_data.reset(ptr);
