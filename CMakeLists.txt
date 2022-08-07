@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDA
 project (ANPV VERSION 0.5 LANGUAGES CXX)
 
 ### setup binary output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BUILD_DIR})
 
 option ( BUILD_SHARED_LIBS "Build a shared object or DLL" off )
 
@@ -61,18 +61,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-protector-all")
 endif()
 
-### setup project include dirs
-set(PROJECT_LOCAL_INCLUDE_DIRS
-        ${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/include/cereal/include
-        ${CMAKE_SOURCE_DIR}/src/Common
-        ${CMAKE_SOURCE_DIR}/src/PlayerLogic
-        ${CMAKE_SOURCE_DIR}/src/InputLibraryWrapper
-        ${CMAKE_SOURCE_DIR}/src/AudioOutput)
 
-
-### Search in the `cmake' directory for additional CMake modules.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(FindPkgConfig)
 include(GNUInstallDirs)
 

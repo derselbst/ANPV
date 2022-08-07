@@ -260,12 +260,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         
         /* terminate output pass */
         jpeg_finish_output(&cinfo);
-
-//         if(targetState == DecodingState::PreviewImage)
-//         {
-//             // only a preview image was requested, which we have finished with this first pass
-//             break;
-//         }
     }
     
     jpeg_finish_decompress(&cinfo);
