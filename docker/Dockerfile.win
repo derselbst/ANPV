@@ -108,7 +108,7 @@ RUN  vcpkg install --clean-after-build gettext[core,tools]:%PLATFORM%-windows-st
 RUN  vcpkg install --clean-after-build kf5itemviews:%PLATFORM%-windows-static
 RUN  vcpkg install --clean-after-build --keep-going kf5kio:%PLATFORM%-windows-static
 
-RUN  vcpkg install --clean-after-build pkgconf:x64-windows-static
+RUN  vcpkg install --clean-after-build pkgconf:%PLATFORM%-windows-static
 
 FROM ${FROM_IMAGE} AS powershell-builder
 
