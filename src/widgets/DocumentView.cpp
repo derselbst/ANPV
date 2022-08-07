@@ -389,6 +389,23 @@ struct DocumentView::Impl
             q->loadImage(newEntry);
         }
     }
+
+    void onToggleSelect()
+    {
+        if (this->currentImageDecoder)
+        {
+            auto img = this->currentImageDecoder->image();
+            if (img)
+            {
+                Qt::CheckState chk = img->checked();
+                if (chk == Qt::CheckState::PartiallyChecked)
+                {
+                    return;
+                }
+                img->setChecked(chk == Qt::CheckState::Checked ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
+            }
+        }
+    }
     
     void onSetBackgroundColor()
     {
@@ -413,15 +430,21 @@ struct DocumentView::Impl
         QAction* act;
         
         act = new QAction(QIcon::fromTheme("go-next"), "Go Next", q);
-        act->setShortcuts({{Qt::Key_Space}, {Qt::Key_Right}});
+        act->setShortcuts({{Qt::Key_Right}});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->goTo(+1); });
         q->addAction(act);
-        
+
         act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", q);
-        act->setShortcuts({{Qt::Key_Backspace}, {Qt::Key_Left}});
+        act->setShortcuts({ {Qt::Key_Left} });
         act->setShortcutContext(Qt::WidgetShortcut);
-        connect(act, &QAction::triggered, q, [&](){ this->goTo(-1); });
+        connect(act, &QAction::triggered, q, [&]() { this->goTo(-1); });
+        q->addAction(act);
+
+        act = new QAction("Toggle check state of current image", q);
+        act->setShortcuts({ {Qt::Key_Space} });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { this->onToggleSelect(); });
         q->addAction(act);
 
         act = new QAction(q);
@@ -472,6 +495,7 @@ struct DocumentView::Impl
                 return;
             }
 
+            WaitCursor w;
             QList<QObject*> objs = act->associatedObjects();
             for(QObject* o : objs)
             {
@@ -485,6 +509,9 @@ struct DocumentView::Impl
                     switch(op)
                     {
                         case ANPV::FileOperation::Move:
+                            // cancel any pending decoding to release the file handle and avoid a "File being used by other process" error on Windows
+                            this->currentImageDecoder->cancelOrTake(this->taskFuture.future());
+                            this->taskFuture.waitForFinished();
                             ANPV::globalInstance()->moveFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
                             q->loadImage(nextImg);
                             break;
@@ -634,7 +661,8 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
 
-    QPoint bottomLeftCheckPoint(0, wndSize.height() - d->isSelectedBox->size().height());
+    QSize i = d->isSelectedBox->iconSize();
+    QPoint bottomLeftCheckPoint(0, wndSize.height() - i.height());
     d->isSelectedBox->move(bottomLeftCheckPoint);
     if(d->currentImageDecoder)
     {

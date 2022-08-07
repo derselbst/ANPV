@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV VERSION 0.4 LANGUAGES CXX)
+project (ANPV VERSION 0.5 LANGUAGES CXX)
 
 ### setup binary output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BUILD_DIR})
 
 option ( BUILD_SHARED_LIBS "Build a shared object or DLL" off )
 
@@ -61,14 +61,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fstack-protector-all")
 endif()
 
-### setup project include dirs
-set(PROJECT_LOCAL_INCLUDE_DIRS
-        ${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/include/cereal/include
-        ${CMAKE_SOURCE_DIR}/src/Common
-        ${CMAKE_SOURCE_DIR}/src/PlayerLogic
-        ${CMAKE_SOURCE_DIR}/src/InputLibraryWrapper
-        ${CMAKE_SOURCE_DIR}/src/AudioOutput)
 
 find_package(PkgConfig REQUIRED)
 include(GNUInstallDirs)
@@ -96,6 +88,8 @@ find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 find_package(JPEG REQUIRED)
 
 find_package(TIFF REQUIRED)
+
+find_package(PNG REQUIRED)
 
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
@@ -144,6 +138,8 @@ src/decoders/SmartImageDecoder.cpp
 src/decoders/SmartImageDecoder.hpp
 src/decoders/SmartJpegDecoder.cpp
 src/decoders/SmartJpegDecoder.hpp
+src/decoders/SmartPngDecoder.cpp
+src/decoders/SmartPngDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
 src/logic/ExifWrapper.cpp
@@ -172,7 +168,7 @@ src/styles/CenteredBoxProxyStyle.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
 target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 

@@ -202,6 +202,7 @@ struct MainWindow::Impl
         
         makeSortAction("File Name", SortedImageModel::Column::FileName);
         makeSortAction("File Size", SortedImageModel::Column::FileSize);
+        makeSortAction("File Extension", SortedImageModel::Column::FileType);
         makeSortAction("Modified Date", SortedImageModel::Column::DateModified);
         makeSortAction("Image Resolution (slow)", SortedImageModel::Column::Resolution, true);
         makeSortAction("Original Record Date (slow)", SortedImageModel::Column::DateRecorded, true);

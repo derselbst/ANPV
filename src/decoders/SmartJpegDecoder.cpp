@@ -8,7 +8,6 @@
 #include <QDebug>
 #include <QColorSpace>
 #include <csetjmp>
-#include "libkexiv2/src/kexiv2previews.h"
 
 extern "C"
 {
@@ -96,6 +95,10 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     jpeg_mem_src(&cinfo, buffer, nbytes);
 
     this->setDecodingMessage("Reading JPEG Header");
+
+    // section below clobbered by setjmp()/longjmp(); declare all non-trivially destroyable types here
+    std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
+    QColorSpace iccProfile{ QColorSpace::SRgb };
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
@@ -110,9 +113,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     }
     
     JOCTET *ptr;
-    std::unique_ptr<JOCTET, decltype(&::free)> icc_data(nullptr, free);
     unsigned int icc_len;
-    QColorSpace iccProfile{QColorSpace::SRgb};
     if(jpeg_read_icc_profile(&cinfo, &ptr, &icc_len))
     {
         icc_data.reset(ptr);
@@ -135,6 +136,11 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // hence, declare any objects with nontrivial destructors here
     std::vector<JSAMPLE*> bufferSetup;
     QImage image;
+
+    if (!roiRect.isValid())
+    {
+        roiRect = this->image()->fullResolutionRect();
+    }
     
     auto& cinfo = d->cinfo;
     
@@ -156,35 +162,59 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     cinfo.scale_num = desiredResolution.width();
     cinfo.scale_denom = roiRect.width();
     
-    if(cinfo.scale_num * 1.0 / cinfo.scale_denom > 1.0)
+    double scale = cinfo.scale_num * 1.0 / cinfo.scale_denom;
+    if(scale > 1.0)
     {
         // do not upscale the image while decoding
-        cinfo.scale_denom = cinfo.scale_num = 1;
+        cinfo.scale_denom = cinfo.scale_num = scale = 1;
     }
-    
+
     // Used to set up image size so arrays can be allocated
     jpeg_calc_output_dimensions(&cinfo);
 
-    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
-    auto* dataPtrBackup = image.constBits();
-    this->image()->setDecodedImage(image);
+    // update the scale because output dimensions might be a bit different to what we requested
+    scale = std::min(cinfo.output_width * 1.0 / cinfo.image_width, cinfo.output_height * 1.0 / cinfo.image_height);
 
-    bufferSetup.resize(cinfo.output_height / cinfo.rec_outbuf_height);
-    for(JDIMENSION i=0; i < bufferSetup.size(); i++)
-    {
-        bufferSetup[i] = const_cast<JSAMPLE*>(reinterpret_cast<const JSAMPLE*>(image.constScanLine(i * cinfo.rec_outbuf_height)));
-    }
-    
-    this->cancelCallback();
+    QRect scaledRoi(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::floor(roiRect.width() * scale), std::floor(roiRect.height() * scale));
+    Q_ASSERT(scaledRoi.isValid());
+    Q_ASSERT(scaledRoi.width() <= cinfo.output_width);
+    Q_ASSERT(scaledRoi.height() <= cinfo.output_height);
 
     // Start decompressor
     this->setDecodingMessage("Starting the JPEG decompressor");
-    
+
     if (jpeg_start_decompress(&cinfo) == false)
     {
         qWarning() << "I/O suspension after jpeg_start_decompress()";
     }
+
+    // TODO: The buffer allocation should be done after cropping the scanline
+    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
+    auto* dataPtrBackup = image.constBits();
+    this->image()->setDecodedImage(image);
+
+    JDIMENSION xoffset = scaledRoi.x();
+    JDIMENSION croppedWidth = scaledRoi.width();
+    if (xoffset > 0 && croppedWidth > 0)
+    {
+        cinfo.global_state = 205;
+        jpeg_crop_scanline(&cinfo, &xoffset, &croppedWidth);
+        cinfo.global_state = 207;
+    }
+    const JDIMENSION skippedScanlinesTop = scaledRoi.y();
+    const JDIMENSION lastScanlineToDecode = skippedScanlinesTop + scaledRoi.height();
+
+    // TODO: buffer allocation should be done here
+
+    bufferSetup.resize(cinfo.output_height / cinfo.rec_outbuf_height);
+    for (JDIMENSION i = 0; i < bufferSetup.size(); i++)
+    {
+        bufferSetup[i] = const_cast<JSAMPLE*>(image.constScanLine(i * cinfo.rec_outbuf_height));
+        bufferSetup[i] += xoffset * sizeof(uint32_t);
+    }
     
+    this->cancelCallback();
+
     // The library's output processing will automatically call jpeg_consume_input()
     // whenever the output processing overtakes the input; thus, simple lockstep
     // display requires no direct calls to jpeg_consume_input().  But by adding
@@ -212,47 +242,50 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     this->setDecodingMessage("Consuming and decoding JPEG input file");
     
-    while (!jpeg_input_complete(&cinfo))
+    int progressiveGuard;
+    for (progressiveGuard = 0; (!jpeg_input_complete(&cinfo)) && progressiveGuard < 1000; progressiveGuard++)
     {
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
-        
+        auto acuallySkipped = jpeg_skip_scanlines(&cinfo, skippedScanlinesTop);
         auto totalLinesRead = cinfo.output_scanline;
-        while (cinfo.output_scanline < cinfo.output_height)
+        while (cinfo.output_scanline < lastScanlineToDecode)
         {
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updatePreviewImage(QRect(0, totalLinesRead, cinfo.output_width, linesRead));
+            this->updatePreviewImage(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
             totalLinesRead += linesRead;
         }
         
         /* terminate output pass */
         jpeg_finish_output(&cinfo);
-
-//         if(targetState == DecodingState::PreviewImage)
-//         {
-//             // only a preview image was requested, which we have finished with this first pass
-//             break;
-//         }
     }
     
     jpeg_finish_decompress(&cinfo);
 
     Q_ASSERT(image.constBits() == dataPtrBackup);
-    Q_ASSERT(dataPtrBackup == &bufferSetup[0][0]);
+    //Q_ASSERT(dataPtrBackup == &bufferSetup[0][0]);
 
 // //     this->setDecodingMessage("Applying final smooth rescaling...");
 // //     image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
     this->convertColorSpace(image);
 
-    // call the progress monitor for a last time to report 100% to GUI
-    this->setDecodingMessage("JPEG decoding completed successfully.");
+    if (progressiveGuard >= 1000)
+    {
+        // see https://libjpeg-turbo.org/pmwiki/uploads/About/TwoIssueswiththeJPEGStandard.pdf
+        this->setDecodingMessage("Progressive JPEG decoding was aborted after decoding 1000 scans");
+    }
+    else
+    {
+        // call the progress monitor for a last time to report 100% to GUI
+        this->setDecodingMessage("JPEG decoding completed successfully.");
+    }
     d->progMgr.completed_passes = d->progMgr.total_passes;
     d->progMgr.progress_monitor((j_common_ptr)&cinfo);
 
-    if(cinfo.output_width == cinfo.image_width && cinfo.output_height == cinfo.image_height)
+    if(scale == 1 && xoffset == 0 && croppedWidth == cinfo.image_width && skippedScanlinesTop == 0 && lastScanlineToDecode == cinfo.image_height)
     {
         this->setDecodingState(DecodingState::FullImage);
     }

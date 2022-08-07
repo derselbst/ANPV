@@ -73,6 +73,7 @@ struct SortedImageModel::Impl
     {
         if (SortCol == Column::FileName ||
             SortCol == Column::FileSize ||
+            SortCol == Column::FileType ||
             SortCol == Column::DateModified)
         {
             return false;
@@ -114,6 +115,10 @@ struct SortedImageModel::Impl
         else if constexpr (SortCol == Column::FileSize)
         {
             return linfo.size() < rinfo.size();
+        }
+        else if constexpr (SortCol == Column::FileType)
+        {
+            return linfo.suffix().toUpper() < rinfo.suffix().toUpper();
         }
         else if constexpr (SortCol == Column::DateModified)
         {
@@ -298,6 +303,9 @@ struct SortedImageModel::Impl
         case Column::FileSize:
             return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileSize>(l, r); };
             
+        case Column::FileType:
+            return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::FileType>(l, r); };
+
         case Column::DateModified:
             return [=](const Entry_t& l, const Entry_t& r) { return topLevelSortFunction<Column::DateModified>(l, r); };
             
@@ -542,7 +550,9 @@ struct SortedImageModel::Impl
             }
             catch(const std::exception& e)
             {
-                throw std::logic_error("todo: handle error, display error");
+                qCritical() << "Exception in SortedImageModel::Impl::addSingleFile()";
+                qCritical() << typeid(e).name() << " : " << e.what();
+                throw;
             }
             
             return true;
@@ -757,6 +767,11 @@ void SortedImageModel::run()
                     d->backgroundTasks[decoder] = (watcher);
                 }
                 QMetaObject::invokeMethod(d->spinningIconHelper.get(), &ProgressIndicatorHelper::startRendering, Qt::QueuedConnection);
+            }
+            else
+            {
+                // increase by one, to make sure we meet the 100% below, which in turn ensures that the status message 'successfully loaded' is displayed in the UI
+                entriesProcessed++;
             }
 
             d->setStatusMessage(entriesProcessed, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
@@ -993,6 +1008,8 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             {
             case Column::FileName:
                 return fi.fileName();
+            case Column::FileType:
+                return fi.suffix();
             case Column::FileSize:
                 return QString::number(fi.size());
             case Column::DateModified:
@@ -1184,4 +1201,20 @@ QFileInfo SortedImageModel::fileInfo(const QModelIndex &index) const
     }
     
     return QFileInfo();
+}
+
+QList<Entry_t> SortedImageModel::checkedEntries()
+{
+    QList<Entry_t> results;
+    results.reserve(this->rowCount());
+    for (Entry_t& e : d->entries)
+    {
+        auto img = this->image(e);
+        Qt::CheckState chk = img->checked();
+        if (chk != Qt::CheckState::Unchecked)
+        {
+            results.push_back(e);
+        }
+    }
+    return results;
 }

@@ -71,6 +71,7 @@ struct ThumbnailListView::Impl
         {
             return;
         }
+        WaitCursor w;
         QDir currentDir = ANPV::globalInstance()->currentDir();
         if(QDir(dest) == currentDir)
         {
@@ -78,8 +79,9 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<Entry_t> imgs = q->selectedImages();
+        QList<Entry_t> imgs = q->checkedImages();
         QList<QString> files;
+        files.reserve(imgs.size());
         for(Entry_t& e : imgs)
         {
             files.push_back(SortedImageModel::image(e)->fileInfo().fileName());
@@ -96,6 +98,11 @@ struct ThumbnailListView::Impl
             default:
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
                 break;
+        }
+        // FIXME: only uncheck those images, which have been processed successfully
+        for (Entry_t& e : imgs)
+        {
+            SortedImageModel::image(e)->setChecked(Qt::Unchecked);
         }
     }
     
@@ -256,7 +263,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     connect(d->actionToggle, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->toggleCheckState); });
 
     d->actionCheck = new QAction("Check selected images", this);
-    d->actionCheck->setShortcut(Qt::Key_Select);
+    d->actionCheck->setShortcut(Qt::Key_Insert);
     d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->checkCheckState); });
 
@@ -265,12 +272,12 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     connect(d->actionUncheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->uncheckCheckState); });
 
     d->actionCopyToFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
-    connect(d->actionCopyToFilePath, &QAction::triggered, this, [&](){ d->onCopyFilePath(); });
-    
-    d->actionMoveTo = new QAction(QIcon::fromTheme("edit-cut"), "Move to", this);
+    connect(d->actionCopyToFilePath, &QAction::triggered, this, [&]() { d->onCopyFilePath(); });
+
+    d->actionMoveTo = new QAction(QIcon::fromTheme("edit-cut"), "Move checked files to", this);
     connect(d->actionMoveTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Move); });
     
-    d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "HardLink to", this);
+    d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "HardLink checked files to", this);
     connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::HardLink); });
     
     d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
@@ -390,19 +397,10 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     QListView::setModel(model);
 }
 
-void ThumbnailListView::mousePressEvent(QMouseEvent *event)
+QList<Entry_t> ThumbnailListView::checkedImages()
 {
-    auto button = event->button();
-    switch(button)
-    {
-        case Qt::BackButton:
-        case Qt::ForwardButton:
-            event->ignore();
-            return;
-        default:
-            break;
-    }
-    QListView::mousePressEvent(event);
+    auto sourceModel = ANPV::globalInstance()->fileModel();
+    return sourceModel->checkedEntries();
 }
 
 QList<Entry_t> ThumbnailListView::selectedImages()
