@@ -430,19 +430,19 @@ struct DocumentView::Impl
         QAction* act;
         
         act = new QAction(QIcon::fromTheme("go-next"), "Go Next", q);
-        act->setShortcuts({{Qt::Key_Right}});
+        act->setShortcut({Qt::Key_Right});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->goTo(+1); });
         q->addAction(act);
 
         act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", q);
-        act->setShortcuts({ {Qt::Key_Left} });
+        act->setShortcut({Qt::Key_Left});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&]() { this->goTo(-1); });
         q->addAction(act);
 
         act = new QAction("Toggle check state of current image", q);
-        act->setShortcuts({ {Qt::Key_Space} });
+        act->setShortcut({Qt::Key_Space});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&]() { this->onToggleSelect(); });
         q->addAction(act);
@@ -475,10 +475,14 @@ struct DocumentView::Impl
         q->addAction(act);
         
         act = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", q);
+        act->setShortcut({ Qt::CTRL | Qt::SHIFT | Qt::Key_C });
+        act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->onCopyViewTransform(); });
         q->addAction(act);
         
         act = new QAction(QIcon::fromTheme("edit-paste"), "Paste", q);
+        act->setShortcut(QKeySequence::Paste);
+        act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->onClipboardPaste(); });
         q->addAction(act);
         

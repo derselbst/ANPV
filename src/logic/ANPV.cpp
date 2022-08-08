@@ -183,7 +183,7 @@ struct ANPV::Impl
                     }
                 });
         this->actionOpen = new QAction("Open Image", q);
-        this->actionOpen->setShortcuts({Qt::CTRL | Qt::Key_O});
+        this->actionOpen->setShortcut({Qt::CTRL | Qt::Key_O});
         this->actionOpen->setShortcutContext(Qt::ApplicationShortcut);
         connect(this->actionOpen, &QAction::triggered, q,
                 [&]()

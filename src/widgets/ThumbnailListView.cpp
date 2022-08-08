@@ -281,15 +281,18 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::HardLink); });
     
     d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
-    d->actionMove->setShortcuts(QKeySequence::Cut);
+    d->actionMove->setShortcut(QKeySequence::Cut);
+    d->actionMove->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
     
     d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
-    d->actionCopy->setShortcuts(QKeySequence::Copy);
+    d->actionCopy->setShortcut(QKeySequence::Copy);
+    d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
+    d->actionDelete->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Delete); });
     
     this->addAction(d->actionOpenSelectionInternally);
