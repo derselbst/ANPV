@@ -245,24 +245,24 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
     if (d->promise.isNull())
     {
         qDebug() << "There isn't anything to cancel.";
+        return;
+    }
+
+    bool taken = QThreadPool::globalInstance()->tryTake(this);
+    if (taken)
+    {
+        // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
+        d->promise->start();
+        this->setDecodingState(DecodingState::Cancelled);
+        d->promise->addResult(d->decodingState());
+        d->promise->finish();
+        return;
     }
 
     bool isFinished = taskFuture.isFinished();
-    bool taken = QThreadPool::globalInstance()->tryTake(this);
-    if(!isFinished)
+    if (!isFinished)
     {
-        if(!taken)
-        {
-            taskFuture.cancel();
-        }
-        else
-        {
-            // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
-            d->promise->start();
-            this->setDecodingState(DecodingState::Cancelled);
-            d->promise->addResult(d->decodingState());
-            d->promise->finish();
-        }
+        taskFuture.cancel();
     }
 }
 
