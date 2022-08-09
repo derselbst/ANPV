@@ -19,9 +19,9 @@ struct SmartPngDecoder::Impl
 {
     SmartPngDecoder* q;
     
-    png_structp cinfo;
-    png_infop info_ptr;
-    png_infop einfo_ptr;
+    png_structp cinfo = nullptr;
+    png_infop info_ptr = nullptr;
+    png_infop einfo_ptr = nullptr;
 
     const unsigned char* inputBufferBegin = nullptr;
     qint64 inputBufferLength = 0;
