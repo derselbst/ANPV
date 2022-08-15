@@ -24,6 +24,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QMimeData>
+#include <QMetaEnum>
 
 #include <vector>
 #include <algorithm>
@@ -71,7 +72,7 @@ struct ThumbnailListView::Impl
         {
             return;
         }
-        WaitCursor w;
+
         QDir currentDir = ANPV::globalInstance()->currentDir();
         if(QDir(dest) == currentDir)
         {
@@ -80,6 +81,14 @@ struct ThumbnailListView::Impl
         }
         
         QList<Entry_t> imgs = q->checkedImages();
+        if (imgs.isEmpty())
+        {
+            const char* operation = QMetaEnum::fromType<ANPV::FileOperation>().key(op);
+            QMessageBox::information(q, QString("Unable to %1").arg(operation), "Pls. select one or more files by checking the box located top-left of the file icon.", QMessageBox::Ok);
+            return;
+        }
+
+        WaitCursor w;
         QList<QString> files;
         files.reserve(imgs.size());
         for(Entry_t& e : imgs)
