@@ -453,7 +453,8 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image);
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
-    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect)
+    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect &&
+        image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height) // extra paranoia to verify we haven't decoded with the fast decoding hack
     {
         this->setDecodingState(DecodingState::FullImage);
     }
@@ -584,16 +585,20 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
             
             this->setDecodingMessage("Uh, it's an uncompressed 8-bit RGBA TIFF. Using fast decoding hack. This may take a few seconds and cannot be cancelled... ");
             
+            size_t rowStride = size_t(width) * samplesPerPixel;
             const uint8_t* rawRgb = d->buffer + initialOffset;
+            rawRgb += roi.y() * rowStride;
+            rawRgb += roi.x() * samplesPerPixel;
             
             QImage rawImage(rawRgb,
-                            width,
-                            height,
-                            width * samplesPerPixel,
+                            roi.width(),
+                            roi.height(),
+                            rowStride,
                             QImage::Format_RGBA8888);
             image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             this->image()->setDecodedImage(image);
+            this->updatePreviewImage(roi);
         }
         else
         {
