@@ -85,7 +85,8 @@ endif()
 
 find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 
-find_package(JPEG REQUIRED)
+# required is libjpeg-tubo 2.1.4 because of https://github.com/libjpeg-turbo/libjpeg-turbo/issues/611
+pkg_check_modules(JPEG REQUIRED libturbojpeg>=2.1.4 libjpeg>=2.1.4)
 
 find_package(TIFF REQUIRED)
 
