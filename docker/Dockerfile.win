@@ -42,18 +42,6 @@ RUN C:\TEMP\Install.cmd C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --n
     --includeRecommended `
     --installPath C:\BuildTools
 
-ENV VCPKG_INSTALLATION_ROOT=C:\vcpkg
-ENV VCPKG_REVISION=e5ca2ac2c24fb7810d6241692e55f1fc243b7e54
-
-
-FROM buildtools AS vcpkg-builder
-
-RUN git config --global user.email "you@example.com"
-RUN git config --global user.name "Your Name"
-RUN git clone -n https://github.com/derselbst/vcpkg.git %VCPKG_INSTALLATION_ROOT%
-WORKDIR ${VCPKG_INSTALLATION_ROOT}
-RUN git checkout --force %VCPKG_REVISION%
-
 COPY ./certs/  ./certs/
 
 # Filepath refers to the path of cert files inside the container's file system
@@ -68,18 +56,32 @@ RUN powershell ls Cert:\LocalMachine\Root
 RUN git config --system http.sslBackend openssl
 
 SHELL ["C:\\Program Files\\Git\\bin\\bash.exe", "-c"]
-RUN "cat /c/vcpkg/certs/ZScaler-Intermediate.cer /c/vcpkg/certs/ZScaler-Root-CA.cer >> '/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt'"
-#RUN bash.exe -c "cat /c/vcpkg/certs/ZScaler-Intermediate.cer /c/vcpkg/certs/ZScaler-Root-CA.cer >> "/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt""
+RUN "cat ./certs/ZScaler-Intermediate.cer ./certs/ZScaler-Root-CA.cer >> '/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt'"
+#RUN bash.exe -c "cat ./certs/ZScaler-Intermediate.cer ./certs/ZScaler-Root-CA.cer >> "/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt""
 
 SHELL ["cmd", "/S", "/C"]
+
+
+
+FROM buildtools AS vcpkg-builder
+
+ENV VCPKG_INSTALLATION_ROOT=C:\vcpkg
+ENV VCPKG_REVISION=b087c827a9f51b39493bf9e70c700ef6b80ba65a
+
+RUN git config --global user.email "you@example.com"
+RUN git config --global user.name "Your Name"
+RUN git clone -n https://github.com/derselbst/vcpkg.git %VCPKG_INSTALLATION_ROOT%
+WORKDIR ${VCPKG_INSTALLATION_ROOT}
+RUN git checkout --force %VCPKG_REVISION%
+
 RUN bootstrap-vcpkg.bat
 
 ARG PLATFORM=x64
 ENV VCPKG_MAX_CONCURRENCY=17
 
 # tell vcpkg to only compile release package, not debug ones
-RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/x64-windows.cmake
-RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/x64-windows-static.cmake
+RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows.cmake
+RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows-static.cmake
 
 RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows tiff:%PLATFORM%-windows exiv2:%PLATFORM%-windows libraw:%PLATFORM%-windows ecm:%PLATFORM%-windows
 RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows-static tiff:%PLATFORM%-windows-static exiv2:%PLATFORM%-windows-static libraw:%PLATFORM%-windows-static ecm:%PLATFORM%-windows-static
