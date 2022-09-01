@@ -8,7 +8,7 @@ RUN zypper install --no-recommends -y sudo
 RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel
 
 # this is for KDE Framework
-RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel qt6-qmlcore-devel qt6-declarative-devel qt6-wayland-devel qt6-base-private-devel libxml2-devel libxslt-devel  libxcb-xkb1 libxcb-res0 libxcb-icccm4 libxcb-xfixes0 libxcb-record0 libXfixes-devel libxcb-keysyms1  libcanberra-devel libgpgmepp-devel
+RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel qt6-qmlcore-devel qt6-declarative-devel qt6-wayland-devel qt6-base-private-devel qca-qt6-devel libxml2-devel libxslt-devel  libxcb-xkb1 libxcb-res0 libxcb-icccm4 libxcb-xfixes0 libxcb-record0 libXfixes-devel libxcb-keysyms1  libcanberra-devel libgpgmepp-devel
 
 RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
 RUN zypper install --no-recommends -y git
