@@ -192,6 +192,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
 
     JDIMENSION xoffset = scaledRoi.x();
     JDIMENSION croppedWidth = scaledRoi.width();

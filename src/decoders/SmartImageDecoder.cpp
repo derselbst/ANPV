@@ -76,7 +76,7 @@ struct SmartImageDecoder::Impl
     void releaseFullImage()
     {
         q->image()->setDecodedImage(QImage());
-        this->decodedRoiRect = QRect();
+        q->resetDecodedRoiRect();
     }
     
     void setErrorMessage(const QString& err)
@@ -481,6 +481,11 @@ void SmartImageDecoder::setDecodingProgress(int prog)
         d->decodingProgress = prog;
         d->promise->setProgressValueAndText(prog , d->decodingMessage);
     }
+}
+
+void SmartImageDecoder::resetDecodedRoiRect()
+{
+    d->decodedRoiRect = QRect();
 }
 
 QRect SmartImageDecoder::decodedRoiRect()

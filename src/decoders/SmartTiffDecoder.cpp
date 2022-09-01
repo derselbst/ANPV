@@ -451,6 +451,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
 
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
     bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
