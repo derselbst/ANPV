@@ -26,6 +26,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <optional>
 
 #include "AfPointOverlay.hpp"
 #include "ExifOverlay.hpp"
@@ -44,7 +45,7 @@ struct DocumentView::Impl
     DocumentView* q = nullptr;
     
     QTimer fovChangedTimer;
-    QTransform previousFovTransform;
+    std::optional<QTransform> previousFovTransform;
     
     QPointer<QGraphicsScene> scene;
     QPointer<MessageWidget> messageWidget;
@@ -96,7 +97,7 @@ struct DocumentView::Impl
             latestDecodingState = DecodingState::Ready;
             // this makes ensures that the if clause will be entered next time we enter onViewportChanged(),
             // to display the next or previous image
-            previousFovTransform = QTransform();
+            previousFovTransform = std::nullopt;
         }
 
         removeSmoothPixmap();
