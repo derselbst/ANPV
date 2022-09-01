@@ -426,7 +426,7 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updatePreviewImage(QRect(0, y, width, linesToConvertNow));
+                this->updateDecodedRoiRect(QRect(0, y, width, linesToConvertNow));
             }
         }
     }
@@ -493,7 +493,7 @@ QRect SmartImageDecoder::decodedRoiRect()
     return d->decodedRoiRect;
 }
 
-void SmartImageDecoder::updatePreviewImage(const QRect& r)
+void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
 {
     d->decodedRoiRect = d->decodedRoiRect.united(r);
     this->image()->updatePreviewImage(r);

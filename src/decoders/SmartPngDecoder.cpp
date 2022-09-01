@@ -74,7 +74,7 @@ struct SmartPngDecoder::Impl
 
         auto width = png_get_image_width(png_ptr, self->info_ptr);
         size_t height = png_get_image_height(png_ptr, self->info_ptr);
-        self->q->updatePreviewImage(QRect(0, row, width, 1));
+        self->q->updateDecodedRoiRect(QRect(0, row, width, 1));
         if (row % 16 == 0)
         {
             self->q->cancelCallback();

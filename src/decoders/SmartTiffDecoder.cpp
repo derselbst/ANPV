@@ -534,7 +534,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                         d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
-                    this->updatePreviewImage(tile);
+                    this->updateDecodedRoiRect(tile);
                     
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
@@ -602,7 +602,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
             image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             this->image()->setDecodedImage(image);
-            this->updatePreviewImage(roi);
+            this->updateDecodedRoiRect(roi);
         }
         else
         {
@@ -633,7 +633,7 @@ gehtnich:
                     
                     buf += pixelsToCpy;
                     
-                    this->updatePreviewImage(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
+                    this->updateDecodedRoiRect(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);

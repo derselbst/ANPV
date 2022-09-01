@@ -256,7 +256,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updatePreviewImage(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
+            this->updateDecodedRoiRect(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
             totalLinesRead += linesRead;
         }
         
