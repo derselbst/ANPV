@@ -453,8 +453,11 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image);
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
-    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect &&
-        image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height) // extra paranoia to verify we haven't decoded with the fast decoding hack
+    bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
+    fullImageDecoded &= (image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
+    fullImageDecoded &= (this->decodedRoiRect() == fullImageRect); // the region we've decoded actually matches the region of the full image
+    
+    if(fullImageDecoded)
     {
         this->setDecodingState(DecodingState::FullImage);
     }
@@ -629,7 +632,7 @@ gehtnich:
                     
                     buf += pixelsToCpy;
                     
-                    this->updatePreviewImage(QRect(0, strip * rowsperstrip, width, std::min((strip+1) * rowsperstrip, height)));
+                    this->updatePreviewImage(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);

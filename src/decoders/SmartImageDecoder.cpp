@@ -38,6 +38,8 @@ struct SmartImageDecoder::Impl
     int decodingProgress=0;
     
     QSharedPointer<Image> image;
+    // the ROI actually decoded
+    QRect decodedRoiRect;
     
     // May or may not contain (a part of) the encoded input file
     // It does for embedded JPEG preview in CR2
@@ -74,6 +76,7 @@ struct SmartImageDecoder::Impl
     void releaseFullImage()
     {
         q->image()->setDecodedImage(QImage());
+        this->decodedRoiRect = QRect();
     }
     
     void setErrorMessage(const QString& err)
@@ -480,8 +483,14 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     }
 }
 
+QRect SmartImageDecoder::decodedRoiRect()
+{
+    return d->decodedRoiRect;
+}
+
 void SmartImageDecoder::updatePreviewImage(const QRect& r)
 {
+    d->decodedRoiRect = d->decodedRoiRect.united(r);
     this->image()->updatePreviewImage(r);
 }
 
