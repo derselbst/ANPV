@@ -183,7 +183,7 @@ struct ANPV::Impl
                     }
                 });
         this->actionOpen = new QAction("Open Image", q);
-        this->actionOpen->setShortcuts({Qt::CTRL | Qt::Key_O});
+        this->actionOpen->setShortcut({Qt::CTRL | Qt::Key_O});
         this->actionOpen->setShortcutContext(Qt::ApplicationShortcut);
         connect(this->actionOpen, &QAction::triggered, q,
                 [&]()
@@ -675,7 +675,7 @@ void ANPV::hardLinkFiles(QList<QString>&& fileNames, QString&& source, QString&&
         box.setDetailedText(details);
         box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
         box.exec();
-    });
+    }, Qt::QueuedConnection); // use queued connection, to avoid displaying the WaitCursor when operation failed
     
     this->undoStack()->push(cmd);
 }
@@ -688,27 +688,27 @@ void ANPV::moveFiles(QList<QString>&& fileNames, QString&& source, QString&& des
     connect(cmd, &MoveFileCommand::failed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
     {
         QMessageBox box(QMessageBox::Critical,
-                    "Move operation failed",
-                    "Some files could not be moved to the destination folder. See details below.",
-                    QMessageBox::Ok,
-                    QApplication::focusWidget());
-        
+            "Move operation failed",
+            "Some files could not be moved to the destination folder. See details below.",
+            QMessageBox::Ok,
+            QApplication::focusWidget());
+
         QString details;
-        for(int i=0; i<failedFilesWithReason.size(); i++)
+        for (int i = 0; i < failedFilesWithReason.size(); i++)
         {
             QPair<QString, QString>& p = failedFilesWithReason[i];
             details += p.first;
-            
-            if(!p.second.isEmpty())
+
+            if (!p.second.isEmpty())
             {
                 details += QString(": ") + p.second;
                 details += "\n";
             }
         }
         box.setDetailedText(details);
-        box.setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+        box.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         box.exec();
-    });
+    }, Qt::QueuedConnection); // use queued connection, to avoid displaying the WaitCursor when operation failed
     
     this->undoStack()->push(cmd);
 }

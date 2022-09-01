@@ -132,17 +132,18 @@ void SmartJpegDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 
 QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
-    // the entire jpeg() section below is clobbered by setjmp/longjmp
-    // hence, declare any objects with nontrivial destructors here
-    std::vector<JSAMPLE*> bufferSetup;
-    QImage image;
-
     if (!roiRect.isValid())
     {
         roiRect = this->image()->fullResolutionRect();
     }
     
     auto& cinfo = d->cinfo;
+
+    // the entire jpeg() section below is clobbered by setjmp/longjmp
+    // hence, declare any objects with nontrivial destructors here
+    std::vector<JSAMPLE*> bufferSetup;
+    QImage image;
+    QRect scaledRoi;
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
@@ -175,7 +176,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // update the scale because output dimensions might be a bit different to what we requested
     scale = std::min(cinfo.output_width * 1.0 / cinfo.image_width, cinfo.output_height * 1.0 / cinfo.image_height);
 
-    QRect scaledRoi(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::floor(roiRect.width() * scale), std::floor(roiRect.height() * scale));
+    scaledRoi = QRect(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::floor(roiRect.width() * scale), std::floor(roiRect.height() * scale));
     Q_ASSERT(scaledRoi.isValid());
     Q_ASSERT(scaledRoi.width() <= cinfo.output_width);
     Q_ASSERT(scaledRoi.height() <= cinfo.output_height);
@@ -192,6 +193,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
 
     JDIMENSION xoffset = scaledRoi.x();
     JDIMENSION croppedWidth = scaledRoi.width();
@@ -254,7 +256,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updatePreviewImage(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
+            this->updateDecodedRoiRect(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
             totalLinesRead += linesRead;
         }
         

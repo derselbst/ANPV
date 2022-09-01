@@ -19,9 +19,9 @@ struct SmartPngDecoder::Impl
 {
     SmartPngDecoder* q;
     
-    png_structp cinfo;
-    png_infop info_ptr;
-    png_infop einfo_ptr;
+    png_structp cinfo = nullptr;
+    png_infop info_ptr = nullptr;
+    png_infop einfo_ptr = nullptr;
 
     const unsigned char* inputBufferBegin = nullptr;
     qint64 inputBufferLength = 0;
@@ -74,7 +74,7 @@ struct SmartPngDecoder::Impl
 
         auto width = png_get_image_width(png_ptr, self->info_ptr);
         size_t height = png_get_image_height(png_ptr, self->info_ptr);
-        self->q->updatePreviewImage(QRect(0, row, width, 1));
+        self->q->updateDecodedRoiRect(QRect(0, row, width, 1));
         if (row % 16 == 0)
         {
             self->q->cancelCallback();
@@ -209,6 +209,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     image = this->allocateImageBuffer(width, height, d->format());
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
 
     std::vector<unsigned char*> bufferSetup;
     bufferSetup.resize(height);

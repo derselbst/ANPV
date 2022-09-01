@@ -451,9 +451,14 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
 
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
-    if(imagePageToDecode == d->findHighestResolution(d->pageInfos) && fullImageRect == targetImageRect)
+    bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
+    fullImageDecoded &= (image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
+    fullImageDecoded &= (this->decodedRoiRect() == fullImageRect); // the region we've decoded actually matches the region of the full image
+    
+    if(fullImageDecoded)
     {
         this->setDecodingState(DecodingState::FullImage);
     }
@@ -529,7 +534,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                         d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
                     }
                     
-                    this->updatePreviewImage(tile);
+                    this->updateDecodedRoiRect(tile);
                     
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
@@ -584,16 +589,20 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
             
             this->setDecodingMessage("Uh, it's an uncompressed 8-bit RGBA TIFF. Using fast decoding hack. This may take a few seconds and cannot be cancelled... ");
             
+            size_t rowStride = size_t(width) * samplesPerPixel;
             const uint8_t* rawRgb = d->buffer + initialOffset;
+            rawRgb += roi.y() * rowStride;
+            rawRgb += roi.x() * samplesPerPixel;
             
             QImage rawImage(rawRgb,
-                            width,
-                            height,
-                            width * samplesPerPixel,
+                            roi.width(),
+                            roi.height(),
+                            rowStride,
                             QImage::Format_RGBA8888);
             image = rawImage.scaled(roi.size() / desiredDecodeScale, Qt::KeepAspectRatio, Qt::FastTransformation);
             image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             this->image()->setDecodedImage(image);
+            this->updateDecodedRoiRect(roi);
         }
         else
         {
@@ -624,7 +633,7 @@ gehtnich:
                     
                     buf += pixelsToCpy;
                     
-                    this->updatePreviewImage(QRect(0, strip * rowsperstrip, width, std::min((strip+1) * rowsperstrip, height)));
+                    this->updateDecodedRoiRect(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);

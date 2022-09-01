@@ -739,6 +739,7 @@ void SortedImageModel::run()
                 d->setStatusMessage(entriesProcessed++, msg);
             }
 
+            // TODO: optimize away explicit sorting, by using heap insert in first place
             d->setStatusMessage(entriesProcessed++, "Sorting entries, please wait...");
             d->sortEntries();
             if (d->sortOrder == Qt::DescendingOrder)

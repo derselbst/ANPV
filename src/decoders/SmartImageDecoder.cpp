@@ -38,6 +38,8 @@ struct SmartImageDecoder::Impl
     int decodingProgress=0;
     
     QSharedPointer<Image> image;
+    // the ROI actually decoded
+    QRect decodedRoiRect;
     
     // May or may not contain (a part of) the encoded input file
     // It does for embedded JPEG preview in CR2
@@ -74,6 +76,7 @@ struct SmartImageDecoder::Impl
     void releaseFullImage()
     {
         q->image()->setDecodedImage(QImage());
+        q->resetDecodedRoiRect();
     }
     
     void setErrorMessage(const QString& err)
@@ -245,24 +248,24 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
     if (d->promise.isNull())
     {
         qDebug() << "There isn't anything to cancel.";
+        return;
+    }
+
+    bool taken = QThreadPool::globalInstance()->tryTake(this);
+    if (taken)
+    {
+        // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
+        d->promise->start();
+        this->setDecodingState(DecodingState::Cancelled);
+        d->promise->addResult(d->decodingState());
+        d->promise->finish();
+        return;
     }
 
     bool isFinished = taskFuture.isFinished();
-    bool taken = QThreadPool::globalInstance()->tryTake(this);
-    if(!isFinished)
+    if (!isFinished)
     {
-        if(!taken)
-        {
-            taskFuture.cancel();
-        }
-        else
-        {
-            // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
-            d->promise->start();
-            this->setDecodingState(DecodingState::Cancelled);
-            d->promise->addResult(d->decodingState());
-            d->promise->finish();
-        }
+        taskFuture.cancel();
     }
 }
 
@@ -423,7 +426,7 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updatePreviewImage(QRect(0, y, width, linesToConvertNow));
+                this->updateDecodedRoiRect(QRect(0, y, width, linesToConvertNow));
             }
         }
     }
@@ -480,8 +483,19 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     }
 }
 
-void SmartImageDecoder::updatePreviewImage(const QRect& r)
+void SmartImageDecoder::resetDecodedRoiRect()
 {
+    d->decodedRoiRect = QRect();
+}
+
+QRect SmartImageDecoder::decodedRoiRect()
+{
+    return d->decodedRoiRect;
+}
+
+void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
+{
+    d->decodedRoiRect = d->decodedRoiRect.united(r);
     this->image()->updatePreviewImage(r);
 }
 

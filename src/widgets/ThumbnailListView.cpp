@@ -24,6 +24,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QMimeData>
+#include <QMetaEnum>
 
 #include <vector>
 #include <algorithm>
@@ -71,7 +72,7 @@ struct ThumbnailListView::Impl
         {
             return;
         }
-        WaitCursor w;
+
         QDir currentDir = ANPV::globalInstance()->currentDir();
         if(QDir(dest) == currentDir)
         {
@@ -80,6 +81,14 @@ struct ThumbnailListView::Impl
         }
         
         QList<Entry_t> imgs = q->checkedImages();
+        if (imgs.isEmpty())
+        {
+            const char* operation = QMetaEnum::fromType<ANPV::FileOperation>().key(op);
+            QMessageBox::information(q, QString("Unable to %1").arg(operation), "Pls. select one or more files by checking the box located top-left of the file icon.", QMessageBox::Ok);
+            return;
+        }
+
+        WaitCursor w;
         QList<QString> files;
         files.reserve(imgs.size());
         for(Entry_t& e : imgs)
@@ -281,15 +290,18 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::HardLink); });
     
     d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
-    d->actionMove->setShortcuts(QKeySequence::Cut);
+    d->actionMove->setShortcut(QKeySequence::Cut);
+    d->actionMove->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
     
     d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
-    d->actionCopy->setShortcuts(QKeySequence::Copy);
+    d->actionCopy->setShortcut(QKeySequence::Copy);
+    d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
     d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
+    d->actionDelete->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Delete); });
     
     this->addAction(d->actionOpenSelectionInternally);
