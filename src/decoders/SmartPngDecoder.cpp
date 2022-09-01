@@ -209,6 +209,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     image = this->allocateImageBuffer(width, height, d->format());
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
+    this->resetDecodedRoiRect();
 
     std::vector<unsigned char*> bufferSetup;
     bufferSetup.resize(height);
