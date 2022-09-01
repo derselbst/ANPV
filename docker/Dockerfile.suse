@@ -2,15 +2,16 @@ FROM opensuse/tumbleweed
 
 RUN zypper refresh
 # this is what we need for running a pipeline in the container
-RUN zypper install --no-recommends -y sudo git
+RUN zypper install --no-recommends -y sudo
 
 # this is for basic development of ANPV, excluding QT6
 RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel
 
 # this is for KDE Framework
-RUN apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-image-formats-plugins libqt6svg6-dev libqt6core5compat6-dev qml6-module-qtcore qt6-declarative-dev qt6-base-dev-tools qt6-tools-dev qt6-wayland qt6-wayland-dev qt6-wayland-dev-tools qt6-base-private-dev libxml2-utils docbook-xsl libxslt1-dev libpolkit-gobject-1-dev libpolkit-agent-1-dev libxcb-xkb-dev libxcb-res0-dev libxcb-icccm4-dev libxcb-xfixes0-dev libxcb-record0-dev libxfixes-dev libxcb-keysyms1-dev libwayland-dev libcanberra-dev libgcrypt20-dev libgpgmepp-dev
+RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel qt6-qmlcore-devel qt6-declarative-devel qt6-wayland-devel qt6-base-private-devel libxml2-devel libxslt-devel  libxcb-xkb1 libxcb-res0 libxcb-icccm4 libxcb-xfixes0 libxcb-record0 libXfixes-devel libxcb-keysyms1  libcanberra-devel libgpgmepp-devel
 
-RUN apt-get install -y x11-xkb-utils libx11-dev libx11-xcb-dev libgpgme-dev
+RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
+RUN zypper install --no-recommends -y git
 
 WORKDIR /root
 RUN git clone https://invent.kde.org/sdk/kdesrc-build.git
