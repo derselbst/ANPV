@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
                 qCritical() << f.str().c_str();
                 return -1;
             }
+            [[fallthrough]];
         }
         default:
         {
