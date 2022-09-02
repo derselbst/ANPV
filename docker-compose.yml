@@ -2,7 +2,7 @@ version: "3"
 
 services:
   anpv:
-    image: qt6-kf6:latest
+    image: qt6-kf6:latest-suse
     build: docker/
     environment:
       - DISPLAY=${DISPLAY}
