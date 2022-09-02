@@ -22,3 +22,5 @@ COPY kdesrc-buildrc /root/.config/
 
 RUN ./kdesrc-build +anpv && rm -rf /root/kde
 WORKDIR /anpv
+
+RUN zypper install --no-recommends -y shadow

@@ -85,8 +85,11 @@ endif()
 
 find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 
+find_package(JPEG REQUIRED)
 # required is libjpeg-tubo 2.1.4 because of https://github.com/libjpeg-turbo/libjpeg-turbo/issues/611
-pkg_check_modules(JPEG REQUIRED libturbojpeg>=2.1.4 libjpeg>=2.1.4)
+if(JPEG_VERSION VERSION_LESS 2.1.4)
+  message(FATAL_ERROR "turbojpeg >= 2.1.4 is required to compile ANPV")
+endif()
 
 find_package(TIFF REQUIRED)
 
@@ -169,8 +172,8 @@ src/styles/CenteredBoxProxyStyle.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
-target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG ${TIFF_LIBRARIES} KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
+target_include_directories(anpv-lib SYSTEM PRIVATE ${TIFF_INCLUDE_DIRS})
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
