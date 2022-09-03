@@ -142,11 +142,10 @@ struct DocumentView::Impl
         }
     }
     
-    void alignImageAccordingToViewMode(const QSharedPointer<Image>& img)
+    void alignImageAccordingToViewMode(const QSharedPointer<Image>& img, ViewMode viewMode)
     {
         auto exif = img->exif();
         
-        auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             q->resetTransform();
@@ -373,11 +372,11 @@ struct DocumentView::Impl
         this->actionShowScrollBars->setChecked(showScrollBar);
     }
     
-    void onViewModeChanged(ViewMode)
+    void onViewModeChanged(ViewMode v)
     {
         if(this->currentImageDecoder)
         {
-            this->alignImageAccordingToViewMode(this->currentImageDecoder->image());
+            this->alignImageAccordingToViewMode(this->currentImageDecoder->image(), v);
         }
     }
     
@@ -671,7 +670,7 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     d->isSelectedBox->move(bottomLeftCheckPoint);
     if(d->currentImageDecoder)
     {
-        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
+        d->alignImageAccordingToViewMode(d->currentImageDecoder->image(), ANPV::globalInstance()->viewMode());
     }
 
     QGraphicsView::resizeEvent(event);
@@ -877,7 +876,7 @@ void DocumentView::showImage(QSharedPointer<Image> img)
         {
             d->latestDecodingState = DecodingState::Metadata;
 
-            d->alignImageAccordingToViewMode(img);
+            d->alignImageAccordingToViewMode(img, ANPV::globalInstance()->viewMode());
             
             auto viewFlags = ANPV::globalInstance()->viewFlags();
             auto afp = img->cachedAutoFocusPoints();

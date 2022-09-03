@@ -504,7 +504,7 @@ void ANPV::setViewMode(ViewMode v)
 {
     xThreadGuard g(this);
     ViewMode old = d->viewMode;
-    if(old != v)
+    if(true) // always emit, to allow user to press F4 to fit image again
     {
         d->viewMode = v;
         emit this->viewModeChanged(v, old);

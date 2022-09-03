@@ -88,10 +88,8 @@ struct MainWindow::Impl
             connect(ANPV::globalInstance(), &ANPV::viewModeChanged, action,
                     [=](ViewMode newMode, ViewMode)
                     {
-                        if(newMode == view)
-                        {
-                            action->trigger();
-                        }
+                        // trigger action to ensure proper selection
+                        action->setChecked(newMode == view);
                     });
             actionGroupViewMode->addAction(action);
         };
