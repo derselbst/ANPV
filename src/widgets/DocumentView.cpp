@@ -766,6 +766,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     switch (newState)
     {
     case DecodingState::Ready:
+        d->messageWidget->hide();
         break;
     case DecodingState::Metadata:
     {
