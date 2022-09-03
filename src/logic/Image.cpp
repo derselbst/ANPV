@@ -375,10 +375,15 @@ QString Image::formatInfoString()
     return infoStr;
 }
 
+QString Image::fileExtension() const
+{
+    return this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
+}
+
 // whether the Image looks like a RAW from its file extension
 bool Image::isRaw() const
 {
-    const QString formatHint = this->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
+    const QString formatHint = this->fileExtension();
     bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(formatHint);
     return isRaw;
 }
