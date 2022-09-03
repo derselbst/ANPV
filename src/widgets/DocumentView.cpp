@@ -1,14 +1,11 @@
 #include "DocumentView.hpp"
 
 #include <QGraphicsScene>
-#include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QFlags>
 #include <QTimer>
 #include <QGraphicsPixmapItem>
-#include <QWindow>
 #include <QGuiApplication>
 #include <QDebug>
 #include <QFuture>
@@ -19,10 +16,10 @@
 #include <QDataStream>
 #include <QScrollBar>
 #include <QActionGroup>
-#include <QtConcurrent/QtConcurrent>
-#include <QColorDialog>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QColorDialog>
+#include <QMimeData>
 
 #include <vector>
 #include <algorithm>

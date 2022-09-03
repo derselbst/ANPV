@@ -9,10 +9,7 @@
 
 #include <QDir>
 #include <QIcon>
-#include <QtDebug>
-#include <QSvgRenderer>
 #include <QAbstractFileIconProvider>
-#include <QPainter>
 #include <QMetaMethod>
 #include <QTimer>
 #include <KDCRAW/KDcraw>

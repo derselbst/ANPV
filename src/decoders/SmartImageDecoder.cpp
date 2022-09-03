@@ -11,10 +11,7 @@
 #include <KDCRAW/KDcraw>
 #include <QtDebug>
 #include <QPromise>
-#include <QMetaMethod>
 #include <QThreadPool>
-#include <QIcon>
-#include <QFileIconProvider>
 #include <chrono>
 #include <atomic>
 #include <mutex>

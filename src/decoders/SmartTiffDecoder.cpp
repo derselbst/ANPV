@@ -9,10 +9,7 @@
 #include <cstring>
 #include <QDebug>
 #include <QtGlobal>
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 #include <QColorSpace>
-#endif
 
 #include "tiff.h"
 #include "tiffio.h"

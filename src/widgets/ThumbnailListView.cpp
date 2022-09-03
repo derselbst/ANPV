@@ -1,24 +1,12 @@
 #include "ThumbnailListView.hpp"
 
-#include <QGraphicsScene>
-#include <QKeyEvent>
 #include <QWheelEvent>
-#include <QPainter>
-#include <QFlags>
-#include <QTimer>
-#include <QGraphicsPixmapItem>
-#include <QWindow>
 #include <QGuiApplication>
-#include <QDebug>
 #include <QListView>
 #include <QWidget>
-#include <QFileSystemModel>
 #include <QString>
-#include <QTreeView>
-#include <QDockWidget>
 #include <QAction>
 #include <QMessageBox>
-#include <QWheelEvent>
 #include <QDesktopServices>
 #include <QSortFilterProxyModel>
 #include <QApplication>
@@ -26,7 +14,6 @@
 #include <QMimeData>
 #include <QMetaEnum>
 
-#include <vector>
 #include <algorithm>
 #include <cmath>
 

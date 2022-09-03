@@ -12,9 +12,6 @@
 #include <QRect>
 #include <cmath>
 #include <QDebug>
-#include <QPainter>
-#include <QPen>
-#include <iomanip>
 #include <KExiv2/KExiv2>
 #include <optional>
 
