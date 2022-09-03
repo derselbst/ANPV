@@ -121,7 +121,7 @@ struct DocumentView::Impl
     void onViewportChanged()
     {
         QTransform newTransform = q->viewportTransform();
-        if(newTransform != this->previousFovTransform && this->taskFuture.isFinished())
+        if(newTransform != this->previousFovTransform)
         {
             if(this->latestDecodingState <= DecodingState::Metadata)
             {
@@ -134,7 +134,9 @@ struct DocumentView::Impl
             }
             else
             {
-                // we already have a preview image, the user zoomed or scrolled around, no need to hurry
+                // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
+                // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
+                // cause the timer restart from being until the user has stopped all viewport changes.
                 this->fovChangedTimer.start(600);
             }
             this->previousFovTransform = newTransform;
