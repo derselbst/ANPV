@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
     QApplication app(argc, argv);
-    
+
     QSplashScreen splash(QPixmap(":/images/splash.jpg"));
     splash.show();
 
@@ -52,58 +52,58 @@ int main(int argc, char *argv[])
     splash.showMessage("Setting application-wide style");
     app.setStyle(new CenteredBoxProxyStyle(QStyleFactory::create("Fusion")));
 
-    ANPV anpv(&splash);
-    
-    QDir cur = anpv.currentDir();
-    switch(argc)
-    {
-    case 1:
-        anpv.fixupAndSetCurrentDir(anpv.savedCurrentDir());
-        anpv.showThumbnailView(&splash);
-        break;
-    case 2:
-    {
-        QString arg = QString::fromLocal8Bit(argv[1]);
-        QFileInfo info(arg);
-        if(info.exists())
-        {
-            if(info.isDir())
-            {
-                anpv.setCurrentDir(info.absoluteFilePath());
-                anpv.showThumbnailView(&splash);
-                break;
-            }
-            else if(info.isFile())
-            {
-                // fallthrough
-            }
-        }
-        else
-        {
-            Formatter f;
-            f << "Path '" << argv[1] << "' not found";
-            QMessageBox::critical(nullptr, "ANPV", f.str().c_str());
-            qCritical() << f.str().c_str();
-            return -1;
-        }
-    }
-    default:
-    {
-        QList<Entry_t> files;
-        for(int i=1; i<argc;i++)
-        {
-            files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))), nullptr));
-        }
-        
-        splash.showMessage("Starting the image decoding task...");
-        anpv.openImages(files);
-        splash.close();
-    }
-    break;
-    }
-    
     try
     {
+        ANPV anpv(&splash);
+
+        QDir cur = anpv.currentDir();
+        switch (argc)
+        {
+        case 1:
+            anpv.fixupAndSetCurrentDir(anpv.savedCurrentDir());
+            anpv.showThumbnailView(&splash);
+            break;
+        case 2:
+        {
+            QString arg = QString::fromLocal8Bit(argv[1]);
+            QFileInfo info(arg);
+            if (info.exists())
+            {
+                if (info.isDir())
+                {
+                    anpv.setCurrentDir(info.absoluteFilePath());
+                    anpv.showThumbnailView(&splash);
+                    break;
+                }
+                else if (info.isFile())
+                {
+                    // fallthrough
+                }
+            }
+            else
+            {
+                Formatter f;
+                f << "Path '" << argv[1] << "' not found";
+                QMessageBox::critical(nullptr, "ANPV", f.str().c_str());
+                qCritical() << f.str().c_str();
+                return -1;
+            }
+        }
+        default:
+        {
+            QList<Entry_t> files;
+            for (int i = 1; i < argc; i++)
+            {
+                files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))), nullptr));
+            }
+
+            splash.showMessage("Starting the image decoding task...");
+            anpv.openImages(files);
+            splash.close();
+        }
+        break;
+        }
+
         int r = app.exec();
         return r;
     }
