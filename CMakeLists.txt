@@ -62,7 +62,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 
-include(FindPkgConfig)
+find_package(PkgConfig REQUIRED)
 include(GNUInstallDirs)
 
 #############################
@@ -86,12 +86,14 @@ endif()
 find_package(Qt6 COMPONENTS Core Widgets Gui Svg Test REQUIRED)
 
 find_package(JPEG REQUIRED)
+# required is libjpeg-tubo 2.1.4 because of https://github.com/libjpeg-turbo/libjpeg-turbo/issues/611
+if(JPEG_VERSION VERSION_LESS 2.1.4)
+  message(FATAL_ERROR "turbojpeg >= 2.1.4 is required to compile ANPV")
+endif()
 
 find_package(TIFF REQUIRED)
 
 find_package(PNG REQUIRED)
-
-#find_package(KF5KIO REQUIRED)
 
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
@@ -99,8 +101,11 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
-#add_subdirectory(kitemviews)
-#include_directories("${CMAKE_BINARY_DIR}/kitemviews/src")
+find_package(KF5KIO REQUIRED)
+if(KF5KIO_VERSION VERSION_LESS 5.91.0)
+  message(FATAL_ERROR "KF5KIO version insufficient, found ${KF5KIO_VERSION}, required is 5.91.0")
+endif()
+
 
 qt_add_library(anpv-lib STATIC MANUAL_FINALIZATION
 src/widgets/AfPointOverlay.cpp
@@ -167,8 +172,7 @@ src/styles/CenteredBoxProxyStyle.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} KExiv2 KDcraw) #KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets
-target_include_directories(anpv-lib SYSTEM PRIVATE ${JPEG_INCLUDE_DIRS} ${TIFF_INCLUDE_DIRS})
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
@@ -192,7 +196,7 @@ set_target_properties(anpv anpv-lib
 
 if(WIN32)
   if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
-    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET )
+    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET GLOBAL )
     target_link_libraries(KDcraw PUBLIC PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
     
     pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )

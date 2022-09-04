@@ -1,0 +1,141 @@
+# escape=`
+
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT license. See LICENSE.txt in the project root for license information.
+
+ARG FROM_IMAGE=mcr.microsoft.com/windows/servercore:ltsc2022
+FROM ${FROM_IMAGE} AS buildtools
+
+# Reset the shell.
+SHELL ["cmd", "/S", "/C"]
+
+# We must run as SYSTEM user, otherwise files are created with custom non-inherited permissions, causing the COPY steps below to fail with access denied
+USER "NT AUTHORITY\SYSTEM"
+
+# Set up environment to collect install errors.
+COPY Install.cmd C:\TEMP\
+ADD https://aka.ms/vscollect.exe C:\TEMP\collect.exe
+
+# Install Node.js LTS
+ADD https://nodejs.org/dist/v8.11.3/node-v8.11.3-x64.msi C:\TEMP\node-install.msi
+RUN start /wait msiexec.exe /i C:\TEMP\node-install.msi /l*vx "%TEMP%\MSI-node-install.log" /qn ADDLOCAL=ALL
+
+# Download channel for fixed install.
+ARG CHANNEL_URL=https://aka.ms/vs/17/release.ltsc.17.2/channel
+ADD ${CHANNEL_URL} C:\TEMP\VisualStudio.chman
+
+
+ADD https://github.com/git-for-windows/git/releases/download/v2.34.1.windows.1/Git-2.34.1-64-bit.exe C:\TEMP\git-setup.exe
+RUN C:\TEMP\git-setup.exe  /VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS="assoc,assoc_sh"
+
+
+# Download and install Build Tools for Visual Studio 2022 for native desktop workload.
+# https://docs.microsoft.com/de-de/visualstudio/releases/2022/release-history
+ADD https://aka.ms/vs/17/release.ltsc.17.2/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
+RUN C:\TEMP\Install.cmd C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
+    --channelUri C:\TEMP\VisualStudio.chman `
+    --installChannelUri C:\TEMP\VisualStudio.chman `
+    --add Microsoft.VisualStudio.Component.WinXP `
+    --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core `
+    --add Microsoft.VisualStudio.Component.Windows10SDK `
+    --add Microsoft.VisualStudio.Workload.VCTools `
+    --includeRecommended `
+    --installPath C:\BuildTools
+
+COPY ./certs/  ./certs/
+
+# Filepath refers to the path of cert files inside the container's file system
+RUN powershell Import-Certificate -FilePath .\certs\ZScaler-Root-CA.cer -CertStoreLocation Cert:\LocalMachine\Root
+RUN powershell Import-Certificate -FilePath .\certs\ZScaler-Intermediate.cer -CertStoreLocation Cert:\LocalMachine\CA
+# Confirming the installation of the certificate
+RUN powershell ls Cert:\LocalMachine\Root
+
+# configure git to use windows cert store, but doing so, may break curl...
+# RUN git config --system http.sslBackend schannel
+
+RUN git config --system http.sslBackend openssl
+
+SHELL ["C:\\Program Files\\Git\\bin\\bash.exe", "-c"]
+RUN "cat ./certs/ZScaler-Intermediate.cer ./certs/ZScaler-Root-CA.cer >> '/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt'"
+#RUN bash.exe -c "cat ./certs/ZScaler-Intermediate.cer ./certs/ZScaler-Root-CA.cer >> "/c/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt""
+
+SHELL ["cmd", "/S", "/C"]
+
+
+
+FROM buildtools AS vcpkg-builder
+
+ENV VCPKG_INSTALLATION_ROOT=C:\vcpkg
+ENV VCPKG_REVISION=b087c827a9f51b39493bf9e70c700ef6b80ba65a
+
+RUN git config --global user.email "you@example.com"
+RUN git config --global user.name "Your Name"
+RUN git clone -n https://github.com/derselbst/vcpkg.git %VCPKG_INSTALLATION_ROOT%
+WORKDIR ${VCPKG_INSTALLATION_ROOT}
+RUN git checkout --force %VCPKG_REVISION%
+
+RUN bootstrap-vcpkg.bat
+
+ARG PLATFORM=x64
+ENV VCPKG_MAX_CONCURRENCY=17
+
+# tell vcpkg to only compile release package, not debug ones
+RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows.cmake
+RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows-static.cmake
+
+RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows tiff:%PLATFORM%-windows exiv2:%PLATFORM%-windows libraw:%PLATFORM%-windows ecm:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows-static tiff:%PLATFORM%-windows-static exiv2:%PLATFORM%-windows-static libraw:%PLATFORM%-windows-static ecm:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build qtbase:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build qtbase:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build qtsvg:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build qtsvg:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows-static
+
+ENV VCPKG_MAX_CONCURRENCY=8
+RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows-static
+
+# Do not use --clean-after-build here. Otherwise git archive will fail for some reason.
+# And not using --editable results in a bluescreen on my machine...
+RUN  vcpkg install --editable qttools[core,designer,linguist]:%PLATFORM%-windows-static
+
+ENV VCPKG_MAX_CONCURRENCY=17
+# KF5I18nMacros.cmake.in looks for gettext and it's executable, which is by default only installed for x64-windows (non-static) and therefore not found
+RUN  vcpkg install --clean-after-build gettext[core,tools]:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build kf5itemviews:%PLATFORM%-windows-static
+RUN  vcpkg install --clean-after-build --keep-going kf5kio:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build pkgconf:%PLATFORM%-windows-static
+
+FROM ${FROM_IMAGE} AS powershell-builder
+
+WORKDIR /
+USER "NT AUTHORITY\SYSTEM"
+ADD https://github.com/PowerShell/PowerShell/releases/download/v7.2.5/PowerShell-7.2.5-win-x64.zip C:\powershell.zip
+SHELL ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
+RUN Expand-Archive C:\powershell.zip -DestinationPath C:\PowerShell
+SHELL ["cmd", "/S", "/C"]
+RUN copy PowerShell\pwsh.exe PowerShell\powershell.exe
+
+
+FROM  mcr.microsoft.com/windows/servercore:ltsc2022
+
+COPY --from=buildtools C:/BuildTools ./BuildTools
+COPY --from=buildtools ["C:/Program Files/Git", "C:/Program Files/Git"]
+COPY --from=powershell-builder ["C:/PowerShell", "C:/PowerShell"]
+COPY --from=vcpkg-builder ["C:/vcpkg/scripts", "./vcpkg/scripts"]
+COPY --from=vcpkg-builder ["C:/vcpkg/triplets", "./vcpkg/triplets"]
+COPY --from=vcpkg-builder ["C:/vcpkg/toolsrc", "./vcpkg/toolsrc"]
+COPY --from=vcpkg-builder ["C:/vcpkg/installed", "./vcpkg/installed"]
+COPY --from=vcpkg-builder ["C:/vcpkg/downloads/tools/cmake-3.22.2-windows/cmake-3.22.2-windows-i386", "./CMake"]
+COPY --from=vcpkg-builder ["C:/vcpkg/.vcpkg-root", "./vcpkg/.vcpkg-root"]
+COPY --from=vcpkg-builder ["C:/Program Files (x86)/Windows Kits/10", "C:/Program Files (x86)/Windows Kits/10"]
+RUN setx path "%path%;C:\Program Files\Git\bin;C:\CMake\bin;C:\PowerShell"
+
+# Use developer command prompt and start PowerShell if no other command specified.
+#ENTRYPOINT C:\BuildTools\Common7\Tools\VsDevCmd.bat

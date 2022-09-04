@@ -1,0 +1,26 @@
+FROM opensuse/tumbleweed
+
+RUN zypper refresh
+# this is what we need for running a pipeline in the container
+RUN zypper install --no-recommends -y sudo
+
+# this is for basic development of ANPV, excluding QT6
+RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel
+
+# this is for KDE Framework
+RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel qt6-qmlcore-devel qt6-declarative-devel qt6-wayland-devel qt6-base-private-devel qca-qt6-devel libxml2-devel libxslt-devel  libxcb-xkb1 libxcb-res0 libxcb-icccm4 libxcb-xfixes0 libxcb-record0 libXfixes-devel libxcb-keysyms1  libcanberra-devel libgpgmepp-devel
+
+RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
+RUN zypper install --no-recommends -y git
+
+WORKDIR /root
+RUN git clone https://invent.kde.org/sdk/kdesrc-build.git
+WORKDIR ./kdesrc-build
+RUN echo n | ./kdesrc-build --initial-setup
+
+COPY kdesrc-buildrc /root/.config/
+
+RUN ./kdesrc-build +anpv && rm -rf /root/kde
+WORKDIR /anpv
+
+RUN zypper install --no-recommends -y shadow

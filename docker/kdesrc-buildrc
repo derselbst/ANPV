@@ -1,0 +1,79 @@
+# This file controls options to apply when configuring/building modules, and
+# controls which modules are built in the first place.
+# List of all options: https://docs.kde.org/trunk5/en/kdesrc-build/kdesrc-build/conf-options-table.html
+
+global
+
+    # Finds and includes *KDE*-based dependencies into the build.  This makes
+    # it easier to ensure that you have all the modules needed, but the
+    # dependencies are not very fine-grained so this can result in quite a few
+    # modules being installed that you didn't need.
+    include-dependencies true
+
+    # Install directory for KDE software
+    kdedir /usr
+
+    # Directory for downloaded source code
+    source-dir ~/kde/src
+
+    # Directory to build KDE into before installing
+    # relative to source-dir by default
+    build-dir ~/kde/build
+
+#   qtdir  ~/kde/qt5 # Where to install Qt5 if kdesrc-build supplies it
+
+    cmake-options -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_WITH_QT6=ON -DEXCLUDE_DEPRECATED_BEFORE_AND_AT=5.94.0 -DBUILD_SHARED_LIBS=1 -DBUILD_STATIC_LIBS=0 -DWITH_WAYLAND=0 -DBUILD_DESIGNERPLUGIN=0 -DWITH_KAUTH=0 -DBUILD_KWALLETD=1 -DBUILD_KWALLET_QUERY=0 -DPHONON_BUILD_EXPERIMENTAL=0 -DPHONON_BUILD_DESIGNER_PLUGIN=0
+
+    # kdesrc-build sets 2 options which is used in options like make-options or set-env
+    # to help manage the number of compile jobs that happen during a build:
+    #
+    # 1. num-cores, which is just the number of detected CPU cores, and can be passed
+    #    to tools like make (needed for parallel build) or ninja (completely optional).
+    #
+    # 2. num-cores-low-mem, which is set to largest value that appears safe for
+    #    particularly heavyweight modules based on total memory, intended for
+    #    modules like qtwebengine
+    num-cores 4
+    num-cores-low-mem 2
+
+    # kdesrc-build can install a sample .xsession file for "Custom"
+    # (or "XSession") logins,
+    install-session-driver false
+
+    # or add a environment variable-setting script to
+    # ~/.config/kde-env-master.sh
+    install-environment-driver true
+
+    # Stop the build process on the first failure
+    stop-on-failure true
+
+    # Use a flat folder layout under ~/kde/src and ~/kde/build
+    # rather than nested directories
+    directory-layout flat
+
+    # Build with LSP support for everything that supports it
+    compile-commands-linking true
+    compile-commands-export true
+
+    tag v5.96.0
+end global
+
+# With base options set, the remainder of the file is used to define modules to build, in the
+# desired order, and set any module-specific options.
+#
+# Modules may be grouped into sets, and this is the normal practice.
+#
+# You can include other files inline using the "include" command. We do this here
+# to include files which are updated with kdesrc-build.
+
+# Common options that should be set for some KDE modules no matter how
+# kdesrc-build finds them. Do not comment these out unless you know
+# what you are doing.
+include /root/kdesrc-build/kf6-common-options-build-include
+
+module-set anpv
+    repository kde-projects
+    use-modules kio kitemviews
+    ignore-modules kdelibs4support kdewebkit khtml kjsembed kmediaplayer kinit kjs kross kdesignerplugin kemoticons kxmlrpcclient knotifications phonon
+    cmake-options -DBUILD_TESTING=TRUE
+end module-set

@@ -35,7 +35,7 @@ struct ThumbnailListView::Impl
     
     QAction *actionOpenSelectionInternally=nullptr;
     QAction *actionOpenSelectionExternally=nullptr;
-    QAction* actionOpenFolder = nullptr;
+    QAction* actionOpenFolder=nullptr;
     QAction* actionToggle = nullptr;
     QAction* actionCheck = nullptr;
     QAction* actionUncheck = nullptr;
@@ -252,7 +252,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     
     d->actionOpenFolder = new QAction(QIcon::fromTheme("system-file-manager"), "Open containing folder", this);
     connect(d->actionOpenFolder, &QAction::triggered, this, [&](){ d->openContainingFolder(); });
-
+    
     d->actionToggle = new QAction("Toggle selected images", this);
     d->actionToggle->setShortcut(Qt::Key_Space);
     d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
@@ -300,11 +300,11 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->addAction(sep);
     
     this->addAction(d->actionCopyToFilePath);
-
+    
     sep = new QAction(this);
     sep->setSeparator(true);
     this->addAction(sep);
-
+    
     this->addAction(d->actionToggle);
     this->addAction(d->actionCheck);
     this->addAction(d->actionUncheck);
