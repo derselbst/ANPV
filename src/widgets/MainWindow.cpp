@@ -331,6 +331,12 @@ struct MainWindow::Impl
     void onUrlNavigatorNavigationTriggered(const QUrl& url)
     {
         QString path = url.path();
+        if (!url.isValid() || path.isEmpty())
+        {
+            qInfo() << "onUrlNavigatorNavigationTriggered() got a null or empty url:" << url << " | " << path;
+            return;
+        }
+
 #ifdef Q_OS_WIN
         if (path[0] == '/')
         {
