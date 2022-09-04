@@ -548,11 +548,10 @@ struct SortedImageModel::Impl
                     decoderList->emplace_back(std::move(decoder));
                 }
             }
-            catch(const std::exception& e)
+            catch(const std::runtime_error& e)
             {
-                qCritical() << "Exception in SortedImageModel::Impl::addSingleFile()";
-                qCritical() << typeid(e).name() << " : " << e.what();
-                throw;
+                // Runtime errors that occurred while opening the file or decoding the image, should be ignored here.
+                // Just keep adding the file to the list, any error will be visible in the ThumbnailView later.
             }
             
             return true;
