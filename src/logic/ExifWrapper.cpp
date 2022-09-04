@@ -14,6 +14,7 @@
 #include <QDebug>
 #include <KExiv2/KExiv2>
 #include <optional>
+#include <iomanip>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
