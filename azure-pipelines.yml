@@ -66,8 +66,13 @@ jobs:
           @ECHO ON
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$(configuration)  -DCMAKE_VERBOSE_MAKEFILE=ON -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DVCPKG_PLATFORM_TOOLSET=$(toolset) -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
           cmake --build . --target anpv
-          cmake --build . --target check
-      displayName: 'Compile static ANPV + unit tests'
+      displayName: 'Compile static ANPV'
+    - script: |
+          call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
+          set path=%path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
+          cmake --build build --target check
+      displayName: 'Run unit tests'
+      enabled: false
     - task: CopyFiles@2
       continueOnError: true
       displayName: 'Copy ANPV binaries to artifact dir'
