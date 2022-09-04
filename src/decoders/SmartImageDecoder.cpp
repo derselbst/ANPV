@@ -61,7 +61,7 @@ struct SmartImageDecoder::Impl
         this->file.reset(new QFile(info.absoluteFilePath()));
         if (!this->file->open(QIODevice::ReadOnly))
         {
-            throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "'");
+            throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "', error was: " << this->file->errorString().toStdString());
         }
     }
     
