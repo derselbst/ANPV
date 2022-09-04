@@ -14,8 +14,6 @@ resources:
 
 jobs:
   - job: Linux
-    variables:
-      DEBIAN_FRONTEND: 'noninteractive'
     pool:
       vmImage: 'ubuntu-20.04'
     container: qt6Container-linux
@@ -51,8 +49,6 @@ jobs:
     container: qt6Container-win
     variables:
       configuration: 'Release'
-      VCPKG_REVISION: '8e1f46de11423e5f7d2395458f5252738ffffbbd'
-      VCPKG_MAX_CONCURRENCY: 1
       platform: 'x64'
       VCPKG_INSTALLATION_ROOT: 'C:/vcpkg'
       PKG_CONFIG_PATH: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static/lib/pkgconfig'

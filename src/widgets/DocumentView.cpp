@@ -1,14 +1,11 @@
 #include "DocumentView.hpp"
 
 #include <QGraphicsScene>
-#include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QFlags>
 #include <QTimer>
 #include <QGraphicsPixmapItem>
-#include <QWindow>
 #include <QGuiApplication>
 #include <QDebug>
 #include <QFuture>
@@ -19,10 +16,10 @@
 #include <QDataStream>
 #include <QScrollBar>
 #include <QActionGroup>
-#include <QtConcurrent/QtConcurrent>
-#include <QColorDialog>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QColorDialog>
+#include <QMimeData>
 
 #include <vector>
 #include <algorithm>
@@ -121,7 +118,7 @@ struct DocumentView::Impl
     void onViewportChanged()
     {
         QTransform newTransform = q->viewportTransform();
-        if(newTransform != this->previousFovTransform && this->taskFuture.isFinished())
+        if(newTransform != this->previousFovTransform)
         {
             if(this->latestDecodingState <= DecodingState::Metadata)
             {
@@ -134,7 +131,9 @@ struct DocumentView::Impl
             }
             else
             {
-                // we already have a preview image, the user zoomed or scrolled around, no need to hurry
+                // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
+                // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
+                // cause the timer restart from being until the user has stopped all viewport changes.
                 this->fovChangedTimer.start(600);
             }
             this->previousFovTransform = newTransform;
@@ -142,11 +141,10 @@ struct DocumentView::Impl
         }
     }
     
-    void alignImageAccordingToViewMode(const QSharedPointer<Image>& img)
+    void alignImageAccordingToViewMode(const QSharedPointer<Image>& img, ViewMode viewMode)
     {
         auto exif = img->exif();
         
-        auto viewMode = ANPV::globalInstance()->viewMode();
         if(viewMode == ViewMode::Fit)
         {
             q->resetTransform();
@@ -373,11 +371,11 @@ struct DocumentView::Impl
         this->actionShowScrollBars->setChecked(showScrollBar);
     }
     
-    void onViewModeChanged(ViewMode)
+    void onViewModeChanged(ViewMode v)
     {
         if(this->currentImageDecoder)
         {
-            this->alignImageAccordingToViewMode(this->currentImageDecoder->image());
+            this->alignImageAccordingToViewMode(this->currentImageDecoder->image(), v);
         }
     }
     
@@ -671,7 +669,7 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     d->isSelectedBox->move(bottomLeftCheckPoint);
     if(d->currentImageDecoder)
     {
-        d->alignImageAccordingToViewMode(d->currentImageDecoder->image());
+        d->alignImageAccordingToViewMode(d->currentImageDecoder->image(), ANPV::globalInstance()->viewMode());
     }
 
     QGraphicsView::resizeEvent(event);
@@ -767,6 +765,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     switch (newState)
     {
     case DecodingState::Ready:
+        d->messageWidget->hide();
         break;
     case DecodingState::Metadata:
     {
@@ -860,7 +859,7 @@ void DocumentView::loadImage(QSharedPointer<Image> image)
 void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
-    d->currentImageDecoder = std::move(dec);
+    d->currentImageDecoder = dec;
     this->loadImage();
 }
 
@@ -877,7 +876,7 @@ void DocumentView::showImage(QSharedPointer<Image> img)
         {
             d->latestDecodingState = DecodingState::Metadata;
 
-            d->alignImageAccordingToViewMode(img);
+            d->alignImageAccordingToViewMode(img, ANPV::globalInstance()->viewMode());
             
             auto viewFlags = ANPV::globalInstance()->viewFlags();
             auto afp = img->cachedAutoFocusPoints();

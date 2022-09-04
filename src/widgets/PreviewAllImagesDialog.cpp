@@ -3,11 +3,7 @@
 #include "ui_PreviewAllImagesDialog.h"
 #include "ANPV.hpp"
 
-#include <QFutureWatcher>
-#include <QFuture>
-#include <QDebug>
 #include <QString>
-#include <QTimer>
 
 struct PreviewAllImagesDialog::Impl
 {

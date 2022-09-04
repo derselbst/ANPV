@@ -1,35 +1,17 @@
 #include "MainWindow.hpp"
 
-#include <QMainWindow>
-#include <QProgressBar>
-#include <QStackedLayout>
 #include <QWidget>
 #include <QSplashScreen>
 #include <QGuiApplication>
 #include <QApplication>
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QPixmap>
-#include <QGraphicsPixmapItem>
-#include <QSplashScreen>
 #include <QScreen>
-#include <QtDebug>
 #include <QFileInfo>
-#include <QMainWindow>
-#include <QStatusBar>
-#include <QProgressBar>
 #include <QDir>
 #include <QFileSystemModel>
-#include <QListView>
 #include <QActionGroup>
 #include <QAction>
-#include <QMenuBar>
-#include <QMenu>
 #include <QSettings>
 #include <QUndoStack>
-#include <QMessageBox>
-#include <QPair>
-#include <QPointer>
 #include <QToolTip>
 #include <QSortFilterProxyModel>
 #include <QCloseEvent>
@@ -92,10 +74,8 @@ struct MainWindow::Impl
             connect(ANPV::globalInstance(), &ANPV::viewModeChanged, action,
                     [=](ViewMode newMode, ViewMode)
                     {
-                        if(newMode == view)
-                        {
-                            action->trigger();
-                        }
+                        // trigger action to ensure proper selection
+                        action->setChecked(newMode == view);
                     });
             actionGroupViewMode->addAction(action);
         };

@@ -73,15 +73,25 @@ QSharedPointer<Image> DecoderFactory::makeImage(const QFileInfo& url)
     return QSharedPointer<Image> (new Image(url), &QObject::deleteLater);
 }
 
-std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Image> image)
+std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPointer<Image>& image)
+{
+    // try to derive decoder from fileExtension
+    auto dec = this->getDecoder(image, image->fileExtension());
+    if (!dec)
+    {
+        // if that didn't work, try to determin type by opening the file
+        dec = this->getDecoder(image, QString());
+    }
+    return dec;
+}
+
+std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPointer<Image>& image, const QString& formatHint)
 {
     const QFileInfo& info = image->fileInfo();
     if(info.isFile())
     {
-        const QString extension = image->fileInfo().fileName().section(QLatin1Char('.'), -1).toLower();
-
         QByteArray format;
-        if (extension.isEmpty())
+        if (formatHint.isEmpty())
         {
             qInfo() << "Could not determine file extension for file " << image->fileInfo().fileName();
             QImageReader r(info.absoluteFilePath());
@@ -90,7 +100,7 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(QSharedPointer<Ima
         }
         else
         {
-            format = extension.toLocal8Bit();
+            format = formatHint.toLocal8Bit();
         }
 
         if(image->isRaw() || format == "jpeg" || format == "jpg")

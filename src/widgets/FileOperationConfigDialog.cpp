@@ -2,11 +2,8 @@
 #include "ui_FileOperationConfigDialog.h"
 
 #include <QDialogButtonBox>
-#include <QFileDialog>
-#include <QShowEvent>
-#include <QDebug>
+#include <QDialog>
 #include <QActionGroup>
-#include <QDir>
 #include <QMetaEnum>
 
 FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, QWidget *parent)

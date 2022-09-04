@@ -69,6 +69,7 @@ public:
     
     QString formatInfoString();
 
+    QString fileExtension() const;
     bool isRaw() const;
     bool hasEquallyNamedJpeg() const;
     bool hasEquallyNamedTiff() const;

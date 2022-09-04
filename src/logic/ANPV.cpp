@@ -1,36 +1,21 @@
 #include "ANPV.hpp"
 
-#include <QMainWindow>
-#include <QProgressBar>
-#include <QStackedLayout>
 #include <QWidget>
 #include <QSplashScreen>
 #include <QGuiApplication>
 #include <QApplication>
-#include <QGraphicsScene>
-#include <QGraphicsView>
 #include <QPixmap>
-#include <QGraphicsPixmapItem>
-#include <QSplashScreen>
 #include <QFileIconProvider>
-#include <QScreen>
 #include <QtDebug>
 #include <QFileInfo>
-#include <QMainWindow>
-#include <QStatusBar>
-#include <QProgressBar>
 #include <QDir>
 #include <QFileSystemModel>
-#include <QListView>
 #include <QActionGroup>
 #include <QAction>
-#include <QMenuBar>
-#include <QMenu>
 #include <QMessageBox>
 #include <QPair>
 #include <QPointer>
 #include <QSettings>
-#include <QTabWidget>
 #include <QSvgRenderer>
 #include <QDataStream>
 #include <QFileDialog>
@@ -504,7 +489,7 @@ void ANPV::setViewMode(ViewMode v)
 {
     xThreadGuard g(this);
     ViewMode old = d->viewMode;
-    if(old != v)
+    if(true) // always emit, to allow user to press F4 to fit image again
     {
         d->viewMode = v;
         emit this->viewModeChanged(v, old);

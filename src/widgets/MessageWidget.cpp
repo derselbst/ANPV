@@ -24,8 +24,6 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPainter>
-#include <QShowEvent>
 #include <QToolButton>
 #include <QStyle>
 #include <QGuiApplication>

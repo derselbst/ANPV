@@ -7,9 +7,6 @@
 #include "ANPV.hpp"
 
 #include <QTabWidget>
-#include <QGuiApplication>
-#include <QRect>
-#include <QScreen>
 #include <QSharedPointer>
 #include <QKeyEvent>
 #include <QSettings>

@@ -9,9 +9,7 @@
 #include <QSvgRenderer>
 #include <QImage>
 #include <QPainter>
-#include <QDebug>
 #include <QString>
-#include <QTimer>
 
 struct ProgressIndicatorHelper::Impl
 {
