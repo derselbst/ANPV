@@ -96,6 +96,10 @@ struct SmartImageDecoder::Impl
             q->setDecodingMessage("Allocating image output buffer");
 
             std::unique_ptr<T, decltype(&free)> mem(static_cast<T*>(calloc(needed, sizeof(T))), &::free);
+            if(mem.get() == nullptr)
+            {
+                throw bad_alloc();
+            }
             QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
             if(image.isNull())
             {
