@@ -163,7 +163,7 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         png_set_gray_to_rgb(cinfo);
     }
 
-    if (color_type == PNG_COLOR_TYPE_RGB)
+    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)
     {
         png_set_filler(cinfo, 0xffff, PNG_FILLER_AFTER);
     }
