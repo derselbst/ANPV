@@ -89,10 +89,9 @@ struct SmartPngDecoder::Impl
     QImage::Format format()
     {
         auto bit_depth = png_get_bit_depth(this->cinfo, this->info_ptr);
-
-        return bit_depth == 16 
+        return bit_depth == 16
             ? QImage::Format_RGBA64
-            : QImage::Format_RGBA8888;
+            : QImage::Format_ARGB32;
     }
 };
 
@@ -153,24 +152,36 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         png_set_expand_gray_1_2_4_to_8(cinfo);
     }
 
-    if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_tRNS))
-    {
-        png_set_tRNS_to_alpha(cinfo);
-    }
-
     if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
     {
         png_set_gray_to_rgb(cinfo);
     }
 
-    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)
+    if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_tRNS))
     {
-        png_set_filler(cinfo, 0xffff, PNG_FILLER_AFTER);
+        png_set_tRNS_to_alpha(cinfo);
+    }
+    else if (!(color_type & PNG_COLOR_MASK_ALPHA))
+    {
+        png_set_filler(cinfo, 0xffff,
+            QSysInfo::ByteOrder == QSysInfo::BigEndian
+            ? PNG_FILLER_BEFORE
+            : PNG_FILLER_AFTER);
     }
 
     if (bit_depth == 16 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
     {
         png_set_swap(cinfo);
+    }
+
+    if (bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::BigEndian)
+    {
+        png_set_swap_alpha(cinfo);
+    }
+
+    if (bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
+    {
+        png_set_bgr(cinfo);
     }
 
     switch (interlace_type)
@@ -182,6 +193,13 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         throw std::runtime_error(Formatter() << "Unsupported interlace type: " << interlace_type);
     }
 
+    uint32_t num_exif;
+    unsigned char* exif;
+    if (png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
+    {
+        qDebug() << "Cool, we've got exif data in " << this->image()->fileInfo().fileName();
+    }
+
     png_charp name;
     png_bytep profile;
     png_uint_32 proflen;
@@ -190,14 +208,43 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         Q_ASSERT(compression_type == PNG_COMPRESSION_TYPE_BASE);
         iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<char*>(profile), proflen));
     }
-
-    uint32_t num_exif;
-    unsigned char* exif;
-    if (png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
+    else if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_sRGB))
     {
-        qDebug() << "Cool, we've got exif data in " << this->image()->fileInfo().fileName();
+        int rendering_intent = -1;
+        // We don't actually care about the rendering_intent, just that it is valid
+        if (png_get_sRGB(cinfo, d->info_ptr, &rendering_intent) && rendering_intent >= 0 && rendering_intent <= 3)
+        {
+            iccProfile = QColorSpace::SRgb;
+        }
     }
-    
+    else if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_gAMA))
+    {
+        double fileGamma = 0.0;
+        png_get_gAMA(cinfo, d->info_ptr, &fileGamma);
+        if (fileGamma > 0.0f)
+        {
+            if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_cHRM))
+            {
+                double white_x, white_y, red_x, red_y;
+                double green_x, green_y, blue_x, blue_y;
+                if (png_get_cHRM(cinfo, d->info_ptr,
+                    &white_x, &white_y, &red_x, &red_y,
+                    &green_x, &green_y, &blue_x, &blue_y))
+                {
+                    QColorSpace col(QPointF(white_x, white_y), QPointF(red_x, red_y), QPointF(green_x, green_y), QPointF(blue_x, blue_y), QColorSpace::TransferFunction::Gamma, fileGamma);
+                    if (col.isValid())
+                    {
+                        iccProfile = col;
+                    }
+                    else
+                    {
+                        iccProfile = QColorSpace(QColorSpace::Primaries::SRgb, QColorSpace::TransferFunction::Gamma, fileGamma);
+                    }
+                }
+            }
+        }
+    }
+
     this->image()->setSize(QSize(width, height));
     this->image()->setColorSpace(iccProfile);
 }
