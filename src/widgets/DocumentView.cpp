@@ -792,10 +792,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
         break;
     }
     
-    if(d->latestDecodingState < newState)
-    {
-        d->latestDecodingState = static_cast<DecodingState>(newState);
-    }
+    d->latestDecodingState = static_cast<DecodingState>(newState);
 }
 
 void DocumentView::onCheckStateChanged(Image* img, int state, int old)
