@@ -191,12 +191,12 @@ struct DocumentView::Impl
         // the "inverted zoom factor"
         // 1.0 means the pixmap is shown at native size
         // >1.0 means the user zoomed out
-        // <1.0 mean the user zommed in and sees the individual pixels
+        // <1.0 means the user zommed in and sees the individual pixels
         auto newScale = std::max(visPixRect.width() / viewportRect.width(), visPixRect.height() / viewportRect.height());
 
         qWarning() << newScale << "\n";
 
-        if (newScale > 1.0)
+        if (newScale > 2.0)
         {
             QPixmap imgToScale;
 
@@ -551,10 +551,12 @@ DocumentView::DocumentView(QWidget *parent)
     d->currentPixmapOverlay = new QGraphicsPixmapItem;
     d->currentPixmapOverlay->setZValue(-9);
     d->currentPixmapOverlay->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+    d->currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
     d->scene->addItem(d->currentPixmapOverlay);
     
     d->smoothPixmapOverlay = new QGraphicsPixmapItem;
     d->smoothPixmapOverlay->setZValue(-8);
+    d->currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
     d->scene->addItem(d->smoothPixmapOverlay);
     
     d->afPointOverlay = new AfPointOverlay;
