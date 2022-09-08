@@ -168,6 +168,11 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         png_set_filler(cinfo, 0xffff, PNG_FILLER_AFTER);
     }
 
+    if (bit_depth == 16 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
+    {
+        png_set_swap(cinfo);
+    }
+
     switch (interlace_type)
     {
     case PNG_INTERLACE_NONE:
@@ -207,6 +212,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     QImage image;
     image = this->allocateImageBuffer(width, height, d->format());
+
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
     this->resetDecodedRoiRect();
