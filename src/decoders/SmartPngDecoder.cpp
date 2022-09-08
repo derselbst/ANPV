@@ -213,6 +213,15 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QImage image;
     image = this->allocateImageBuffer(width, height, d->format());
 
+    png_uint_32 res_x, res_y;
+    int unit;
+    if (png_get_pHYs(cinfo, d->info_ptr, &res_x, &res_y, &unit) && unit == PNG_RESOLUTION_METER)
+    {
+        // RESOLUTIONUNIT must be read and set now, because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
+        image.setDotsPerMeterX(res_x);
+        image.setDotsPerMeterY(res_y);
+    }
+
     auto* dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
     this->resetDecodedRoiRect();
