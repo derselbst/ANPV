@@ -290,20 +290,13 @@ void DecoderTest::testAccessingDecoderWhileStillDecodingOngoing()
     QVERIFY(fut.isRunning()); QVERIFY(fut2.isRunning());
     QVERIFY(!fut.isCanceled()); QVERIFY(!fut2.isCanceled());
     
-    // decoding a third time with a different targetState will cancel the previous decoding
-    QFuture<DecodingState> fut3 = dec->decodeAsync(DecodingState::PreviewImage, Priority::Normal);
-    QVERIFY(fut.isStarted()); QVERIFY(fut2.isStarted());
-    QVERIFY(!fut.isRunning()); QVERIFY(!fut2.isRunning());
-    QVERIFY(fut.isCanceled()); QVERIFY(fut2.isCanceled());
-    QThread::msleep(100);
-    QVERIFY(fut3.isStarted());
-    QVERIFY(fut3.isRunning());
-    QVERIFY(!fut3.isCanceled());
+    // decoding a third time with a different targetState will raise an error
+    QVERIFY_EXCEPTION_THROWN(dec->decodeAsync(DecodingState::PreviewImage, Priority::Normal), std::logic_error);
     
     // will block until decoding done
     dec->releaseFullImage();
-    QVERIFY(fut3.isFinished());
-    QVERIFY(!fut3.isRunning());
+    QVERIFY(fut2.isFinished());
+    QVERIFY(!fut2.isRunning());
 }
 
 void DecoderTest::testTakeDecoderFromThreadPoolBeforeDecodingCouldBeStarted()

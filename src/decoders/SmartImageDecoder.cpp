@@ -291,7 +291,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
             return taskFuture;
         }
 
-        Q_ASSERT(taskFuture.isFinished());
+        this->assertNotDecoding();
     }
 
     std::lock_guard g(d->asyncApiMtx);
