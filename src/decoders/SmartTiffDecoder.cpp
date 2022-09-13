@@ -564,7 +564,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
             uint64_t *stripOffset = nullptr;
             TIFFGetField(d->tiff, TIFFTAG_STRIPOFFSETS, &stripOffset);
             
-            if(stripCount == 0)
+            if(stripCount == 0 || stripOffset == nullptr)
             {
                 throw std::runtime_error("This should never happen: TIFFNumberOfStrips() returned zero??");
             }
