@@ -919,7 +919,6 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     
     d->addThumbnailPreview(img);
     d->exifOverlay->setMetadata(img);
-    d->onViewportChanged();
 }
 
 void DocumentView::loadImage()
