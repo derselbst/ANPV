@@ -283,16 +283,15 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
         QFuture<DecodingState> taskFuture = d->promise->future();
         DecodingState imageState = this->image()->decodingState();
         
+        // if the requested state is the same as we already have decoded and this is not some potentially incomplete-preview-image state
         if(targetState != DecodingState::PreviewImage && targetState == d->targetState && targetState == imageState)
         {
             // return already decoded stuff
             qDebug() << "Skipping decoding of image " << this->image()->fileInfo().fileName() << " and returning what we already have.";
             return taskFuture;
         }
-        
-        this->cancelOrTake(taskFuture);
-        taskFuture.waitForFinished();
-        this->reset();
+
+        Q_ASSERT(taskFuture.isFinished());
     }
 
     std::lock_guard g(d->asyncApiMtx);
