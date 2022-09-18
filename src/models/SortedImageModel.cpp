@@ -59,6 +59,8 @@ struct SortedImageModel::Impl
     QTimer layoutChangedTimer;
     QPointer<ProgressIndicatorHelper> spinningIconHelper;
 
+    uint64_t numberOfCheckedImages = 0;
+
     Impl(SortedImageModel* parent) : q(parent)
     {}
     
@@ -442,6 +444,7 @@ struct SortedImageModel::Impl
         directoryWorker = std::make_unique<QPromise<DecodingState>>();
         watcher->removePath(currentDir.absolutePath());
         currentDir = QDir();
+        this->numberOfCheckedImages = 0;
     }
 
     void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
@@ -529,7 +532,14 @@ struct SortedImageModel::Impl
             , Qt::QueuedConnection);
         connect(image.data(), &Image::thumbnailChanged, q,
                 [&](Image*, QImage){ updateLayout(); });
+        auto con = connect(image.data(), &Image::checkStateChanged, q,
+            [&](Image*, int c, int)
+            {
+                this->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
+            });
 
+        // increment, because Image::connectNotify will decrement it soon afterwards
+        this->numberOfCheckedImages++;
         this->entries.push_back(std::make_pair(image, decoder));
         
         if(decoder)
@@ -581,7 +591,8 @@ struct SortedImageModel::Impl
         q->beginResetModel();
         for(auto it = entries.begin(); it != entries.end();)
         {
-            const QFileInfo& eInfo = SortedImageModel::image(*it)->fileInfo();
+            auto img = SortedImageModel::image(*it);
+            const QFileInfo& eInfo = img->fileInfo();
             auto result = std::find_if(fileInfoList.begin(),
                                     fileInfoList.end(),
                                     [&](const QFileInfo& other)
@@ -589,6 +600,11 @@ struct SortedImageModel::Impl
             
             if(result == fileInfoList.end())
             {
+                // TODO: this is ugly, think of a better way using events / connections
+                if (img->checked() != Qt::Unchecked)
+                {
+                    this->numberOfCheckedImages--;
+                }
                 // file e doesn't exist in the directory, probably deleted
                 it = entries.erase(it);
                 continue;
@@ -1217,4 +1233,9 @@ QList<Entry_t> SortedImageModel::checkedEntries()
         }
     }
     return results;
+}
+
+bool SortedImageModel::isSafeToChangeDir()
+{
+    return d->numberOfCheckedImages == 0;
 }

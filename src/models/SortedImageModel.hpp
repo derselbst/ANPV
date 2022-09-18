@@ -62,6 +62,8 @@ public:
     void sort(Column column);
     void sort(Qt::SortOrder order);
 
+    bool isSafeToChangeDir();
+
 public: // QAbstractItemModel
     
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;

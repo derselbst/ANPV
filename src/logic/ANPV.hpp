@@ -64,7 +64,7 @@ public:
     void setViewFlags(ViewFlags_t);
     
     QString currentDir();
-    void setCurrentDir(QString str);
+    void setCurrentDir(QString str, bool force = false);
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
     

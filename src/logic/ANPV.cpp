@@ -400,7 +400,7 @@ QString ANPV::currentDir()
     return d->currentDir;
 }
 
-void ANPV::setCurrentDir(QString str)
+void ANPV::setCurrentDir(QString str, bool force)
 {
     xThreadGuard g(this);
     
@@ -412,9 +412,19 @@ void ANPV::setCurrentDir(QString str)
         qWarning() << "ANPV::setCurrentDir(): ignoring non-existing new directory " << newDir;
         return;
     }
-    
-    if(d->currentDir != str)
+
+    if(d->currentDir != str || force)
     {
+        auto model = this->fileModel();
+        if (model && !model->isSafeToChangeDir())
+        {
+            QMessageBox::StandardButton reply = QMessageBox::question(d->mainWindow.get(), "Changing directory will discard check selection", "You have checked images recently. Changing the directory now will discard any selection. Are you sure to change directory?", QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::No)
+            {
+                return;
+            }
+        }
+
         d->currentDir = newDir.absolutePath();
         emit this->currentDirChanged(d->currentDir, old.absolutePath());
     }

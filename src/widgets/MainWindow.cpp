@@ -101,7 +101,7 @@ struct MainWindow::Impl
         connect(ui->actionReload, &QAction::triggered, q,
             [&](bool)
             {
-                ANPV::globalInstance()->fileModel()->changeDirAsync(ANPV::globalInstance()->currentDir());
+                ANPV::globalInstance()->setCurrentDir(ANPV::globalInstance()->currentDir(), true);
             }
         );
         connect(ui->actionPreview_all_images, &QAction::triggered, q,
