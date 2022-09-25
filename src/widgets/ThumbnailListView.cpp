@@ -168,17 +168,6 @@ struct ThumbnailListView::Impl
         Q_ASSERT(cb != nullptr);
         cb->setText(filePaths);
     }
-    
-    void scrollToCurrentIdx()
-    {
-        QModelIndex cur = q->selectionModel()->currentIndex();
-        if(!cur.isValid() || !q->selectionModel()->isSelected(cur))
-        {
-            return;
-        }
-        
-        q->scrollTo(cur, QAbstractItemView::PositionAtCenter);
-    }
 
     static Qt::CheckState toggleCheckState(Qt::CheckState state, const Qt::ItemFlags& flags)
     {
@@ -392,7 +381,6 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     {
         old->disconnect(this);
     }
-    connect(model, &QAbstractItemModel::layoutChanged, this, [&](const QList<QPersistentModelIndex>, QAbstractItemModel::LayoutChangeHint){ d->scrollToCurrentIdx(); }, Qt::QueuedConnection);
     QListView::setModel(model);
 }
 
