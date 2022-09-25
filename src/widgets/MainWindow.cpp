@@ -442,6 +442,24 @@ struct MainWindow::Impl
     {
         this->ui->infoBox->setText("");
     }
+
+    void onImageCheckStateChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles)
+    {
+        if (!roles.contains(Qt::CheckStateRole))
+        {
+            return;
+        }
+
+        size_t size = 0;
+        auto model = ANPV::globalInstance()->fileModel();
+        QItemSelectionRange r(this->proxyModel->mapToSource(topLeft), this->proxyModel->mapToSource(bottomRight));
+        QModelIndexList idx = r.indexes();
+        for(const QModelIndex& i : idx)
+        {
+            auto& img = model->image(model->entry(i));
+            size += img->fileInfo().size();
+        }
+    }
     
     void onThumbnailListViewSelectionChanged(const QItemSelection &, const QItemSelection &)
     {
@@ -539,6 +557,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
             this, [&](){ d->filterRegularExpressionChanged(); });
     
     connect(d->proxyModel, &QSortFilterProxyModel::modelAboutToBeReset, this, [&](){ d->clearInfoBox(); });
+    connect(d->proxyModel, &QSortFilterProxyModel::dataChanged, this, [&](const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles) { d->onImageCheckStateChanged(topLeft, bottomRight, roles); });
     connect(d->ui->thumbnailListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection &selected, const QItemSelection &deselected)
     {
         d->onThumbnailListViewSelectionChanged(selected, deselected);
