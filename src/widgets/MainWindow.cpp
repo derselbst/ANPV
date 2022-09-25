@@ -446,23 +446,45 @@ struct MainWindow::Impl
     void onThumbnailListViewSelectionChanged(const QItemSelection &, const QItemSelection &)
     {
         auto imgs = this->ui->thumbnailListView->selectedImages();
+        auto chkImgs = this->ui->thumbnailListView->checkedImages();
         
-        if(imgs.isEmpty())
+        if(imgs.isEmpty() && chkImgs.isEmpty())
         {
             this->clearInfoBox();
         }
         else
         {
+            QString text;
             size_t count = imgs.size();
-            size_t size = 0;
-            for(Entry_t& e : imgs)
+            if (count > 0)
             {
-                size += SortedImageModel::image(e)->fileInfo().size();
+                size_t size = 0;
+                for (Entry_t& e : imgs)
+                {
+                    size += SortedImageModel::image(e)->fileInfo().size();
+                }
+
+                text += QString(
+                    "%1 items selected<br />"
+                    "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
             }
-            
-            QString text = QString(
-                "%1 items selected<br />"
-                "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
+
+            count = chkImgs.size();
+            if (count > 0)
+            {
+                size_t size = 0;
+                for (Entry_t& e : chkImgs)
+                {
+                    size += SortedImageModel::image(e)->fileInfo().size();
+                }
+                if (!text.isEmpty())
+                {
+                    text += "<br /><br />";
+                }
+                text += QString(
+                    "%1 items checked<br />"
+                    "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
+            }
             this->ui->infoBox->setText(text);
         }
     }
