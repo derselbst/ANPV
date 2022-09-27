@@ -44,7 +44,7 @@ struct SortedImageModel::Impl
     std::vector<Entry_t> entries;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
-    std::mutex m;
+    std::recursive_mutex m;
     std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
     std::map<QSharedPointer<SmartImageDecoder>, QMetaObject::Connection> spinningIconDrawConnections;
     
@@ -407,7 +407,7 @@ struct SortedImageModel::Impl
     
     void cancelAllBackgroundTasks()
     {
-        std::lock_guard<std::mutex> l(m);
+        std::lock_guard<std::recursive_mutex> l(m);
         if(!backgroundTasks.empty())
         {
             for (const auto& [key,value] : backgroundTasks)
@@ -470,7 +470,7 @@ struct SortedImageModel::Impl
     
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
     {
-        std::lock_guard<std::mutex> l(m);
+        std::lock_guard<std::recursive_mutex> l(m);
         auto& watcher2 = this->backgroundTasks[dec];
         Q_ASSERT(watcher2.get() == watcher.get());
         watcher->disconnect(q);
@@ -481,6 +481,9 @@ struct SortedImageModel::Impl
         {
             this->spinningIconHelper->stopRendering();
         }
+
+        // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
+        this->scheduleSpinningIconRedraw(q->index(dec->image()));
     }
 
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
@@ -767,7 +770,7 @@ void SortedImageModel::run()
             {
                 d->setStatusMessage(entriesProcessed++, "Directory read, starting async decoding tasks in the background.");
 
-                std::lock_guard<std::mutex> l(d->m);
+                std::lock_guard<std::recursive_mutex> l(d->m);
                 for(auto& decoder : decodersToRunLater)
                 {
                     QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
@@ -833,7 +836,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
     d->waitForDirectoryWorker();
     d->cancelAllBackgroundTasks();
 
-    std::lock_guard<std::mutex> l(d->m);
+    std::lock_guard<std::recursive_mutex> l(d->m);
     if (!d->entries.empty())
     {
         d->spinningIconHelper->startRendering();
@@ -1063,7 +1066,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
         {
             QSharedPointer<QFutureWatcher<DecodingState>> watcher;
             {
-                std::lock_guard<std::mutex> l(d->m);
+                std::lock_guard<std::recursive_mutex> l(d->m);
                 if (d->backgroundTasks.contains(dec))
                 {
                     watcher = d->backgroundTasks[dec];
