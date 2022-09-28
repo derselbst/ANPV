@@ -509,7 +509,9 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         {
             for (uint32_t x = 0; x < width; x += tw)
             {
-                QRect tile(x,y,tw,tl);
+                unsigned linesToCopy = std::min(tl, height - y);
+                unsigned widthToCopy = std::min(tw, width - x);
+                QRect tile(x,y,widthToCopy,linesToCopy);
                 if(!tile.intersects(roi))
                 {
                     skipColorTransform = true;
