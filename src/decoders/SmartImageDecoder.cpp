@@ -403,7 +403,10 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
     QColorSpace csp = this->image()->colorSpace();
     if (csp.isValid() && csp != srgbSpace)
     {
-        this->setDecodingMessage("Transforming colorspace...");
+        if (!silent)
+        {
+            this->setDecodingMessage("Transforming colorspace...");
+        }
         QColorTransform colorTransform = csp.transformationToColorSpace(srgbSpace);
 
         auto* dataPtr = image.constBits();
