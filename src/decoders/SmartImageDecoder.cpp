@@ -537,6 +537,11 @@ void SmartImageDecoder::assertNotDecoding()
     }
 }
 
+QImage SmartImageDecoder::allocateImageBuffer(const QSize& s, QImage::Format format)
+{
+    return this->allocateImageBuffer(s.width(), s.height(), format);
+}
+
 QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
 {
     switch(format)

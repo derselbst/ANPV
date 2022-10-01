@@ -418,7 +418,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
 
-    QImage image = this->allocateImageBuffer(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+    QImage image = this->allocateImageBuffer(mappedRoi.size(), d->format(imagePageToDecode));
 
     // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
     float resX = 0;
@@ -446,13 +446,15 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             break;
         }
     }
+    
+    image.setOffset(mappedRoi.topLeft());
 
     this->image()->setDecodedImage(image);
     this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 
     bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
-    fullImageDecoded &= (image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
+    fullImageDecoded &= ((unsigned)image.width() >= d->pageInfos[imagePageToDecode].width && (unsigned)image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
     fullImageDecoded &= (this->decodedRoiRect() == fullImageRect); // the region we've decoded actually matches the region of the full image
     
     if(fullImageDecoded)
@@ -479,6 +481,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         // roi's coordinates are native to imagePageToDecode
         roi = QRect(0, 0, width, height);
     }
+    
+    Q_ASSERT(roi.size() == image.size());
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
@@ -507,12 +511,14 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         QRect decodedRoiRect;
         for (uint32_t y = 0; y < height; y += tl)
         {
-            for (uint32_t x = 0; x < width; x += tw)
+            for (uint32_t x = 0, destCol=0; x < width; x += tw)
             {
-                unsigned linesToCopy = std::min(tl, height - y);
-                unsigned widthToCopy = std::min(tw, width - x);
-                QRect tile(x,y,widthToCopy,linesToCopy);
-                if(!tile.intersects(roi))
+                const unsigned linesToCopy = std::min(tl, height - y);
+                const unsigned widthToCopy = std::min(tw, width - x);
+                QRect tileRect(x,y,widthToCopy,linesToCopy);
+                
+                QRect areaToCopy = tileRect.intersected(roi);
+                if(areaToCopy.isEmpty())
                 {
                     skipColorTransform = true;
                     continue;
@@ -525,21 +531,22 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 }
                 else
                 {
-                    unsigned linesToCopy = std::min(tl, height - y);
-                    unsigned widthToCopy = std::min(tw, width - x);
-                    for (unsigned i = 0; i < linesToCopy; i++)
+                    const unsigned linesToSkip = linesToCopy - areaToCopy.height();
+                    const unsigned widthToSkip = widthToCopy - areaToCopy.width();
+                    for (unsigned i = linesToSkip; i < (unsigned)areaToCopy.height(); i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
+                        d->convert32BitOrder(&buf[size_t(y+i - roi.y())*image.width() + destCol], &tileBuf[(tl-i-1)*tw + widthToSkip], 1, areaToCopy.width());
                     }
+                    destCol += areaToCopy.width();
                     
-                    this->updateDecodedRoiRect(tile);
+                    this->updateDecodedRoiRect(areaToCopy);
                     
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
                 }
                 
-                decodedRoiRect = decodedRoiRect.united(tile);
+                decodedRoiRect = decodedRoiRect.united(areaToCopy);
             }
         }
         Q_ASSERT(image.constBits() == dataPtrBackup);

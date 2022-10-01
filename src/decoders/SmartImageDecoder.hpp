@@ -60,7 +60,8 @@ protected:
     QRect decodedRoiRect();
     void resetDecodedRoiRect();
     void updateDecodedRoiRect(const QRect& r);
-
+    
+    QImage allocateImageBuffer(const QSize& s, QImage::Format format);
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
     void convertColorSpace(QImage& image, bool silent = false);
 
