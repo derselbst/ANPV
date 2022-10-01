@@ -537,7 +537,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     for (unsigned i = linesToSkip; i < (unsigned)areaToCopy.height(); i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[size_t(y+i - roi.y())*image.width() + destCol], &tileBuf[(tl-i-1)*tw + widthToSkip], 1, areaToCopy.width());
+                        d->convert32BitOrder(&buf[size_t(y+i - roi.y())*image.width() + destCol], &tileBuf[(tl-i-1)*tw + (x<areaToCopy.x() ? widthToSkip : 0)], 1, areaToCopy.width());
                     }
                     destCol += areaToCopy.width();
                     
