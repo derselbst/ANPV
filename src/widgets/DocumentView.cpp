@@ -173,7 +173,7 @@ struct DocumentView::Impl
     void createSmoothPixmap()
     {
         xThreadGuard g(q);
-        if (currentDocumentPixmap.isNull())
+//         if (currentDocumentPixmap.isNull())
         {
             return;
         }
@@ -556,7 +556,6 @@ DocumentView::DocumentView(QWidget *parent)
     
     d->smoothPixmapOverlay = new QGraphicsPixmapItem;
     d->smoothPixmapOverlay->setZValue(-8);
-    d->currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
     d->scene->addItem(d->smoothPixmapOverlay);
     
     d->afPointOverlay = new AfPointOverlay;
@@ -746,10 +745,13 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
 
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
+    d->currentPixmapOverlay->setOffset(d->currentPixmapOverlay->mapFromScene(image.offset()));
 
     QSize fullImageSize = img->size();
-    auto newScale = (fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width());
-    d->currentPixmapOverlay->setScale(newScale);
+    auto newScaleX = (fullImageSize.width() * 1.0 / (d->currentPixmapOverlay->boundingRect().width() + d->currentPixmapOverlay->offset().x()));
+    auto newScaleY = (fullImageSize.height() * 1.0 / (d->currentPixmapOverlay->boundingRect().height() + d->currentPixmapOverlay->offset().y()));
+    qDebug() << "scaleX: " << newScaleX << "   |   scaleY: " << newScaleY << "   |    offset: " << image.offset();
+    d->currentPixmapOverlay->setScale(newScaleY);
     d->currentPixmapOverlay->show();
 
     d->scene->invalidate();

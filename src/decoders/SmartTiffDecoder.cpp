@@ -447,7 +447,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         }
     }
     
-    image.setOffset(mappedRoi.topLeft());
+    image.setOffset(roiRect.topLeft());
 
     this->image()->setDecodedImage(image);
     this->resetDecodedRoiRect();
