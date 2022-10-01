@@ -418,6 +418,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
 
+    qDebug() << "actualPageScaleXInverted: " << actualPageScaleXInverted<< "   |   actualPageScaleYInverted: " <<actualPageScaleYInverted ;
     QImage image = this->allocateImageBuffer(mappedRoi.size(), d->format(imagePageToDecode));
 
     // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
@@ -449,7 +450,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     image.setOffset(roiRect.topLeft());
 
-    this->image()->setDecodedImage(image);
+    this->image()->setDecodedImage(image, QTransform::fromScale(1/actualPageScaleXInverted, 1/actualPageScaleYInverted));
     this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
 

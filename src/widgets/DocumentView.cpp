@@ -735,7 +735,7 @@ void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
     d->currentPixmapOverlay->update(r);
 }
 
-void DocumentView::onImageRefinement(Image* img, QImage image)
+void DocumentView::onImageRefinement(Image* img, QImage image, QTransform scale)
 {
     if(img != this->d->currentImageDecoder->image().data())
     {
@@ -745,13 +745,13 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
 
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
+    d->currentPixmapOverlay->setTransform(scale, false);
     d->currentPixmapOverlay->setOffset(d->currentPixmapOverlay->mapFromScene(image.offset()));
-
+/*
     QSize fullImageSize = img->size();
     auto newScaleX = (fullImageSize.width() * 1.0 / (d->currentPixmapOverlay->boundingRect().width() + d->currentPixmapOverlay->offset().x()));
     auto newScaleY = (fullImageSize.height() * 1.0 / (d->currentPixmapOverlay->boundingRect().height() + d->currentPixmapOverlay->offset().y()));
-    qDebug() << "scaleX: " << newScaleX << "   |   scaleY: " << newScaleY << "   |    offset: " << image.offset();
-    d->currentPixmapOverlay->setScale(newScaleY);
+    qDebug() << "scaleX: " << newScaleX << "   |   scaleY: " << newScaleY << "   |    offset: " << image.offset();*/
     d->currentPixmapOverlay->show();
 
     d->scene->invalidate();
@@ -778,7 +778,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     }
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
+        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage(), QTransform());
 
         d->thumbnailPreviewOverlay->hide();
         break;
