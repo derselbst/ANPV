@@ -537,7 +537,13 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                     for (unsigned i = linesToSkip; i < (unsigned)areaToCopy.height(); i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[size_t(y+i - roi.y())*image.width() + destCol], &tileBuf[(tl-i-1)*tw + (x<areaToCopy.x() ? widthToSkip : 0)], 1, areaToCopy.width());
+                        // determine the destinationRow to write to, make it size_t to avoid 32bit overflow for panorama images
+                        size_t destRow = y+i - roi.y();
+                        // the source row to read from, we need to start from the bottom (i.e. last pixel row of the tile), -1 because tl is a size but we need an index
+                        unsigned srcRow = tl-i-1;
+                        // the source column to read from, if a tile intersects to the left of areaToCopy, we need to skip widthToSkip pixels, if a tile intersects at the right, we start with with the first pixel
+                        unsigned srcCol = x<areaToCopy.x() ? widthToSkip : 0;
+                        d->convert32BitOrder(&buf[destRow*image.width() + destCol], &tileBuf[srcRow*tw + srcCol], 1, areaToCopy.width());
                     }
                     destCol += areaToCopy.width();
                     
