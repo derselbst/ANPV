@@ -475,8 +475,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     const auto& width = d->pageInfos[imagePageToDecode].width;
     const auto& height = d->pageInfos[imagePageToDecode].height;
     
-    bool skipColorTransform = false;
-    
     if(!roi.isValid())
     {
         // roi's coordinates are native to imagePageToDecode
@@ -521,7 +519,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 QRect areaToCopy = tileRect.intersected(roi);
                 if(areaToCopy.isEmpty())
                 {
-                    skipColorTransform = true;
                     continue;
                 }
             
@@ -656,16 +653,7 @@ gehtnich:
         }
     }
 
-    if(skipColorTransform)
-    {
-        this->setDecodingMessage("Partial decoding finished, but color transforming is not yet supported for partial decoded images.");
-        // it would also transform the non-decoded surrounding void, which is very memory expensive...
-    }
-    else
-    {
-        this->convertColorSpace(image);
-        this->setDecodingMessage("TIFF decoding completed successfully.");
-    }
-
+    this->convertColorSpace(image);
+    this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }
