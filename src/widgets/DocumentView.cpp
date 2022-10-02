@@ -568,6 +568,7 @@ DocumentView::DocumentView(QWidget *parent)
     d->messageWidget = new MessageWidget(this);
     d->messageWidget->setCloseButtonVisible(false);
     d->messageWidget->setWordWrap(true);
+    d->messageWidget->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     d->messageWidget->hide();
     
     d->isSelectedBox = new QCheckBox(this);
@@ -593,6 +594,9 @@ DocumentView::DocumentView(QWidget *parent)
     d->onViewModeChanged(ANPV::globalInstance()->viewMode());
     connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
             [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
+
+    d->exifOverlay->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+    this->setFocusPolicy(Qt::FocusPolicy::WheelFocus);
 }
 
 DocumentView::~DocumentView() = default;
