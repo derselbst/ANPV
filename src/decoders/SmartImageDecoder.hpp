@@ -49,6 +49,7 @@ public:
     void run() override;
     void cancelOrTake(QFuture<DecodingState> taskFuture);
     void releaseFullImage();
+    QRect decodedRoiRect();
 
 protected:
     virtual void decodeHeader(const unsigned char* buffer, qint64 nbytes) = 0;
@@ -57,7 +58,6 @@ protected:
     void cancelCallback();
     void assertNotDecoding();
 
-    QRect decodedRoiRect();
     void resetDecodedRoiRect();
     void updateDecodedRoiRect(const QRect& r);
     

@@ -58,7 +58,9 @@ struct DocumentView::Impl
     QAction* actionShowScrollBars = nullptr;
 
     AfPointOverlay* afPointOverlay = nullptr;
-    
+
+    QGraphicsRectItem* debugOverlay1 = nullptr;
+
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(q);
     
     QFutureWatcher<DecodingState> taskFuture;
@@ -561,6 +563,12 @@ DocumentView::DocumentView(QWidget *parent)
     d->afPointOverlay = new AfPointOverlay;
     d->afPointOverlay->setZValue(100);
     d->scene->addItem(d->afPointOverlay);
+
+    d->debugOverlay1 = new QGraphicsRectItem;
+    d->debugOverlay1->setZValue(100000);
+    d->debugOverlay1->setPen(QPen(Qt::green, 6, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
+    d->scene->addItem(d->debugOverlay1);
+    d->debugOverlay1->hide();
     
     this->setScene(d->scene);
             
@@ -592,6 +600,14 @@ DocumentView::DocumentView(QWidget *parent)
     d->onViewModeChanged(ANPV::globalInstance()->viewMode());
     connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
             [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
+
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this, [&]()
+        {
+            QRect decodedRoi = d->currentImageDecoder->decodedRoiRect();
+            d->debugOverlay1->setRect(decodedRoi);
+            d->debugOverlay1->show();
+            qDebug() << "decoded Roi: " << decodedRoi;
+        });
 }
 
 DocumentView::~DocumentView() = default;

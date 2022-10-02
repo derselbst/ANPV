@@ -498,7 +498,7 @@ QRect SmartImageDecoder::decodedRoiRect()
 
 void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
 {
-    d->decodedRoiRect = d->decodedRoiRect.united(r);
+    d->decodedRoiRect = d->decodedRoiRect.isValid() ? d->decodedRoiRect.united(r) : r;
     this->image()->updatePreviewImage(r);
 }
 

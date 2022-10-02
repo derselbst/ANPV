@@ -479,7 +479,7 @@ void Image::updatePreviewImage(const QRect& r)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     QRect updateRect = d->cachedUpdateRect;
-    updateRect = updateRect.united(r);
+    updateRect = updateRect.isValid() ? updateRect.united(r) : r;
     d->cachedUpdateRect = updateRect;
     lck.unlock();
 
