@@ -412,13 +412,9 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         throw std::runtime_error("Unable to find a suitable TIFF directory to decode.");
     }
 
-    double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
-    double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();
-    
-    QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
+    QTransform scaleTrafo = this->fullResToPageTransform(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
 
-    qDebug() << "actualPageScaleXInverted: " << actualPageScaleXInverted<< "   |   actualPageScaleYInverted: " <<actualPageScaleYInverted ;
     QImage image = this->allocateImageBuffer(mappedRoi.size(), d->format(imagePageToDecode));
 
     // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
@@ -449,8 +445,8 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
     
     image.setOffset(roiRect.topLeft());
-
-    QTransform toFullScaleTransform(QTransform::fromScale(1 / actualPageScaleXInverted, 1 / actualPageScaleYInverted));
+    
+    QTransform toFullScaleTransform = scaleTrafo.inverted();
     this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution);

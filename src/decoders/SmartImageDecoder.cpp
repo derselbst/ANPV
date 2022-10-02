@@ -563,3 +563,38 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
             throw std::logic_error(Formatter() << "QImage Format '" << format << "' not supported currently");
     }
 }
+
+
+// A transform that can be used to translate coordinates, which are in the domain of the full image resolution,
+// to coordinates which are in domain of the provided resolution.
+QTransform SmartImageDecoder::fullResToPageTransform(const QSize& desiredResolution)
+{
+    if (!desiredResolution.isValid())
+    {
+        throw std::logic_error("desiredResolution must be valid!");
+    }
+    return this->fullResToPageTransform(desiredResolution.width(), desiredResolution.height());
+}
+
+QTransform SmartImageDecoder::fullResToPageTransform(unsigned w, unsigned h)
+{
+    if (w == 0 || h == 0)
+    {
+        throw std::logic_error("w and h must be >0 !");
+    }
+
+    QRect fullResRect = this->image()->fullResolutionRect();
+    if (fullResRect.isEmpty())
+    {
+        throw std::logic_error("fullResolutionRect must not be empty!");
+    }
+
+    double pageScaleXInverted = w * 1.0 / fullResRect.width();
+    double pageScaleYInverted = h * 1.0 / fullResRect.height();
+
+    QTransform scaleTrafo = QTransform::fromScale(pageScaleXInverted, pageScaleYInverted);
+    // assert this transform is invertible, to allow "reversing" this operation (i.e. transform from provided domain to full image res)
+    Q_ASSERT(scaleTrafo.isInvertible());
+
+    return scaleTrafo;
+}

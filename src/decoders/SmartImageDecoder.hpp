@@ -65,6 +65,9 @@ protected:
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
     void convertColorSpace(QImage& image, bool silent = false);
 
+    QTransform fullResToPageTransform(const QSize& desiredResolution);
+    QTransform fullResToPageTransform(unsigned w, unsigned h);
+
     void setDecodingState(DecodingState state);
     void setDecodingMessage(QString&& msg);
     void setDecodingProgress(int prog);
