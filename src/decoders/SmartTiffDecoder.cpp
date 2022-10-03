@@ -651,7 +651,7 @@ gehtnich:
         }
     }
 
-    this->convertColorSpace(image, true);
+    this->convertColorSpace(image);
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }

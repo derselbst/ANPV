@@ -429,7 +429,7 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updateDecodedRoiRect(QRect(0, y, width, linesToConvertNow));
+                this->updateDecodedRoiRect(QRect(image.offset() + QPoint(0, y), QSize(width, linesToConvertNow)));
             }
         }
     }
