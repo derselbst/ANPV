@@ -503,7 +503,8 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
         std::vector<uint32_t> tileBuf(tw * tl);
         
-        for (uint32_t y = 0; y < height; y += tl)
+        unsigned destRowIncr = 0;
+        for (uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
         {
             for (uint32_t x = 0, destCol=0; x < width; x += tw)
             {
@@ -524,21 +525,22 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 }
                 else
                 {
-                    const unsigned linesToSkip = y < areaToCopy.y() ? linesToCopy - areaToCopy.height() : 0;
-                    const unsigned widthToSkip = x < areaToCopy.x() ? widthToCopy - areaToCopy.width() : 0;
-                    for (unsigned i = linesToSkip; i < (unsigned)areaToCopy.height() + linesToSkip; i++)
+                    const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
+                    const unsigned widthToSkipFromLeft = x < areaToCopy.x() ? areaToCopy.x() - x : 0;
+                    for (unsigned i = 0; i < (unsigned)areaToCopy.height(); i++)
                     {
                         // brainfuck ahead...
                         // determine the destinationRow to write to, make it size_t to avoid 32bit overflow for panorama images when multiplying by image.width() below
-                        size_t destRow = y+i - roi.y();
+                        size_t dr = destRow + i;
                         // the source row to read from, we need to start from the bottom (i.e. last pixel row of the tile), -1 because tl is a size but we need an index
-                        unsigned srcRow = tl-i-1;
+                        unsigned srcRow = tl - 1 - (i + linesToSkipFromTop);
                         // the source column to read from, if a tile intersects to the left of areaToCopy, we need to skip widthToSkip pixels, if a tile intersects at the right, we start with with the first pixel
-                        unsigned srcCol = widthToSkip;
-                        qDebug() << "destRow: " << destRow << " | srcRow: " << srcRow;
-                        d->convert32BitOrder(&buf[destRow*image.width() + destCol], &tileBuf[srcRow*tw + srcCol], 1, areaToCopy.width());
+                        unsigned srcCol = widthToSkipFromLeft;
+                        qDebug() << "destRow: " << dr << " | srcRow: " << srcRow;
+                        d->convert32BitOrder(&buf[dr*image.width() + destCol], &tileBuf[srcRow*tw + srcCol], 1, areaToCopy.width());
                     }
                     destCol += areaToCopy.width();
+                    destRowIncr = areaToCopy.height();
                     
                     QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
                     this->updateDecodedRoiRect(mappedArea);
