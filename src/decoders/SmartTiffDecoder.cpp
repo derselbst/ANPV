@@ -617,9 +617,18 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
 gehtnich:
             std::vector<uint32_t> stripBuf(width * rowsperstrip);
             std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
-            for (tstrip_t strip = 0; strip < stripCount; strip++)
+            for (tstrip_t strip = 0, destRow=0; strip < stripCount; strip++)
             {
-                uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const unsigned y = (strip*rowsperstrip);
+                QRect stripRect(0,y,width,rowsToDecode);
+                
+                QRect areaToCopy = stripRect.intersected(roi);
+                if(areaToCopy.isEmpty())
+                {
+                    continue;
+                }
+                
                 auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
                 if(ret == 0)
                 {
@@ -629,19 +638,14 @@ gehtnich:
                 {
                     d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsToDecode, width);
 
-                    QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
-                                    width,
-                                    rowsToDecode,
-                                    width * sizeof(uint32_t),
-                                    d->format(imagePageToDecode));
-                    stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
+                    const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
+                    for(unsigned i=0; i < (unsigned)areaToCopy.height(); i++)
+                    {
+                        ::memcpy(&buf[destRow++*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                    }
                     
-                    size_t pixelsToCpy = stripImg.width() * stripImg.height();
-                    ::memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
-                    
-                    buf += pixelsToCpy;
-                    
-                    this->updateDecodedRoiRect(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
+                    QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
+                    this->updateDecodedRoiRect(mappedArea);
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);
