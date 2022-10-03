@@ -144,6 +144,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     std::vector<JSAMPLE*> bufferSetup;
     QImage image;
     QRect scaledRoi;
+    QTransform currentResToFullResTrafo;
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
@@ -192,7 +193,8 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // TODO: The buffer allocation should be done after cropping the scanline
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
-    this->image()->setDecodedImage(image, this->fullResToPageTransform(cinfo.output_width, cinfo.output_height).inverted());
+    currentResToFullResTrafo = this->fullResToPageTransform(cinfo.output_width, cinfo.output_height).inverted();
+    this->image()->setDecodedImage(image, currentResToFullResTrafo);
     this->resetDecodedRoiRect();
 
     JDIMENSION xoffset = scaledRoi.x();
@@ -256,7 +258,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updateDecodedRoiRect(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
+            this->updateDecodedRoiRect(currentResToFullResTrafo.mapRect(QRect(xoffset, totalLinesRead, croppedWidth, linesRead)));
             totalLinesRead += linesRead;
         }
         
