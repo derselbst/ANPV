@@ -41,6 +41,7 @@ struct MultiDocumentView::Impl
         
     void writeSettings()
     {
+        WaitCursor w;
         QSettings settings;
         settings.beginGroup("MultiDocumentView");
         settings.setValue("geometry", q->saveGeometry());
@@ -49,6 +50,7 @@ struct MultiDocumentView::Impl
 
     void readSettings(QMainWindow *parent)
     {
+        WaitCursor w;
         QSettings settings;
         settings.beginGroup("MultiDocumentView");
         // open the window on the primary screen

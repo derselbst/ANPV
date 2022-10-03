@@ -27,6 +27,7 @@
 #include "MoveFileCommand.hpp"
 #include "FileOperationConfigDialog.hpp"
 #include "CancellableProgressWidget.hpp"
+#include "WaitCursor.hpp"
 #include "xThreadGuard.hpp"
 
 
@@ -280,6 +281,7 @@ struct MainWindow::Impl
     
     void writeSettings()
     {
+        WaitCursor w;
         QSettings settings;
 
         settings.beginGroup("MainWindow");
@@ -292,6 +294,7 @@ struct MainWindow::Impl
 
     void readSettings()
     {
+        WaitCursor w;
         QScreen *ps = QGuiApplication::primaryScreen();
         QRect screenres = ps->geometry();
 
