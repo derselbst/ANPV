@@ -192,7 +192,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     // TODO: The buffer allocation should be done after cropping the scanline
     image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
-    this->image()->setDecodedImage(image);
+    this->image()->setDecodedImage(image, this->fullResToPageTransform(cinfo.output_width, cinfo.output_height).inverted());
     this->resetDecodedRoiRect();
 
     JDIMENSION xoffset = scaledRoi.x();
