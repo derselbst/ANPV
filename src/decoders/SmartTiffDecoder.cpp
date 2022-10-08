@@ -450,6 +450,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution);
+    this->convertColorSpace(image, false, toFullScaleTransform);
 
     bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
     fullImageDecoded &= ((unsigned)image.width() >= d->pageInfos[imagePageToDecode].width && (unsigned)image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
@@ -655,7 +656,6 @@ gehtnich:
         }
     }
 
-    this->convertColorSpace(image);
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }
