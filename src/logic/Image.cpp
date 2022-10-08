@@ -98,7 +98,10 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
         {
             std::unique_lock<std::recursive_mutex> lck(d->m);
             QRect updateRect = d->cachedUpdateRect;
-            Q_ASSERT(updateRect.isValid());
+            if (!updateRect.isValid())
+            {
+                return;
+            }
             d->cachedUpdateRect = QRect();
             lck.unlock();
             emit this->previewImageUpdated(this, updateRect);
