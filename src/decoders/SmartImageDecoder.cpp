@@ -391,7 +391,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
 }
 
-void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
+void SmartImageDecoder::convertColorSpace(QImage& image, bool silent, QTransform currentPageToFullResTransform)
 {
     auto depth = image.depth();
     if(depth != 32 && depth != 64)
@@ -429,7 +429,10 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updateDecodedRoiRect(QRect(image.offset() + QPoint(0, y), QSize(width, linesToConvertNow)));
+                QRect update = QRect(QPoint(0, y), QSize(width, linesToConvertNow));
+                update = currentPageToFullResTransform.mapRect(update);
+                update.moveTopLeft(image.offset());
+                this->updateDecodedRoiRect(update);
             }
         }
     }
@@ -498,6 +501,7 @@ QRect SmartImageDecoder::decodedRoiRect()
 
 void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
 {
+    Q_ASSERT(r.isValid());
     d->decodedRoiRect = d->decodedRoiRect.isValid() ? d->decodedRoiRect.united(r) : r;
     this->image()->updatePreviewImage(r);
 }

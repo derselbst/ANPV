@@ -253,7 +253,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             auto linesRead = jpeg_read_scanlines(&cinfo, &bufferSetup[cinfo.output_scanline - skippedScanlinesTop], cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updateDecodedRoiRect(currentResToFullResTrafo.mapRect(QRect(xoffset, cinfo.output_scanline, croppedWidth, linesRead)));
+            this->updateDecodedRoiRect(currentResToFullResTrafo.mapRect(QRect(xoffset, cinfo.output_scanline - linesRead, croppedWidth, linesRead)));
         }
         
         /* terminate output pass */
@@ -268,7 +268,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 // //     this->setDecodingMessage("Applying final smooth rescaling...");
 // //     image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    this->convertColorSpace(image);
+    this->convertColorSpace(image, false, currentResToFullResTrafo);
 
     if (progressiveGuard >= 1000)
     {

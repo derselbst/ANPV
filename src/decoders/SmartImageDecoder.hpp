@@ -63,7 +63,7 @@ protected:
     
     QImage allocateImageBuffer(const QSize& s, QImage::Format format);
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format);
-    void convertColorSpace(QImage& image, bool silent = false);
+    void convertColorSpace(QImage& image, bool silent = false, QTransform = QTransform());
 
     QTransform fullResToPageTransform(const QSize& desiredResolution);
     QTransform fullResToPageTransform(unsigned w, unsigned h);

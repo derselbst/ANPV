@@ -748,6 +748,7 @@ void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
         // ignore events from a previous decoder that might still be running in the background
         return;
     }
+    qDebug() << "onPreviewImageUpdated: " << r;
     d->currentPixmapOverlay->update(r);
 }
 
