@@ -642,7 +642,7 @@ gehtnich:
                     const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
                     for(unsigned i=0; i < (unsigned)areaToCopy.height(); i++)
                     {
-                        ::memcpy(&buf[destRow++*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                        ::memcpy(&buf[size_t(destRow++)*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
                     }
                     
                     QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
