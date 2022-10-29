@@ -575,6 +575,7 @@ DocumentView::DocumentView(QWidget *parent)
     d->messageWidget = new MessageWidget(this);
     d->messageWidget->setCloseButtonVisible(false);
     d->messageWidget->setWordWrap(true);
+    d->messageWidget->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     d->messageWidget->hide();
     
     d->isSelectedBox = new QCheckBox(this);
@@ -587,6 +588,9 @@ DocumentView::DocumentView(QWidget *parent)
                 dec->image()->setChecked(static_cast<Qt::CheckState>(state));
             }
         });
+
+    d->exifOverlay->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+    this->setFocusPolicy(Qt::FocusPolicy::WheelFocus);
 
     d->createActions();
 
