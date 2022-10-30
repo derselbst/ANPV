@@ -98,6 +98,10 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
         {
             std::unique_lock<std::recursive_mutex> lck(d->m);
             QRect updateRect = d->cachedUpdateRect;
+            if (!updateRect.isValid())
+            {
+                return;
+            }
             d->cachedUpdateRect = QRect();
             lck.unlock();
             emit this->previewImageUpdated(this, updateRect);
@@ -466,21 +470,22 @@ QImage Image::decodedImage()
     return d->decodedImage;
 }
 
-void Image::setDecodedImage(QImage img)
+void Image::setDecodedImage(QImage img, QTransform scale)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     // skip comparison with current image, can be slow
     d->decodedImage = img;
     lck.unlock();
-    emit this->decodedImageChanged(this, d->decodedImage);
+    emit this->decodedImageChanged(this, d->decodedImage, scale);
 }
 
 void Image::updatePreviewImage(const QRect& r)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
     QRect updateRect = d->cachedUpdateRect;
-    updateRect = updateRect.united(r);
+    updateRect = updateRect.isValid() ? updateRect.united(r) : r;
     d->cachedUpdateRect = updateRect;
+    Q_ASSERT(updateRect.isValid());
     lck.unlock();
 
     QMetaObject::invokeMethod(this, [&]()
@@ -512,7 +517,7 @@ void Image::connectNotify(const QMetaMethod& signal)
         QImage img = this->decodedImage();
         if(!img.isNull())
         {
-            emit this->decodedImageChanged(this, img);
+            emit this->decodedImageChanged(this, img, QTransform());
         }
     }
     else if (signal.name() == QStringLiteral("checkStateChanged"))

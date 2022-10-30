@@ -364,7 +364,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         try
         {
             QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
-            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), 1, thumb.size());
+            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), QTransform(), thumb.size());
 
             this->convertColorSpace(thumb, true);
             this->image()->setThumbnail(thumb);
@@ -412,13 +412,10 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         throw std::runtime_error("Unable to find a suitable TIFF directory to decode.");
     }
 
-    double actualPageScaleXInverted = d->pageInfos[imagePageToDecode].width * 1.0f / fullImageRect.width();
-    double actualPageScaleYInverted = d->pageInfos[imagePageToDecode].height * 1.0f / fullImageRect.height();
-    
-    QTransform scaleTrafo = QTransform::fromScale(actualPageScaleXInverted, actualPageScaleYInverted);
+    QTransform scaleTrafo = this->fullResToPageTransform(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height);
     QRect mappedRoi = scaleTrafo.mapRect(targetImageRect);
 
-    QImage image = this->allocateImageBuffer(d->pageInfos[imagePageToDecode].width, d->pageInfos[imagePageToDecode].height, d->format(imagePageToDecode));
+    QImage image = this->allocateImageBuffer(mappedRoi.size(), d->format(imagePageToDecode));
 
     // RESOLUTIONUNIT must be read and set now (and not in decodeInternal), because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
     float resX = 0;
@@ -446,13 +443,17 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             break;
         }
     }
-
-    this->image()->setDecodedImage(image);
+    
+    image.setOffset(roiRect.topLeft());
+    
+    QTransform toFullScaleTransform = scaleTrafo.inverted();
+    this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
-    this->decodeInternal(imagePageToDecode, image, mappedRoi, desiredScaleX, desiredResolution);
+    this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution);
+    this->convertColorSpace(image, false, toFullScaleTransform);
 
     bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
-    fullImageDecoded &= (image.width() >= d->pageInfos[imagePageToDecode].width && image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
+    fullImageDecoded &= ((unsigned)image.width() >= d->pageInfos[imagePageToDecode].width && (unsigned)image.height() >= d->pageInfos[imagePageToDecode].height); // we have not used the fast decoding hack
     fullImageDecoded &= (this->decodedRoiRect() == fullImageRect); // the region we've decoded actually matches the region of the full image
     
     if(fullImageDecoded)
@@ -467,18 +468,18 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     return image;
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, double desiredDecodeScale, QSize desiredResolution)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, QTransform currentPageToFullResTransform, QSize desiredResolution)
 {
     const auto& width = d->pageInfos[imagePageToDecode].width;
     const auto& height = d->pageInfos[imagePageToDecode].height;
-    
-    bool skipColorTransform = false;
     
     if(!roi.isValid())
     {
         // roi's coordinates are native to imagePageToDecode
         roi = QRect(0, 0, width, height);
     }
+    
+    Q_ASSERT(roi.size() == image.size());
     
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
@@ -503,18 +504,18 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     
         std::vector<uint32_t> tileBuf(tw * tl);
         
-        // A rectangle covering the entire area that was decoded below
-        QRect decodedRoiRect;
-        for (uint32_t y = 0; y < height; y += tl)
+        unsigned destRowIncr = 0;
+        for (uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
         {
-            for (uint32_t x = 0; x < width; x += tw)
+            for (uint32_t x = 0, destCol=0; x < width; x += tw)
             {
-                unsigned linesToCopy = std::min(tl, height - y);
-                unsigned widthToCopy = std::min(tw, width - x);
-                QRect tile(x,y,widthToCopy,linesToCopy);
-                if(!tile.intersects(roi))
+                const unsigned linesToCopy = std::min(tl, height - y);
+                const unsigned widthToCopy = std::min(tw, width - x);
+                QRect tileRect(x,y,widthToCopy,linesToCopy);
+                
+                QRect areaToCopy = tileRect.intersected(roi);
+                if(areaToCopy.isEmpty())
                 {
-                    skipColorTransform = true;
                     continue;
                 }
             
@@ -525,21 +526,29 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                 }
                 else
                 {
-                    unsigned linesToCopy = std::min(tl, height - y);
-                    unsigned widthToCopy = std::min(tw, width - x);
-                    for (unsigned i = 0; i < linesToCopy; i++)
+                    const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
+                    const unsigned widthToSkipFromLeft = x < areaToCopy.x() ? areaToCopy.x() - x : 0;
+                    for (unsigned i = 0; i < (unsigned)areaToCopy.height(); i++)
                     {
                         // brainfuck ahead...
-                        d->convert32BitOrder(&buf[size_t(y+i)*width + x], &tileBuf[(tl-i-1)*tw], 1, widthToCopy);
+                        // determine the destinationRow to write to, make it size_t to avoid 32bit overflow for panorama images when multiplying by image.width() below
+                        size_t dr = destRow + i;
+                        // the source row to read from, we need to start from the bottom (i.e. last pixel row of the tile), -1 because tl is a size but we need an index
+                        unsigned srcRow = tl - 1 - (i + linesToSkipFromTop);
+                        // the source column to read from, if a tile intersects to the left of areaToCopy, we need to skip widthToSkip pixels, if a tile intersects at the right, we start with with the first pixel
+                        unsigned srcCol = widthToSkipFromLeft;
+                        qDebug() << "destRow: " << dr << " | srcRow: " << srcRow;
+                        d->convert32BitOrder(&buf[dr*image.width() + destCol], &tileBuf[srcRow*tw + srcCol], 1, areaToCopy.width());
                     }
+                    destCol += areaToCopy.width();
+                    destRowIncr = areaToCopy.height();
                     
-                    this->updateDecodedRoiRect(tile);
+                    QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
+                    this->updateDecodedRoiRect(mappedArea);
                     
                     double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
                     this->setDecodingProgress(progress);
                 }
-                
-                decodedRoiRect = decodedRoiRect.united(tile);
             }
         }
         Q_ASSERT(image.constBits() == dataPtrBackup);
@@ -553,7 +562,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
         }
         
         const auto stripCount = TIFFNumberOfStrips(d->tiff);
-        
+#if 0
         if(comp == COMPRESSION_NONE &&
             samplesPerPixel == 4 /* RGBA */ &&
             planar == 1 &&
@@ -604,13 +613,23 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
             this->updateDecodedRoiRect(roi);
         }
         else
+#endif
         {
 gehtnich:
             std::vector<uint32_t> stripBuf(width * rowsperstrip);
             std::vector<uint32_t> stripBufUncrustified(width * rowsperstrip);
-            for (tstrip_t strip = 0; strip < stripCount; strip++)
+            for (tstrip_t strip = 0, destRow=0; strip < stripCount; strip++)
             {
-                uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const unsigned y = (strip*rowsperstrip);
+                QRect stripRect(0,y,width,rowsToDecode);
+                
+                QRect areaToCopy = stripRect.intersected(roi);
+                if(areaToCopy.isEmpty())
+                {
+                    continue;
+                }
+                
                 auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
                 if(ret == 0)
                 {
@@ -620,19 +639,14 @@ gehtnich:
                 {
                     d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsToDecode, width);
 
-                    QImage stripImg(reinterpret_cast<uint8_t*>(stripBufUncrustified.data()),
-                                    width,
-                                    rowsToDecode,
-                                    width * sizeof(uint32_t),
-                                    d->format(imagePageToDecode));
-                    stripImg = stripImg.scaledToWidth(image.width(), Qt::FastTransformation);
+                    const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
+                    for(unsigned i=0; i < (unsigned)areaToCopy.height(); i++)
+                    {
+                        ::memcpy(&buf[size_t(destRow++)*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                    }
                     
-                    size_t pixelsToCpy = stripImg.width() * stripImg.height();
-                    ::memcpy(buf, stripImg.constBits(), pixelsToCpy * sizeof(uint32_t));
-                    
-                    buf += pixelsToCpy;
-                    
-                    this->updateDecodedRoiRect(QRect(0, strip * rowsperstrip, stripImg.width(), stripImg.height()));
+                    QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
+                    this->updateDecodedRoiRect(mappedArea);
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);
@@ -642,16 +656,6 @@ gehtnich:
         }
     }
 
-    if(skipColorTransform)
-    {
-        this->setDecodingMessage("Partial decoding finished, but color transforming is not yet supported for partial decoded images.");
-        // it would also transform the non-decoded surrounding void, which is very memory expensive...
-    }
-    else
-    {
-        this->convertColorSpace(image);
-        this->setDecodingMessage("TIFF decoding completed successfully.");
-    }
-
+    this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
 }

@@ -58,7 +58,9 @@ struct DocumentView::Impl
     QAction* actionShowScrollBars = nullptr;
 
     AfPointOverlay* afPointOverlay = nullptr;
-    
+
+    QGraphicsRectItem* debugOverlay1 = nullptr;
+
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(q);
     
     QFutureWatcher<DecodingState> taskFuture;
@@ -106,6 +108,8 @@ struct DocumentView::Impl
         
         thumbnailPreviewOverlay->setPixmap(QPixmap());
         thumbnailPreviewOverlay->hide();
+        
+        debugOverlay1->hide();
         
         afPointOverlay->hide();
         
@@ -173,7 +177,7 @@ struct DocumentView::Impl
     void createSmoothPixmap()
     {
         xThreadGuard g(q);
-        if (currentDocumentPixmap.isNull())
+//         if (currentDocumentPixmap.isNull())
         {
             return;
         }
@@ -556,12 +560,17 @@ DocumentView::DocumentView(QWidget *parent)
     
     d->smoothPixmapOverlay = new QGraphicsPixmapItem;
     d->smoothPixmapOverlay->setZValue(-8);
-    d->currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
     d->scene->addItem(d->smoothPixmapOverlay);
     
     d->afPointOverlay = new AfPointOverlay;
     d->afPointOverlay->setZValue(100);
     d->scene->addItem(d->afPointOverlay);
+
+    d->debugOverlay1 = new QGraphicsRectItem;
+    d->debugOverlay1->setZValue(100000);
+    d->debugOverlay1->setPen(QPen(Qt::green, 6, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
+    d->scene->addItem(d->debugOverlay1);
+    d->debugOverlay1->hide();
     
     this->setScene(d->scene);
             
@@ -582,6 +591,9 @@ DocumentView::DocumentView(QWidget *parent)
             }
         });
 
+    d->exifOverlay->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+    this->setFocusPolicy(Qt::FocusPolicy::WheelFocus);
+
     d->createActions();
 
     d->fovChangedTimer.setSingleShot(true);
@@ -595,8 +607,13 @@ DocumentView::DocumentView(QWidget *parent)
     connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
             [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
 
-    d->exifOverlay->setFocusPolicy(Qt::FocusPolicy::NoFocus);
-    this->setFocusPolicy(Qt::FocusPolicy::WheelFocus);
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this, [&]()
+        {
+            QRect decodedRoi = d->currentImageDecoder->decodedRoiRect();
+            d->debugOverlay1->setRect(decodedRoi);
+            d->debugOverlay1->show();
+            qDebug() << "decoded Roi: " << decodedRoi;
+        });
 }
 
 DocumentView::~DocumentView() = default;
@@ -737,10 +754,11 @@ void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
         // ignore events from a previous decoder that might still be running in the background
         return;
     }
+    qDebug() << "onPreviewImageUpdated: " << r;
     d->currentPixmapOverlay->update(r);
 }
 
-void DocumentView::onImageRefinement(Image* img, QImage image)
+void DocumentView::onImageRefinement(Image* img, QImage image, QTransform scale)
 {
     if(img != this->d->currentImageDecoder->image().data())
     {
@@ -750,10 +768,13 @@ void DocumentView::onImageRefinement(Image* img, QImage image)
 
     d->currentDocumentPixmap = QPixmap::fromImage(image, Qt::NoFormatConversion);
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
-
+    d->currentPixmapOverlay->setTransform(scale, false);
+    d->currentPixmapOverlay->setOffset(d->currentPixmapOverlay->mapFromScene(image.offset()));
+/*
     QSize fullImageSize = img->size();
-    auto newScale = (fullImageSize.width() * 1.0 / d->currentDocumentPixmap.width());
-    d->currentPixmapOverlay->setScale(newScale);
+    auto newScaleX = (fullImageSize.width() * 1.0 / (d->currentPixmapOverlay->boundingRect().width() + d->currentPixmapOverlay->offset().x()));
+    auto newScaleY = (fullImageSize.height() * 1.0 / (d->currentPixmapOverlay->boundingRect().height() + d->currentPixmapOverlay->offset().y()));
+    qDebug() << "scaleX: " << newScaleX << "   |   scaleY: " << newScaleY << "   |    offset: " << image.offset();*/
     d->currentPixmapOverlay->show();
 
     d->scene->invalidate();
@@ -780,7 +801,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     }
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage());
+        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage(), QTransform());
 
         d->thumbnailPreviewOverlay->hide();
         break;

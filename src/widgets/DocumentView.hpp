@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QString>
 #include <QFileInfo>
+#include <QTransform>
 
 class ANPV;
 class Image;
@@ -39,7 +40,7 @@ public slots:
     void zoomIn();
     void zoomOut();
     void onPreviewImageUpdated(Image* img, QRect r);
-    void onImageRefinement(Image* self, QImage img);
+    void onImageRefinement(Image* self, QImage img, QTransform);
     void onDecodingStateChanged(Image* self, quint32 newState, quint32 oldState);
     void onCheckStateChanged(Image* img, int state, int old);
 

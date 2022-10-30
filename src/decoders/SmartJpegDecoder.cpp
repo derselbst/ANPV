@@ -144,6 +144,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     std::vector<JSAMPLE*> bufferSetup;
     QImage image;
     QRect scaledRoi;
+    QTransform currentResToFullResTrafo, fullResToCurrentRes;
     
     if (setjmp(d->jerr.setjmp_buffer))
     {
@@ -174,9 +175,9 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     jpeg_calc_output_dimensions(&cinfo);
 
     // update the scale because output dimensions might be a bit different to what we requested
-    scale = std::min(cinfo.output_width * 1.0 / cinfo.image_width, cinfo.output_height * 1.0 / cinfo.image_height);
+    fullResToCurrentRes = this->fullResToPageTransform(cinfo.output_width, cinfo.output_height);
 
-    scaledRoi = QRect(std::floor(roiRect.x() * scale), std::floor(roiRect.y() * scale), std::floor(roiRect.width() * scale), std::floor(roiRect.height() * scale));
+    scaledRoi = fullResToCurrentRes.mapRect(roiRect);
     Q_ASSERT(scaledRoi.isValid());
     Q_ASSERT(scaledRoi.width() <= cinfo.output_width);
     Q_ASSERT(scaledRoi.height() <= cinfo.output_height);
@@ -189,30 +190,27 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         qWarning() << "I/O suspension after jpeg_start_decompress()";
     }
 
-    // TODO: The buffer allocation should be done after cropping the scanline
-    image = this->allocateImageBuffer(cinfo.output_width, cinfo.output_height, QImage::Format_ARGB32);
-    auto* dataPtrBackup = image.constBits();
-    this->image()->setDecodedImage(image);
-    this->resetDecodedRoiRect();
-
     JDIMENSION xoffset = scaledRoi.x();
     JDIMENSION croppedWidth = scaledRoi.width();
-    if (xoffset > 0 && croppedWidth > 0)
-    {
-        cinfo.global_state = 205;
-        jpeg_crop_scanline(&cinfo, &xoffset, &croppedWidth);
-        cinfo.global_state = 207;
-    }
+    jpeg_crop_scanline(&cinfo, &xoffset, &croppedWidth);
+    scaledRoi.setX(xoffset);
+    scaledRoi.setWidth(croppedWidth);
+
     const JDIMENSION skippedScanlinesTop = scaledRoi.y();
     const JDIMENSION lastScanlineToDecode = skippedScanlinesTop + scaledRoi.height();
 
-    // TODO: buffer allocation should be done here
+    image = this->allocateImageBuffer(scaledRoi.width(), scaledRoi.height(), QImage::Format_ARGB32);
+    auto* dataPtrBackup = image.constBits();
+    currentResToFullResTrafo = fullResToCurrentRes.inverted();
+    image.setOffset(currentResToFullResTrafo.mapRect(scaledRoi).topLeft());
 
-    bufferSetup.resize(cinfo.output_height / cinfo.rec_outbuf_height);
+    this->image()->setDecodedImage(image, currentResToFullResTrafo);
+    this->resetDecodedRoiRect();
+
+    bufferSetup.resize(image.height() / cinfo.rec_outbuf_height);
     for (JDIMENSION i = 0; i < bufferSetup.size(); i++)
     {
         bufferSetup[i] = const_cast<JSAMPLE*>(image.constScanLine(i * cinfo.rec_outbuf_height));
-        bufferSetup[i] += xoffset * sizeof(uint32_t);
     }
     
     this->cancelCallback();
@@ -250,14 +248,12 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
         auto acuallySkipped = jpeg_skip_scanlines(&cinfo, skippedScanlinesTop);
-        auto totalLinesRead = cinfo.output_scanline;
         while (cinfo.output_scanline < lastScanlineToDecode)
         {
-            auto linesRead = jpeg_read_scanlines(&cinfo, bufferSetup.data()+cinfo.output_scanline, cinfo.rec_outbuf_height);
+            auto linesRead = jpeg_read_scanlines(&cinfo, &bufferSetup[cinfo.output_scanline - skippedScanlinesTop], cinfo.rec_outbuf_height);
             this->cancelCallback();
 
-            this->updateDecodedRoiRect(QRect(xoffset, totalLinesRead, croppedWidth, linesRead));
-            totalLinesRead += linesRead;
+            this->updateDecodedRoiRect(currentResToFullResTrafo.mapRect(QRect(xoffset, cinfo.output_scanline - linesRead, croppedWidth, linesRead)));
         }
         
         /* terminate output pass */
@@ -272,7 +268,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 // //     this->setDecodingMessage("Applying final smooth rescaling...");
 // //     image = image.scaled(desiredResolution, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    this->convertColorSpace(image);
+    this->convertColorSpace(image, false, currentResToFullResTrafo);
 
     if (progressiveGuard >= 1000)
     {

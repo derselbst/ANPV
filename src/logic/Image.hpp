@@ -11,6 +11,7 @@
 #include <QString>
 #include <QFileInfo>
 #include <QFuture>
+#include <QTransform>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -86,7 +87,7 @@ public slots:
 signals:
     void decodingStateChanged(Image* self, quint32 newState, quint32 oldState);
     void thumbnailChanged(Image* self, QImage);
-    void decodedImageChanged(Image* self, QImage img);
+    void decodedImageChanged(Image* self, QImage img, QTransform sc);
     void previewImageUpdated(Image* self, QRect r);
     void checkStateChanged(Image* self, int newState, int oldState);
 
@@ -100,7 +101,7 @@ protected:
     void setColorSpace(QColorSpace);
     
     void setDecodingState(DecodingState state);
-    void setDecodedImage(QImage);
+    void setDecodedImage(QImage, QTransform s=QTransform());
     void setErrorMessage(const QString&);
     
     void updatePreviewImage(const QRect& r);

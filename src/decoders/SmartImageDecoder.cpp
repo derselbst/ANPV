@@ -391,7 +391,7 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     }
 }
 
-void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
+void SmartImageDecoder::convertColorSpace(QImage& image, bool silent, QTransform currentPageToFullResTransform)
 {
     auto depth = image.depth();
     if(depth != 32 && depth != 64)
@@ -429,7 +429,10 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent)
             this->cancelCallback();
             if (!silent)
             {
-                this->updateDecodedRoiRect(QRect(0, y, width, linesToConvertNow));
+                QRect update = QRect(QPoint(0, y), QSize(width, linesToConvertNow));
+                update = currentPageToFullResTransform.mapRect(update);
+                update.moveTopLeft(image.offset());
+                this->updateDecodedRoiRect(update);
             }
         }
     }
@@ -498,7 +501,8 @@ QRect SmartImageDecoder::decodedRoiRect()
 
 void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
 {
-    d->decodedRoiRect = d->decodedRoiRect.united(r);
+    Q_ASSERT(r.isValid());
+    d->decodedRoiRect = d->decodedRoiRect.isValid() ? d->decodedRoiRect.united(r) : r;
     this->image()->updatePreviewImage(r);
 }
 
@@ -537,6 +541,11 @@ void SmartImageDecoder::assertNotDecoding()
     }
 }
 
+QImage SmartImageDecoder::allocateImageBuffer(const QSize& s, QImage::Format format)
+{
+    return this->allocateImageBuffer(s.width(), s.height(), format);
+}
+
 QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
 {
     switch(format)
@@ -557,4 +566,39 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
         default:
             throw std::logic_error(Formatter() << "QImage Format '" << format << "' not supported currently");
     }
+}
+
+
+// A transform that can be used to translate coordinates, which are in the domain of the full image resolution,
+// to coordinates which are in domain of the provided resolution.
+QTransform SmartImageDecoder::fullResToPageTransform(const QSize& desiredResolution)
+{
+    if (!desiredResolution.isValid())
+    {
+        throw std::logic_error("desiredResolution must be valid!");
+    }
+    return this->fullResToPageTransform(desiredResolution.width(), desiredResolution.height());
+}
+
+QTransform SmartImageDecoder::fullResToPageTransform(unsigned w, unsigned h)
+{
+    if (w == 0 || h == 0)
+    {
+        throw std::logic_error("w and h must be >0 !");
+    }
+
+    QRect fullResRect = this->image()->fullResolutionRect();
+    if (fullResRect.isEmpty())
+    {
+        throw std::logic_error("fullResolutionRect must not be empty!");
+    }
+
+    double pageScaleXInverted = w * 1.0 / fullResRect.width();
+    double pageScaleYInverted = h * 1.0 / fullResRect.height();
+
+    QTransform scaleTrafo = QTransform::fromScale(pageScaleXInverted, pageScaleYInverted);
+    // assert this transform is invertible, to allow "reversing" this operation (i.e. transform from provided domain to full image res)
+    Q_ASSERT(scaleTrafo.isInvertible());
+
+    return scaleTrafo;
 }
