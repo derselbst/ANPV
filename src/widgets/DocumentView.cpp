@@ -109,6 +109,8 @@ struct DocumentView::Impl
         thumbnailPreviewOverlay->setPixmap(QPixmap());
         thumbnailPreviewOverlay->hide();
         
+        debugOverlay1->hide();
+        
         afPointOverlay->hide();
         
         messageWidget->hide();
