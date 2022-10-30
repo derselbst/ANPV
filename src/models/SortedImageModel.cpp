@@ -536,13 +536,15 @@ struct SortedImageModel::Impl
         connect(image.data(), &Image::thumbnailChanged, q,
                 [&](Image*, QImage){ updateLayout(); });
         auto con = connect(image.data(), &Image::checkStateChanged, q,
-            [&](Image*, int c, int)
+            [&](Image*, int c, int old)
             {
-                this->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
+                if (c != old)
+                {
+                    this->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
+                }
             });
 
-        // increment, because Image::connectNotify will decrement it soon afterwards
-        this->numberOfCheckedImages++;
+        this->numberOfCheckedImages += (image->checked() == Qt::Unchecked) ? 0 : +1;
         this->entries.push_back(std::make_pair(image, decoder));
         
         if(decoder)

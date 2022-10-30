@@ -418,7 +418,7 @@ void ANPV::setCurrentDir(QString str, bool force)
         auto model = this->fileModel();
         if (model && !model->isSafeToChangeDir())
         {
-            QMessageBox::StandardButton reply = QMessageBox::question(d->mainWindow.get(), "Changing directory will discard check selection", "You have checked images recently. Changing the directory now will discard any selection. Are you sure to change directory?", QMessageBox::Yes | QMessageBox::No);
+            QMessageBox::StandardButton reply = QMessageBox::question(d->mainWindow.get(), "Changing directory will discard check selection", "You have checked images recently. Changing the directory now will discard any selection. Are you sure to change directory?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (reply == QMessageBox::No)
             {
                 return;
