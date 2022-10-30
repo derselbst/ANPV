@@ -284,11 +284,10 @@ struct DocumentView::Impl
         QImage thumb = img->thumbnail();
         if(!thumb.isNull())
         {
-            QSize fullImageSize = img->size();
-            auto newScale = std::max(fullImageSize.width() * 1.0 / thumb.width(), fullImageSize.height() * 1.0 / thumb.height());
+            auto thumbnailToFullResTrafo = currentImageDecoder->fullResToPageTransform(thumb.size()).inverted();
 
             thumbnailPreviewOverlay->setPixmap(QPixmap::fromImage(thumb, Qt::NoFormatConversion));
-            thumbnailPreviewOverlay->setScale(newScale);
+            thumbnailPreviewOverlay->setTransform(thumbnailToFullResTrafo);
             thumbnailPreviewOverlay->show();
         }
     }
