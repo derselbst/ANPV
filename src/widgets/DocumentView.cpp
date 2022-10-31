@@ -177,7 +177,7 @@ struct DocumentView::Impl
     void createSmoothPixmap()
     {
         xThreadGuard g(q);
-//         if (currentDocumentPixmap.isNull())
+        if (currentDocumentPixmap.isNull())
         {
             return;
         }
@@ -198,7 +198,16 @@ struct DocumentView::Impl
         // <1.0 means the user zommed in and sees the individual pixels
         auto newScale = std::max(visPixRect.width() / viewportRect.width(), visPixRect.height() / viewportRect.height());
 
-        qWarning() << newScale << "\n";
+        if (newScale >= 1.0)
+        {
+            currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
+        }
+        else
+        {
+            currentPixmapOverlay->setTransformationMode(Qt::FastTransformation);
+        }
+
+        return;
 
         if (newScale > 2.0)
         {
