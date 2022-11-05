@@ -118,28 +118,33 @@ struct DocumentView::Impl
         
         scene->invalidate();
     }
+
+    void forceTriggerDecoding()
+    {
+        if (this->latestDecodingState <= DecodingState::Metadata)
+        {
+            // no preview image available, quickly start the decoding
+            if (!this->fovChangedTimer.isActive())
+            {
+                // delay the decoding by a few milliseconds, as sometimes there may be two resizeEvents being sent, I don't know why
+                this->fovChangedTimer.start(50);
+            }
+        }
+        else
+        {
+            // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
+            // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
+            // cause the timer restart from being until the user has stopped all viewport changes.
+            this->fovChangedTimer.start(600);
+        }
+    }
     
     void onViewportChanged()
     {
         QTransform newTransform = q->viewportTransform();
         if(newTransform != this->previousFovTransform)
         {
-            if(this->latestDecodingState <= DecodingState::Metadata)
-            {
-                // no preview image available, quickly start the decoding
-                if(!this->fovChangedTimer.isActive())
-                {
-                    // delay the decoding by a few milliseconds, as sometimes there may be two resizeEvents being sent, I don't know why
-                    this->fovChangedTimer.start(50);
-                }
-            }
-            else
-            {
-                // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
-                // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
-                // cause the timer restart from being until the user has stopped all viewport changes.
-                this->fovChangedTimer.start(600);
-            }
+            forceTriggerDecoding();
             this->previousFovTransform = newTransform;
             removeSmoothPixmap();
         }
@@ -161,6 +166,7 @@ struct DocumentView::Impl
         }
         else if(viewMode == ViewMode::None)
         {
+            this->forceTriggerDecoding();
         }
     }
     
