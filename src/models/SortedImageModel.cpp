@@ -393,8 +393,13 @@ struct SortedImageModel::Impl
     void onDirectoryLoaded()
     {
         xThreadGuard g(q);
-        q->beginInsertRows(QModelIndex(), 0, entries.size()-1);
-        q->endInsertRows();
+        this->waitForDirectoryWorker();
+        size_t s = entries.size();
+        if (s != 0)
+        {
+            q->beginInsertRows(QModelIndex(), 0, s - 1);
+            q->endInsertRows();
+        }
     }
     
     void waitForDirectoryWorker() const

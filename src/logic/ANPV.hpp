@@ -83,6 +83,8 @@ public:
     QAction* actionOpen();
     QAction* actionExit();
     QActionGroup* copyMoveActionGroup();
+    QActionGroup* viewFlagActionGroup();
+    QActionGroup* viewModeActionGroup();
     QUndoStack* undoStack();
     
     QList<QString> getExistingFile(QWidget* parent, QString& proposedDirToOpen);

@@ -11,6 +11,7 @@
 #include <QKeyEvent>
 #include <QSettings>
 #include <QAction>
+#include <QActionGroup>
 #include <QPointer>
 
 struct MultiDocumentView::Impl
@@ -104,6 +105,18 @@ MultiDocumentView::MultiDocumentView(QMainWindow *parent)
     closeAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     connect(closeAction, &QAction::triggered, this, [&]() { d->openThumbnailView(); });
     this->addAction(closeAction);
+
+    QAction* sep = new QAction(this);
+    sep->setSeparator(true);
+    this->addAction(sep);
+
+    this->addActions(ANPV::globalInstance()->viewModeActionGroup()->actions());
+
+    sep = new QAction(this);
+    sep->setSeparator(true);
+    this->addAction(sep);
+
+    this->addActions(ANPV::globalInstance()->viewFlagActionGroup()->actions());
 }
 
 MultiDocumentView::~MultiDocumentView() = default;

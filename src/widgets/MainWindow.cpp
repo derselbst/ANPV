@@ -44,7 +44,6 @@ struct MainWindow::Impl
     
     QActionGroup* actionGroupSortColumn = nullptr;
     QActionGroup* actionGroupSortOrder = nullptr;
-    QActionGroup* actionGroupViewMode = nullptr;
         
     QAction *actionUndo = nullptr;
     QAction *actionRedo = nullptr;
@@ -67,37 +66,12 @@ struct MainWindow::Impl
     
     void createViewActions()
     {
-        actionGroupViewMode = new QActionGroup(q);
-        
-        auto makeViewAction = [&](QAction* action, ViewMode view)
-        {
-            connect(action, &QAction::triggered, q, [=](bool){ ANPV::globalInstance()->setViewMode(view); });
-            connect(ANPV::globalInstance(), &ANPV::viewModeChanged, action,
-                    [=](ViewMode newMode, ViewMode)
-                    {
-                        // trigger action to ensure proper selection
-                        action->setChecked(newMode == view);
-                    });
-            actionGroupViewMode->addAction(action);
-        };
-        
-        makeViewAction(ui->actionNo_Change, ViewMode::None);
-        makeViewAction(ui->actionFit_in_FOV, ViewMode::Fit);
-        
-        auto makeTriggerAction = [&](QAction* action, ViewFlag v)
-        {
-            connect(action, &QAction::triggered, q, [=](bool isChecked){ ANPV::globalInstance()->setViewFlag(v, isChecked); });
-            connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, action,
-                    [=](ViewFlags_t newMode, ViewFlags_t)
-                    {
-                        action->setChecked((newMode & static_cast<ViewFlags_t>(v)) != 0);
-                    });
-        };
-        
-        makeTriggerAction(ui->actionCombine_RAWs_and_JPGs, ViewFlag::CombineRawJpg);
-        makeTriggerAction(ui->actionShow_AF_Points, ViewFlag::ShowAfPoints);
-        makeTriggerAction(ui->actionRespect_EXIF_orientation, ViewFlag::RespectExifOrientation);
-        makeTriggerAction(ui->actionCenter_AF_focus_point, ViewFlag::CenterAf);
+        QActionGroup* viewMode = ANPV::globalInstance()->viewModeActionGroup();
+        QActionGroup* viewFlag = ANPV::globalInstance()->viewFlagActionGroup();
+        this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
+        this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewMode->actions());
+        this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
+        this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewFlag->actions());
 
         connect(ui->actionReload, &QAction::triggered, q,
             [&](bool)

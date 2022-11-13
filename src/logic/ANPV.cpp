@@ -116,6 +116,8 @@ struct ANPV::Impl
     QFileSystemModel* dirModel = nullptr;
     QSharedPointer<SortedImageModel> fileModel = nullptr;
     QActionGroup* actionGroupFileOperation = nullptr;
+    QActionGroup* actionGroupViewMode = nullptr;
+    QActionGroup* actionGroupViewFlag = nullptr;
     QAction* actionOpen = nullptr;
     QString lastOpenImageDir;
     QAction* actionExit = nullptr;
@@ -183,6 +185,71 @@ struct ANPV::Impl
                     }
                     q->openImages(images);
                 });
+
+        actionGroupViewMode = new QActionGroup(q);
+        auto makeViewModeAction = [&](const QString& text, ViewMode view)
+        {
+            QAction* action = new QAction(text, actionGroupViewMode);
+            action->setCheckable(true);
+            action->setShortcutContext(Qt::ApplicationShortcut);
+            connect(action, &QAction::triggered, q, [=](bool)
+                { q->setViewMode(view); });
+            connect(q, &ANPV::viewModeChanged, action,
+                [=](ViewMode newMode, ViewMode)
+                {
+                    // trigger action to ensure proper selection
+                    action->setChecked(newMode == view);
+                });
+            return action;
+        };
+
+        QAction* actionNo_Change = makeViewModeAction(QStringLiteral("No Change"), ViewMode::None);
+        actionNo_Change->setToolTip(QStringLiteral("Do not change the scale, rotation or transformation when switching between images."));
+        actionNo_Change->setStatusTip(actionNo_Change->toolTip());
+        actionNo_Change->setShortcut({ Qt::Key_F3 });
+
+        QAction* actionFit_in_FOV = makeViewModeAction(QStringLiteral("Fit in FOV"), ViewMode::Fit);
+        actionFit_in_FOV->setToolTip(QStringLiteral("When switching between images, fit the entire image into the Field Of View, i.e. the available space of the window."));
+        actionFit_in_FOV->setStatusTip(actionFit_in_FOV->toolTip());
+        actionFit_in_FOV->setShortcut({ Qt::Key_F4 });
+
+        actionGroupViewFlag = new QActionGroup(q);
+        actionGroupViewFlag->setExclusive(false);
+        auto makeViewFlagAction = [&](const QString& text, ViewFlag v)
+        {
+            QAction* action = new QAction(text, actionGroupViewFlag);
+            action->setCheckable(true);
+            action->setShortcutContext(Qt::ApplicationShortcut);
+            connect(action, &QAction::triggered, q, [=](bool isChecked)
+                { q->setViewFlag(v, isChecked); });
+            connect(q, &ANPV::viewFlagsChanged, action,
+                [=](ViewFlags_t newMode, ViewFlags_t)
+                {
+                    action->setChecked((newMode & static_cast<ViewFlags_t>(v)) != 0);
+                });
+            return action;
+        };
+
+        QAction* actionCombine_RAWs_and_JPGs = makeViewFlagAction(QStringLiteral("Combine RAWs and JPGs"), ViewFlag::CombineRawJpg);
+        actionCombine_RAWs_and_JPGs->setToolTip(QStringLiteral("If a RAW file (e.g. .CR2 or .NEF) has a similar named .JPG file, only display the JPG and hide the RAWs."));
+        actionCombine_RAWs_and_JPGs->setStatusTip(actionCombine_RAWs_and_JPGs->toolTip());
+        actionCombine_RAWs_and_JPGs->setShortcut({ Qt::Key_F6 });
+
+        QAction* actionShow_AF_Points = makeViewFlagAction(QStringLiteral("Show AF Points"), ViewFlag::ShowAfPoints);
+        actionShow_AF_Points->setToolTip(QStringLiteral("Shows the AutoFocus Points available in the EXIF metadata. Currently only supported for Canon cameras."));
+        actionShow_AF_Points->setStatusTip(actionShow_AF_Points->toolTip());
+        actionShow_AF_Points->setShortcut({ Qt::Key_F7 });
+
+        QAction* actionCenter_AF_focus_point = makeViewFlagAction(QStringLiteral("Center around AF focus point"), ViewFlag::CenterAf);
+        actionCenter_AF_focus_point->setToolTip(QStringLiteral("This will preserve the zoom factor, while making sure to transpose the image so that the AF points which are \"in-focus\" are located in the center of the FOV. If no AF data is available, no transposing takes place."));
+        actionCenter_AF_focus_point->setStatusTip(actionCenter_AF_focus_point->toolTip());
+        actionCenter_AF_focus_point->setShortcut({ Qt::Key_F8 });
+
+        QAction* actionRespect_EXIF_orientation = makeViewFlagAction(QStringLiteral("Respect EXIF orientation"), ViewFlag::RespectExifOrientation);
+        actionRespect_EXIF_orientation->setToolTip(QStringLiteral("Automatically rotates the image as indicated by the EXIF metadata.If no such information is available, landscape orientation will be used by default."));
+        actionRespect_EXIF_orientation->setStatusTip(actionRespect_EXIF_orientation->toolTip());
+
+
         this->undoStack = new QUndoStack(q);
     }
     
@@ -634,6 +701,18 @@ QActionGroup* ANPV::copyMoveActionGroup()
 {
     xThreadGuard g(this);
     return d->actionGroupFileOperation;
+}
+
+QActionGroup* ANPV::viewModeActionGroup()
+{
+    xThreadGuard g(this);
+    return d->actionGroupViewMode;
+}
+
+QActionGroup* ANPV::viewFlagActionGroup()
+{
+    xThreadGuard g(this);
+    return d->actionGroupViewFlag;
 }
 
 QUndoStack* ANPV::undoStack()
