@@ -274,19 +274,27 @@ struct DocumentView::Impl
         // and map that rect to scene coordinates
         QRectF viewportRectScene = q->mapToScene(viewportRect).boundingRect();
 
-        // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
-        QRectF visPixRect = viewportRectScene.intersected(this->currentImageDecoder->image()->fullResolutionRect());
+        QFuture<DecodingState> fut;
+        QRect fullResRect = this->currentImageDecoder->image()->fullResolutionRect();
+        if (!fullResRect.isEmpty())
+        {
+            // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
+            QRectF visPixRect = viewportRectScene.intersected(fullResRect);
 
-        // the GraphicsView may have been scaled; we must translate the visible rectangle
-        // (which is in scene coordinates) into the view's coordinates
-        QRectF visPixRectMappedToView = q->mapFromScene(visPixRect).boundingRect();
+            // the GraphicsView may have been scaled; we must translate the visible rectangle
+            // (which is in scene coordinates) into the view's coordinates
+            QRectF visPixRectMappedToView = q->mapFromScene(visPixRect).boundingRect();
 
-        QSize desiredRes = visPixRectMappedToView.toAlignedRect().size();
-        
-        auto fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, desiredRes, visPixRect.toAlignedRect());
+            QSize desiredRes = visPixRectMappedToView.toAlignedRect().size();
+
+            fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, desiredRes, visPixRect.toAlignedRect());
+            qDebug() << "startImageDecoding(): desiredRes: " << desiredRes << " | visPixRect: " << visPixRect.toAlignedRect();
+        }
+        else
+        {
+            fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, viewportRect.size(), QRect());
+        }
         this->taskFuture.setFuture(fut);
-        
-        qDebug() << "startImageDecoding(): desiredRes: " << desiredRes << " | visPixRect: " << visPixRect.toAlignedRect();
     }
     
     void onFOVChanged()
