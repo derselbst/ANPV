@@ -706,6 +706,8 @@ void DocumentView::showEvent(QShowEvent* event)
 
 void DocumentView::resizeEvent(QResizeEvent *event)
 {
+    QGraphicsView::resizeEvent(event);
+
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
 
@@ -716,8 +718,6 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     {
         d->alignImageAccordingToViewMode(d->currentImageDecoder->image(), ANPV::globalInstance()->viewMode());
     }
-
-    QGraphicsView::resizeEvent(event);
 }
 
 void DocumentView::mouseMoveEvent(QMouseEvent *event)
