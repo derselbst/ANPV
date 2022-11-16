@@ -117,7 +117,7 @@ border-radius: 0px;
      <x>0</x>
      <y>0</y>
      <width>1179</width>
-     <height>30</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -136,14 +136,6 @@ border-radius: 0px;
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="actionCombine_RAWs_and_JPGs"/>
-    <addaction name="actionShow_AF_Points"/>
-    <addaction name="actionCenter_AF_focus_point"/>
-    <addaction name="actionRespect_EXIF_orientation"/>
-    <addaction name="separator"/>
-    <addaction name="actionNo_Change"/>
-    <addaction name="actionFit_in_FOV"/>
-    <addaction name="separator"/>
     <addaction name="actionReload"/>
     <addaction name="actionPreview_all_images"/>
    </widget>
