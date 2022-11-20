@@ -34,8 +34,9 @@ struct SmartImageDecoder::Impl
     QString decodingMessage;
     int decodingProgress=0;
     
+    // the decoded image
     QSharedPointer<Image> image;
-    // the ROI actually decoded
+    // the ROI actually decoded in the same coordinate system as the decoded image
     QRect decodedRoiRect;
     
     // May or may not contain (a part of) the encoded input file

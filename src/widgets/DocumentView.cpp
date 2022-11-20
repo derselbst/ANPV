@@ -628,14 +628,6 @@ DocumentView::DocumentView(QWidget *parent)
     d->onViewModeChanged(ANPV::globalInstance()->viewMode());
     connect(ANPV::globalInstance(), &ANPV::viewModeChanged, this,
             [&](ViewMode neu, ViewMode){ d->onViewModeChanged(neu); });
-
-    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this, [&]()
-        {
-            QRect decodedRoi = d->currentImageDecoder->decodedRoiRect();
-            d->debugOverlay1->setRect(decodedRoi);
-            d->debugOverlay1->show();
-            qDebug() << "decoded Roi: " << decodedRoi;
-        });
 }
 
 DocumentView::~DocumentView() = default;
@@ -795,11 +787,6 @@ void DocumentView::onImageRefinement(Image* img, QImage image, QTransform scale)
     d->currentPixmapOverlay->setPixmap(d->currentDocumentPixmap);
     d->currentPixmapOverlay->setTransform(scale, false);
     d->currentPixmapOverlay->setOffset(d->currentPixmapOverlay->mapFromScene(image.offset()));
-/*
-    QSize fullImageSize = img->size();
-    auto newScaleX = (fullImageSize.width() * 1.0 / (d->currentPixmapOverlay->boundingRect().width() + d->currentPixmapOverlay->offset().x()));
-    auto newScaleY = (fullImageSize.height() * 1.0 / (d->currentPixmapOverlay->boundingRect().height() + d->currentPixmapOverlay->offset().y()));
-    qDebug() << "scaleX: " << newScaleX << "   |   scaleY: " << newScaleY << "   |    offset: " << image.offset();*/
     d->currentPixmapOverlay->show();
 
     d->scene->invalidate();
@@ -826,8 +813,6 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
     }
     case DecodingState::FullImage:
     {
-        this->onImageRefinement(dec->image().data(), dec->image()->decodedImage(), QTransform());
-
         d->thumbnailPreviewOverlay->hide();
         break;
     }
