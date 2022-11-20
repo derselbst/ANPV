@@ -771,12 +771,15 @@ void DocumentView::mouseMoveEvent(QMouseEvent *event)
 
 void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
 {
-    if (img != this->d->currentImageDecoder->image().data() || !d->currentPixmapOverlay)
+    if (img != this->d->currentImageDecoder->image().data() || !d->currentPixmapOverlay || d->currentPixmapOverlay->pixmap().isNull())
     {
         // ignore events from a previous decoder that might still be running in the background
         return;
     }
-    qDebug() << "onPreviewImageUpdated: " << r;
+
+    // assert that the update rect is inside the boundingBox of the pixmapOverlay
+    QRectF bound = d->currentPixmapOverlay->boundingRect();
+    Q_ASSERT(bound.contains(r));
     d->currentPixmapOverlay->update(r);
 }
 

@@ -645,8 +645,7 @@ gehtnich:
                         ::memcpy(&buf[size_t(destRow++)*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
                     }
                     
-                    QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
-                    this->updateDecodedRoiRect(mappedArea);
+                    this->updateDecodedRoiRect(areaToCopy);
                     
                     double progress = strip * 100.0 / stripCount;
                     this->setDecodingProgress(progress);
