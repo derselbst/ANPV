@@ -493,6 +493,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
 void SmartImageDecoder::resetDecodedRoiRect()
 {
     d->decodedRoiRect = QRect();
+    this->image()->updatePreviewImage(QRect());
 }
 
 QRect SmartImageDecoder::decodedRoiRect()

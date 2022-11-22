@@ -482,6 +482,13 @@ void Image::setDecodedImage(QImage img, QTransform scale)
 void Image::updatePreviewImage(const QRect& r)
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
+    if (!r.isValid())
+    {
+        // reset and stop timer
+        d->cachedUpdateRect = QRect();
+        QMetaObject::invokeMethod(d->updateRectTimer, &QTimer::stop, Qt::QueuedConnection);
+        return;
+    }
     QRect updateRect = d->cachedUpdateRect;
     updateRect = updateRect.isValid() ? updateRect.united(r) : r;
     d->cachedUpdateRect = updateRect;
