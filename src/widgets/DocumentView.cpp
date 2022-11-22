@@ -771,7 +771,8 @@ void DocumentView::onPreviewImageUpdated(Image* img, QRect r)
 
     // assert that the update rect is inside the boundingBox of the pixmapOverlay
     QRectF bound = d->currentPixmapOverlay->boundingRect();
-    Q_ASSERT(bound.contains(r));
+    QRect algBound = bound.toAlignedRect();
+    Q_ASSERT(algBound.contains(r));
     d->currentPixmapOverlay->update(r);
 }
 

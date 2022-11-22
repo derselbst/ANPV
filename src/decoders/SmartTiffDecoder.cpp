@@ -364,7 +364,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
         try
         {
             QImage thumb(d->pageInfos[thumbnailPageToDecode].width, d->pageInfos[thumbnailPageToDecode].height, d->format(thumbnailPageToDecode));
-            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), QTransform(), thumb.size());
+            this->decodeInternal(thumbnailPageToDecode, thumb, QRect(), QTransform(), thumb.size(), true);
 
             this->convertColorSpace(thumb, true);
             this->image()->setThumbnail(thumb);
@@ -449,7 +449,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform toFullScaleTransform = scaleTrafo.inverted();
     this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
-    this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution);
+    this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution, false);
     this->convertColorSpace(image, false, toFullScaleTransform);
 
     bool fullImageDecoded = (imagePageToDecode == d->findHighestResolution(d->pageInfos)); // We have decoded the highest resolution available
@@ -468,7 +468,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     return image;
 }
 
-void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, QTransform currentPageToFullResTransform, QSize desiredResolution)
+void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, QTransform currentPageToFullResTransform, QSize desiredResolution, bool quiet)
 {
     const auto& width = d->pageInfos[imagePageToDecode].width;
     const auto& height = d->pageInfos[imagePageToDecode].height;
@@ -537,17 +537,18 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
                         unsigned srcRow = tl - 1 - (i + linesToSkipFromTop);
                         // the source column to read from, if a tile intersects to the left of areaToCopy, we need to skip widthToSkip pixels, if a tile intersects at the right, we start with with the first pixel
                         unsigned srcCol = widthToSkipFromLeft;
-                        qDebug() << "destRow: " << dr << " | srcRow: " << srcRow;
-                        d->convert32BitOrder(&buf[dr*image.width() + destCol], &tileBuf[srcRow*tw + srcCol], 1, areaToCopy.width());
+                        d->convert32BitOrder(&buf[dr * image.width() + destCol], &tileBuf[srcRow * tw + srcCol], 1, areaToCopy.width());
                     }
                     destCol += areaToCopy.width();
                     destRowIncr = areaToCopy.height();
-                    
-                    QRect mappedArea = currentPageToFullResTransform.mapRect(areaToCopy);
-                    this->updateDecodedRoiRect(mappedArea);
-                    
-                    double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
-                    this->setDecodingProgress(progress);
+
+                    if (!quiet)
+                    {
+                        this->updateDecodedRoiRect(areaToCopy);
+
+                        double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
+                        this->setDecodingProgress(progress);
+                    }
                 }
             }
         }
@@ -640,15 +641,18 @@ gehtnich:
                     d->convert32BitOrder(stripBufUncrustified.data(), stripBuf.data(), rowsToDecode, width);
 
                     const unsigned linesToSkipFromTop = y < areaToCopy.y() ? areaToCopy.y() - y : 0;
-                    for(unsigned i=0; i < (unsigned)areaToCopy.height(); i++)
+                    for (unsigned i = 0; i < (unsigned)areaToCopy.height(); i++)
                     {
-                        ::memcpy(&buf[size_t(destRow++)*image.width()+0], &stripBufUncrustified.data()[(i+linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                        ::memcpy(&buf[size_t(destRow++) * image.width() + 0], &stripBufUncrustified.data()[(i + linesToSkipFromTop) * width + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
                     }
-                    
-                    this->updateDecodedRoiRect(areaToCopy);
-                    
-                    double progress = strip * 100.0 / stripCount;
-                    this->setDecodingProgress(progress);
+
+                    if (!quiet)
+                    {
+                        this->updateDecodedRoiRect(areaToCopy);
+
+                        double progress = strip * 100.0 / stripCount;
+                        this->setDecodingProgress(progress);
+                    }
                 }
             }
             Q_ASSERT(image.constBits() == dataPtrBackup);
