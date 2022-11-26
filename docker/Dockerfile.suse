@@ -3,24 +3,14 @@ FROM opensuse/tumbleweed
 RUN zypper refresh
 
 # this is for basic development of ANPV, excluding QT6
-RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel
-
-# this is for KDE Framework
-RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel qt6-qmlcore-devel qt6-declarative-devel qt6-wayland-devel qt6-base-private-devel qca-qt6-devel libxml2-devel libxslt-devel  libxcb-xkb1 libxcb-res0 libxcb-icccm4 libxcb-xfixes0 libxcb-record0 libXfixes-devel libxcb-keysyms1  libcanberra-devel libgpgmepp-devel
-
-RUN zypper --plus-content debug install --no-recommends -y qt6-base-debugsource qt6-base-debuginfo qt6-tools-debuginfo qt6-imageformats-debuginfo qt6-svg-debuginfo libQt6Concurrent6-debuginfo libQt6Core5Compat6-debuginfo libQt6DBus6-debuginfo libQt6Gui6-debuginfo libQt6Network6-debuginfo libQt6PrintSupport6-debuginfo libQt6Svg6-debuginfo libQt6Widgets6-debuginfo libQt6Xml6-debuginfo qt6-qt5compat-debuginfo libQt6Core6-debuginfo
-
+RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel libpng16-devel extra-cmake-modules
 RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
 RUN zypper install --no-recommends -y git
 
-WORKDIR /root
-RUN git clone https://invent.kde.org/sdk/kdesrc-build.git
-WORKDIR ./kdesrc-build
-RUN echo n | ./kdesrc-build --initial-setup
+RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel
 
-COPY kdesrc-buildrc /root/.config/
+RUN zypper --plus-content debug install --no-recommends -y qt6-base-debugsource qt6-base-debuginfo qt6-tools-debuginfo qt6-imageformats-debuginfo qt6-svg-debuginfo libQt6Concurrent6-debuginfo libQt6DBus6-debuginfo libQt6Gui6-debuginfo libQt6Svg6-debuginfo libQt6Widgets6-debuginfo libQt6Core6-debuginfo
 
-RUN ./kdesrc-build +anpv && rm -rf /root/kde
 WORKDIR /anpv
 
 # this is needed for running ANPV in a container, displaying fonts correctly, etc.

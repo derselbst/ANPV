@@ -83,8 +83,10 @@ ENV VCPKG_MAX_CONCURRENCY=17
 RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows.cmake
 RUN echo set(VCPKG_BUILD_TYPE release) >> triplets/%PLATFORM%-windows-static.cmake
 
-RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows tiff:%PLATFORM%-windows exiv2:%PLATFORM%-windows libraw:%PLATFORM%-windows ecm:%PLATFORM%-windows
-RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows-static tiff:%PLATFORM%-windows-static exiv2:%PLATFORM%-windows-static libraw:%PLATFORM%-windows-static ecm:%PLATFORM%-windows-static
+RUN  vcpkg install --clean-after-build pkgconf:%PLATFORM%-windows-static
+
+RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows tiff:%PLATFORM%-windows exiv2:%PLATFORM%-windows libraw:%PLATFORM%-windows libpng:%PLATFORM%-windows ecm:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build libjpeg-turbo:%PLATFORM%-windows-static tiff:%PLATFORM%-windows-static exiv2:%PLATFORM%-windows-static libraw:%PLATFORM%-windows-static libpng:%PLATFORM%-windows-static ecm:%PLATFORM%-windows-static
 
 RUN  vcpkg install --clean-after-build qtbase:%PLATFORM%-windows
 RUN  vcpkg install --clean-after-build qtbase:%PLATFORM%-windows-static
@@ -95,22 +97,6 @@ RUN  vcpkg install --clean-after-build qtsvg:%PLATFORM%-windows-static
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows-static
 
-ENV VCPKG_MAX_CONCURRENCY=8
-RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows
-RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows-static
-
-# Do not use --clean-after-build here. Otherwise git archive will fail for some reason.
-# And not using --editable results in a bluescreen on my machine...
-RUN  vcpkg install --editable qttools[core,designer,linguist]:%PLATFORM%-windows-static
-
-ENV VCPKG_MAX_CONCURRENCY=17
-# KF5I18nMacros.cmake.in looks for gettext and it's executable, which is by default only installed for x64-windows (non-static) and therefore not found
-RUN  vcpkg install --clean-after-build gettext[core,tools]:%PLATFORM%-windows-static
-
-RUN  vcpkg install --clean-after-build kf5itemviews:%PLATFORM%-windows-static
-RUN  vcpkg install --clean-after-build --keep-going kf5kio:%PLATFORM%-windows-static
-
-RUN  vcpkg install --clean-after-build pkgconf:%PLATFORM%-windows-static
 
 FROM ${FROM_IMAGE} AS powershell-builder
 

@@ -16,7 +16,6 @@
 #include <QSortFilterProxyModel>
 #include <QCloseEvent>
 #include <QWhatsThis>
-#include <KUrlNavigator>
 
 #include "DocumentView.hpp"
 #include "PreviewAllImagesDialog.hpp"
@@ -217,17 +216,6 @@ struct MainWindow::Impl
 
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
-        
-        actionBack = new QAction(QIcon::fromTheme("go-previous"), "Previous Folder", q);
-        actionBack->setShortcuts({QKeySequence(Qt::Key_Back)});
-        actionBack->setShortcutContext(Qt::WidgetShortcut);
-        connect(actionBack, &QAction::triggered, q, [&](bool){ this->ui->urlNavigator->goBack(); });
-
-        actionForward = new QAction(QIcon::fromTheme("go-next"), "Next Folder", q);
-        actionForward->setShortcuts({QKeySequence(Qt::Key_Forward)});
-        actionForward->setShortcutContext(Qt::WidgetShortcut);
-        connect(actionForward, &QAction::triggered, q, [&](bool){ this->ui->urlNavigator->goForward(); });
-    
     }
     
     void createMenus()
@@ -338,11 +326,6 @@ struct MainWindow::Impl
             ui->fileSystemTreeView->scrollTo(mo, QAbstractItemView::EnsureVisible);
         }
 
-        if(QDir(newDir) != rememberedUrlNavigatorActivatedDir)
-        {
-            // avoid infinite recursion
-            ui->urlNavigator->setLocationUrl(QUrl::fromLocalFile(newDir));
-        }
         rememberedActivatedDir = QDir();
         rememberedUrlNavigatorActivatedDir = QDir();
 
@@ -539,8 +522,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     {
         d->onThumbnailListViewSelectionChanged(selected, deselected);
     });
-    
-    connect(d->ui->urlNavigator, &KUrlNavigator::urlChanged, this, [&](const QUrl& url){ d->onUrlNavigatorNavigationTriggered(url); });
+
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
 }
 

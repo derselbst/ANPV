@@ -101,11 +101,6 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
-find_package(KF5KIO REQUIRED)
-if(KF5KIO_VERSION VERSION_LESS 5.91.0)
-  message(FATAL_ERROR "KF5KIO version insufficient, found ${KF5KIO_VERSION}, required is 5.91.0")
-endif()
-
 
 qt_add_library(anpv-lib STATIC MANUAL_FINALIZATION
 src/widgets/AfPointOverlay.cpp
@@ -172,7 +167,7 @@ src/styles/CenteredBoxProxyStyle.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF KExiv2 KDcraw KF5::KIOCore KF5::KIOFileWidgets KF5::KIOWidgets)
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF KExiv2 KDcraw)
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
