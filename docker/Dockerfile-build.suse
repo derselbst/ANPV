@@ -9,12 +9,5 @@ RUN zypper install --no-recommends -y git
 
 RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel
 
-RUN zypper --plus-content debug install --no-recommends -y qt6-base-debugsource qt6-base-debuginfo qt6-tools-debuginfo qt6-imageformats-debuginfo qt6-svg-debuginfo libQt6Concurrent6-debuginfo libQt6DBus6-debuginfo libQt6Gui6-debuginfo libQt6Svg6-debuginfo libQt6Widgets6-debuginfo libQt6Core6-debuginfo
-
-WORKDIR /anpv
-
-# this is needed for running ANPV in a container, displaying fonts correctly, etc.
-RUN zypper install --no-recommends -y xauth xorg-x11-fonts xorg-x11-fonts-converted
-
 # this is what we need for running a pipeline in the container
 RUN zypper install --no-recommends -y sudo shadow
