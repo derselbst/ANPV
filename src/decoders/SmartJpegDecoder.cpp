@@ -179,8 +179,8 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     scaledRoi = fullResToCurrentRes.mapRect(roiRect);
     Q_ASSERT(scaledRoi.isValid());
-    Q_ASSERT(scaledRoi.width() <= cinfo.output_width);
-    Q_ASSERT(scaledRoi.height() <= cinfo.output_height);
+    Q_ASSERT(scaledRoi.right() <= cinfo.output_width);
+    Q_ASSERT(scaledRoi.bottom() <= cinfo.output_height);
 
     // Start decompressor
     this->setDecodingMessage("Starting the JPEG decompressor");
@@ -191,13 +191,15 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
 
     JDIMENSION xoffset = scaledRoi.x();
-    JDIMENSION croppedWidth = scaledRoi.width();
+    JDIMENSION croppedWidth = scaledRoi.right() - xoffset;
     jpeg_crop_scanline(&cinfo, &xoffset, &croppedWidth);
+    Q_ASSERT(croppedWidth <= cinfo.output_width); // output_width is now cropped as well
     scaledRoi.setX(xoffset);
     scaledRoi.setWidth(croppedWidth);
 
     const JDIMENSION skippedScanlinesTop = scaledRoi.y();
-    const JDIMENSION lastScanlineToDecode = skippedScanlinesTop + scaledRoi.height();
+    const JDIMENSION lastScanlineToDecode = scaledRoi.bottom();
+    Q_ASSERT(lastScanlineToDecode <= cinfo.output_height);
 
     image = this->allocateImageBuffer(scaledRoi.width(), scaledRoi.height(), QImage::Format_ARGB32);
     auto* dataPtrBackup = image.constBits();
