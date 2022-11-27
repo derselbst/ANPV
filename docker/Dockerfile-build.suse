@@ -10,4 +10,4 @@ RUN zypper install --no-recommends -y git
 RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel
 
 # this is what we need for running a pipeline in the container
-RUN zypper install --no-recommends -y sudo shadow
+RUN zypper install --no-recommends -y sudo shadow util-linux
