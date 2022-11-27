@@ -430,9 +430,11 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent, QTransform
             this->cancelCallback();
             if (!silent)
             {
-                QRect update = QRect(QPoint(0, y), QSize(width, linesToConvertNow));
-                update = currentPageToFullResTransform.mapRect(update);
-                update.moveTopLeft(image.offset());
+                QPoint off = image.offset();
+                // the offset is in full resolution coordinates, we need to translate it to current resolution
+                off = currentPageToFullResTransform.inverted().map(off);
+                off.ry() += y;
+                QRect update = QRect(off, QSize(width, linesToConvertNow));
                 this->updateDecodedRoiRect(update);
             }
         }
