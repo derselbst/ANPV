@@ -366,7 +366,7 @@ struct SortedImageModel::Impl
         
         if(std::distance(itBegin, itEnd) > 1)
         {
-            std::reverse(itBegin, itEnd);
+            std::reverse(itBegin, itEnd+1);
         }
     }
 
