@@ -39,8 +39,8 @@ struct UrlNavigatorWidget::Impl
 
         this->bSkipNextHide = false;
         this->slHistory.clear();
-        q->goToHomeDirectory();
         q->connect(q, &UrlNavigatorWidget::currentIndexChanged, q, &UrlNavigatorWidget::onIndexChanged);
+        q->connect(ANPV::globalInstance(), &ANPV::currentDirChanged, q, &UrlNavigatorWidget::setPath);
     }
 
     QFileSystemModel* fsModel;
@@ -76,52 +76,17 @@ UrlNavigatorWidget::UrlNavigatorWidget(const QString &path, QWidget *parent)
 
 UrlNavigatorWidget::~UrlNavigatorWidget() = default;
 
-/* Decreases the current history index */
-void UrlNavigatorWidget::goHistoryBack()
-{
-   if(d->iCurrentHistoryIndex > 0)
-   {
-      this->navigateTo(d->slHistory[--d->iCurrentHistoryIndex], true);
-   }
-}
-
-/* Increases the current history index */
-void UrlNavigatorWidget::goHistoryForward()
-{
-   if(d->iCurrentHistoryIndex < d->slHistory.size())
-   {
-      this->navigateTo(d->slHistory[++d->iCurrentHistoryIndex], true);
-   }
-}
-
-/* Navigates to the home directory */
-void UrlNavigatorWidget::goToHomeDirectory()
-{
-   this->navigateTo(ANPV::globalInstance()->currentDir());
-}
-
 /* Sets the path (path) to the combo box and emits the signal pathChanged. If the path is not from the history operations 
    (fromhistory == false) the history is rewound to the current history index. */
-void UrlNavigatorWidget::navigateTo(const QString &path, bool fromhistory)
+void UrlNavigatorWidget::navigateTo(const QString &path)
 {
-   if(d->slHistory.isEmpty() || (!fromhistory && d->slHistory.last() != path))
-   {
-      if(d->iCurrentHistoryIndex > 0)
-      {
-         d->slHistory.remove(d->iCurrentHistoryIndex, d->slHistory.size() - d->iCurrentHistoryIndex);
-      }
-      d->slHistory.append(path);
-      d->iCurrentHistoryIndex = d->slHistory.size() - 1;
-   }
-
-   this->setCurrentText(path);
-   emit this->pathChanged(path);
+   emit this->pathChangedByUser(path);
 }
 
 /* Sets the path (newpath) to be used. */
 void UrlNavigatorWidget::setPath(const QString &newpath)
 {
-   this->navigateTo(newpath, false);
+   this->setCurrentText(newpath);
 }
 
 /* Returns the currently used path. */
@@ -136,7 +101,7 @@ void UrlNavigatorWidget::keyPressEvent(QKeyEvent *keyEvent)
     if(keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
     {
         this->clearFocus();
-        this->navigateTo(this->currentText(), false);
+        this->navigateTo(this->currentText());
         keyEvent->accept();
         return;
     }
@@ -159,21 +124,6 @@ bool UrlNavigatorWidget::eventFilter(QObject* object, QEvent* event)
    
    return false;
 }
-
-/* Returns true, if the this->iCurrentHistoryIndex is at the begin of the history list.
-    Otherwise false. */
-bool UrlNavigatorWidget::isHistoryAtFirstIndex() const
-{
-    return d->iCurrentHistoryIndex <= 0;
-}
-
-/* Returns true, if the this->iCurrentHistoryIndex is at the end of the history list.
-    Otherwise false. */
-bool UrlNavigatorWidget::isHistoryAtLastIndex() const
-{
-    return d->iCurrentHistoryIndex >= (d->slHistory.size() - 1);
-}
-    
 
 /* Prepare the treeview object with expanding items to the currently used path
    and popup the treeview. */
@@ -210,5 +160,5 @@ void UrlNavigatorWidget::onIndexChanged(int index)
 {
    Q_UNUSED(index)
 
-   this->navigateTo(d->fsModel->filePath(d->tvView->currentIndex()), false);
+   this->navigateTo(d->fsModel->filePath(d->tvView->currentIndex()));
 }

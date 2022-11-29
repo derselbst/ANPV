@@ -18,7 +18,6 @@ class UrlNavigatorWidget : public QComboBox
       UrlNavigatorWidget(const QString &syspath, QWidget *parent = nullptr);
       ~UrlNavigatorWidget() override;
      
-      void setPath(const QString &newpath);
       QString getPath() const;
 
       bool isHistoryAtFirstIndex() const;
@@ -30,18 +29,14 @@ class UrlNavigatorWidget : public QComboBox
       void keyPressEvent(QKeyEvent *e) override;
 
    public slots:
-      void goHistoryBack();
-      void goHistoryForward();
-      void goToHomeDirectory();
+      void setPath(const QString &path);
 
    signals:
-      void pathChanged(const QString &path);
-
-   protected:
-      void navigateTo(const QString &path, bool fromhistory = false);
+      void pathChangedByUser(const QString &path);
 
    protected slots:
       void onIndexChanged(int index);
+      void navigateTo(const QString &path);
 
    private:
     struct Impl;

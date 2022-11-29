@@ -52,7 +52,7 @@ border-radius: 0px;
      </widget>
     </item>
     <item>
-     <widget class="UrlNavigatorWidget" name="comboBox"/>
+     <widget class="UrlNavigatorWidget" name="urlNavigator"/>
     </item>
     <item>
      <widget class="ThumbnailListView" name="thumbnailListView">

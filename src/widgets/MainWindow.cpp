@@ -524,6 +524,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     });
 
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
+    connect(d->ui->urlNavigator, &UrlNavigatorWidget::pathChangedByUser, ANPV::globalInstance(), QOverload<const QString&>::of(&ANPV::setCurrentDir));
 }
 
 MainWindow::~MainWindow() = default;

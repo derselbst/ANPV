@@ -64,7 +64,7 @@ public:
     void setViewFlags(ViewFlags_t);
     
     QString currentDir();
-    void setCurrentDir(QString str, bool force = false);
+    void setCurrentDir(const QString& str, bool force);
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
     
@@ -100,6 +100,7 @@ signals:
     
 public slots:
     void about();
+    void setCurrentDir(const QString& str);
     
 private:
     struct Impl;

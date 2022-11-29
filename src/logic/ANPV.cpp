@@ -467,7 +467,11 @@ QString ANPV::currentDir()
     return d->currentDir;
 }
 
-void ANPV::setCurrentDir(QString str, bool force)
+void ANPV::setCurrentDir(const QString& str)
+{
+    this->setCurrentDir(str, false);
+}
+void ANPV::setCurrentDir(const QString& str, bool force)
 {
     xThreadGuard g(this);
     
