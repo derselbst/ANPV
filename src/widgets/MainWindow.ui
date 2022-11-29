@@ -52,6 +52,9 @@ border-radius: 0px;
      </widget>
     </item>
     <item>
+     <widget class="UrlNavigatorWidget" name="comboBox"/>
+    </item>
+    <item>
      <widget class="ThumbnailListView" name="thumbnailListView">
       <property name="contextMenuPolicy">
        <enum>Qt::ActionsContextMenu</enum>
@@ -419,6 +422,11 @@ border-radius: 0px;
    <extends>QWidget</extends>
    <header>CancellableProgressWidget.hpp</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UrlNavigatorWidget</class>
+   <extends>QComboBox</extends>
+   <header>UrlNavigatorWidget.hpp</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -130,6 +130,8 @@ src/widgets/ProgressIndicatorHelper.cpp
 src/widgets/ProgressIndicatorHelper.hpp
 src/widgets/ThumbnailListView.cpp
 src/widgets/ThumbnailListView.hpp
+src/widgets/UrlNavigatorWidget.cpp
+src/widgets/UrlNavigatorWidget.hpp
 src/decoders/DecoderFactory.hpp
 src/decoders/DecoderFactory.cpp
 src/decoders/DecodingState.hpp
