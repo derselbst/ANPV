@@ -27,7 +27,7 @@ class UrlNavigatorWidget : public QComboBox
       void hidePopup() override;
       void showPopup() override;
       bool eventFilter(QObject* object, QEvent* event) override;
-      bool event(QEvent *e) override; 
+      void keyPressEvent(QKeyEvent *e) override;
 
    public slots:
       void goHistoryBack();

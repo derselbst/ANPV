@@ -97,7 +97,7 @@ void UrlNavigatorWidget::goHistoryForward()
 /* Navigates to the home directory */
 void UrlNavigatorWidget::goToHomeDirectory()
 {
-   this->navigateTo(QDir::homePath());
+   this->navigateTo(ANPV::globalInstance()->currentDir());
 }
 
 /* Sets the path (path) to the combo box and emits the signal pathChanged. If the path is not from the history operations 
@@ -131,20 +131,16 @@ QString UrlNavigatorWidget::getPath() const
 }
 
 /* Filters the Enter- and Return-KeyPressed event for clearing the objects focus. */
-bool UrlNavigatorWidget::event(QEvent *e)
+void UrlNavigatorWidget::keyPressEvent(QKeyEvent *keyEvent)
 {
-   if(e->type() == QEvent::KeyPress)
-   {
-      QKeyEvent *keyEvent = dynamic_cast<QKeyEvent *>(e);
-      
-      if(keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
-      {
-         this->clearFocus();
-         this->navigateTo(this->currentText(), false);
-         return true;
-      }
-   } 
-   return QComboBox::event(e); 
+    if(keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+    {
+        this->clearFocus();
+        this->navigateTo(this->currentText(), false);
+        keyEvent->accept();
+        return;
+    }
+    QComboBox::keyPressEvent(keyEvent);
 }
 
 /* Filters the MouseButtonPress event on the viewport of the treeview object 
@@ -153,9 +149,9 @@ bool UrlNavigatorWidget::eventFilter(QObject* object, QEvent* event)
 {
    if(event->type() == QEvent::MouseButtonPress && object == view()->viewport())
    {
-      QMouseEvent* mouseEvent = dynamic_cast<QMouseEvent *>(event); 
-      QModelIndex index = d->tvView->indexAt(mouseEvent->pos());
-      if(!d->tvView->visualRect(index).contains(mouseEvent->pos()))
+      QMouseEvent& mouseEvent = dynamic_cast<QMouseEvent &>(*event);
+      QModelIndex index = d->tvView->indexAt(mouseEvent.pos());
+      if(!d->tvView->visualRect(index).contains(mouseEvent.pos()))
       {
          d->bSkipNextHide = true;
       }
