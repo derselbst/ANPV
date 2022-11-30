@@ -906,6 +906,16 @@ const QSharedPointer<SmartImageDecoder>& SortedImageModel::decoder(const Entry_t
     return std::get<1>(e);
 }
 
+QSharedPointer<Image> SortedImageModel::image(Entry_t&& e)
+{
+    return std::get<0>(e);
+}
+
+QSharedPointer<SmartImageDecoder> SortedImageModel::decoder(Entry_t&& e)
+{
+    return std::get<1>(e);
+}
+
 Entry_t SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
 {
     xThreadGuard g(this);

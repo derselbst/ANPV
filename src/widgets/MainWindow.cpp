@@ -416,7 +416,7 @@ struct MainWindow::Impl
         QModelIndexList idx = r.indexes();
         for(const QModelIndex& i : idx)
         {
-            auto& img = model->image(model->entry(i));
+            auto img = model->image(model->entry(i));
             size += img->fileInfo().size();
         }
     }

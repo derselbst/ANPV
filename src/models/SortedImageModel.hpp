@@ -42,6 +42,8 @@ public:
     };
     static const QSharedPointer<Image>& image(const Entry_t& e);
     static const QSharedPointer<SmartImageDecoder>& decoder(const Entry_t& e);
+    static QSharedPointer<Image> image(Entry_t&& e);
+    static QSharedPointer<SmartImageDecoder> decoder(Entry_t&& e);
 
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
