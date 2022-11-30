@@ -429,6 +429,16 @@ border-radius: 0px;
    <header>UrlNavigatorWidget.hpp</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>thumbnailListView</tabstop>
+  <tabstop>urlNavigator</tabstop>
+  <tabstop>iconSizeSlider</tabstop>
+  <tabstop>filterPatternLineEdit</tabstop>
+  <tabstop>filterSyntaxComboBox</tabstop>
+  <tabstop>filterCaseSensitivityCheckBox</tabstop>
+  <tabstop>fileSystemTreeView</tabstop>
+  <tabstop>infoBox</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
