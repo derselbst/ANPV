@@ -23,12 +23,14 @@ struct UrlNavigatorWidget::Impl
     {
         this->iCurrentHistoryIndex = -1;
         q->setEditable(true);
+        q->setMaxVisibleItems(20);
 
         this->fsModel = ANPV::globalInstance()->dirModel();
         q->setModel(this->fsModel);
 
         this->tvView = new QTreeView(q);
         q->setView(this->tvView);
+        this->tvView->setSelectionMode(QAbstractItemView::SingleSelection);
         this->tvView->setHeaderHidden(true);
         this->tvView->showColumn(0);
         this->tvView->hideColumn(1);
@@ -87,6 +89,9 @@ void UrlNavigatorWidget::navigateTo(const QString &path)
 void UrlNavigatorWidget::setPath(const QString &newpath)
 {
    this->setCurrentText(newpath);
+   QModelIndex curDirIdx = d->fsModel->index(newpath);
+   d->tvView->setCurrentIndex(curDirIdx);
+   d->tvView->scrollTo(curDirIdx, QAbstractItemView::PositionAtCenter);
 }
 
 /* Returns the currently used path. */
@@ -98,12 +103,18 @@ QString UrlNavigatorWidget::getPath() const
 /* Filters the Enter- and Return-KeyPressed event for clearing the objects focus. */
 void UrlNavigatorWidget::keyPressEvent(QKeyEvent *keyEvent)
 {
-    if(keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+    switch(keyEvent->key())
     {
-        this->clearFocus();
-        this->navigateTo(this->currentText());
-        keyEvent->accept();
-        return;
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            this->clearFocus();
+            this->navigateTo(this->currentText());
+            keyEvent->accept();
+            return;
+        case Qt::Key_Escape:
+            this->setCurrentText(d->fsModel->filePath(d->tvView->currentIndex()));
+            keyEvent->accept();
+            return;
     }
     QComboBox::keyPressEvent(keyEvent);
 }
@@ -129,17 +140,19 @@ bool UrlNavigatorWidget::eventFilter(QObject* object, QEvent* event)
    and popup the treeview. */
 void UrlNavigatorWidget::showPopup()
 {
-   QDir expdir = this->currentText();
-
-   d->tvView->setCurrentIndex(d->fsModel->index(this->currentText()));
    d->tvView->collapseAll();
    
+   QDir expdir = this->currentText();
    do
-   {   
+   {
       d->tvView->setExpanded(d->fsModel->index(expdir.absolutePath()), true);
    }while(expdir.cdUp());
-
    QComboBox::showPopup();
+
+   QModelIndex curDirIdx = d->fsModel->index(this->currentText());
+   d->tvView->setCurrentIndex(curDirIdx);
+   d->tvView->scrollTo(curDirIdx, QAbstractItemView::PositionAtCenter);
+
 }
 
 /* Prevent the hiding of the popup widget, when an treeview item is clicked. */
