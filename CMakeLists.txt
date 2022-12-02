@@ -225,3 +225,34 @@ qt_finalize_target(anpv-lib)
 qt_finalize_target(anpv)
 
 add_subdirectory(test)
+
+# Additional targets to perform clang-format/clang-tidy
+# Get all project files
+file(GLOB_RECURSE
+     ALL_SOURCE_FILES
+     LIST_DIRECTORIES false
+     "${ANPV_SOURCE_DIR}/src/*.[chi]"
+     "${ANPV_SOURCE_DIR}/src/*.[chi]pp"
+     "${ANPV_SOURCE_DIR}/src/*.[chi]xx"
+     "${ANPV_SOURCE_DIR}/src/*.cc"
+     "${ANPV_SOURCE_DIR}/src/*.hh"
+     "${ANPV_SOURCE_DIR}/src/*.ii"
+     "${ANPV_SOURCE_DIR}/src/*.[CHI]"
+     )
+
+find_program ( ASTYLE "astyle" )
+if ( ASTYLE )
+  add_custom_target(
+    format
+    COMMAND ${ASTYLE}
+    -A1
+    -xb
+    -j
+    -k3
+    -p
+    -f
+    -n
+    -U
+    ${ALL_SOURCE_FILES}
+    )
+endif(ASTYLE)
