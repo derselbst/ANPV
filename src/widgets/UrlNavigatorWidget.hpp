@@ -11,34 +11,34 @@
 
 class UrlNavigatorWidget : public QComboBox
 {
-   Q_OBJECT
+    Q_OBJECT
 
-   public:
-      UrlNavigatorWidget(QWidget *parent = nullptr);
-      UrlNavigatorWidget(const QString &syspath, QWidget *parent = nullptr);
-      ~UrlNavigatorWidget() override;
-     
-      QString getPath() const;
+public:
+    UrlNavigatorWidget(QWidget *parent = nullptr);
+    UrlNavigatorWidget(const QString &syspath, QWidget *parent = nullptr);
+    ~UrlNavigatorWidget() override;
 
-      bool isHistoryAtFirstIndex() const;
-      bool isHistoryAtLastIndex() const;
-     
-      void hidePopup() override;
-      void showPopup() override;
-      bool eventFilter(QObject* object, QEvent* event) override;
-      void keyPressEvent(QKeyEvent *e) override;
+    QString getPath() const;
 
-   public slots:
-      void setPath(const QString &path);
+    bool isHistoryAtFirstIndex() const;
+    bool isHistoryAtLastIndex() const;
 
-   signals:
-      void pathChangedByUser(const QString &path);
+    void hidePopup() override;
+    void showPopup() override;
+    bool eventFilter(QObject *object, QEvent *event) override;
+    void keyPressEvent(QKeyEvent *e) override;
 
-   protected slots:
-      void onIndexChanged(int index);
-      void navigateTo(const QString &path);
+public slots:
+    void setPath(const QString &path);
 
-   private:
+signals:
+    void pathChangedByUser(const QString &path);
+
+protected slots:
+    void onIndexChanged(int index);
+    void navigateTo(const QString &path);
+
+private:
     struct Impl;
     std::unique_ptr<Impl> d;
 };
