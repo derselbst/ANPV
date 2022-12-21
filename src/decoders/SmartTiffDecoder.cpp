@@ -480,18 +480,25 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     }
     
     Q_ASSERT(roi.size() == image.size());
-    
+
     TIFFSetDirectory(d->tiff, imagePageToDecode);
 
     uint16_t samplesPerPixel = d->pageInfos[imagePageToDecode].spp;
     uint16_t bitsPerSample = d->pageInfos[imagePageToDecode].bps;
-        
+
     uint16_t comp;
-    TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
-    
+    if(!TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp))
+    {
+        throw std::runtime_error("Failed to read TIFFTAG_COMPRESSION");
+    }
+    if(!TIFFIsCODECConfigured(comp))
+    {
+        throw std::runtime_error(Formatter() << "Codec " << (int)comp << " is not supported by libtiff");
+    }
+#if 0
     uint16_t planar;
     TIFFGetField(d->tiff, TIFFTAG_PLANARCONFIG, &planar);
-    
+#endif
     this->setDecodingMessage((Formatter() << "Decoding TIFF image at directory no. " << imagePageToDecode).str().c_str());
 
     auto* dataPtrBackup = image.constBits();
@@ -499,8 +506,10 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRec
     if(TIFFIsTiled(d->tiff))
     {   
         uint32_t tw,tl;
-        TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw);
-        TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl);
+        if(!TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw) || !TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl))
+        {
+            throw std::runtime_error("Failed to read tile size");
+        }
     
         std::vector<uint32_t> tileBuf(tw * tl);
         
