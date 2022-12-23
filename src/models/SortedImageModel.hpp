@@ -12,7 +12,6 @@
 #include <memory>
 
 class QDir;
-class ImageDecodeTask;
 class Image;
 class SmartImageDecoder;
 

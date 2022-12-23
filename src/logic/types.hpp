@@ -27,7 +27,14 @@ class Image;
 class SmartImageDecoder;
 using Entry_t = std::pair<QSharedPointer<Image>, QSharedPointer<SmartImageDecoder>>;
 
-enum {
+enum ItemModelUserRoles
+{
     CheckAlignmentRole = Qt::UserRole,
     DecorationAlignmentRole,
+};
+
+enum ListItemType
+{
+    ImageItem,
+    SectionItem
 };
