@@ -871,8 +871,12 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
             connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [=]() { d->onBackgroundTaskStarted(watcher, decoder); });
 
+            QSize fullResSize = image->size();
+            QSize desiredResolution = fullResSize.isValid()
+            ? fullResSize.scaled(1, imageHeight, Qt::KeepAspectRatioByExpanding)
+            : QSize(imageHeight, imageHeight);
             // decode asynchronously
-            auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+            auto fut = decoder->decodeAsync(state, Priority::Background, desiredResolution);
             watcher->setFuture(fut);
             fut.then(
                 [=](DecodingState result)
