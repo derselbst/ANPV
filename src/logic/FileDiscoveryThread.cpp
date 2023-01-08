@@ -1,21 +1,22 @@
 
 #include "FileDiscoveryThread.hpp"
 
-
-/* Constructs the thread for loading the image thumbnails */
-FileDiscoveryThread::FileDiscoveryThread(QObject *parent)
-   : QThread(parent), lstFileData(nullptr), szThumbnailSize(QSize(0,0))
+struct Impl
 {
-}
+    ImageSectionDataContainer* data;
+};
+
 
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
-FileDiscoveryThread::FileDiscoveryThread(QSize &thumbsize, QList<IBImageListImageItem *> *data, QObject *parent)
-   : QThread(parent), lstFileData(data), szThumbnailSize(thumbsize)
+FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObject *parent)
+   : d(std::make_unique<Impl>()), QThread(parent)
 {
+    d->data = data;
 }
 
-/* Loads the images and invokes the creation of the thumbnail. It is finished, the signal imageLoaded is emitted. */
+FileDiscoveryThread::~FileDiscoveryThread() = default;
+
 void FileDiscoveryThread::run()
 {
    QList<IBImageListImageItem *>::iterator it;
@@ -34,28 +35,4 @@ void FileDiscoveryThread::run()
          emit imageLoaded(it - this->lstFileData->begin());
       }
    }
-}
-
-/* Sets the size (size) of the thumbnails. */
-void FileDiscoveryThread::setThumbnailSize(QSize &size)
-{
-   this->szThumbnailSize = size;
-}
-
-/* Returns the size of the thumbnails. */
-QSize FileDiscoveryThread::getThumbnailSize() const
-{
-   return this->szThumbnailSize; 
-}
-
-/* Sets the image list (data) to be handled. */
-void FileDiscoveryThread::setImageList(QList<IBImageListImageItem *> *data)
-{
-   this->lstFileData = data;
-}
-
-/* Returns the handled image list. */
-QList<IBImageListImageItem *> *FileDiscoveryThread::getImageList() const
-{
-   return this->lstFileData;
 }
