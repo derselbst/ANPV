@@ -3,25 +3,34 @@
 
 #include "DecodingState.hpp"
 #include "types.hpp"
+#include "AbstractListItem.hpp"
+#include "SectionItem.hpp"
 
 #include <QFileInfo>
 #include <QSharedPointer>
 #include <memory>
 
 class Image;
-class SmartImageDecoder;
 
 class ImageSectionDataContainer
 {
 public:
-    void addImageItem(QSharedPointer<Image> image);
+    using SectionList = std::list<QSharedPointer<SectionItem>>;
+
+    ImageSectionDataContainer();
+    ~ImageSectionDataContainer();
+
+    void addImageItem(const QVariant& section, QSharedPointer<Image> item);
     bool removeImageItem(QSharedPointer<Image> image);
     bool removeImageItem(QFileInfo info);
     
-    QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx);
-    getLinearIndexOfItem(const AbstractListItem* item);
-    int size();
-    bool clear(bool force);
+    QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;
+    int getLinearIndexOfItem(const AbstractListItem* item) const;
+    int size() const;
+    void clear();
+
+    void sortImageItems(ImageSortField field, Qt::SortOrder order);
+    void sortSections(Qt::SortOrder order);
     
 private:
     struct Impl;

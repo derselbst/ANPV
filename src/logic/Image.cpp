@@ -87,7 +87,7 @@ struct Image::Impl
     }
 };
 
-Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
+Image::Image(const QFileInfo& url) : AbstractListItem(ListItemType::Image), d(std::make_unique<Impl>(url))
 {
     d->updateRectTimer = new QTimer(this);
     d->updateRectTimer->setInterval(100);
@@ -111,6 +111,11 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
 Image::~Image()
 {
     xThreadGuard g(this);
+}
+
+QString Image::getName() const
+{
+    return this->fileInfo().fileName();
 }
 
 bool Image::hasDecoder() const

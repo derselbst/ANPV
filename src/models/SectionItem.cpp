@@ -11,7 +11,7 @@ struct SectionItem::Impl
     
     Impl(SectionItem* q) : q(q) {}
     
-    QList<QSharedPointer<Image>> data;
+    ImageList data;
 };
 
 SectionItem::~SectionItem() = default;
@@ -23,21 +23,7 @@ SectionItem::SectionItem()
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QVariant. */ 
-SectionItem::SectionItem(QVariant &itemid)
-   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
-{
-   this->setItemID(itemid);
-}
-
-/* Constructs an section object of the image list model with the name (itemid) as the type of QString. */
-SectionItem::SectionItem(QString &itemid)
-   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
-{
-   this->setItemID(itemid);
-}
-
-/* Constructs an section object of the image list model with the name (itemid) as the type of QDate. */
-SectionItem::SectionItem(QDate &itemid)
+SectionItem::SectionItem(const QVariant &itemid)
    : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
    this->setItemID(itemid);
@@ -57,21 +43,9 @@ QString SectionItem::getName() const
 }
 
 /* Sets the name (itemid) of the section item as the type of QVariant. */
-void SectionItem::setItemID(QVariant &itemid)
+void SectionItem::setItemID(const QVariant &itemid)
 {
    this->varId = itemid;
-}
-
-/* Sets the name (itemid) of the section item as the type of QString. */
-void SectionItem::setItemID(QString &itemid)
-{
-   this->varId = QVariant(itemid);
-}
-
-/* Sets the name (itemid) of the section item as the type of QDate. */
-void SectionItem::setItemID(QDate &itemid)
-{
-   this->varId = QVariant(itemid);
 }
 
 /* Returns the name of the section item as a QVariant value. */
@@ -89,7 +63,7 @@ void SectionItem::sortItems(ImageSortField field, Qt::SortOrder order)
             switch (field)
             {
             case ImageSortField::SortByName:
-                aBeforeB = QString::compare(itemA->fileInfo().fileName(), itemB->fileInfo().fileName(), Qt::CaseInsensitive);
+                aBeforeB = QString::compare(itemA->getName(), itemB->getName(), Qt::CaseInsensitive);
                 return (order == Qt::AscendingOrder) ? aBeforeB < 0 : aBeforeB > 0;
 
             case ImageSortField::SortByDate:
@@ -105,6 +79,46 @@ void SectionItem::sortItems(ImageSortField field, Qt::SortOrder order)
             }
         });
 }
+
+SectionItem::ImageList::iterator SectionItem::findInsertPosition(const QSharedPointer<Image>& img)
+{
+    // TODO add the correct comparator
+    auto upper = std::upper_bound(this->d->data.begin(), this->d->data.end(), img);
+    return upper;
+}
+
+bool SectionItem::find(const AbstractListItem* item, int* externalIdx)
+{
+    auto it = std::find_if(this->d->data.begin(), this->d->data.end(),
+        [=](QSharedPointer<Image>& entry)
+        {
+            return entry.data() == item;
+        });
+
+    externalIdx += std::distance(this->d->data.begin(), it);
+    return it != this->d->data.end();
+}
+
+void SectionItem::insert(ImageList::iterator it, QSharedPointer<Image>& img)
+{
+    this->d->data.insert(it, img);
+}
+
+size_t SectionItem::size() const
+{
+    return this->d->data.size();
+}
+
+QSharedPointer<AbstractListItem> SectionItem::at(int idx) const
+{
+    return this->d->data.at(idx);
+}
+
+void SectionItem::clear()
+{
+    this->d->data.clear();
+}
+
 
 /* Returns true if the name of the item is less than the given item (item). Otherwise false is returned. 
    If the name is of type QString, then the name of item is lexically less than the name of the given item. 
