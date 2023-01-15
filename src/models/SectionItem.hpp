@@ -28,7 +28,7 @@ public:
     void setItemID(QDate &itemid);
     QVariant getItemID() const;
 
-    void sortItems(IBImageListModel::IBImageSortField field = IBImageListModel::SortByName,  
+    void sortItems(ImageSortField field = ImageSortField::SortByName,
                     Qt::SortOrder order = Qt::AscendingOrder);
 
     /*operator <*/
@@ -69,4 +69,6 @@ public:
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
+    /* contains the name of the section items */
+    QVariant varId;
 };

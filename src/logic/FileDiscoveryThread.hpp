@@ -5,6 +5,8 @@
 #include <QThread>
 #include <memory>
 
+#include "ImageSectionDataContainer.hpp"
+
 class FileDiscoveryThread : public QThread
 {
    Q_OBJECT

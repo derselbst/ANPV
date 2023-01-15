@@ -1,37 +1,9 @@
 
 #include "SectionItem.hpp"
 
-#include <QPromise>
-#include <QFileInfo>
-#include <QSize>
-#include <QtConcurrent/QtConcurrent>
-#include <QThreadPool>
-#include <QDir>
-
-// #include <execution>
-#include <algorithm>
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <cstring> // for strverscmp()
-
-#ifdef _WINDOWS
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <shlwapi.h>
-#endif
-
-#include "SmartImageDecoder.hpp"
-#include "DecoderFactory.hpp"
-#include "UserCancellation.hpp"
-#include "Formatter.hpp"
-#include "ExifWrapper.hpp"
-#include "xThreadGuard.hpp"
-#include "WaitCursor.hpp"
 #include "Image.hpp"
-#include "ANPV.hpp"
-#include "ProgressIndicatorHelper.hpp"
+#include "xThreadGuard.hpp"
+#include "types.hpp"
 
 struct SectionItem::Impl
 {
@@ -40,38 +12,33 @@ struct SectionItem::Impl
     Impl(SectionItem* q) : q(q) {}
     
     QList<QSharedPointer<Image>> data;
-    /* contains the name of the section items */
-    QVariant varId;
 };
 
-SectionItem::~SectionItem()
-{
-    xThreadGuard(this);
-}
+SectionItem::~SectionItem() = default;
 
 /* Constructs an section object of the image list model. */ 
 SectionItem::SectionItem()
-   : d(std::make_unique<Impl>(this)), AbstractItem(ListItemType::Section)
+   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QVariant. */ 
 SectionItem::SectionItem(QVariant &itemid)
-   : d(std::make_unique<Impl>(this)), AbstractItem(ListItemType::Section)
+   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
    this->setItemID(itemid);
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QString. */
 SectionItem::SectionItem(QString &itemid)
-   : d(std::make_unique<Impl>(this)), AbstractItem(ListItemType::Section)
+   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
    this->setItemID(itemid);
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QDate. */
 SectionItem::SectionItem(QDate &itemid)
-   : d(std::make_unique<Impl>(this)), AbstractItem(ListItemType::Section)
+   : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
    this->setItemID(itemid);
 }
@@ -114,45 +81,29 @@ QVariant SectionItem::getItemID() const
 }
 
 /* Sorts the images items of the item according to given the field (field) and the order (order). */ 
-void SectionItem::sortItems(IBImageListModel::IBImageSortField field, Qt::SortOrder order)
+void SectionItem::sortItems(ImageSortField field, Qt::SortOrder order)
 {
-   std::sort(this->begin(), this->end(), [field, order](IBImageListImageItem *itemA, IBImageListImageItem *itemB)
-     {
-        switch(field)
+    std::sort(this->d->data.begin(), this->d->data.end(), [field, order](QSharedPointer<Image>& itemA, QSharedPointer<Image>& itemB)
         {
-           case IBImageListModel::SortByName:
-              if(order ==  Qt::AscendingOrder)
-              {
-                 return QString::compare(itemA->getName(), itemB->getName(), Qt::CaseInsensitive) < 0;
-              }
-              else
-              {
-                 return QString::compare(itemA->getName(), itemB->getName(), Qt::CaseInsensitive) > 0;
-              }
+            int aBeforeB;
+            switch (field)
+            {
+            case ImageSortField::SortByName:
+                aBeforeB = QString::compare(itemA->fileInfo().fileName(), itemB->fileInfo().fileName(), Qt::CaseInsensitive);
+                return (order == Qt::AscendingOrder) ? aBeforeB < 0 : aBeforeB > 0;
 
-           case IBImageListModel::SortByDate:
-              if(order ==  Qt::AscendingOrder)
-              {
-                 return itemA->getLastModified().date() < itemB->getLastModified().date();
-              }
-              else
-              {
-                 return itemA->getLastModified().date() > itemB->getLastModified().date();
-              }
+            case ImageSortField::SortByDate:
+                aBeforeB = itemA->fileInfo().lastModified().date() < itemB->fileInfo().lastModified().date();
+                return (order == Qt::AscendingOrder) ? aBeforeB != 0 : aBeforeB == 0;
 
+            case ImageSortField::SortByFileType:
+                aBeforeB = QString::compare(itemA->fileInfo().suffix(), itemB->fileInfo().suffix(), Qt::CaseInsensitive);
+                return (order == Qt::AscendingOrder) ? aBeforeB < 0 : aBeforeB > 0;
 
-           case IBImageListModel::SortByFileType:
-              if(order ==  Qt::AscendingOrder)
-              {
-                 return QString::compare(itemA->getFileType(), itemB->getFileType(), Qt::CaseInsensitive) > 0;
-              }
-              else
-              {
-                 return QString::compare(itemA->getFileType(), itemB->getFileType(), Qt::CaseInsensitive) > 0;
-              }
-        }
-        return false;
-     });
+            default:
+                throw std::logic_error("Unkown case in SectionItem::sortItems");
+            }
+        });
 }
 
 /* Returns true if the name of the item is less than the given item (item). Otherwise false is returned. 

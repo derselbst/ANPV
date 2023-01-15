@@ -33,8 +33,27 @@ enum ItemModelUserRoles
     DecorationAlignmentRole,
 };
 
-enum ListItemType
+enum class ListItemType
 {
-    ImageItem,
-    SectionItem
+    Image,
+    Section
+};
+
+/* enumeration of fields for image sorting */
+enum class ImageSortField
+{
+    SortByName,
+    SortByDate,
+    SortByFileType,
+    Last
+};
+
+/* enumeration of the type of section heads */
+enum class ListSectionType
+{
+    NoSection,
+    AlphabeticSection,
+    DateSection,
+    FileTypeSection,
+    Last
 };
