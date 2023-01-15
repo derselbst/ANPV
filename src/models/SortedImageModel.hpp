@@ -39,6 +39,22 @@ public:
         CameraModel,
         Count // must be last!
     };
+
+    enum ItemModelUserRoles
+    {
+        ItemName = Qt::DisplayRole,
+        CheckAlignmentRole = Qt::UserRole,
+        DecorationAlignmentRole,
+        ItemFileName,
+        ItemFilePath,
+        ItemFileType,
+        ItemFileLastModified,
+        ItemImageSize,
+        ItemImageLoaded,
+        ItemThumbnail,
+        ItemIsSection
+    };
+
     static const QSharedPointer<Image>& image(const Entry_t& e);
     static const QSharedPointer<SmartImageDecoder>& decoder(const Entry_t& e);
     static QSharedPointer<Image> image(Entry_t&& e);

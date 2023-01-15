@@ -4,6 +4,7 @@
 #include "ListItemDelegate.hpp"
 
 #include "types.hpp"
+#include "SortedImageModel.hpp"
 
 /* Constructs a ItemDelegate object. */
 ListItemDelegate::ListItemDelegate(QObject *parent)
@@ -21,7 +22,7 @@ void ListItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
       return;
    }
 
-   issection = index.model()->data(index, IBImageListModel::ItemIsSection).toBool();
+   issection = index.model()->data(index, SortedImageModel::ItemIsSection).toBool();
 
    if(issection)
    {
@@ -39,7 +40,7 @@ void ListItemDelegate::paintSection(QPainter *painter, const QStyleOptionViewIte
    QString fname;
    QFont paintfont;
 
-   fname = index.model()->data(index, IBImageListModel::ItemName).toString();
+   fname = index.model()->data(index, SortedImageModel::ItemName).toString();
 
    painter->save();
    painter->setRenderHint(QPainter::Antialiasing, true);
@@ -68,11 +69,11 @@ void ListItemDelegate::paintItem(QPainter *painter, const QStyleOptionViewItem &
    QFont paintfont;
    bool imageloaded;
    
-   ftype = index.model()->data(index, IBImageListModel::ItemFileType).toString();
-   fname = index.model()->data(index, IBImageListModel::ItemName).toString();
-   thumbnail = index.model()->data(index, IBImageListModel::ItemThumbnail).value<QPixmap>();
-   imagesize = index.model()->data(index, IBImageListModel::ItemImageSize).toSize();
-   imageloaded = index.model()->data(index, IBImageListModel::ItemImageLoaded).toBool();
+   ftype = index.model()->data(index, SortedImageModel::ItemFileType).toString();
+   fname = index.model()->data(index, SortedImageModel::ItemName).toString();
+   thumbnail = index.model()->data(index, SortedImageModel::ItemThumbnail).value<QPixmap>();
+   imagesize = index.model()->data(index, SortedImageModel::ItemImageSize).toSize();
+   imageloaded = index.model()->data(index, SortedImageModel::ItemImageLoaded).toBool();
 
    /* start painting of item on a pixmap to prevent text flickering */
    hbufpainter = new QPainter(&hbufpxmp);
@@ -149,7 +150,7 @@ QSize ListItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 {
    Q_UNUSED(option)
 
-   bool issection = index.model()->data(index, IBImageListModel::ItemIsSection).toBool();
+   bool issection = index.model()->data(index, SortedImageModel::ItemIsSection).toBool();
 
    if(issection)
    {
