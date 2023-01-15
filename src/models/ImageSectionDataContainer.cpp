@@ -2,14 +2,13 @@
 #include "ImageSectionDataContainer.hpp"
 
 #include "SectionItem.hpp"
+#include "Image.hpp"
 
 struct ImageSectionDataContainer::Impl
 {
     ImageSectionDataContainer* q;
     
     SectionList data;
-    
-
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer() : d(std::make_unique<Impl>())
@@ -39,9 +38,7 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     }
 
     auto insertIt = (*it)->findInsertPosition(item);
-    QSharedPointer<Image> i = (*insertIt);
-    AbstractListItem* ab = i.data();
-    int insertIdx = this->getLinearIndexOfItem(ab);
+    int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
     // TODO Model::beginInsert
     (*it)->insert(insertIt, item);
     // Model::endInsert

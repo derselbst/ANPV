@@ -20,6 +20,7 @@ public:
 
     SectionItem();
     SectionItem(const QVariant &itemid);
+    ~SectionItem();
 
     QString getName() const override;
     
