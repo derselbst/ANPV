@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QThread>
+#include <QFuture>
 #include <memory>
 
 #include "ImageSectionDataContainer.hpp"

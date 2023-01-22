@@ -21,6 +21,7 @@ public:
     ImageSectionDataContainer(SortedImageModel* model);
     ~ImageSectionDataContainer();
 
+    bool addImageItem(const QFileInfo& info);
     void addImageItem(const QVariant& section, QSharedPointer<Image> item);
     bool removeImageItem(QSharedPointer<Image> image);
     bool removeImageItem(QFileInfo info);
@@ -30,8 +31,8 @@ public:
     int size() const;
     void clear();
 
-    void sortImageItems(ImageSortField field, Qt::SortOrder order);
-    void sortSections(Qt::SortOrder order);
+    void sortImageItems(SortField, Qt::SortOrder order);
+    void sortSections(SortField, Qt::SortOrder order);
     
 private:
     struct Impl;

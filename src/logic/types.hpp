@@ -33,21 +33,21 @@ enum class ListItemType
     Section
 };
 
-/* enumeration of fields for image sorting */
-enum class ImageSortField
+enum class SortField
 {
-    SortByName,
-    SortByDate,
-    SortByFileType,
+    None, // only used for sections
+    FileName,
+    FileSize,
+    DateModified,
+    FileType,
+    Resolution,
+    DateRecorded,
+    Aperture,
+    Exposure,
+    Iso,
+    FocalLength,
+    Lens,
+    CameraModel,
     Last
 };
 
-/* enumeration of the type of section heads */
-enum class ListSectionType
-{
-    NoSection,
-    AlphabeticSection,
-    DateSection,
-    FileTypeSection,
-    Last
-};
