@@ -11,13 +11,14 @@
 #include <memory>
 
 class Image;
+class SortedImageModel;
 
 class ImageSectionDataContainer
 {
 public:
     using SectionList = std::list<QSharedPointer<SectionItem>>;
 
-    ImageSectionDataContainer();
+    ImageSectionDataContainer(SortedImageModel* model);
     ~ImageSectionDataContainer();
 
     void addImageItem(const QVariant& section, QSharedPointer<Image> item);

@@ -3,17 +3,24 @@
 
 #include "SectionItem.hpp"
 #include "Image.hpp"
+#include "SortedImageModel.hpp"
+
+#include <mutex>
 
 struct ImageSectionDataContainer::Impl
 {
     ImageSectionDataContainer* q;
     
+    // mutex which protects concurrent access to data
+    std::recursive_mutex m;
     SectionList data;
+    SortedImageModel* model = nullptr;
 };
 
-ImageSectionDataContainer::ImageSectionDataContainer() : d(std::make_unique<Impl>())
+ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
 {
     d->q = this;
+    d->model = model;
 }
 
 ImageSectionDataContainer::~ImageSectionDataContainer() = default;
@@ -22,6 +29,7 @@ ImageSectionDataContainer::~ImageSectionDataContainer() = default;
 void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image> item)
 {
     SectionList::iterator it;
+    std::lock_guard<std::recursive_mutex> l(d->m);
 
     for (it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -39,15 +47,17 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
 
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
-    // TODO Model::beginInsert
+
+    d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx);
     (*it)->insert(insertIt, item);
-    // Model::endInsert
+    d->model->endInsertRows();
 }
 
 /* Return the item of a given index (index). The 2D data list are handled like a 1D list. */ 
 QSharedPointer<AbstractListItem> ImageSectionDataContainer::getItemByLinearIndex(int index) const
 {
     QSharedPointer<AbstractListItem> retitem;
+    std::lock_guard<std::recursive_mutex> l(d->m);
 
     if (this->d->data.empty() && index < 0)
     {
@@ -88,14 +98,14 @@ QSharedPointer<AbstractListItem> ImageSectionDataContainer::getItemByLinearIndex
 /* Return the index of a given item (item). The 2D data list are handled like a 1D list. */ 
 int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item) const
 {
-    SectionList::const_iterator sit;
-    SectionItem::ImageList::const_iterator iit;
     int itmidx = 0;
 
     if (!item)
     {
         return -1;
     }
+
+    std::lock_guard<std::recursive_mutex> l(d->m);
 
     if (this->d->data.front() == this->d->data.back() && this->d->data.front()->getName().isEmpty())
     {
@@ -106,7 +116,7 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
     }
     else
     {
-        for (sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+        for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
         {
             if ((*sit) == item)
             {
@@ -126,9 +136,9 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 
 void ImageSectionDataContainer::clear()
 {
-   SectionList::iterator it;
+   std::lock_guard<std::recursive_mutex> l(d->m);
 
-   for(it = this->d->data.begin(); it != this->d->data.end(); ++it)
+   for(SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
    {
       (*it)->clear();
    }
@@ -140,6 +150,7 @@ void ImageSectionDataContainer::clear()
 int ImageSectionDataContainer::size() const
 {
    int size = 0;
+   std::lock_guard<std::recursive_mutex> l(d->m);
  
    if(this->d->data.empty())
    {
@@ -165,6 +176,7 @@ int ImageSectionDataContainer::size() const
 /* Invoke the sorting the images items of the section items according to given the field (field) and the order (order). */
 void ImageSectionDataContainer::sortImageItems(ImageSortField field, Qt::SortOrder order)
 {
+    std::lock_guard<std::recursive_mutex> l(d->m);
    for(auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
    {
       (*it)->sortItems(field, order);
@@ -174,6 +186,7 @@ void ImageSectionDataContainer::sortImageItems(ImageSortField field, Qt::SortOrd
 /* Sorts the section item according to given the order (order). */
 void ImageSectionDataContainer::sortSections(Qt::SortOrder order)
 {
+    std::lock_guard<std::recursive_mutex> l(d->m);
     std::sort(this->d->data.begin(), this->d->data.end(), [order](SectionItem* itemA, SectionItem* itemB)
         {
             if (order == Qt::AscendingOrder)

@@ -14,10 +14,12 @@
 class QDir;
 class Image;
 class SmartImageDecoder;
+class ImageSectionDataContainer;
 
 class SortedImageModel : public QAbstractTableModel, public QRunnable
 {
     Q_OBJECT
+    friend class ImageSectionDataContainer;
     
 public:
     
