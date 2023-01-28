@@ -124,7 +124,8 @@ void FileDiscoveryThread::run()
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             d->directoryDiscovery->setProgressValueAndText(0, msg);
 
-            QMetaObject::invokeMethod(d->spinningIconHelper.get(), &ProgressIndicatorHelper::startRendering, Qt::QueuedConnection);
+            // TODO startRendering
+            //QMetaObject::invokeMethod(d->spinningIconHelper.get(), &ProgressIndicatorHelper::startRendering, Qt::QueuedConnection);
             unsigned readableImages = 0;
             for (auto it = d->discoveredFiles.begin(); it != d->discoveredFiles.end(); ++it)
             {
