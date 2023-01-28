@@ -90,7 +90,7 @@ SectionItem::ImageList::iterator SectionItem::findInsertPosition(const QSharedPo
 bool SectionItem::find(const AbstractListItem* item, int* externalIdx)
 {
     auto it = std::find_if(this->d->data.begin(), this->d->data.end(),
-        [=](QSharedPointer<Image>& entry)
+        [=](const QSharedPointer<Image>& entry)
         {
             return entry.data() == item;
         });
@@ -99,9 +99,35 @@ bool SectionItem::find(const AbstractListItem* item, int* externalIdx)
     return it != this->d->data.end();
 }
 
+int SectionItem::find(const QFileInfo info, ImageList::iterator* itout)
+{
+    auto it = std::find_if(this->d->data.begin(), this->d->data.end(),
+        [=](const QSharedPointer<Image>& entry)
+        {
+            return entry->fileInfo() == info;
+        });
+
+    if(it == this->d->data.end())
+    {
+        return -1;
+    }
+
+    if (itout)
+    {
+        *itout = it;
+    }
+
+    return std::distance(this->d->data.begin(), it);
+}
+
 void SectionItem::insert(ImageList::iterator it, QSharedPointer<Image>& img)
 {
     this->d->data.insert(it, img);
+}
+
+void SectionItem::erase(ImageList::iterator it)
+{
+    this->d->data.erase(it);
 }
 
 size_t SectionItem::size() const

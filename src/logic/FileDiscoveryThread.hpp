@@ -17,6 +17,7 @@ class FileDiscoveryThread : public QThread
      ~FileDiscoveryThread();
 
      void run() override;
+     QFuture<DecodingState> changeDirAsync(const QString& dir);
 
    signals:
       void imageLoaded(int index);

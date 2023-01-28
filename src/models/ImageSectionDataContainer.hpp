@@ -24,7 +24,7 @@ public:
     bool addImageItem(const QFileInfo& info);
     void addImageItem(const QVariant& section, QSharedPointer<Image> item);
     bool removeImageItem(QSharedPointer<Image> image);
-    bool removeImageItem(QFileInfo info);
+    bool removeImageItem(const QFileInfo& info);
     
     QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;
     int getLinearIndexOfItem(const AbstractListItem* item) const;

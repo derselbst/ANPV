@@ -32,7 +32,9 @@ public:
 
     ImageList::iterator findInsertPosition(const QSharedPointer<Image>& img);
     bool find(const AbstractListItem* item, int* externalIdx);
+    int find(const QFileInfo info, ImageList::iterator* itout);
     void insert(ImageList::iterator it, QSharedPointer<Image>& img);
+    void erase(ImageList::iterator it);
     size_t size() const;
     QSharedPointer<AbstractListItem> at(int idx) const;
     void clear();

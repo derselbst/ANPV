@@ -8,21 +8,25 @@
 #include "SmartImageDecoder.hpp"
 
 #include <QApplication>
+#include <QPersistentModelIndex>
+#include <QFutureWatcher>
+
 #include <mutex>
 
 struct ImageSectionDataContainer::Impl
 {
-    ImageSectionDataContainer* q;
+    ImageSectionDataContainer* q = nullptr;
+    SortedImageModel* model = nullptr;
     
-    // mutex which protects concurrent access to data
+    // mutex which protects concurrent access to members below
     std::recursive_mutex m;
     SectionList data;
-    SortedImageModel* model = nullptr;
+    int numberOfCheckedImages = 0;
+    std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
     SortField sectionSortField = SortField::None;
     SortField imageSortField = SortField::None;
     
-
     // returns true if the column that is sorted against requires us to preload the image metadata
     // before we insert the items into the model
     static constexpr bool sortedColumnNeedsPreloadingMetadata(SortField sectionField, SortField imgField)
@@ -41,6 +45,8 @@ struct ImageSectionDataContainer::Impl
             case SortField::FileType:
             case SortField::DateModified:
                 return false;
+            case SortField::None:
+                throw std::logic_error("SortField::None should not be used for images");
             default:
                 break;
             }
@@ -51,6 +57,59 @@ struct ImageSectionDataContainer::Impl
         return true;
     }
 
+    void onThumbnailChanged(Image* img)
+    {
+        int i = q->getLinearIndexOfItem(img);
+        QPersistentModelIndex pm = this->model->index(i, 0);
+        if (pm.isValid())
+        {
+            emit model->layoutAboutToBeChanged({ pm });
+            emit model->dataChanged(pm, pm, { Qt::DecorationRole });
+            emit model->layoutChanged();
+        }
+    }
+
+    void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
+    {
+        if (newState == DecodingState::Ready)
+        {
+            // ignore ready state
+            return;
+        }
+
+        int i = q->getLinearIndexOfItem(img);
+        QModelIndex idx = this->model->index(i, 0);
+        if (idx.isValid())
+        {
+            emit model->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
+        }
+    }
+
+    void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
+    {
+        std::lock_guard<std::recursive_mutex> l(m);
+        auto& watcher2 = this->backgroundTasks[dec];
+        Q_ASSERT(watcher2.get() == watcher.get());
+        watcher->disconnect(q);
+        spinningIconHelper->disconnect(this->spinningIconDrawConnections[dec]);
+        this->spinningIconDrawConnections.erase(dec);
+        this->backgroundTasks.erase(dec);
+        if (this->backgroundTasks.empty())
+        {
+            this->spinningIconHelper->stopRendering();
+        }
+
+        // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
+        this->scheduleSpinningIconRedraw(q->index(dec->image()));
+    }
+
+    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
+    {
+        QModelIndex idx = q->index(dec->image());
+        Q_ASSERT(idx.isValid());
+        this->spinningIconDrawConnections[dec] = q->connect(spinningIconHelper, &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
+        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
+    }
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
@@ -61,7 +120,7 @@ ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : 
 
 ImageSectionDataContainer::~ImageSectionDataContainer() = default;
 
-bool ImageSectionDataContainer::addImageItem(const QFileInfo& info, std::vector<QSharedPointer<SmartImageDecoder>>* decoderList)
+bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
     auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
@@ -71,27 +130,27 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info, std::vector<
 
     d->model->connect(image.data(), &Image::decodingStateChanged, d->model,
         [&](Image* img, quint32 newState, quint32 old)
-        { onBackgroundImageTaskStateChanged(img, newState, old); }
+        { d->onBackgroundImageTaskStateChanged(img, newState, old); }
     , Qt::QueuedConnection);
     d->model->connect(image.data(), &Image::thumbnailChanged, d->model,
-        [&](Image*, QImage) { updateLayout(); });
+        [&](Image* i, QImage) { d->onThumbnailChanged(i); });
     auto con = d->model->connect(image.data(), &Image::checkStateChanged, d->model,
         [&](Image*, int c, int old)
         {
             if (c != old)
             {
-                this->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
+                this->d->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
             }
         });
 
-    this->numberOfCheckedImages += (image->checked() == Qt::Unchecked) ? 0 : +1;
-    this->entries.push_back(std::make_pair(image, decoder));
+    this->d->numberOfCheckedImages += (image->checked() == Qt::Unchecked) ? 0 : +1;
+    //this->entries.push_back(std::make_pair(image, decoder));
 
     if (decoder)
     {
         try
         {
-            if (decoderList == nullptr || d->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
+            if (d->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
             {
                 decoder->open();
                 // decode synchronously
@@ -100,7 +159,18 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info, std::vector<
             }
             else
             {
-                decoderList->emplace_back(std::move(decoder));
+                QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
+                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
+                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started, this, [=]() { d->onBackgroundTaskStarted(watcher, decoder); });
+                watcher->moveToThread(QGuiApplication::instance()->thread());
+
+                // decode asynchronously
+                auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, QSize());
+                watcher->setFuture(fut);
+
+                std::lock_guard<std::recursive_mutex> l(d->m);
+                d->backgroundTasks[decoder] = watcher;
             }
 
             QString str;
@@ -165,18 +235,58 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
         }
     }
 
+    int offset = 0;
     if (this->d->data.end() == it)
     {
         // no suitable section found, create a new one
         it = this->d->data.insert(it, SectionList::value_type(new SectionItem(section)));
+        offset++;
     }
 
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
 
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx); }, Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx - offset, insertIdx); }, Qt::BlockingQueuedConnection);
     (*it)->insert(insertIt, item);
     QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::BlockingQueuedConnection);
+}
+
+bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
+{
+    std::lock_guard<std::recursive_mutex> l(d->m);
+    int globalIdx = 0;
+    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    {
+        SectionItem::ImageList::iterator it;
+        int localIdx = (*sit)->find(info, &it);
+        if (localIdx > 0)
+        {
+            int endIdxToRemove = globalIdx + 1 + localIdx;
+            int startIdxToRemove = endIdxToRemove;
+            if ((*sit)->size() == 1)
+            {
+                // There is only one item left in that section which we are going to remove. Therefore, remove the entire section
+                --startIdxToRemove;
+            }
+            QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove); }, Qt::BlockingQueuedConnection);
+
+            if((*it)->checked() != Qt::Unchecked)
+            {
+                this->d->numberOfCheckedImages--;
+            }
+            (*sit)->erase(it);
+            if ((*sit)->size() == 0)
+            {
+                this->d->data.erase(sit);
+            }
+
+            QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::BlockingQueuedConnection);
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Return the item of a given index (index). The 2D data list are handled like a 1D list. */ 
@@ -274,6 +384,7 @@ void ImageSectionDataContainer::clear()
         (*it)->clear();
     }
     this->d->data.clear();
+    this->d->numberOfCheckedImages = 0;
 
     if (rowCount != 0)
     {
