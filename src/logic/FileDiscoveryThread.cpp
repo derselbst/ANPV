@@ -5,6 +5,7 @@
 
 #include <QDir>
 #include <QFileSystemWatcher>
+#include <QScopedPointer>
 
 struct FileDiscoveryThread::Impl
 {
@@ -12,7 +13,9 @@ struct FileDiscoveryThread::Impl
     ImageSectionDataContainer* data;
     QDir currentDir;
     QFileInfoList discoveredFiles;
-    QPointer<QFileSystemWatcher> watcher;
+    
+    QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
+    QScopedPointer<QEventLoop> evtLoop;
 
     void onDirectoryChanged(const QString& path)
     {
@@ -58,16 +61,18 @@ struct FileDiscoveryThread::Impl
             ++it;
         }
 
-        if (!fileInfoList.isEmpty())
+        // any file still in the list are new, we need to add them
+        for (QFileInfo i : fileInfoList)
         {
-            int iconHeight = cachedIconHeight;
-            QSize iconSize(iconHeight, iconHeight);
-
-            // any file still in the list are new, we need to add them
-            for (QFileInfo i : fileInfoList)
-            {
-                addSingleFile(std::move(i), iconSize, nullptr);
-            }
+            addImageItem(i, nullptr);
+        }
+    }
+    
+    void throwIfDirectoryDiscoveryCancelled()
+    {
+        if(this->directoryDiscovery->isCanceled())
+        {
+            throw UserCancellation();
         }
     }
 };
@@ -84,39 +89,41 @@ FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObjec
 
 FileDiscoveryThread::~FileDiscoveryThread() = default;
 
-void FileDiscoveryThread::run()
-{
-    d->discoveredFiles = d->currentDir.entryInfoList();
-
-
-
-    d->watcher = new QFileSystemWatcher(this);
-    connect(d->watcher, &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
-}
-
-
 QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
 {
     xThreadGuard g(this);
 
-    d->watcher->removePath(d->currentDir.absolutePath());
+    if(d->evtLoop)
+    {
+        d->evtLoop->quit();
+    }
     d->currentDir = QDir(dir);
-    return d->directoryWorker->future();
+    d->directoryWorker = new QPromise<DecodingState>;
+    return d->directoryDiscovery->future();
 }
 
 void FileDiscoveryThread::run()
 {
+    QScopedPointer<QFileSystemWatcher> watcher = new QFileSystemWatcher(this);
+    connect(d->watcher, &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
+    
+    d->evtLoop = new QEventLoop(this);
+    connect(QApplication::instance(), &QApplication::aboutToQuit, &d->evtLoop, &QEventLoop::quit);
+
     int entriesProcessed = 0;
     try
     {
-        d->directoryWorker->start();
+        d->directoryDiscovery->start();
 
         d->setStatusMessage(0, "Looking up directory");
+        
         d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+        d->watcher->addPath(d->currentDir.absolutePath());
+        
         const int entriesToProcess = d->discoveredFiles.size();
         if (entriesToProcess > 0)
         {
-            d->directoryWorker->setProgressRange(0, entriesToProcess + 2 /* for sorting effort + starting the decoding */);
+            d->directoryDiscovery->setProgressRange(0, entriesToProcess + 2 /* for sorting effort + starting the decoding */);
 
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             if (d->sortedColumnNeedsPreloadingMetadata(d->currentSortedCol))
@@ -125,8 +132,6 @@ void FileDiscoveryThread::run()
             }
 
             d->setStatusMessage(0, msg);
-            d->entries.reserve(entriesToProcess);
-            d->entries.shrink_to_fit();
             unsigned readableImages = 0;
             int iconHeight = d->cachedIconHeight;
             QSize iconSize(iconHeight, iconHeight);
@@ -137,17 +142,16 @@ void FileDiscoveryThread::run()
                 do
                 {
                     QFileInfo inf = fileInfoList.takeFirst();
-                    if (d->addSingleFile(std::move(inf), iconSize, &decodersToRunLater))
+                    if (d->data->addImageItem(inf, &decodersToRunLater))
                     {
                         ++readableImages;
                     }
                 } while (false);
 
-                d->throwIfDirectoryLoadingCancelled();
+                d->throwIfDirectoryDiscoveryCancelled();
                 d->setStatusMessage(entriesProcessed++, msg);
             }
 
-            // TODO: optimize away explicit sorting, by using heap insert in first place
             d->setStatusMessage(entriesProcessed++, "Sorting entries, please wait...");
             d->sortEntries();
             if (d->sortOrder == Qt::DescendingOrder)
@@ -155,7 +159,7 @@ void FileDiscoveryThread::run()
                 d->reverseEntries();
             }
 
-            d->throwIfDirectoryLoadingCancelled();
+            d->throwIfDirectoryDiscoveryCancelled();
             if (!decodersToRunLater.empty())
             {
                 d->setStatusMessage(entriesProcessed++, "Directory read, starting async decoding tasks in the background.");
@@ -188,7 +192,7 @@ void FileDiscoveryThread::run()
         }
         else
         {
-            d->directoryWorker->setProgressRange(0, 1);
+            d->directoryDiscovery->setProgressRange(0, 1);
             entriesProcessed++;
             if (d->currentDir.exists())
             {
@@ -200,23 +204,38 @@ void FileDiscoveryThread::run()
             }
         }
 
-        d->directoryWorker->addResult(DecodingState::FullImage);
+        d->directoryDiscovery->addResult(DecodingState::FullImage);
         d->watcher->addPath(d->currentDir.absolutePath());
     }
     catch (const UserCancellation&)
     {
-        d->directoryWorker->addResult(DecodingState::Cancelled);
+        d->directoryDiscovery->addResult(DecodingState::Cancelled);
     }
     catch (const std::exception& e)
     {
         d->setStatusMessage(entriesProcessed, QString("Exception occurred while loading the directory: %1").arg(e.what()));
-        d->directoryWorker->addResult(DecodingState::Error);
+        d->directoryDiscovery->addResult(DecodingState::Error);
     }
     catch (...)
     {
         d->setStatusMessage(entriesProcessed, "Fatal error occurred while loading the directory");
-        d->directoryWorker->addResult(DecodingState::Error);
+        d->directoryDiscovery->addResult(DecodingState::Error);
     }
-    d->directoryWorker->finish();
+    d->directoryDiscovery->finish();
+    
+    try
+    {
+        d->evtLoop->exec();
+    }
+    catch(const std::exception& e)
+    {
+        Formatter f;
+        f << << "FileDiscoveryThread terminated as it caught an exception while processing event loop:\n" << 
+            "Error Type: " << typeid(e).name() << "\n"
+            "Error Message: \n" << e.what();
+        qCritical() << f.str().c_str();
+    }
+    d->watcher->removePath(d->currentDir.absolutePath());
+    d->evtLoop = nullptr;
 }
 

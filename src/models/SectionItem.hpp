@@ -27,7 +27,7 @@ public:
     void setItemID(const QVariant &itemid);
     QVariant getItemID() const;
 
-    void sortItems(ImageSortField field = ImageSortField::SortByName,
+    void sortItems(SortField field,
                     Qt::SortOrder order = Qt::AscendingOrder);
 
     ImageList::iterator findInsertPosition(const QSharedPointer<Image>& img);

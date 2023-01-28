@@ -55,22 +55,22 @@ QVariant SectionItem::getItemID() const
 }
 
 /* Sorts the images items of the item according to given the field (field) and the order (order). */ 
-void SectionItem::sortItems(ImageSortField field, Qt::SortOrder order)
+void SectionItem::sortItems(SortField field, Qt::SortOrder order)
 {
     std::sort(this->d->data.begin(), this->d->data.end(), [field, order](QSharedPointer<Image>& itemA, QSharedPointer<Image>& itemB)
         {
             int aBeforeB;
             switch (field)
             {
-            case ImageSortField::SortByName:
+            case SortField::FileName:
                 aBeforeB = QString::compare(itemA->getName(), itemB->getName(), Qt::CaseInsensitive);
                 return (order == Qt::AscendingOrder) ? aBeforeB < 0 : aBeforeB > 0;
 
-            case ImageSortField::SortByDate:
+            case SortField::DateModified:
                 aBeforeB = itemA->fileInfo().lastModified().date() < itemB->fileInfo().lastModified().date();
                 return (order == Qt::AscendingOrder) ? aBeforeB != 0 : aBeforeB == 0;
 
-            case ImageSortField::SortByFileType:
+            case SortField::FileType:
                 aBeforeB = QString::compare(itemA->fileInfo().suffix(), itemB->fileInfo().suffix(), Qt::CaseInsensitive);
                 return (order == Qt::AscendingOrder) ? aBeforeB < 0 : aBeforeB > 0;
 

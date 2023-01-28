@@ -21,6 +21,7 @@ struct ImageSectionDataContainer::Impl
 
     SortField sectionSortField = SortField::None;
     SortField imageSortField = SortField::None;
+    
 
     // returns true if the column that is sorted against requires us to preload the image metadata
     // before we insert the items into the model
@@ -60,10 +61,8 @@ ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : 
 
 ImageSectionDataContainer::~ImageSectionDataContainer() = default;
 
-bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
+bool ImageSectionDataContainer::addImageItem(const QFileInfo& info, std::vector<QSharedPointer<SmartImageDecoder>>* decoderList)
 {
-    std::vector<QSharedPointer<SmartImageDecoder>>* decoderList;
-
     auto image = DecoderFactory::globalInstance()->makeImage(info);
     auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
 
@@ -96,7 +95,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             {
                 decoder->open();
                 // decode synchronously
-                decoder->decode(DecodingState::Metadata, iconSize);
+                decoder->decode(DecodingState::Metadata, QSize());
                 decoder->close();
             }
             else
@@ -175,9 +174,9 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
 
-    d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx);
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx); }, Qt::BlockingQueuedConnection);
     (*it)->insert(insertIt, item);
-    d->model->endInsertRows();
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::BlockingQueuedConnection);
 }
 
 /* Return the item of a given index (index). The 2D data list are handled like a 1D list. */ 
@@ -268,7 +267,7 @@ void ImageSectionDataContainer::clear()
     auto rowCount = this->size();
     if (rowCount != 0)
     {
-        d->model->beginRemoveRows(QModelIndex(), 0, rowCount - 1);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), 0, rowCount - 1); }, Qt::BlockingQueuedConnection);
     }
     for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -278,7 +277,7 @@ void ImageSectionDataContainer::clear()
 
     if (rowCount != 0)
     {
-        d->model->endRemoveRows();
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::BlockingQueuedConnection);
     }
 }
 
