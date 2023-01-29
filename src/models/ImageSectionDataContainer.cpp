@@ -86,6 +86,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     {
         try
         {
+            QSharedPointer<QFutureWatcher<DecodingState>> watcher;
             if (d->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
             {
                 decoder->open();
@@ -95,7 +96,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             }
             else
             {
-                QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+                watcher.reset(new QFutureWatcher<DecodingState>());
                 watcher->moveToThread(QGuiApplication::instance()->thread());
 
                 // decode asynchronously
@@ -134,7 +135,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                 throw std::logic_error("requested section sort type not yet implemented");
             }
 
-            this->addImageItem(var, image);
+            this->addImageItem(var, image, watcher);
         }
         catch (const std::runtime_error& e)
         {
@@ -153,7 +154,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 }
 
 /* Adds a given item (item) to a given section item (section). If the section item does not exist, it will be created. */
-void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image> item)
+void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
 {
     SectionList::iterator it;
     std::lock_guard<std::recursive_mutex> l(d->m);
@@ -179,6 +180,7 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
 
     QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx - offset, insertIdx); }, d->syncConnection());
     (*it)->insert(insertIt, item);
+    d->model->welcomeImage(item, watcher);
     QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
 }
 

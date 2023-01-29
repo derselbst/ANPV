@@ -59,7 +59,7 @@ public:
     QList<Image*> checkedEntries();
 
     bool isSafeToChangeDir();
-    void welcomeImage(QSharedPointer<Image> image, QSharedPointer<SmartImageDecoder> decoder, QSharedPointer<QFutureWatcher<DecodingState>> watcher);
+    void welcomeImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
 
 public: // QAbstractItemModel
     

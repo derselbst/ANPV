@@ -217,16 +217,16 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
                 d->updateLayout();
             });
 
-    connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, this,
-            [&](Qt::SortOrder newOrd, Qt::SortOrder)
+    connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, this,
+            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
             {
-                this->sort(newOrd);
+                d->entries->sortImageItems(newField, newOrder);
             });
 
-    connect(ANPV::globalInstance(), &ANPV::primarySortColumnChanged, this,
-            [&](SortedImageModel::Column newCol, SortedImageModel::Column)
+    connect(ANPV::globalInstance(), &ANPV::sectionSortOrderChanged, this,
+            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
             {
-                this->sort(newCol);
+                d->entries->sortSections(newField, newOrder);
             });
     
     connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
@@ -604,7 +604,7 @@ bool SortedImageModel::isSafeToChangeDir()
 
 // this function makes all conections required right after having added a new image to the model, making sure decoding progress is displayed, etc
 // this function is thread-safe
-void SortedImageModel::welcomeImage(QSharedPointer<Image> image, QSharedPointer<SmartImageDecoder> decoder, QSharedPointer<QFutureWatcher<DecodingState>> watcher)
+void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
 {
     Q_ASSERT(image != nullptr);
 

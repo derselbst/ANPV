@@ -8,6 +8,7 @@
 
 #include <QFileInfo>
 #include <QSharedPointer>
+#include <QFutureWatcher>
 #include <memory>
 
 class Image;
@@ -22,7 +23,7 @@ public:
     ~ImageSectionDataContainer();
 
     bool addImageItem(const QFileInfo& info);
-    void addImageItem(const QVariant& section, QSharedPointer<Image> item);
+    void addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
     bool removeImageItem(QSharedPointer<Image> image);
     bool removeImageItem(const QFileInfo& info);
     
