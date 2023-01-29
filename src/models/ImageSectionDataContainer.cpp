@@ -56,6 +56,14 @@ struct ImageSectionDataContainer::Impl
         return true;
     }
 
+    Qt::ConnectionType syncConnection()
+    {
+        if (QThread::currentThread() == this->model->thread())
+        {
+            return Qt::DirectConnection;
+        }
+        return Qt::BlockingQueuedConnection;
+    }
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
@@ -169,9 +177,9 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
 
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx - offset, insertIdx); }, Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx - offset, insertIdx); }, d->syncConnection());
     (*it)->insert(insertIt, item);
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
 }
 
 bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
@@ -191,7 +199,7 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
                 // There is only one item left in that section which we are going to remove. Therefore, remove the entire section
                 --startIdxToRemove;
             }
-            QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove); }, Qt::BlockingQueuedConnection);
+            QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove); }, d->syncConnection());
 
             (*sit)->erase(it);
             if ((*sit)->size() == 0)
@@ -199,7 +207,7 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
                 this->d->data.erase(sit);
             }
 
-            QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::BlockingQueuedConnection);
+            QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::AutoConnection);
 
             return true;
         }
@@ -296,7 +304,7 @@ void ImageSectionDataContainer::clear()
     auto rowCount = this->size();
     if (rowCount != 0)
     {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), 0, rowCount - 1); }, Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), 0, rowCount - 1); }, d->syncConnection());
     }
     for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -306,7 +314,7 @@ void ImageSectionDataContainer::clear()
 
     if (rowCount != 0)
     {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::AutoConnection);
     }
 }
 
