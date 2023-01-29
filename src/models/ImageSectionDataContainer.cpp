@@ -21,7 +21,6 @@ struct ImageSectionDataContainer::Impl
     // mutex which protects concurrent access to members below
     std::recursive_mutex m;
     SectionList data;
-    int numberOfCheckedImages = 0;
     std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
     SortField sectionSortField = SortField::None;
@@ -57,59 +56,6 @@ struct ImageSectionDataContainer::Impl
         return true;
     }
 
-    void onThumbnailChanged(Image* img)
-    {
-        int i = q->getLinearIndexOfItem(img);
-        QPersistentModelIndex pm = this->model->index(i, 0);
-        if (pm.isValid())
-        {
-            emit model->layoutAboutToBeChanged({ pm });
-            emit model->dataChanged(pm, pm, { Qt::DecorationRole });
-            emit model->layoutChanged();
-        }
-    }
-
-    void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
-    {
-        if (newState == DecodingState::Ready)
-        {
-            // ignore ready state
-            return;
-        }
-
-        int i = q->getLinearIndexOfItem(img);
-        QModelIndex idx = this->model->index(i, 0);
-        if (idx.isValid())
-        {
-            emit model->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
-        }
-    }
-
-    void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
-    {
-        std::lock_guard<std::recursive_mutex> l(m);
-        auto& watcher2 = this->backgroundTasks[dec];
-        Q_ASSERT(watcher2.get() == watcher.get());
-        watcher->disconnect(q);
-        spinningIconHelper->disconnect(this->spinningIconDrawConnections[dec]);
-        this->spinningIconDrawConnections.erase(dec);
-        this->backgroundTasks.erase(dec);
-        if (this->backgroundTasks.empty())
-        {
-            this->spinningIconHelper->stopRendering();
-        }
-
-        // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
-        this->scheduleSpinningIconRedraw(q->index(dec->image()));
-    }
-
-    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<SmartImageDecoder>& dec)
-    {
-        QModelIndex idx = q->index(dec->image());
-        Q_ASSERT(idx.isValid());
-        this->spinningIconDrawConnections[dec] = q->connect(spinningIconHelper, &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
-        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
-    }
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
@@ -128,24 +74,6 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     // move both objects to the UI thread to ensure proper signal delivery
     image->moveToThread(QGuiApplication::instance()->thread());
 
-    d->model->connect(image.data(), &Image::decodingStateChanged, d->model,
-        [&](Image* img, quint32 newState, quint32 old)
-        { d->onBackgroundImageTaskStateChanged(img, newState, old); }
-    , Qt::QueuedConnection);
-    d->model->connect(image.data(), &Image::thumbnailChanged, d->model,
-        [&](Image* i, QImage) { d->onThumbnailChanged(i); });
-    auto con = d->model->connect(image.data(), &Image::checkStateChanged, d->model,
-        [&](Image*, int c, int old)
-        {
-            if (c != old)
-            {
-                this->d->numberOfCheckedImages += (c == Qt::Unchecked) ? -1 : +1;
-            }
-        });
-
-    this->d->numberOfCheckedImages += (image->checked() == Qt::Unchecked) ? 0 : +1;
-    //this->entries.push_back(std::make_pair(image, decoder));
-
     if (decoder)
     {
         try
@@ -160,17 +88,11 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             else
             {
                 QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
-                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
-                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, decoder); });
-                watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started, this, [=]() { d->onBackgroundTaskStarted(watcher, decoder); });
                 watcher->moveToThread(QGuiApplication::instance()->thread());
 
                 // decode asynchronously
                 auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, QSize());
                 watcher->setFuture(fut);
-
-                std::lock_guard<std::recursive_mutex> l(d->m);
-                d->backgroundTasks[decoder] = watcher;
             }
 
             QString str;
@@ -216,6 +138,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     }
     else
     {
+        // TODO invoke required??
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
     return false;

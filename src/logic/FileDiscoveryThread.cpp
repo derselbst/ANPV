@@ -72,6 +72,14 @@ struct FileDiscoveryThread::Impl
             throw UserCancellation();
         }
     }
+
+    void waitForDirectoryDiscovery() const
+    {
+        if (directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
+        {
+            directoryDiscovery->future().waitForFinished();
+        }
+    }
 };
 
 

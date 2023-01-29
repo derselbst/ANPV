@@ -16,72 +16,48 @@ class Image;
 class SmartImageDecoder;
 class ImageSectionDataContainer;
 
-class SortedImageModel : public QAbstractTableModel, public QRunnable
+class SortedImageModel : public QAbstractTableModel
 {
     Q_OBJECT
     friend class ImageSectionDataContainer;
     
 public:
-    
-    enum Column : int
-    {
-        Unknown = -1,
-        FirstValid = 0,
-        FileName = FirstValid,
-        FileSize,
-        DateModified,
-        FileType,
-        Resolution,
-        DateRecorded,
-        Aperture,
-        Exposure,
-        Iso,
-        FocalLength,
-        Lens,
-        CameraModel,
-        Count // must be last!
-    };
 
     enum ItemModelUserRoles
     {
         ItemName = Qt::DisplayRole,
+        ItemThumbnail = Qt::DecorationRole,
         CheckAlignmentRole = Qt::UserRole,
         DecorationAlignmentRole,
         ItemFileName,
-        ItemFilePath,
+        ItemFileSize,
         ItemFileType,
         ItemFileLastModified,
-        ItemImageSize,
-        ItemImageLoaded,
-        ItemThumbnail,
-        ItemIsSection
+        ItemIsSection,
+        ItemImageResolution,
+        ItemImageDateRecorded,
+        ItemImageAperture,
+        ItemImageExposure,
+        ItemImageIso,
+        ItemImageFocalLength,
+        ItemImageLens,
+        ItemImageCameraModel,
     };
-
-    static const QSharedPointer<Image>& image(const Entry_t& e);
-    static const QSharedPointer<SmartImageDecoder>& decoder(const Entry_t& e);
-    static QSharedPointer<Image> image(Entry_t&& e);
-    static QSharedPointer<SmartImageDecoder> decoder(Entry_t&& e);
 
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
     
     QFuture<DecodingState> changeDirAsync(const QString& dir);
-    void run() override;
     void decodeAllImages(DecodingState state, int imageHeight);
     
     using QAbstractTableModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
     QModelIndex index(const Image* img);
-    QFileInfo fileInfo(const QModelIndex& idx) const;
     Entry_t goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
-    Entry_t entry(const QModelIndex& idx) const;
-    Entry_t entry(unsigned int row) const;
-    QList<Entry_t> checkedEntries();
-
-    void sort(Column column);
-    void sort(Qt::SortOrder order);
+    QList<Image*> checkedEntries();
 
     bool isSafeToChangeDir();
+    void welcomeImage(QSharedPointer<Image> image, QSharedPointer<SmartImageDecoder> decoder, QSharedPointer<QFutureWatcher<DecodingState>> watcher);
 
 public: // QAbstractItemModel
     
@@ -92,8 +68,6 @@ public: // QAbstractItemModel
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-
-    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
     
 private:
     struct Impl;

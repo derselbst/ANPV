@@ -451,9 +451,9 @@ struct MainWindow::Impl
             if (count > 0)
             {
                 size_t size = 0;
-                for (Entry_t& e : chkImgs)
+                for (Image* i : chkImgs)
                 {
-                    size += SortedImageModel::image(e)->fileInfo().size();
+                    size += i->fileInfo().size();
                 }
                 if (!text.isEmpty())
                 {

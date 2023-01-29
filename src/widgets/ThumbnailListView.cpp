@@ -384,7 +384,7 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     QListView::setModel(model);
 }
 
-QList<Entry_t> ThumbnailListView::checkedImages()
+QList<Image*> ThumbnailListView::checkedImages()
 {
     auto sourceModel = ANPV::globalInstance()->fileModel();
     return sourceModel->checkedEntries();
@@ -398,12 +398,12 @@ QList<Entry_t> ThumbnailListView::selectedImages()
 
 QList<Entry_t> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
 {
-    QList<Entry_t> entries;
+    QList<QSharedPointer<Image>> entries;
     auto sourceModel = ANPV::globalInstance()->fileModel();
     auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
     for(int i=0; i<selectedIdx.size(); i++)
     {
-        entries.push_back(sourceModel->entry(proxyModel.mapToSource(selectedIdx[i])));
+        entries.push_back(sourceModel->item(proxyModel.mapToSource(selectedIdx[i])));
     }
     return entries;
 }
