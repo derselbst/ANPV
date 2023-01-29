@@ -193,10 +193,6 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
             }
             QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove); }, Qt::BlockingQueuedConnection);
 
-            if((*it)->checked() != Qt::Unchecked)
-            {
-                this->d->numberOfCheckedImages--;
-            }
             (*sit)->erase(it);
             if ((*sit)->size() == 0)
             {
@@ -307,7 +303,6 @@ void ImageSectionDataContainer::clear()
         (*it)->clear();
     }
     this->d->data.clear();
-    this->d->numberOfCheckedImages = 0;
 
     if (rowCount != 0)
     {

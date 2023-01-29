@@ -308,7 +308,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
                     return result;
                 });
 
-            d->backgroundTasks[decoder] = (watcher);
+            d->backgroundTasks[image.data()] = (watcher);
         }
     }
 }
@@ -382,7 +382,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
         f |= Qt::ItemIsUserCheckable;
         if ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
-            QSharedPointer<Image> e = this->image(this->entry(index));
+            QSharedPointer<Image> e = this->imageFromItem(this->item(index));
             if (e && d->hideRawIfNonRawAvailable(e))
             {
                 f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
@@ -567,6 +567,27 @@ QModelIndex SortedImageModel::index(const Image* img)
     }
 
     return this->index(d->entries->getLinearIndexOfItem(img), 0);
+}
+
+QSharedPointer<AbstractListItem> SortedImageModel::item(const QModelIndex& idx) const
+{
+    xThreadGuard g(this);
+    if (!idx.isValid())
+    {
+        return nullptr;
+    }
+
+    return d->entries->getItemByLinearIndex(idx.row());
+}
+
+QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<AbstractListItem>& item) const
+{
+    if (item != nullptr && item->getType() == ListItemType::Image)
+    {
+        return qSharedPointerDynamicCast<Image>(item);
+    }
+
+    return nullptr;
 }
 
 QList<Image*> SortedImageModel::checkedEntries()

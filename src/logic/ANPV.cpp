@@ -130,8 +130,10 @@ struct ANPV::Impl
     QString currentDir;
     ViewMode viewMode = ViewMode::Unknown;
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
-    Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
-    SortedImageModel::Column primarySortColumn = SortedImageModel::Column::Unknown;
+    Qt::SortOrder imageSortOrder = static_cast<Qt::SortOrder>(-1);
+    Qt::SortOrder sectionSortOrder = static_cast<Qt::SortOrder>(-1);
+    SortField imageSortField = SortField::None;
+    SortField sectionSortField = SortField::None;
     int iconHeight = -1;
     
     Impl(ANPV* parent) : q(parent)
@@ -284,8 +286,10 @@ struct ANPV::Impl
         }
         settings.setValue("viewMode", static_cast<int>(q->viewMode()));
         settings.setValue("viewFlags", q->viewFlags());
-        settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
-        settings.setValue("primarySortColumn", static_cast<int>(q->primarySortColumn()));
+        settings.setValue("imageSortOrder", static_cast<int>(q->imageSortOrder()));
+        settings.setValue("sectionSortOrder", static_cast<int>(q->sectionSortOrder()));
+        settings.setValue("imageSortField", static_cast<int>(q->imageSortField()));
+        settings.setValue("sectionSortField", static_cast<int>(q->imageSortField()));
         settings.setValue("iconHeight", q->iconHeight());
         
         QByteArray actionsArray;
@@ -310,8 +314,10 @@ struct ANPV::Impl
 
         q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)).toUInt());
-        q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
-        q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
+        q->setImageSortOrder(static_cast<Qt::SortOrder>(settings.value("imageSortOrder", Qt::AscendingOrder).toInt()));
+        q->setSectionSortOrder(static_cast<Qt::SortOrder>(settings.value("sectionSortOrder", Qt::AscendingOrder).toInt()));
+        q->setImageSortField(static_cast<SortField>(settings.value("imageSortField", static_cast<int>(SortField::FileName)).toInt()));
+        q->setSectionSortField(static_cast<SortField>(settings.value("sectionSortField", static_cast<int>(SortField::None)).toInt()));
         q->setIconHeight(settings.value("iconHeight", 150).toInt());
         
         QByteArray actionsArray = settings.value("actionGroupFileOperation").toByteArray();
@@ -610,37 +616,71 @@ void ANPV::setViewFlag(ViewFlag v, bool on)
     this->setViewFlags(newFlags);
 }
 
-Qt::SortOrder ANPV::sortOrder()
+Qt::SortOrder ANPV::imageSortOrder()
 {
     xThreadGuard g(this);
-    return d->sortOrder;
+    return d->imageSortOrder;
 }
 
-void ANPV::setSortOrder(Qt::SortOrder order)
+void ANPV::setImageSortOrder(Qt::SortOrder order)
 {
     xThreadGuard g(this);
-    Qt::SortOrder old = d->sortOrder;
-    if(order != old)
+    Qt::SortOrder old = d->imageSortOrder;
+    if (order != old)
     {
-        d->sortOrder = order;
-        emit this->sortOrderChanged(order, old);
+        d->imageSortOrder = order;
+        emit this->imageSortOrderChanged(d->imageSortField, order, d->imageSortField, old);
     }
 }
 
-SortedImageModel::Column ANPV::primarySortColumn()
+SortField ANPV::imageSortField()
 {
     xThreadGuard g(this);
-    return d->primarySortColumn;
+    return d->imageSortField;
 }
 
-void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
+void ANPV::setImageSortField(SortField field)
 {
     xThreadGuard g(this);
-    SortedImageModel::Column old = d->primarySortColumn;
-    if(old != col)
+    SortField old = d->imageSortField;
+    if (field != old)
     {
-        d->primarySortColumn = col;
-        emit this->primarySortColumnChanged(col, old);
+        d->imageSortField = field;
+        emit this->imageSortOrderChanged(field, d->imageSortOrder, old, d->imageSortOrder);
+    }
+}
+
+Qt::SortOrder ANPV::sectionSortOrder()
+{
+    xThreadGuard g(this);
+    return d->sectionSortOrder;
+}
+
+void ANPV::setSectionSortOrder(Qt::SortOrder order)
+{
+    xThreadGuard g(this);
+    Qt::SortOrder old = d->sectionSortOrder;
+    if (order != old)
+    {
+        d->sectionSortOrder = order;
+        emit this->sectionSortOrderChanged(d->sectionSortField, order, d->sectionSortField, old);
+    }
+}
+
+SortField ANPV::sectionSortField()
+{
+    xThreadGuard g(this);
+    return d->sectionSortField;
+}
+
+void ANPV::setSectionSortField(SortField field)
+{
+    xThreadGuard g(this);
+    SortField old = d->sectionSortField;
+    if (field != old)
+    {
+        d->sectionSortField = field;
+        emit this->sectionSortOrderChanged(field, d->sectionSortOrder, old, d->sectionSortOrder);
     }
 }
 

@@ -68,11 +68,15 @@ public:
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
     
-    Qt::SortOrder sortOrder();
-    void setSortOrder(Qt::SortOrder);
-    
-    SortedImageModel::Column primarySortColumn();
-    void setPrimarySortColumn(SortedImageModel::Column);
+    Qt::SortOrder imageSortOrder();
+    void setImageSortOrder(Qt::SortOrder order);
+    SortField imageSortField();
+    void setImageSortField(SortField field);
+
+    Qt::SortOrder sectionSortOrder();
+    void setSectionSortOrder(Qt::SortOrder order);
+    SortField sectionSortField();
+    void setSectionSortField(SortField field);
     
     int iconHeight();
     void setIconHeight(int);
@@ -94,8 +98,8 @@ signals:
     void currentDirChanged(QString dir, QString old);
     void viewModeChanged(ViewMode newView, ViewMode old);
     void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
-    void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
-    void primarySortColumnChanged(SortedImageModel::Column newCol, SortedImageModel::Column old);
+    void imageSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
+    void sectionSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
     void iconHeightChanged(int h, int old);
     
 public slots:

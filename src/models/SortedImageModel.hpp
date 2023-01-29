@@ -53,6 +53,8 @@ public:
     using QAbstractTableModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image>& img);
     QModelIndex index(const Image* img);
+    QSharedPointer<AbstractListItem> item(const QModelIndex& idx) const;
+    QSharedPointer<Image> imageFromItem(const QSharedPointer<AbstractListItem>& item) const;
     Entry_t goTo(const QSharedPointer<Image>& img, int stepsFromCurrent);
     QList<Image*> checkedEntries();
 
