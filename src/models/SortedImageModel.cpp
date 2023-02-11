@@ -50,10 +50,6 @@ struct SortedImageModel::Impl
     std::map<Image*, QMetaObject::Connection> spinningIconDrawConnections;
     QList<Image*> checkedImages;
     
-    // The column which is currently sorted
-    Column currentSortedCol = Column::FileName;
-    Qt::SortOrder sortOrder = Qt::AscendingOrder;
-    
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
     int cachedIconHeight = 1;
     ViewFlags_t cachedViewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
