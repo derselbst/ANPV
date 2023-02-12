@@ -4,35 +4,27 @@
 #ifndef H_IBIMAGEITEMDELEGATE
 #define H_IBIMAGEITEMDELEGATE
 
-#include <QAbstractItemDelegate>
+#include <QStyledItemDelegate>
 #include <QFont>
 #include <QPainter>
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QSize>
 
-class ListItemDelegate : public QAbstractItemDelegate
+class ListItemDelegate : public QStyledItemDelegate
 {
    public:
       ListItemDelegate(QObject *parent = nullptr);
-      void paint(QPainter *painter, const QStyleOptionViewItem &option,
-                const QModelIndex &index) const override;
+      void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
-      QSize sizeHint(const QStyleOptionViewItem &option,
-                     const QModelIndex &index) const override;
+      QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
       void resizeSectionSize(const QSize &newsize);
 
    protected:
-      void paintItem(QPainter *painter, const QStyleOptionViewItem &option,
-                       const QModelIndex &index) const;
-
-      void paintSection(QPainter *painter, const QStyleOptionViewItem &option,
-                       const QModelIndex &index) const;
+      void paintSection(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
    private:
-      /* size of a normal item */
-      QSize szItemSize;
       /* size of a section item */
       QSize szSectionSize;
 };
