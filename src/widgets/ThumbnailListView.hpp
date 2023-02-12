@@ -35,6 +35,7 @@ public:
         
 protected:
     void wheelEvent(QWheelEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags flags) override;
     
 private:

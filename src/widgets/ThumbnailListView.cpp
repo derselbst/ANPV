@@ -28,6 +28,7 @@
 #include "SortedImageModel.hpp"
 #include "MoveFileCommand.hpp"
 #include "WaitCursor.hpp"
+#include "ListItemDelegate.hpp"
 
 struct ThumbnailListView::Impl
 {
@@ -45,6 +46,8 @@ struct ThumbnailListView::Impl
     QAction* actionMove=nullptr;
     QAction* actionCopy=nullptr;
     QAction* actionDelete=nullptr;
+
+    QPointer<ListItemDelegate> itemDelegate;
     
     QString lastTargetDirectory;
     void onFileOperation(ANPV::FileOperation op)
@@ -230,6 +233,8 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     
     d->q = this;
+    d->itemDelegate = new ListItemDelegate(this);
+    this->setItemDelegate(d->itemDelegate);
 
     connect(this, &QListView::activated, this, [&](const QModelIndex &){ d->openSelectionInternally(); });
 
@@ -318,6 +323,13 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
 }
 
 ThumbnailListView::~ThumbnailListView() = default;
+
+/* Changes the visible size of the item delegate for the section items. */
+void ThumbnailListView::resizeEvent(QResizeEvent* event)
+{
+    d->itemDelegate->resizeSectionSize(event->size());
+    QListView::resizeEvent(event);
+}
 
 void ThumbnailListView::wheelEvent(QWheelEvent *event)
 {
