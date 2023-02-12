@@ -176,6 +176,10 @@ struct SortedImageModel::Impl
             this->onBackgroundTaskFinished(watcher, img);
             return;
         }
+        if (this->spinningIconDrawConnections.empty())
+        {
+            this->spinningIconHelper->startRendering();
+        }
         this->spinningIconDrawConnections[img.data()] = q->connect(this->spinningIconHelper, &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
         q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
     }
