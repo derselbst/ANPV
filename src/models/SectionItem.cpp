@@ -22,6 +22,9 @@ struct SectionItem::Impl
     
     ImageList data;
 
+    SortField imageSortField = SortField::None;
+    Qt::SortOrder imageSortOrder = Qt::DescendingOrder;
+
     static bool compareFileName(const QFileInfo& linfo, const QFileInfo& rinfo)
     {
 #ifdef _WINDOWS
@@ -290,10 +293,12 @@ SectionItem::SectionItem()
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QVariant. */ 
-SectionItem::SectionItem(const QVariant &itemid)
+SectionItem::SectionItem(const QVariant &itemid, SortField field, Qt::SortOrder order)
    : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
 {
    this->setItemID(itemid);
+   d->imageSortField = field;
+   d->imageSortOrder = order;
 }
 
 /* Returns the name of the section item as a QString value. If no name is set, an empty value is returned. */
@@ -324,15 +329,22 @@ QVariant SectionItem::getItemID() const
 /* Sorts the images items of the item according to given the field (field) and the order (order). */ 
 void SectionItem::sortItems(SortField field, Qt::SortOrder order)
 {
+    d->imageSortField = field;
+    d->imageSortOrder = order;
     auto sortFunction = d->getSortFunction(field, order);
     std::sort(/*std::execution::par_unseq, */this->d->data.begin(), this->d->data.end(), sortFunction);
 }
 
 SectionItem::ImageList::iterator SectionItem::findInsertPosition(const QSharedPointer<Image>& img)
 {
-    // TODO add the correct comparator
-    auto upper = std::upper_bound(this->d->data.begin(), this->d->data.end(), img);
+    auto sortFunction = d->getSortFunction(d->imageSortField, d->imageSortOrder);
+    auto upper = std::upper_bound(this->d->data.begin(), this->d->data.end(), img, sortFunction);
     return upper;
+}
+
+bool SectionItem::isEnd(const SectionItem::ImageList::iterator& it) const
+{
+    return it == this->d->data.end();
 }
 
 bool SectionItem::find(const AbstractListItem* item, int* externalIdx)

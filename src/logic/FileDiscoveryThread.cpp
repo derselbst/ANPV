@@ -99,21 +99,21 @@ FileDiscoveryThread::~FileDiscoveryThread()
     {
         d->evtLoop->quit();
     }
+    d->waitForDirectoryDiscovery();
     this->wait();
     d->data = nullptr;
 }
 
 QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
 {
-    xThreadGuard g(this);
-
     if(d->evtLoop)
     {
         d->evtLoop->quit();
     }
+    d->waitForDirectoryDiscovery();
+    this->wait();
     d->currentDir = QDir(dir);
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
-    this->wait();
     this->start(QThread::LowPriority);
     return d->directoryDiscovery->future();
 }

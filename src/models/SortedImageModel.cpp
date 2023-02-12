@@ -91,9 +91,9 @@ struct SortedImageModel::Impl
     {
         xThreadGuard g(q);
         
-        cancelAllBackgroundTasks();
         this->checkedImages.clear();
         this->entries->clear();
+        cancelAllBackgroundTasks();
     }
 
     void updateLayout()
@@ -152,8 +152,8 @@ struct SortedImageModel::Impl
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
         std::lock_guard<std::recursive_mutex> l(m);
-        auto& watcher2 = this->backgroundTasks[img.data()];
-        Q_ASSERT(watcher2.get() == watcher.get());
+        auto watcher2 = this->backgroundTasks[img.data()];
+        Q_ASSERT(watcher2 == watcher);
         watcher->disconnect(q);
         this->spinningIconHelper->disconnect(this->spinningIconDrawConnections[img.data()]);
         this->spinningIconDrawConnections.erase(img.data());
@@ -620,7 +620,10 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
 
     if (watcher != nullptr)
     {
-        QMetaObject::invokeMethod(this, [=]() { d->backgroundTasks[image.data()] = watcher; });
+        {
+            std::lock_guard<std::recursive_mutex> l(d->m);
+            d->backgroundTasks[image.data()] = watcher;
+        }
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [=]() { d->onBackgroundTaskStarted(watcher, image); });

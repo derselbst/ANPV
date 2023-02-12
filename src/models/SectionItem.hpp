@@ -19,7 +19,7 @@ public:
     using ImageList = std::deque<QSharedPointer<Image>>;
 
     SectionItem();
-    SectionItem(const QVariant &itemid);
+    SectionItem(const QVariant &itemid, SortField field, Qt::SortOrder order);
     ~SectionItem();
 
     QString getName() const override;
@@ -31,6 +31,7 @@ public:
                     Qt::SortOrder order = Qt::AscendingOrder);
 
     ImageList::iterator findInsertPosition(const QSharedPointer<Image>& img);
+    bool isEnd(const SectionItem::ImageList::iterator& it) const;
     bool find(const AbstractListItem* item, int* externalIdx);
     int find(const QFileInfo info, ImageList::iterator* itout);
     void insert(ImageList::iterator it, QSharedPointer<Image>& img);

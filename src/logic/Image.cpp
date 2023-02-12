@@ -21,6 +21,9 @@ struct Image::Impl
 
     DecodingState state{ DecodingState::Unknown };
     
+    // Quick reference to the decoder, possibly an owning reference as well
+    QSharedPointer<SmartImageDecoder> decoder;
+    
     // file path to the decoded input file
     const QFileInfo fileInfo;
     
@@ -539,4 +542,14 @@ void Image::connectNotify(const QMetaMethod& signal)
     }
 
     QObject::connectNotify(signal);
+}
+
+QSharedPointer<SmartImageDecoder> Image::decoder()
+{
+    return d->decoder;
+}
+
+void Image::setDecoder(const QSharedPointer<SmartImageDecoder>& dec)
+{
+    d->decoder = dec;
 }

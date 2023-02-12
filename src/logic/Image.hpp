@@ -65,6 +65,9 @@ public:
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
+
+    QSharedPointer<SmartImageDecoder> decoder();
+    void setDecoder(const QSharedPointer<SmartImageDecoder>& dec);
     
     QSharedPointer<ExifWrapper> exif();
     

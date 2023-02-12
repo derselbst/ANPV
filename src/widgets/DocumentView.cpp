@@ -411,7 +411,10 @@ struct DocumentView::Impl
         if(this->currentImageDecoder && this->model)
         {
             QSharedPointer<Image> newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
-            q->loadImage(newEntry);
+            if (newEntry)
+            {
+                q->loadImage(newEntry);
+            }
         }
     }
 

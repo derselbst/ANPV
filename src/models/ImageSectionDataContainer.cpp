@@ -24,7 +24,10 @@ struct ImageSectionDataContainer::Impl
     std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
     SortField sectionSortField = SortField::None;
+    Qt::SortOrder sectionSortOrder = Qt::DescendingOrder;
+
     SortField imageSortField = SortField::None;
+    Qt::SortOrder imageSortOrder = Qt::DescendingOrder;
     
     Qt::ConnectionType syncConnection()
     {
@@ -56,6 +59,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     {
         try
         {
+            image->setDecoder(decoder);
             QSharedPointer<QFutureWatcher<DecodingState>> watcher;
             if (this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
             {
@@ -127,7 +131,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
 {
     SectionList::iterator it;
-    std::lock_guard<std::recursive_mutex> l(d->m);
+    std::unique_lock<std::recursive_mutex> l(d->m);
 
     for (it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -141,18 +145,23 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     if (this->d->data.end() == it)
     {
         // no suitable section found, create a new one
-        it = this->d->data.insert(it, SectionList::value_type(new SectionItem(section)));
+        it = this->d->data.insert(it, SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder)));
         offset++;
     }
 
     auto insertIt = (*it)->findInsertPosition(item);
-    int insertIdx = this->getLinearIndexOfItem((*insertIt).data());
+    int insertIdx = (*it)->isEnd(insertIt) ? this->size() : this->getLinearIndexOfItem((*insertIt).data());
 
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx - offset, insertIdx); }, d->syncConnection());
+    l.unlock();
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + offset); }, d->syncConnection());
+    
+    l.lock();
     (*it)->insert(insertIt, item);
-    d->model->welcomeImage(item, watcher);
     QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
-}
+    l.unlock();
+
+    d->model->welcomeImage(item, watcher);
+    }
 
 bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
 {
@@ -327,6 +336,7 @@ void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::Sor
         (*it)->sortItems(imageSortField, order);
     }
     d->imageSortField = imageSortField;
+    d->imageSortOrder = order;
 }
 
 /* Sorts the section item according to given the order (order). */
