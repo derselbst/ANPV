@@ -74,10 +74,11 @@ struct FileDiscoveryThread::Impl
         }
     }
 
-    void waitForDirectoryDiscovery() const
+    void cancelAndWaitForDirectoryDiscovery() const
     {
         if (directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
         {
+            directoryDiscovery->future().cancel();
             directoryDiscovery->future().waitForFinished();
         }
     }
@@ -99,7 +100,8 @@ FileDiscoveryThread::~FileDiscoveryThread()
     {
         d->evtLoop->quit();
     }
-    d->waitForDirectoryDiscovery();
+
+    d->cancelAndWaitForDirectoryDiscovery();
     this->wait();
     d->data = nullptr;
 }
@@ -110,7 +112,7 @@ QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
     {
         d->evtLoop->quit();
     }
-    d->waitForDirectoryDiscovery();
+    d->cancelAndWaitForDirectoryDiscovery();
     this->wait();
     d->currentDir = QDir(dir);
     d->directoryDiscovery.reset(new QPromise<DecodingState>);

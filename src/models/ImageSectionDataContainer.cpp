@@ -157,8 +157,8 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     
     l.lock();
     (*it)->insert(insertIt, item);
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
     l.unlock();
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
 
     d->model->welcomeImage(item, watcher);
     }
@@ -317,7 +317,7 @@ int ImageSectionDataContainer::size() const
    }
    else
    {
-      size = this->size();
+      size = this->d->data.size();
       for(auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
       {
          size += (*it)->size();

@@ -423,98 +423,98 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
             }
             else
             {
-                Image* img = dynamic_cast<Image*>(item.data());
-                Q_ASSERT(item->getType() == ListItemType::Image);
-                Q_ASSERT(item != nullptr);
-
-                const QFileInfo fi = img->fileInfo();
-                switch (role)
+                auto img = this->imageFromItem(item);
+                if (img != nullptr)
                 {
+                    const QFileInfo fi = img->fileInfo();
+                    switch (role)
+                    {
 
-                case ItemFileSize:
-                    return QString::number(fi.size());
-                case ItemFileType:
-                    return fi.suffix();
-                case ItemFileLastModified:
-                    return fi.lastModified();
+                    case ItemFileSize:
+                        return QString::number(fi.size());
+                    case ItemFileType:
+                        return fi.suffix();
+                    case ItemFileLastModified:
+                        return fi.lastModified();
 
-                default:
-                {
-                    auto exif = img->exif();
-                    if (!exif.isNull())
-                    {
-                        switch (role)
-                        {
-                        case ItemImageDateRecorded:
-                            return exif->dateRecorded();
-                        case ItemImageResolution:
-                            return exif->size();
-                        case ItemImageAperture:
-                            return exif->aperture();
-                        case ItemImageExposure:
-                            return exif->exposureTime();
-                        case ItemImageIso:
-                            return exif->iso();
-                        case ItemImageFocalLength:
-                            return exif->focalLength();
-                        case ItemImageLens:
-                            return exif->lens();
-                        case ItemImageCameraModel:
-                            throw std::logic_error("ItemImageCameraModel not yet implemented");
-                        }
-                    }
-                    break;
-                }
-                case Qt::DecorationRole:
-                {
-                    QSharedPointer<QFutureWatcher<DecodingState>> watcher;
-                    {
-                        std::lock_guard<std::recursive_mutex> l(d->m);
-                        if (d->backgroundTasks.contains(img))
-                        {
-                            watcher = d->backgroundTasks[img];
-                        }
-                    }
-                    if (watcher && watcher->isRunning())
-                    {
-                        QPixmap frame = d->spinningIconHelper->getProgressIndicator(*watcher);
-                        return frame;
-                    }
-                    return img->thumbnailTransformed(d->cachedIconHeight);
-                }
-                case Qt::ToolTipRole:
-                    switch (img->decodingState())
-                    {
-                    case Ready:
-                        return "Decoding not yet started";
-                    case Cancelled:
-                        return "Decoding cancelled";
-                    case Error:
-                    case Fatal:
-                        return img->errorMessage();
                     default:
-                        return img->formatInfoString();
+                    {
+                        auto exif = img->exif();
+                        if (!exif.isNull())
+                        {
+                            switch (role)
+                            {
+                            case ItemImageDateRecorded:
+                                return exif->dateRecorded();
+                            case ItemImageResolution:
+                                return exif->size();
+                            case ItemImageAperture:
+                                return exif->aperture();
+                            case ItemImageExposure:
+                                return exif->exposureTime();
+                            case ItemImageIso:
+                                return exif->iso();
+                            case ItemImageFocalLength:
+                                return exif->focalLength();
+                            case ItemImageLens:
+                                return exif->lens();
+                            case ItemImageCameraModel:
+                                throw std::logic_error("ItemImageCameraModel not yet implemented");
+                            }
+                        }
+                        break;
                     }
+                    case Qt::DecorationRole:
+                    {
+                        QSharedPointer<QFutureWatcher<DecodingState>> watcher;
+                        {
+                            std::lock_guard<std::recursive_mutex> l(d->m);
+                            if (d->backgroundTasks.contains(img.data()))
+                            {
+                                watcher = d->backgroundTasks[img.data()];
+                            }
+                        }
+                        if (watcher && watcher->isRunning())
+                        {
+                            QPixmap frame = d->spinningIconHelper->getProgressIndicator(*watcher);
+                            return frame;
+                        }
+                        return img->thumbnailTransformed(d->cachedIconHeight);
+                    }
+                    case Qt::ToolTipRole:
+                        switch (img->decodingState())
+                        {
+                        case Ready:
+                            return "Decoding not yet started";
+                        case Cancelled:
+                            return "Decoding cancelled";
+                        case Error:
+                        case Fatal:
+                            return img->errorMessage();
+                        default:
+                            return img->formatInfoString();
+                        }
 
-                case Qt::TextAlignmentRole:
-                {
-                    constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
-                    constexpr int a = alignment;
-                    return a;
-                }
-                case Qt::CheckStateRole:
-                    return img->checked();
-                case CheckAlignmentRole:
-                {
-                    constexpr Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignTop;
-                    constexpr int a = alignment;
-                    return a;
-                }
-                case DecorationAlignmentRole:
-                case Qt::EditRole:
-                case Qt::StatusTipRole:
-                case Qt::WhatsThisRole:
-                    break;
+                    case Qt::TextAlignmentRole:
+                    {
+                        constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
+                        constexpr int a = alignment;
+                        return a;
+                    }
+                    case Qt::CheckStateRole:
+                        return img->checked();
+                    case CheckAlignmentRole:
+                    {
+                        constexpr Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignTop;
+                        constexpr int a = alignment;
+                        return a;
+                    }
+                    case DecorationAlignmentRole:
+                    case Qt::EditRole:
+                    case Qt::StatusTipRole:
+                    case Qt::WhatsThisRole:
+                        break;
+                    }
                 }
             }
         }
