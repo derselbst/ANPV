@@ -32,13 +32,12 @@ public:
         case SortField::DateModified:
             switch (imgField)
             {
+            case SortField::None:
             case SortField::FileName:
             case SortField::FileSize:
             case SortField::FileType:
             case SortField::DateModified:
                 return false;
-            case SortField::None:
-                throw std::logic_error("SortField::None should not be used for images");
             default:
                 break;
             }

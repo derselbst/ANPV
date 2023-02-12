@@ -289,7 +289,7 @@ struct ANPV::Impl
         settings.setValue("imageSortOrder", static_cast<int>(q->imageSortOrder()));
         settings.setValue("sectionSortOrder", static_cast<int>(q->sectionSortOrder()));
         settings.setValue("imageSortField", static_cast<int>(q->imageSortField()));
-        settings.setValue("sectionSortField", static_cast<int>(q->imageSortField()));
+        settings.setValue("sectionSortField", static_cast<int>(q->sectionSortField()));
         settings.setValue("iconHeight", q->iconHeight());
         
         QByteArray actionsArray;
