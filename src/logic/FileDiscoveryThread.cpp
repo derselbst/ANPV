@@ -93,7 +93,15 @@ FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObjec
     d->data = data;
 }
 
-FileDiscoveryThread::~FileDiscoveryThread() = default;
+FileDiscoveryThread::~FileDiscoveryThread()
+{
+    if (d->evtLoop)
+    {
+        d->evtLoop->quit();
+    }
+    this->wait();
+    d->data = nullptr;
+}
 
 QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
 {

@@ -33,12 +33,14 @@
 #include "ANPV.hpp"
 #include "ProgressIndicatorHelper.hpp"
 #include "ImageSectionDataContainer.hpp"
+#include "FileDiscoveryThread.hpp"
 
 struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
     QScopedPointer<ImageSectionDataContainer> entries;
+    QPointer<FileDiscoveryThread> directoryWatcher;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
@@ -192,6 +194,7 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     
     d->spinningIconHelper = new ProgressIndicatorHelper(this);
     d->entries.reset(new ImageSectionDataContainer(this));
+    d->directoryWatcher = new FileDiscoveryThread(d->entries.get(), this);
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
             [&](int v)
@@ -230,8 +233,7 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
     xThreadGuard g(this);
 
     d->clear();
-
-    return d->entries->changeDirAsync(dir);
+    return d->directoryWatcher->changeDirAsync(dir);
 }
 
 void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
