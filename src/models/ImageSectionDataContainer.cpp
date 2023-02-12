@@ -306,7 +306,7 @@ void ImageSectionDataContainer::clear()
     auto rowCount = this->size();
     if (rowCount != 0)
     {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), 0, rowCount - 1); }, d->syncConnection());
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
     }
     for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -316,7 +316,7 @@ void ImageSectionDataContainer::clear()
 
     if (rowCount != 0)
     {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::AutoConnection);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
     }
 }
 

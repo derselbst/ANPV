@@ -3,6 +3,7 @@
 
 #include "xThreadGuard.hpp"
 #include "UserCancellation.hpp"
+#include "ImageSectionDataContainer.hpp"
 
 #include <QDir>
 #include <QFileSystemWatcher>
@@ -104,6 +105,8 @@ QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
     }
     d->currentDir = QDir(dir);
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
+    this->wait();
+    this->start(QThread::LowPriority);
     return d->directoryDiscovery->future();
 }
 

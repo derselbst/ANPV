@@ -38,10 +38,6 @@ struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
-    std::unique_ptr<QPromise<DecodingState>> directoryWorker;
-    
-    QPointer<QFileSystemWatcher> watcher;
-    QDir currentDir;
     QScopedPointer<ImageSectionDataContainer> entries;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
@@ -92,19 +88,10 @@ struct SortedImageModel::Impl
     void clear()
     {
         xThreadGuard g(q);
-        if(directoryWorker != nullptr && !directoryWorker->future().isFinished())
-        {
-            directoryWorker->future().cancel();
-            directoryWorker->future().waitForFinished();
-        }
         
         cancelAllBackgroundTasks();
-        entries.clear();
-
-        directoryWorker = std::make_unique<QPromise<DecodingState>>();
-        watcher->removePath(currentDir.absolutePath());
-        currentDir = QDir();
-        this->numberOfCheckedImages = 0;
+        this->checkedImages.clear();
+        this->entries->clear();
     }
 
     void updateLayout()
@@ -242,26 +229,14 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
     xThreadGuard g(this);
 
-    auto rowCount = this->rowCount();
-    if (rowCount != 0)
-    {
-        this->beginRemoveRows(QModelIndex(), 0, rowCount-1);
-    }
-
     d->clear();
-    d->currentDir = QDir(dir);
 
-    if (rowCount != 0)
-    {
-        this->endRemoveRows();
-    }
-
-    QThreadPool::globalInstance()->start(this, static_cast<int>(Priority::Normal));
-    return d->directoryWorker->future();
+    return d->entries->changeDirAsync(dir);
 }
 
 void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
 {
+#if 0
     xThreadGuard(this);
     d->waitForDirectoryWorker();
     d->cancelAllBackgroundTasks();
@@ -307,10 +282,13 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
             d->backgroundTasks[image.data()] = (watcher);
         }
     }
+#endif
 }
 
-Entry_t SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent)
+Entry_t SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const
 {
+    return {};
+#if 0
     xThreadGuard g(this);
     d->waitForDirectoryWorker();
 
@@ -356,6 +334,7 @@ Entry_t SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCu
     } while(stepsFromCurrent);
 
     return e;
+#endif
 }
 
 Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
@@ -363,7 +342,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
     xThreadGuard g(this);
     if (!index.isValid())
     {
-        return;
+        return Qt::NoItemFlags;
     }
 
     Qt::ItemFlags f = this->QAbstractTableModel::flags(index);
