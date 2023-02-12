@@ -67,7 +67,7 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<Entry_t> imgs = q->checkedImages();
+        QList<Image*> imgs = q->checkedImages();
         if (imgs.isEmpty())
         {
             const char* operation = QMetaEnum::fromType<ANPV::FileOperation>().key(op);
@@ -78,9 +78,9 @@ struct ThumbnailListView::Impl
         WaitCursor w;
         QList<QString> files;
         files.reserve(imgs.size());
-        for(Entry_t& e : imgs)
+        for(Image*& e : imgs)
         {
-            files.push_back(SortedImageModel::image(e)->fileInfo().fileName());
+            files.push_back(e->fileInfo().fileName());
         }
         
         switch(op)
@@ -96,9 +96,9 @@ struct ThumbnailListView::Impl
                 break;
         }
         // FIXME: only uncheck those images, which have been processed successfully
-        for (Entry_t& e : imgs)
+        for (Image*& e : imgs)
         {
-            SortedImageModel::image(e)->setChecked(Qt::Unchecked);
+            e->setChecked(Qt::Unchecked);
         }
     }
     
@@ -108,11 +108,11 @@ struct ThumbnailListView::Impl
         {
             throw std::logic_error("Unsupported mode when copying to clipboard");
         }
-        QList<Entry_t> imgs = q->selectedImages();
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
         QList<QUrl> files;
-        for(Entry_t& e : imgs)
+        for(QSharedPointer<Image>& e : imgs)
         {
-            files.push_back(QUrl::fromLocalFile(SortedImageModel::image(e)->fileInfo().absoluteFilePath()));
+            files.push_back(QUrl::fromLocalFile(e->fileInfo().absoluteFilePath()));
         }
         
         QMimeData *mimeData = new QMimeData;
@@ -128,13 +128,13 @@ struct ThumbnailListView::Impl
     
     void openSelectionInternally()
     {
-        QList<Entry_t> imgs = q->selectedImages();
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
         if(imgs.size() == 0)
         {
             return;
         }
         
-        QFileInfo firstInf = SortedImageModel::image(imgs[0])->fileInfo();
+        QFileInfo firstInf = imgs[0]->fileInfo();
         if(imgs.size() == 1 && firstInf.isDir())
         {
             ANPV::globalInstance()->setCurrentDir(firstInf.absoluteFilePath());
@@ -159,9 +159,9 @@ struct ThumbnailListView::Impl
         
         auto imgs = q->selectedImages();
         QString filePaths;
-        for(Entry_t& e : imgs)
+        for(QSharedPointer<Image>& e : imgs)
         {
-            filePaths += QString(" '%1' ").arg(SortedImageModel::image(e)->fileInfo().absoluteFilePath());
+            filePaths += QString(" '%1' ").arg(e->fileInfo().absoluteFilePath());
         }
         
         QClipboard* cb = QApplication::clipboard();
@@ -390,20 +390,24 @@ QList<Image*> ThumbnailListView::checkedImages()
     return sourceModel->checkedEntries();
 }
 
-QList<Entry_t> ThumbnailListView::selectedImages()
+QList<QSharedPointer<Image>> ThumbnailListView::selectedImages()
 {
     QModelIndexList selectedIdx = this->selectionModel()->selectedRows();
     return this->selectedImages(selectedIdx);
 }
 
-QList<Entry_t> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
+QList<QSharedPointer<Image>> ThumbnailListView::selectedImages(const QModelIndexList& selectedIdx)
 {
     QList<QSharedPointer<Image>> entries;
     auto sourceModel = ANPV::globalInstance()->fileModel();
     auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
     for(int i=0; i<selectedIdx.size(); i++)
     {
-        entries.push_back(sourceModel->item(proxyModel.mapToSource(selectedIdx[i])));
+        auto img = sourceModel->imageFromItem(sourceModel->item(proxyModel.mapToSource(selectedIdx[i])));
+        if (img != nullptr)
+        {
+            entries.push_back(img);
+        }
     }
     return entries;
 }

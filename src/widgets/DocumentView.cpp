@@ -410,7 +410,7 @@ struct DocumentView::Impl
         WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
-            Entry_t newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
+            QSharedPointer<Image> newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
             q->loadImage(newEntry);
         }
     }
@@ -530,7 +530,7 @@ struct DocumentView::Impl
             {
                 if(o == q && q->hasFocus())
                 {
-                    Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+                    QSharedPointer<Image> nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
 
                     ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
@@ -862,20 +862,6 @@ void DocumentView::loadImage(QString url)
     }
     
     this->loadImage(DecoderFactory::globalInstance()->makeImage(info));
-}
-
-void DocumentView::loadImage(const Entry_t& e)
-{
-    auto& dec = SortedImageModel::decoder(e);
-    auto& img = SortedImageModel::image(e);
-    if(dec)
-    {
-        this->loadImage(dec);
-    }
-    else if(img)
-    {
-        this->loadImage(img);
-    }
 }
 
 void DocumentView::loadImage(QSharedPointer<Image> image)

@@ -30,8 +30,8 @@ public:
 
     void fileOperationOnSelectedFiles(QAction*);
     QList<Image*> checkedImages();
-    QList<Entry_t> selectedImages();
-    QList<Entry_t> selectedImages(const QModelIndexList& selectedIdx);
+    QList<QSharedPointer<Image>> selectedImages();
+    QList<QSharedPointer<Image>> selectedImages(const QModelIndexList& selectedIdx);
         
 protected:
     void wheelEvent(QWheelEvent *event) override;

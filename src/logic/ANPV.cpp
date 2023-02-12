@@ -179,11 +179,11 @@ struct ANPV::Impl
                 {
                     QList<QString> files = q->getExistingFile(QApplication::focusWidget(), lastOpenImageDir);
                     
-                    QList<Entry_t> images;
+                    QList<QSharedPointer<Image>> images;
                     images.reserve(files.size());
                     for(auto& f : files)
                     {
-                        images.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)), nullptr));
+                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)));
                     }
                     q->openImages(images);
                 });
@@ -717,7 +717,7 @@ void ANPV::showThumbnailView(QSplashScreen* splash)
     splash->finish(d->mainWindow.get());
 }
 
-void ANPV::openImages(const QList<Entry_t>& image)
+void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     xThreadGuard g(this);
     if(image.isEmpty())

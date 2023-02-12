@@ -285,7 +285,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
 #endif
 }
 
-Entry_t SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const
+QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const
 {
     return {};
 #if 0

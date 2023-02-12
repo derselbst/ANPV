@@ -56,7 +56,7 @@ public:
     QModelIndex index(const Image* img);
     QSharedPointer<AbstractListItem> item(const QModelIndex& idx) const;
     QSharedPointer<Image> imageFromItem(const QSharedPointer<AbstractListItem>& item) const;
-    Entry_t goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const;
+    QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const;
     QList<Image*> checkedEntries();
 
     bool isSafeToChangeDir();

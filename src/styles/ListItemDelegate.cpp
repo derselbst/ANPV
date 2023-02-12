@@ -72,8 +72,8 @@ void ListItemDelegate::paintItem(QPainter *painter, const QStyleOptionViewItem &
    ftype = index.model()->data(index, SortedImageModel::ItemFileType).toString();
    fname = index.model()->data(index, SortedImageModel::ItemName).toString();
    thumbnail = index.model()->data(index, SortedImageModel::ItemThumbnail).value<QPixmap>();
-   imagesize = index.model()->data(index, SortedImageModel::ItemImageSize).toSize();
-   imageloaded = index.model()->data(index, SortedImageModel::ItemImageLoaded).toBool();
+   imagesize = index.model()->data(index, SortedImageModel::ItemFileSize).toSize();
+   imageloaded = true;// TODO index.model()->data(index, SortedImageModel::ItemImageLoaded).toBool();
 
    /* start painting of item on a pixmap to prevent text flickering */
    hbufpainter = new QPainter(&hbufpxmp);

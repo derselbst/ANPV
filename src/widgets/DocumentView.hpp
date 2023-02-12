@@ -31,7 +31,6 @@ public:
 
     void setModel(QSharedPointer<SortedImageModel>);
     QFileInfo currentFile();
-    void loadImage(const Entry_t& e);
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
     void loadImage(const QSharedPointer<SmartImageDecoder>& dec);

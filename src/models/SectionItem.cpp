@@ -56,7 +56,7 @@ struct SectionItem::Impl
 
         bool leftFileNameIsBeforeRight = compareFileName(linfo, rinfo);
 
-        if constexpr (sortedColumnNeedsPreloadingMetadata(SortCol))
+        if constexpr (sortedColumnNeedsPreloadingMetadata(SortCol, SortCol))
         {
             // only evaluate exif() when sortedColumnNeedsPreloadingMetadata() is true!
             auto lexif = limg->exif();
@@ -275,7 +275,7 @@ struct SectionItem::Impl
             return [=](const QSharedPointer<Image>& l, const QSharedPointer<Image>& r) { return topLevelSortFunction<SortField::CameraModel>(order, l, r); };
 
         default:
-            throw std::logic_error(Formatter() << "No sorting function implemented for SortField " << field);
+            throw std::logic_error(Formatter() << "No sorting function implemented for SortField " << (int)field);
         }
     }
 };

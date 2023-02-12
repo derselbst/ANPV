@@ -25,7 +25,6 @@ enum class ViewFlag : ViewFlags_t
 
 class Image;
 class SmartImageDecoder;
-using Entry_t = std::pair<QSharedPointer<Image>, QSharedPointer<SmartImageDecoder>>;
 
 enum class ListItemType
 {

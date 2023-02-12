@@ -363,7 +363,7 @@ void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::Sor
 void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
-    std::sort(this->d->data.begin(), this->d->data.end(), [order](SectionItem* itemA, SectionItem* itemB)
+    std::sort(this->d->data.begin(), this->d->data.end(), [order](const QSharedPointer<SectionItem>& itemA, const QSharedPointer<SectionItem>& itemB)
         {
             if (order == Qt::AscendingOrder)
             {

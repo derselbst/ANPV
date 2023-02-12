@@ -97,17 +97,17 @@ struct MainWindow::Impl
 
         actionGroupSortOrder = new QActionGroup(q);
         
-        action = new QAction("Sort Order", q);
+        action = new QAction("Image Sort Order", q);
         action->setSeparator(true);
         actionGroupSortOrder->addAction(action);
         
         action = new QAction("Ascending (small to big)", q);
         action->setCheckable(true);
-        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setSortOrder(Qt::AscendingOrder); });
-        connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, action,
-                [=](Qt::SortOrder newOrd, Qt::SortOrder)
+        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setImageSortOrder(Qt::AscendingOrder); });
+        connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, action,
+                [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
                 {
-                    if(newOrd == Qt::AscendingOrder)
+                    if(newOrder == Qt::AscendingOrder)
                     {
                         action->trigger();
                     }
@@ -116,11 +116,11 @@ struct MainWindow::Impl
         
         action = new QAction("Descending (big to small)", q);
         action->setCheckable(true);
-        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setSortOrder(Qt::DescendingOrder); });
-        connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, action,
-                [=](Qt::SortOrder newOrd, Qt::SortOrder)
+        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setImageSortOrder(Qt::DescendingOrder); });
+        connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, action,
+                [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
                 {
-                    if(newOrd == Qt::DescendingOrder)
+                    if(newOrder == Qt::DescendingOrder)
                     {
                         action->trigger();
                     }
@@ -130,11 +130,11 @@ struct MainWindow::Impl
         
         actionGroupSortColumn = new QActionGroup(q);
         
-        action = new QAction("Sort according to", q);
+        action = new QAction("Sort images according to", q);
         action->setSeparator(true);
         actionGroupSortColumn->addAction(action);
         
-        auto makeSortAction = [&](QString&& name, SortedImageModel::Column col, bool isSlow=false)
+        auto makeSortAction = [&](QString&& name, SortField col, bool isSlow=false)
         {
             QAction* action = new QAction(std::move(name), q);
             action->setCheckable(true);
@@ -142,11 +142,11 @@ struct MainWindow::Impl
             {
                 addSlowHint(action);
             }
-            connect(action, &QAction::triggered, q, [=](bool){ ANPV::globalInstance()->setPrimarySortColumn(col); });
-            connect(ANPV::globalInstance(), &ANPV::primarySortColumnChanged, action,
-                    [=](SortedImageModel::Column newCol, SortedImageModel::Column)
+            connect(action, &QAction::triggered, q, [=](bool){ ANPV::globalInstance()->setImageSortField(col); });
+            connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, action,
+                    [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
                     {
-                        if(newCol == col)
+                        if(newField == col)
                         {
                             action->trigger();
                         }
@@ -154,18 +154,18 @@ struct MainWindow::Impl
             actionGroupSortColumn->addAction(action);
         };
         
-        makeSortAction("File Name", SortedImageModel::Column::FileName);
-        makeSortAction("File Size", SortedImageModel::Column::FileSize);
-        makeSortAction("File Extension", SortedImageModel::Column::FileType);
-        makeSortAction("Modified Date", SortedImageModel::Column::DateModified);
-        makeSortAction("Image Resolution (slow)", SortedImageModel::Column::Resolution, true);
-        makeSortAction("Original Record Date (slow)", SortedImageModel::Column::DateRecorded, true);
-        makeSortAction("Aperture (slow)", SortedImageModel::Column::Aperture, true);
-        makeSortAction("Exposure (slow)", SortedImageModel::Column::Exposure, true);
-        makeSortAction("ISO (slow)", SortedImageModel::Column::Iso, true);
-        makeSortAction("Camera Model (slow)", SortedImageModel::Column::CameraModel, true);
-        makeSortAction("Focal Length (slow)", SortedImageModel::Column::FocalLength, true);
-        makeSortAction("Lens Model (slow)", SortedImageModel::Column::Lens, true);
+        makeSortAction("File Name",                   SortField::FileName);
+        makeSortAction("File Size",                   SortField::FileSize);
+        makeSortAction("File Extension",              SortField::FileType);
+        makeSortAction("Modified Date",               SortField::DateModified);
+        makeSortAction("Image Resolution (slow)",     SortField::Resolution, true);
+        makeSortAction("Original Record Date (slow)", SortField::DateRecorded, true);
+        makeSortAction("Aperture (slow)",             SortField::Aperture, true);
+        makeSortAction("Exposure (slow)",             SortField::Exposure, true);
+        makeSortAction("ISO (slow)",                  SortField::Iso, true);
+        makeSortAction("Camera Model (slow)",         SortField::CameraModel, true);
+        makeSortAction("Focal Length (slow)",         SortField::FocalLength, true);
+        makeSortAction("Lens Model (slow)",           SortField::Lens, true);
     }
     
     void refreshCopyMoveActions()
@@ -416,8 +416,11 @@ struct MainWindow::Impl
         QModelIndexList idx = r.indexes();
         for(const QModelIndex& i : idx)
         {
-            auto img = model->image(model->entry(i));
-            size += img->fileInfo().size();
+            auto img = model->imageFromItem(model->item(i));
+            if (img)
+            {
+                size += img->fileInfo().size();
+            }
         }
     }
     
@@ -437,9 +440,9 @@ struct MainWindow::Impl
             if (count > 0)
             {
                 size_t size = 0;
-                for (Entry_t& e : imgs)
+                for (QSharedPointer<Image>& e : imgs)
                 {
-                    size += SortedImageModel::image(e)->fileInfo().size();
+                    size += e->fileInfo().size();
                 }
 
                 text += QString(

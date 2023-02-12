@@ -43,7 +43,7 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void openImages(const QList<Entry_t>&);
+    void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView();
     void showThumbnailView(QSplashScreen*);
     
