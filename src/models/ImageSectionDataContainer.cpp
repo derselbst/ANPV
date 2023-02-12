@@ -26,36 +26,6 @@ struct ImageSectionDataContainer::Impl
     SortField sectionSortField = SortField::None;
     SortField imageSortField = SortField::None;
     
-    // returns true if the column that is sorted against requires us to preload the image metadata
-    // before we insert the items into the model
-    static constexpr bool sortedColumnNeedsPreloadingMetadata(SortField sectionField, SortField imgField)
-    {
-        switch (sectionField)
-        {
-        case SortField::None:
-        case SortField::FileName:
-        case SortField::FileSize:
-        case SortField::FileType:
-        case SortField::DateModified:
-            switch (imgField)
-            {
-            case SortField::FileName:
-            case SortField::FileSize:
-            case SortField::FileType:
-            case SortField::DateModified:
-                return false;
-            case SortField::None:
-                throw std::logic_error("SortField::None should not be used for images");
-            default:
-                break;
-            }
-        default:
-            break;
-        }
-
-        return true;
-    }
-
     Qt::ConnectionType syncConnection()
     {
         if (QThread::currentThread() == this->model->thread())
@@ -87,7 +57,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
         try
         {
             QSharedPointer<QFutureWatcher<DecodingState>> watcher;
-            if (d->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
+            if (this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
             {
                 decoder->open();
                 // decode synchronously

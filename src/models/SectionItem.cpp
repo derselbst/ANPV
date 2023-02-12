@@ -5,6 +5,7 @@
 #include "xThreadGuard.hpp"
 #include "types.hpp"
 #include "ExifWrapper.hpp"
+#include "ImageSectionDataContainer.hpp"
 
 #ifdef _WINDOWS
 #define NOMINMAX
@@ -56,7 +57,7 @@ struct SectionItem::Impl
 
         bool leftFileNameIsBeforeRight = compareFileName(linfo, rinfo);
 
-        if constexpr (sortedColumnNeedsPreloadingMetadata(SortCol, SortCol))
+        if constexpr (ImageSectionDataContainer::sortedColumnNeedsPreloadingMetadata(SortCol, SortCol))
         {
             // only evaluate exif() when sortedColumnNeedsPreloadingMetadata() is true!
             auto lexif = limg->exif();
