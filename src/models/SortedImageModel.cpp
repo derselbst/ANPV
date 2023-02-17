@@ -33,14 +33,14 @@
 #include "ANPV.hpp"
 #include "ProgressIndicatorHelper.hpp"
 #include "ImageSectionDataContainer.hpp"
-#include "FileDiscoveryThread.hpp"
+#include "DirectoryWorker.hpp"
 
 struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
     QScopedPointer<ImageSectionDataContainer> entries;
-    QScopedPointer<FileDiscoveryThread> directoryWatcher;
+    QScopedPointer<DirectoryWorker> directoryWatcher;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
@@ -205,10 +205,10 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     connect(qGuiApp, &QGuiApplication::lastWindowClosed, backgroundThread, &QThread::quit);
     connect(backgroundThread, &QThread::finished, backgroundThread, &QThread::deleteLater);
 
-    d->directoryWatcher.reset(new FileDiscoveryThread(d->entries.get()));
+    d->directoryWatcher.reset(new DirectoryWorker(d->entries.get()));
     d->directoryWatcher->moveToThread(backgroundThread);
 
-    connect(d->directoryWatcher.get(), &FileDiscoveryThread::discoverDirectory, d->directoryWatcher.get(), &FileDiscoveryThread::onDiscoverDirectory, Qt::QueuedConnection);
+    connect(d->directoryWatcher.get(), &DirectoryWorker::discoverDirectory, d->directoryWatcher.get(), &DirectoryWorker::onDiscoverDirectory, Qt::QueuedConnection);
     backgroundThread->start(QThread::LowPriority);
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,

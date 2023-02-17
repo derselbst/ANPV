@@ -1,5 +1,5 @@
 
-#include "FileDiscoveryThread.hpp"
+#include "DirectoryWorker.hpp"
 
 #include "xThreadGuard.hpp"
 #include "UserCancellation.hpp"
@@ -11,9 +11,9 @@
 #include <QEventLoop>
 #include <QApplication>
 
-struct FileDiscoveryThread::Impl
+struct DirectoryWorker::Impl
 {
-    FileDiscoveryThread* q;
+    DirectoryWorker* q;
     ImageSectionDataContainer* data;
     QDir currentDir;
     QFileInfoList discoveredFiles;
@@ -87,7 +87,7 @@ struct FileDiscoveryThread::Impl
 
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
-FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObject *parent)
+DirectoryWorker::DirectoryWorker(ImageSectionDataContainer* data, QObject *parent)
    : d(std::make_unique<Impl>()), QObject(parent)
 {
     d->q = this;
@@ -96,13 +96,13 @@ FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObjec
     connect(d->watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
 }
 
-FileDiscoveryThread::~FileDiscoveryThread()
+DirectoryWorker::~DirectoryWorker()
 {
     d->cancelAndWaitForDirectoryDiscovery();
     d->data = nullptr;
 }
 
-QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
+QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString& dir)
 {
     d->cancelAndWaitForDirectoryDiscovery();
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
@@ -110,7 +110,7 @@ QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
     return d->directoryDiscovery->future();
 }
 
-void FileDiscoveryThread::onDiscoverDirectory(QString newDir)
+void DirectoryWorker::onDiscoverDirectory(QString newDir)
 {
     d->watcher->removePath(d->currentDir.absolutePath());
     d->currentDir = QDir(newDir);

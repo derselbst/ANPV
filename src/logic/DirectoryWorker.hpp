@@ -8,13 +8,13 @@
 
 #include "ImageSectionDataContainer.hpp"
 
-class FileDiscoveryThread : public QObject
+class DirectoryWorker : public QObject
 {
     Q_OBJECT
 
 public:
-    FileDiscoveryThread(ImageSectionDataContainer* data = nullptr, QObject* parent = nullptr);
-    ~FileDiscoveryThread();
+    DirectoryWorker(ImageSectionDataContainer* data = nullptr, QObject* parent = nullptr);
+    ~DirectoryWorker();
 
     QFuture<DecodingState> changeDirAsync(const QString& dir);
 

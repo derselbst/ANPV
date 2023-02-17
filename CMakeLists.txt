@@ -162,8 +162,8 @@ src/logic/TraceTimer.cpp
 src/logic/TraceTimer.hpp
 src/logic/ANPV.cpp
 src/logic/ANPV.hpp
-src/logic/FileDiscoveryThread.cpp
-src/logic/FileDiscoveryThread.hpp
+src/logic/DirectoryWorker.cpp
+src/logic/DirectoryWorker.hpp
 src/models/AbstractListItem.cpp
 src/models/AbstractListItem.hpp
 src/models/ImageSectionDataContainer.cpp
