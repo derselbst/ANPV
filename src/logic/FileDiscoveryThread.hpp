@@ -8,22 +8,24 @@
 
 #include "ImageSectionDataContainer.hpp"
 
-class FileDiscoveryThread : public QThread
+class FileDiscoveryThread : public QObject
 {
-   Q_OBJECT
+    Q_OBJECT
 
-   public:
-     FileDiscoveryThread(ImageSectionDataContainer *data = nullptr, QObject *parent = nullptr);
-     ~FileDiscoveryThread();
+public:
+    FileDiscoveryThread(ImageSectionDataContainer* data = nullptr, QObject* parent = nullptr);
+    ~FileDiscoveryThread();
 
-     void run() override;
-     QFuture<DecodingState> changeDirAsync(const QString& dir);
+    QFuture<DecodingState> changeDirAsync(const QString& dir);
 
-   signals:
-      void imageLoaded(int index);
+signals:
+    void discoverDirectory(QString newDir);
 
-   private:
-     struct Impl;
-     std::unique_ptr<Impl> d;
+public slots:
+    void onDiscoverDirectory(QString);
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> d;
 };
 

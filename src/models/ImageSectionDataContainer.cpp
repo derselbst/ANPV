@@ -251,6 +251,11 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 
     std::lock_guard<std::recursive_mutex> l(d->m);
 
+    if (this->d->data.empty())
+    {
+        return -1;
+    }
+
     if (this->d->data.front() == this->d->data.back() && this->d->data.front()->getName().isEmpty())
     {
         if (this->d->data.front()->find(item, &itmidx))

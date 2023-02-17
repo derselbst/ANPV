@@ -19,7 +19,7 @@ struct FileDiscoveryThread::Impl
     QFileInfoList discoveredFiles;
     
     QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
-    QScopedPointer<QEventLoop> evtLoop;
+    QScopedPointer<QFileSystemWatcher> watcher;
 
     void onDirectoryChanged(const QString& path)
     {
@@ -79,7 +79,7 @@ struct FileDiscoveryThread::Impl
         if (directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
         {
             directoryDiscovery->future().cancel();
-            directoryDiscovery->future().waitForFinished();
+            //directoryDiscovery->future().waitForFinished();
         }
     }
 };
@@ -88,55 +88,41 @@ struct FileDiscoveryThread::Impl
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
 FileDiscoveryThread::FileDiscoveryThread(ImageSectionDataContainer* data, QObject *parent)
-   : d(std::make_unique<Impl>()), QThread(parent)
+   : d(std::make_unique<Impl>()), QObject(parent)
 {
     d->q = this;
     d->data = data;
+    d->watcher.reset(new QFileSystemWatcher(this));
+    connect(d->watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
 }
 
 FileDiscoveryThread::~FileDiscoveryThread()
 {
-    if (d->evtLoop)
-    {
-        d->evtLoop->quit();
-    }
-
     d->cancelAndWaitForDirectoryDiscovery();
-    this->wait();
     d->data = nullptr;
 }
 
 QFuture<DecodingState> FileDiscoveryThread::changeDirAsync(const QString& dir)
 {
-    if(d->evtLoop)
-    {
-        d->evtLoop->quit();
-    }
     d->cancelAndWaitForDirectoryDiscovery();
-    this->wait();
-    d->currentDir = QDir(dir);
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
-    this->start(QThread::LowPriority);
+    emit this->discoverDirectory(dir);
     return d->directoryDiscovery->future();
 }
 
-void FileDiscoveryThread::run()
+void FileDiscoveryThread::onDiscoverDirectory(QString newDir)
 {
-    QScopedPointer<QFileSystemWatcher> watcher(new QFileSystemWatcher(this));
-    connect(watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
-    
-    d->evtLoop.reset(new QEventLoop(this));
-    connect(QApplication::instance(), &QApplication::aboutToQuit, d->evtLoop.data(), &QEventLoop::quit);
-
+    d->watcher->removePath(d->currentDir.absolutePath());
+    d->currentDir = QDir(newDir);
     int entriesProcessed = 0;
     try
     {
         d->directoryDiscovery->start();
         d->directoryDiscovery->setProgressValueAndText(0, "Looking up directory");
-        
+
         d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-        watcher->addPath(d->currentDir.absolutePath());
-        
+        d->watcher->addPath(d->currentDir.absolutePath());
+
         const int entriesToProcess = d->discoveredFiles.size();
         if (entriesToProcess > 0)
         {
@@ -191,20 +177,4 @@ void FileDiscoveryThread::run()
         d->directoryDiscovery->addResult(DecodingState::Error);
     }
     d->directoryDiscovery->finish();
-    
-    try
-    {
-        d->evtLoop->exec();
-    }
-    catch(const std::exception& e)
-    {
-        Formatter f;
-        f << "FileDiscoveryThread terminated as it caught an exception while processing event loop:\n" << 
-            "Error Type: " << typeid(e).name() << "\n"
-            "Error Message: \n" << e.what();
-        qCritical() << f.str().c_str();
-    }
-    watcher->removePath(d->currentDir.absolutePath());
-    d->evtLoop.reset(nullptr);
 }
-
