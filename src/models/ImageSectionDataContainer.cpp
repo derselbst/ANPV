@@ -58,12 +58,13 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     // move both objects to the UI thread to ensure proper signal delivery
     image->moveToThread(QGuiApplication::instance()->thread());
 
+    QSharedPointer<QFutureWatcher<DecodingState>> watcher;
+    QVariant var;
     if (decoder)
     {
         try
         {
             image->setDecoder(decoder);
-            QSharedPointer<QFutureWatcher<DecodingState>> watcher;
             if (this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
             {
                 decoder->open();
@@ -82,7 +83,6 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             }
 
             QString str;
-            QVariant var;
             switch (d->sectionSortField)
             {
             case SortField::DateModified:
@@ -127,6 +127,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
         // TODO invoke required??
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
+    this->addImageItem(var, image, watcher);
     return false;
 }
 
