@@ -597,10 +597,8 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
     this->connect(image.data(), &Image::destroyed, this,
         [&](QObject* i)
         {
-            Image* img = dynamic_cast<Image*>(i);
-            Q_ASSERT(img != nullptr);
-            d->checkedImages.removeAll(img);
-            d->backgroundTasks.erase(img);
+            Q_ASSERT(i != nullptr);
+            d->checkedImages.removeAll(static_cast<Image*>(i));
         });
 
     if (watcher != nullptr)
