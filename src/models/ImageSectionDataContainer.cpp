@@ -386,8 +386,13 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
                 }
 
                 QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+
+                QSize fullResSize = image->size();
+                QSize desiredResolution = fullResSize.isValid()
+                    ? fullResSize.scaled(1, imageHeight, Qt::KeepAspectRatioByExpanding)
+                    : QSize(imageHeight, imageHeight);
                 // decode asynchronously
-                auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+                auto fut = decoder->decodeAsync(state, Priority::Background, desiredResolution);
                 watcher->setFuture(fut);
                 fut.then(
                     [=](DecodingState result)
