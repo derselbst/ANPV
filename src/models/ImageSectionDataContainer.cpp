@@ -45,7 +45,10 @@ ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : 
     d->model = model;
 }
 
-ImageSectionDataContainer::~ImageSectionDataContainer() = default;
+ImageSectionDataContainer::~ImageSectionDataContainer()
+{
+    qDebug() << "~ImageDatacontainer";
+}
 
 bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 {
@@ -152,16 +155,16 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = (*it)->isEnd(insertIt) ? this->size() : this->getLinearIndexOfItem((*insertIt).data());
 
-    l.unlock();
+   //l.unlock();
     QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + offset); }, d->syncConnection());
-    
-    l.lock();
+
+    //l.lock();
     (*it)->insert(insertIt, item);
-    l.unlock();
     QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
+    l.unlock();
 
     d->model->welcomeImage(item, watcher);
-    }
+}
 
 bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
 {

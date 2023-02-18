@@ -23,6 +23,8 @@ class SmartImageDecoder;
 class CancellableProgressWidget;
 class QMimeData;
 class QAction;
+class ProgressIndicatorHelper;
+class QThread;
 
 template<typename T>
 class QFuture;
@@ -42,6 +44,8 @@ public:
     ANPV();
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
+
+    QThread* backgroundThread();
 
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView();
@@ -80,6 +84,7 @@ public:
     
     int iconHeight();
     void setIconHeight(int);
+    ProgressIndicatorHelper* spinningIconHelper();
     
     QPixmap noIconPixmap();
     QPixmap noPreviewPixmap();

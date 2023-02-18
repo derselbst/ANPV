@@ -21,7 +21,7 @@ public:
 signals:
     void discoverDirectory(QString newDir);
 
-public slots:
+private slots:
     void onDiscoverDirectory(QString);
 
 private:

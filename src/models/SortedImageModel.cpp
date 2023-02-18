@@ -50,10 +50,9 @@ struct SortedImageModel::Impl
     
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
     int cachedIconHeight = 1;
-    ViewFlags_t cachedViewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
+    std::atomic<ViewFlags_t> cachedViewFlags{ static_cast<ViewFlags_t>(ViewFlag::None) };
     
     QTimer layoutChangedTimer;
-    QPointer<ProgressIndicatorHelper> spinningIconHelper;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}
@@ -82,17 +81,14 @@ struct SortedImageModel::Impl
             }
             layoutChangedTimer.stop();
             backgroundTasks.clear();
-            spinningIconHelper->stopRendering();
+            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
         }
     }
     
     // stop processing, delete everything and wait until finished
     void clear()
     {
-        xThreadGuard g(q);
-        
         this->checkedImages.clear();
-        this->entries->clear();
         cancelAllBackgroundTasks();
     }
 
@@ -113,10 +109,9 @@ struct SortedImageModel::Impl
         emit q->layoutChanged();
     }
 
-    bool hideRawIfNonRawAvailable(const QSharedPointer<Image>& e)
+    static bool hideRawIfNonRawAvailable(ViewFlags_t viewFlags, const QSharedPointer<Image>& e)
     {
-        xThreadGuard g(q);
-        return ((this->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
                  && e->isRaw()
                  && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
     }
@@ -151,16 +146,16 @@ struct SortedImageModel::Impl
 
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
-        std::lock_guard<std::recursive_mutex> l(m);
+        xThreadGuard g(q);
         auto watcher2 = this->backgroundTasks[img.data()];
         Q_ASSERT(watcher2 == watcher);
         watcher->disconnect(q);
-        this->spinningIconHelper->disconnect(this->spinningIconDrawConnections[img.data()]);
+        ANPV::globalInstance()->spinningIconHelper()->disconnect(this->spinningIconDrawConnections[img.data()]);
         this->spinningIconDrawConnections.erase(img.data());
         this->backgroundTasks.erase(img.data());
         if (this->backgroundTasks.empty())
         {
-            this->spinningIconHelper->stopRendering();
+            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
         }
 
         // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
@@ -169,6 +164,7 @@ struct SortedImageModel::Impl
 
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
+        xThreadGuard g(q);
         QModelIndex idx = q->index(img);
         if (!idx.isValid())
         {
@@ -178,9 +174,9 @@ struct SortedImageModel::Impl
         }
         if (this->spinningIconDrawConnections.empty())
         {
-            this->spinningIconHelper->startRendering();
+            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::startRendering);
         }
-        this->spinningIconDrawConnections[img.data()] = q->connect(this->spinningIconHelper, &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
+        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
         q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
     }
 
@@ -196,20 +192,8 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     d->layoutChangedTimer.setSingleShot(true);
     connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
     
-    d->spinningIconHelper = new ProgressIndicatorHelper(this);
     d->entries.reset(new ImageSectionDataContainer(this));
-
-    QThread* backgroundThread = new QThread(this);
-    backgroundThread->setObjectName("Background Thread");
-    connect(QApplication::instance(), &QApplication::aboutToQuit, backgroundThread, &QThread::quit);
-    connect(qGuiApp, &QGuiApplication::lastWindowClosed, backgroundThread, &QThread::quit);
-    connect(backgroundThread, &QThread::finished, backgroundThread, &QThread::deleteLater);
-
-    d->directoryWatcher.reset(new DirectoryWorker(d->entries.get()));
-    d->directoryWatcher->moveToThread(backgroundThread);
-
-    connect(d->directoryWatcher.get(), &DirectoryWorker::discoverDirectory, d->directoryWatcher.get(), &DirectoryWorker::onDiscoverDirectory, Qt::QueuedConnection);
-    backgroundThread->start(QThread::LowPriority);
+    d->directoryWatcher.reset(new DirectoryWorker(d->entries.get(), this));
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
             [&](int v)
@@ -241,12 +225,11 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
 SortedImageModel::~SortedImageModel()
 {
     xThreadGuard(this);
+    d->cancelAllBackgroundTasks();
 }
 
 QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
-    xThreadGuard g(this);
-
     d->clear();
     return d->directoryWatcher->changeDirAsync(dir);
 }
@@ -261,7 +244,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
     std::lock_guard<std::recursive_mutex> l(d->m);
     if (!d->entries.empty())
     {
-        d->spinningIconHelper->startRendering();
+        d->spinningIconHelper()->startRendering();
     }
     for(Entry_t& e : d->entries)
     {
@@ -356,7 +339,6 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
 
 Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
 {
-    xThreadGuard g(this);
     if (!index.isValid())
     {
         return Qt::NoItemFlags;
@@ -372,10 +354,11 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
     else
     {
         f |= Qt::ItemIsUserCheckable;
-        if ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        ViewFlags_t viewFlagsLocal = d->cachedViewFlags;
+        if ((viewFlagsLocal & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
             QSharedPointer<Image> e = this->imageFromItem(this->item(index));
-            if (e && d->hideRawIfNonRawAvailable(e))
+            if (e && d->hideRawIfNonRawAvailable(viewFlagsLocal, e))
             {
                 f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             }
@@ -387,20 +370,16 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
 
 int SortedImageModel::columnCount(const QModelIndex &) const
 {
-    xThreadGuard g(this);
     return 1;
 }
 
 int SortedImageModel::rowCount(const QModelIndex&) const
 {
-    xThreadGuard g(this);
     return d->entries->size();
 }
 
 bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-    xThreadGuard g(this);
-
     if (index.isValid())
     {
         QSharedPointer<AbstractListItem> item = d->entries->getItemByLinearIndex(index.row());
@@ -421,8 +400,6 @@ bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, 
 
 QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
-    xThreadGuard g(this);
-
     if (index.isValid())
     {
         QSharedPointer<AbstractListItem> item = d->entries->getItemByLinearIndex(index.row());
@@ -491,7 +468,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
                         }
                         if (watcher && watcher->isRunning())
                         {
-                            QPixmap frame = d->spinningIconHelper->getProgressIndicator(*watcher);
+                            QPixmap frame = ANPV::globalInstance()->spinningIconHelper()->getProgressIndicator(*watcher);
                             return frame;
                         }
                         return img->thumbnailTransformed(d->cachedIconHeight);
@@ -539,20 +516,16 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 
 bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
 {
-    xThreadGuard g(this);
     return false;
 }
 
 QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
-    xThreadGuard g(this);
-
     return this->index(img.data());
 }
 
 QModelIndex SortedImageModel::index(const Image* img)
 {
-    xThreadGuard g(this);
     if(img == nullptr)
     {
         return QModelIndex();
@@ -563,7 +536,6 @@ QModelIndex SortedImageModel::index(const Image* img)
 
 QSharedPointer<AbstractListItem> SortedImageModel::item(const QModelIndex& idx) const
 {
-    xThreadGuard g(this);
     if (!idx.isValid())
     {
         return nullptr;
@@ -584,13 +556,11 @@ QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<Abstr
 
 QList<Image*> SortedImageModel::checkedEntries()
 {
-    xThreadGuard g(this);
     return d->checkedImages;
 }
 
 bool SortedImageModel::isSafeToChangeDir()
 {
-    xThreadGuard g(this);
     return d->checkedImages.size() == 0;
 }
 
@@ -643,4 +613,9 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [=]() { d->onBackgroundTaskStarted(watcher, image); });
     }
+}
+
+void SortedImageModel::cancelAllBackgroundTasks()
+{
+    d->cancelAllBackgroundTasks();
 }

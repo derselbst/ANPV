@@ -71,7 +71,10 @@ public: // QAbstractItemModel
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    
+
+public slots:
+    void cancelAllBackgroundTasks();
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

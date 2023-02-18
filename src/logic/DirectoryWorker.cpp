@@ -79,7 +79,7 @@ struct DirectoryWorker::Impl
         if (directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
         {
             directoryDiscovery->future().cancel();
-            //directoryDiscovery->future().waitForFinished();
+            directoryDiscovery->future().waitForFinished();
         }
     }
 };
@@ -94,6 +94,7 @@ DirectoryWorker::DirectoryWorker(ImageSectionDataContainer* data, QObject *paren
     d->data = data;
     d->watcher.reset(new QFileSystemWatcher(this));
     connect(d->watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
+    connect(this, &DirectoryWorker::discoverDirectory, this, &DirectoryWorker::onDiscoverDirectory, Qt::QueuedConnection);
 }
 
 DirectoryWorker::~DirectoryWorker()
@@ -118,6 +119,9 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
     try
     {
         d->directoryDiscovery->start();
+        d->directoryDiscovery->setProgressValueAndText(0, "Clearing Model");
+
+        d->data->clear();
         d->directoryDiscovery->setProgressValueAndText(0, "Looking up directory");
 
         d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);

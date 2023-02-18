@@ -35,6 +35,7 @@
 #include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
 #include "WaitCursor.hpp"
+#include "ProgressIndicatorHelper.hpp"
 
 class MyDisabledFileIconProvider : public QAbstractFileIconProvider
 {
@@ -113,15 +114,17 @@ struct ANPV::Impl
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
     
     // QObjects with parent
-    QFileSystemModel* dirModel = nullptr;
-    QSharedPointer<SortedImageModel> fileModel = nullptr;
-    QActionGroup* actionGroupFileOperation = nullptr;
-    QActionGroup* actionGroupViewMode = nullptr;
-    QActionGroup* actionGroupViewFlag = nullptr;
-    QAction* actionOpen = nullptr;
+    QPointer<QFileSystemModel> dirModel;
+    QSharedPointer<SortedImageModel> fileModel;
+    QPointer<QActionGroup> actionGroupFileOperation;
+    QPointer<QActionGroup> actionGroupViewMode;
+    QPointer<QActionGroup> actionGroupViewFlag;
+    QPointer<QAction> actionOpen;
     QString lastOpenImageDir;
-    QAction* actionExit = nullptr;
-    QUndoStack* undoStack = nullptr;
+    QPointer<QAction> actionExit;
+    QPointer<QUndoStack> undoStack;
+    QPointer<QThread> backgroundThread;
+    QPointer<ProgressIndicatorHelper> spinningIconHelper;
     
     // Use a simple string for the currentDir, because:
     // QDir lacks a "null" value, as it defaults to the current working directory
@@ -146,7 +149,37 @@ struct ANPV::Impl
         {
             ::global = QPointer<ANPV>(q);
         }
+
+        this->backgroundThread = new QThread(nullptr);
+        this->backgroundThread->setObjectName("Background Thread");
+        connect(QApplication::instance(), &QApplication::aboutToQuit, this->backgroundThread, &QThread::quit);
+        connect(qGuiApp, &QGuiApplication::lastWindowClosed, this->backgroundThread, &QThread::quit);
+        connect(this->backgroundThread, &QThread::finished, this->backgroundThread, &QThread::deleteLater);
+        backgroundThread->start(QThread::LowPriority);
         
+
+        connect(QApplication::instance(), &QApplication::aboutToQuit, q, 
+            [&]()
+            {
+                qInfo() << "Abouttoquit!!!";
+            });
+        connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
+            [&]()
+            {
+                this->fileModel->cancelAllBackgroundTasks();
+                // move the fileModel back to the UI thread, to allow for processing deleteLater
+                this->fileModel->moveToThread(QApplication::instance()->thread());
+                this->fileModel.reset();
+                qInfo() << "lastWindowClose!";
+            });
+
+        connect(this->backgroundThread, &QThread::finished, q,
+            [&]()
+            {
+                qInfo() << "Qthread::finished()";
+            });
+
+
         this->iconProvider.reset(new MyUIThreadOnlyIconProvider());
         this->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
         this->noIconProvider.reset(new MyDisabledFileIconProvider());
@@ -156,7 +189,8 @@ struct ANPV::Impl
         this->dirModel->setRootPath("");
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
-        this->fileModel.reset(new SortedImageModel(q));
+        this->fileModel.reset(new SortedImageModel(nullptr), &QObject::deleteLater);
+        this->fileModel->moveToThread(this->backgroundThread);
         
         this->actionGroupFileOperation = new QActionGroup(q);
         this->actionExit = new QAction("Close", q);
@@ -437,6 +471,8 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
+    d->spinningIconHelper = new ProgressIndicatorHelper(d->mainWindow.get());
+
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
@@ -453,6 +489,13 @@ ANPV::~ANPV()
 QAbstractFileIconProvider* ANPV::iconProvider()
 {
     return d->iconProvider.get();
+}
+
+QThread* ANPV::backgroundThread()
+{
+    Q_ASSERT(d->backgroundThread != nullptr);
+    xThreadGuard g(this);
+    return d->backgroundThread;
 }
 
 QFileSystemModel* ANPV::dirModel()
@@ -700,6 +743,13 @@ void ANPV::setIconHeight(int h)
         d->iconHeight = h;
         emit iconHeightChanged(h, old);
     }
+}
+
+// called by multiple threads
+ProgressIndicatorHelper* ANPV::spinningIconHelper()
+{
+    Q_ASSERT(d->spinningIconHelper != nullptr);
+    return d->spinningIconHelper;
 }
 
 void ANPV::showThumbnailView()
