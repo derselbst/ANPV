@@ -54,7 +54,6 @@ public:
 
     bool addImageItem(const QFileInfo& info);
     void addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
-    bool removeImageItem(QSharedPointer<Image> image);
     bool removeImageItem(const QFileInfo& info);
     
     QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;
@@ -64,6 +63,8 @@ public:
 
     void sortImageItems(SortField, Qt::SortOrder order);
     void sortSections(SortField, Qt::SortOrder order);
+
+    void decodeAllImages(DecodingState state, int imageHeight);
     
 private:
     struct Impl;

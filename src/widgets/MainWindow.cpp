@@ -87,9 +87,15 @@ struct MainWindow::Impl
             {
                 PreviewAllImagesDialog d;
                 d.setImageHeight(ANPV::globalInstance()->iconHeight());
-                if(d.exec() == QDialog::Accepted)
+                if (d.exec() == QDialog::Accepted)
                 {
-                    ANPV::globalInstance()->fileModel()->decodeAllImages(DecodingState::PreviewImage, d.imageHeight());
+                    auto imgHeight = d.imageHeight();
+                    auto model = ANPV::globalInstance()->fileModel();
+                    QMetaObject::invokeMethod(ANPV::globalInstance()->fileModel().get(), [=]()
+                        {
+                            model->cancelAllBackgroundTasks();
+                            model->decodeAllImages(DecodingState::PreviewImage, imgHeight);
+                        });
                 }
             }
         );

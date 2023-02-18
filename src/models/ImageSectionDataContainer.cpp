@@ -124,7 +124,6 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     }
     else
     {
-        // TODO invoke required??
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
     this->addImageItem(var, image, watcher);
@@ -156,14 +155,11 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     auto insertIt = (*it)->findInsertPosition(item);
     int insertIdx = (*it)->isEnd(insertIt) ? this->size() : this->getLinearIndexOfItem((*insertIt).data());
 
-   //l.unlock();
     QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + offset); }, d->syncConnection());
-
-    //l.lock();
     (*it)->insert(insertIt, item);
     QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
-    l.unlock();
 
+    l.unlock();
     d->model->welcomeImage(item, watcher);
 }
 
@@ -362,3 +358,47 @@ void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::Sor
         });
     d->sectionSortField = sectionSortField;
 }
+
+void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHeight)
+{
+    std::unique_lock<std::recursive_mutex> l(d->m);
+
+    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    {
+        auto size = (*sit)->size();
+        for (size_t i = 0; i < size; i++)
+        {
+            auto item = (*sit)->at(i);
+            auto image = d->model->imageFromItem(item);
+            const QSharedPointer<SmartImageDecoder>& decoder = image->decoder();
+            if (decoder)
+            {
+                bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
+                if (taken)
+                {
+                    qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
+                }
+                QImage thumb = image->thumbnail();
+                if (state == DecodingState::PreviewImage && !thumb.isNull())
+                {
+                    qDebug() << "Skipping preview decoding of " << image->fileInfo().fileName() << " as it already has a thumbnail of sufficient size.";
+                    continue;
+                }
+
+                QSharedPointer<QFutureWatcher<DecodingState>> watcher(new QFutureWatcher<DecodingState>());
+                // decode asynchronously
+                auto fut = decoder->decodeAsync(state, Priority::Background, QSize(imageHeight, imageHeight));
+                watcher->setFuture(fut);
+                fut.then(
+                    [=](DecodingState result)
+                    {
+                        decoder->releaseFullImage();
+                        return result;
+                    });
+
+                d->model->welcomeImage(image, watcher);
+            }
+        }
+    }
+}
+
