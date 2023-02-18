@@ -355,7 +355,7 @@ bool SectionItem::find(const AbstractListItem* item, int* externalIdx)
             return entry.data() == item;
         });
 
-    externalIdx += std::distance(this->d->data.begin(), it);
+    *externalIdx += std::distance(this->d->data.begin(), it);
     return it != this->d->data.end();
 }
 
