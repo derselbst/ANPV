@@ -156,10 +156,11 @@ struct SortedImageModel::Impl
         if (this->backgroundTasks.empty())
         {
             QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
+            this->updateLayout();
         }
 
         // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
-        this->scheduleSpinningIconRedraw(q->index(img));
+        this->scheduleSpinningIconRedraw(img);
     }
 
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
@@ -176,12 +177,13 @@ struct SortedImageModel::Impl
         {
             QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::startRendering);
         }
-        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
-        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(idx); });
+        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(img); });
+        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(img); });
     }
 
-    void scheduleSpinningIconRedraw(const QModelIndex& idx)
+    void scheduleSpinningIconRedraw(const QSharedPointer<Image>& img)
     {
+        QModelIndex idx = q->index(img);
         emit q->dataChanged(idx, idx, { Qt::DecorationRole });
     }
 };
