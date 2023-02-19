@@ -52,7 +52,7 @@ struct SortedImageModel::Impl
     int cachedIconHeight = 1;
     std::atomic<ViewFlags_t> cachedViewFlags{ static_cast<ViewFlags_t>(ViewFlag::None) };
     
-    QTimer layoutChangedTimer;
+    QPointer<QTimer> layoutChangedTimer;
 
     Impl(SortedImageModel* parent) : q(parent)
     {}
@@ -82,7 +82,7 @@ struct SortedImageModel::Impl
                 Q_ASSERT(!future.isNull());
                 future->waitForFinished();
             }
-            layoutChangedTimer.stop();
+            layoutChangedTimer->stop();
             backgroundTasks.clear();
             QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
         }
@@ -98,9 +98,9 @@ struct SortedImageModel::Impl
     void updateLayout()
     {
         xThreadGuard g(q);
-        if (!layoutChangedTimer.isActive())
+        if (!layoutChangedTimer->isActive())
         {
-            layoutChangedTimer.start();
+            layoutChangedTimer->start();
         }
     }
 
@@ -122,15 +122,13 @@ struct SortedImageModel::Impl
     void onThumbnailChanged(Image* img)
     {
         xThreadGuard g(q);
-        int i = this->entries->getLinearIndexOfItem(img);
-        QPersistentModelIndex pm = q->index(i, 0);
-        if (pm.isValid())
+        QModelIndex m = q->index(img);
+        if (m.isValid())
         {
-            emit q->layoutAboutToBeChanged({ pm });
             // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
             img->thumbnailTransformed(this->cachedIconHeight);
-            emit q->dataChanged(pm, pm, { Qt::DecorationRole });
-            emit q->layoutChanged();
+            emit q->dataChanged(m, m, { Qt::DecorationRole });
+            this->updateLayout();
         }
     }
 
@@ -199,9 +197,10 @@ struct SortedImageModel::Impl
 
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent), d(std::make_unique<Impl>(this))
 {
-    d->layoutChangedTimer.setInterval(1000);
-    d->layoutChangedTimer.setSingleShot(true);
-    connect(&d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
+    d->layoutChangedTimer = new QTimer(this);
+    d->layoutChangedTimer->setInterval(1000);
+    d->layoutChangedTimer->setSingleShot(true);
+    connect(d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
     
     d->entries.reset(new ImageSectionDataContainer(this));
     d->directoryWatcher.reset(new DirectoryWorker(d->entries.get(), this));
