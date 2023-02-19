@@ -70,13 +70,16 @@ struct SortedImageModel::Impl
             for (const auto& [key,value] : backgroundTasks)
             {
                 auto& future = value;
+                Q_ASSERT(!future.isNull());
                 future->disconnect(q);
+                Q_ASSERT(!future.isNull());
                 future->cancel();
             }
 
             for (const auto& [key, value] : backgroundTasks)
             {
                 auto& future = value;
+                Q_ASSERT(!future.isNull());
                 future->waitForFinished();
             }
             layoutChangedTimer.stop();
@@ -130,6 +133,7 @@ struct SortedImageModel::Impl
 
     void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
     {
+        xThreadGuard g(q);
         if (newState == DecodingState::Ready)
         {
             // ignore ready state
@@ -146,7 +150,7 @@ struct SortedImageModel::Impl
 
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
-        xThreadGuard g(q);
+        std::lock_guard<std::recursive_mutex> l(m);
         auto watcher2 = this->backgroundTasks[img.data()];
         Q_ASSERT(watcher2 == watcher);
         watcher->disconnect(q);
@@ -165,7 +169,7 @@ struct SortedImageModel::Impl
 
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
-        xThreadGuard g(q);
+        std::lock_guard<std::recursive_mutex> l(m);
         QModelIndex idx = q->index(img);
         if (!idx.isValid())
         {
