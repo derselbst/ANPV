@@ -33,6 +33,12 @@
 
 #include "ui_MainWindow.h"
 
+#ifndef NDEBUG
+#ifdef Q_OS_LINUX
+#include "sanitizer/asan_interface.h"
+#endif
+#endif
+
 struct MainWindow::Impl
 {
     MainWindow* q = nullptr;
@@ -99,6 +105,25 @@ struct MainWindow::Impl
                 }
             }
         );
+    }
+    
+    void createDebugActions()
+    {
+#ifndef NDEBUG
+#ifdef Q_OS_LINUX
+        QAction* action;
+        action = new QAction("Asan Profile Memory Usage", q);
+        connect(action, &QAction::triggered, q,
+            [&](bool)
+            {
+                __sanitizer_print_memory_profile(90, 10);
+            }
+        );
+            
+        QMenu* debugMenu = ui->menuFile->addMenu("Debug");
+        debugMenu->addAction(action);
+#endif
+#endif
     }
     
     void createSortActions()
@@ -258,6 +283,7 @@ struct MainWindow::Impl
     {
         this->createViewActions();
         this->createSortActions();
+        this->createDebugActions();
 
         QUndoStack* undoStack = ANPV::globalInstance()->undoStack();
         actionUndo = undoStack->createUndoAction(q, "Undo");
