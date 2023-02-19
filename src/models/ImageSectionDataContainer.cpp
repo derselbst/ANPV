@@ -44,10 +44,10 @@ struct ImageSectionDataContainer::Impl
         {
         default:
         case Qt::AscendingOrder:
-            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return (*left) < (*right); };
+            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return left->getName().isEmpty() || (*left) < (*right); };
 
         case Qt::DescendingOrder:
-            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return (*left) > (*right); };
+            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return left->getName().isEmpty() || (*left) > (*right); };
         };
     }
 
