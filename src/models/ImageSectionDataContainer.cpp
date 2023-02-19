@@ -37,6 +37,25 @@ struct ImageSectionDataContainer::Impl
         }
         return Qt::BlockingQueuedConnection;
     }
+    
+    std::function<bool(const SectionList::value_type& left, const SectionList::value_type& right)> getSortFunction(Qt::SortOrder order)
+    {
+        switch (order)
+        {
+        default:
+        case Qt::AscendingOrder:
+            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return (*left) < (*right); };
+
+        case Qt::DescendingOrder:
+            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return (*left) > (*right); };
+        };
+    }
+
+    SectionList::iterator findInsertPosition(const SectionList::value_type& section)
+    {
+        auto upper = std::upper_bound(this->data.begin(), this->data.end(), section, this->getSortFunction(this->sectionSortOrder));
+        return upper;
+    }
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
@@ -148,7 +167,8 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     if (this->d->data.end() == it)
     {
         // no suitable section found, create a new one
-        it = this->d->data.insert(it, SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder)));
+        auto s = SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder));
+        it = this->d->data.insert(d->findInsertPosition(s), s);
         offset++;
     }
 
@@ -336,27 +356,31 @@ int ImageSectionDataContainer::size() const
 void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
+    
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
+    
     for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->sortItems(imageSortField, order);
     }
     d->imageSortField = imageSortField;
     d->imageSortOrder = order;
+    
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
 }
 
 /* Sorts the section item according to given the order (order). */
 void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
-    std::sort(this->d->data.begin(), this->d->data.end(), [order](const QSharedPointer<SectionItem>& itemA, const QSharedPointer<SectionItem>& itemB)
-        {
-            if (order == Qt::AscendingOrder)
-            {
-                return (*itemA) < (*itemB);
-            }
-            return  (*itemA) > (*itemB);
-        });
+    
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
+    
+    std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
+    d->sectionSortOrder = order;
     d->sectionSortField = sectionSortField;
+    
+    QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
 }
 
 void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHeight)
