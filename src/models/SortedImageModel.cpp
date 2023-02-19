@@ -121,11 +121,14 @@ struct SortedImageModel::Impl
 
     void onThumbnailChanged(Image* img)
     {
+        xThreadGuard g(q);
         int i = this->entries->getLinearIndexOfItem(img);
         QPersistentModelIndex pm = q->index(i, 0);
         if (pm.isValid())
         {
             emit q->layoutAboutToBeChanged({ pm });
+            // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
+            img->thumbnailTransformed(this->cachedIconHeight);
             emit q->dataChanged(pm, pm, { Qt::DecorationRole });
             emit q->layoutChanged();
         }
