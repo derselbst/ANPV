@@ -144,6 +144,8 @@ struct SortedImageModel::Impl
         QModelIndex idx = q->index(i, 0);
         if (idx.isValid())
         {
+            // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
+            img->thumbnailTransformed(this->cachedIconHeight);
             emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
         }
     }
