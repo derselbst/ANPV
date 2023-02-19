@@ -59,6 +59,9 @@ public:
     QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const;
     QList<Image*> checkedEntries();
 
+    QVariant data(const QSharedPointer<AbstractListItem>& item, int role) const;
+    Qt::ItemFlags flags(const QSharedPointer<AbstractListItem>& item) const;
+
     bool isSafeToChangeDir();
     void welcomeImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
 

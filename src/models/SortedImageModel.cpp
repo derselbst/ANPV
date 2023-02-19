@@ -302,16 +302,27 @@ QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, i
 #endif
 }
 
-Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
+Qt::ItemFlags SortedImageModel::flags(const QModelIndex& index) const
 {
     if (!index.isValid())
     {
         return Qt::NoItemFlags;
     }
 
-    Qt::ItemFlags f = this->QAbstractTableModel::flags(index);
+    auto item = this->item(index);
+    return this->flags(item);
+}
 
-    bool isSection = index.model()->data(index, SortedImageModel::ItemIsSection).toBool();
+Qt::ItemFlags SortedImageModel::flags(const QSharedPointer<AbstractListItem>& item) const
+{
+    if (!item)
+    {
+        return Qt::NoItemFlags;
+    }
+
+    Qt::ItemFlags f = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren;
+
+    bool isSection = this->data(item, SortedImageModel::ItemIsSection).toBool();
     if (isSection)
     {
         f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
@@ -322,7 +333,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex &index) const
         ViewFlags_t viewFlagsLocal = d->cachedViewFlags;
         if ((viewFlagsLocal & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
-            QSharedPointer<Image> e = this->imageFromItem(this->item(index));
+            QSharedPointer<Image> e = this->imageFromItem(item);
             if (e && d->hideRawIfNonRawAvailable(viewFlagsLocal, e))
             {
                 f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
@@ -365,113 +376,120 @@ bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, 
 
 QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
-    if (index.isValid())
+    if (!index.isValid())
     {
-        QSharedPointer<AbstractListItem> item = d->entries->getItemByLinearIndex(index.row());
-        if (item)
+        return QVariant();
+    }
+
+    auto item = this->item(index);
+    return this->data(item, role);
+}
+
+QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem>& item, int role) const
+{
+    if (item)
+    {
+        if (role == ItemModelUserRoles::ItemName)
         {
-            if (role == ItemModelUserRoles::ItemName)
+            return item->getName();
+        }
+        else if (role == ItemModelUserRoles::ItemIsSection)
+        {
+            return item->getType() == ListItemType::Section;
+        }
+        else
+        {
+            auto img = this->imageFromItem(item);
+            if (img != nullptr)
             {
-                return item->getName();
-            }
-            else if (role == ItemModelUserRoles::ItemIsSection)
-            {
-                return item->getType() == ListItemType::Section;
-            }
-            else
-            {
-                auto img = this->imageFromItem(item);
-                if (img != nullptr)
+                const QFileInfo fi = img->fileInfo();
+                switch (role)
                 {
-                    const QFileInfo fi = img->fileInfo();
-                    switch (role)
+
+                case ItemFileSize:
+                    return QString::number(fi.size());
+                case ItemFileType:
+                    return fi.suffix();
+                case ItemFileLastModified:
+                    return fi.lastModified();
+
+                default:
+                {
+                    auto exif = img->exif();
+                    if (!exif.isNull())
                     {
-
-                    case ItemFileSize:
-                        return QString::number(fi.size());
-                    case ItemFileType:
-                        return fi.suffix();
-                    case ItemFileLastModified:
-                        return fi.lastModified();
-
+                        switch (role)
+                        {
+                        case ItemImageDateRecorded:
+                            return exif->dateRecorded();
+                        case ItemImageResolution:
+                            return exif->size();
+                        case ItemImageAperture:
+                            return exif->aperture();
+                        case ItemImageExposure:
+                            return exif->exposureTime();
+                        case ItemImageIso:
+                            return exif->iso();
+                        case ItemImageFocalLength:
+                            return exif->focalLength();
+                        case ItemImageLens:
+                            return exif->lens();
+                        case ItemImageCameraModel:
+                            throw std::logic_error("ItemImageCameraModel not yet implemented");
+                        }
+                    }
+                    break;
+                }
+                case Qt::DecorationRole:
+                {
+                    QSharedPointer<QFutureWatcher<DecodingState>> watcher;
+                    {
+                        std::lock_guard<std::recursive_mutex> l(d->m);
+                        if (d->backgroundTasks.contains(img.data()))
+                        {
+                            watcher = d->backgroundTasks[img.data()];
+                        }
+                    }
+                    if (watcher && watcher->isRunning())
+                    {
+                        QPixmap frame = ANPV::globalInstance()->spinningIconHelper()->getProgressIndicator(*watcher);
+                        return frame;
+                    }
+                    return img->thumbnailTransformed(d->cachedIconHeight);
+                }
+                case Qt::ToolTipRole:
+                    switch (img->decodingState())
+                    {
+                    case Ready:
+                        return "Decoding not yet started";
+                    case Cancelled:
+                        return "Decoding cancelled";
+                    case Error:
+                    case Fatal:
+                        return img->errorMessage();
                     default:
-                    {
-                        auto exif = img->exif();
-                        if (!exif.isNull())
-                        {
-                            switch (role)
-                            {
-                            case ItemImageDateRecorded:
-                                return exif->dateRecorded();
-                            case ItemImageResolution:
-                                return exif->size();
-                            case ItemImageAperture:
-                                return exif->aperture();
-                            case ItemImageExposure:
-                                return exif->exposureTime();
-                            case ItemImageIso:
-                                return exif->iso();
-                            case ItemImageFocalLength:
-                                return exif->focalLength();
-                            case ItemImageLens:
-                                return exif->lens();
-                            case ItemImageCameraModel:
-                                throw std::logic_error("ItemImageCameraModel not yet implemented");
-                            }
-                        }
-                        break;
+                        return img->formatInfoString();
                     }
-                    case Qt::DecorationRole:
-                    {
-                        QSharedPointer<QFutureWatcher<DecodingState>> watcher;
-                        {
-                            std::lock_guard<std::recursive_mutex> l(d->m);
-                            if (d->backgroundTasks.contains(img.data()))
-                            {
-                                watcher = d->backgroundTasks[img.data()];
-                            }
-                        }
-                        if (watcher && watcher->isRunning())
-                        {
-                            QPixmap frame = ANPV::globalInstance()->spinningIconHelper()->getProgressIndicator(*watcher);
-                            return frame;
-                        }
-                        return img->thumbnailTransformed(d->cachedIconHeight);
-                    }
-                    case Qt::ToolTipRole:
-                        switch (img->decodingState())
-                        {
-                        case Ready:
-                            return "Decoding not yet started";
-                        case Cancelled:
-                            return "Decoding cancelled";
-                        case Error:
-                        case Fatal:
-                            return img->errorMessage();
-                        default:
-                            return img->formatInfoString();
-                        }
 
-                    case Qt::TextAlignmentRole:
-                    {
-                        constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
-                        constexpr int a = alignment;
-                        return a;
-                    }
-                    case Qt::CheckStateRole:
-                        return img->checked();
-                    case CheckAlignmentRole:
-                    {
-                        constexpr Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignTop;
-                        constexpr int a = alignment;
-                        return a;
-                    }
-                    case DecorationAlignmentRole:
-                    case Qt::EditRole:
-                    case Qt::StatusTipRole:
-                    case Qt::WhatsThisRole:
-                        break;
-                    }
+                case Qt::TextAlignmentRole:
+                {
+                    constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
+                    constexpr int a = alignment;
+                    return a;
+                }
+                case Qt::CheckStateRole:
+                    return img->checked();
+                case CheckAlignmentRole:
+                {
+                    constexpr Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignTop;
+                    constexpr int a = alignment;
+                    return a;
+                }
+                case DecorationAlignmentRole:
+                case Qt::EditRole:
+                case Qt::StatusTipRole:
+                case Qt::WhatsThisRole:
+                    break;
                 }
             }
         }
