@@ -10,6 +10,7 @@
 #include <QScopedPointer>
 #include <QEventLoop>
 #include <QApplication>
+#include <QPromise>
 
 struct DirectoryWorker::Impl
 {
