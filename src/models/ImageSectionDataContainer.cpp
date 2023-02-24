@@ -6,6 +6,7 @@
 #include "SortedImageModel.hpp"
 #include "DecoderFactory.hpp"
 #include "SmartImageDecoder.hpp"
+#include "ExifWrapper.hpp"
 
 #include <QApplication>
 #include <QPersistentModelIndex>
@@ -128,9 +129,39 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             case SortField::None:
                 break;
             default:
-                throw std::logic_error("requested section sort type not yet implemented");
+            {
+                auto exif = image->exif();
+                if (!exif.isNull())
+                {
+                    switch (d->sectionSortField)
+                    {
+                    case SortField::DateRecorded:
+                        var = exif->dateRecorded().date();
+                        break;
+                    case SortField::Aperture:
+                        var = exif->aperture();
+                        break;
+                    case SortField::Exposure:
+                        var = exif->exposureTime();
+                        break;
+                    case SortField::Iso:
+                        var = exif->iso();
+                        break;
+                    case SortField::FocalLength:
+                        var = exif->focalLength();
+                        break;
+                    case SortField::Lens:
+                        var = exif->lens();
+                        break;
+                    case SortField::CameraModel:
+                        throw std::logic_error("ItemImageCameraModel not yet implemented");
+                    default:
+                        throw std::logic_error("requested section sort type not yet implemented");
+                    }
+                }
+                break;
             }
-
+            }
             this->addImageItem(var, image, watcher);
         }
         catch (const std::runtime_error& e)
