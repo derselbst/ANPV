@@ -306,7 +306,13 @@ QString SectionItem::getName() const
 {
    if(this->varId.isValid())
    {
-      return this->varId.toString();
+       switch (this->varId.typeId())
+       {
+       case QMetaType::QDate:
+           return this->varId.toDate().toString("yyyy-MM-dd (dddd)");
+       default:
+           return this->varId.toString();
+       }
    }
    else
    {

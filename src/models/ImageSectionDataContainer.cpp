@@ -130,6 +130,8 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                 break;
             default:
             {
+                double f;
+                long l;
                 auto exif = image->exif();
                 if (!exif.isNull())
                 {
@@ -139,13 +141,19 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                         var = exif->dateRecorded().date();
                         break;
                     case SortField::Aperture:
-                        var = exif->aperture();
+                        if (exif->aperture(f))
+                        {
+                            var = f;
+                        }
                         break;
                     case SortField::Exposure:
                         var = exif->exposureTime();
                         break;
                     case SortField::Iso:
-                        var = exif->iso();
+                        if (exif->iso(l))
+                        {
+                            var = qlonglong(l);
+                        }
                         break;
                     case SortField::FocalLength:
                         var = exif->focalLength();
