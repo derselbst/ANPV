@@ -48,7 +48,6 @@ public:
         return true;
     }
 
-
     ImageSectionDataContainer(SortedImageModel* model);
     ~ImageSectionDataContainer();
 
@@ -58,6 +57,7 @@ public:
     
     QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;
     int getLinearIndexOfItem(const AbstractListItem* item) const;
+    QSharedPointer<Image> goTo(const ViewFlags_t& viewFlags, const Image* img, int stepsFromCurrent) const;
     int size() const;
     void clear();
 

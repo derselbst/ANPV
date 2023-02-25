@@ -36,6 +36,7 @@
 #include "MessageWidget.hpp"
 #include "xThreadGuard.hpp"
 #include "WaitCursor.hpp"
+#include "ImageSectionDataContainer.hpp"
 
 struct DocumentView::Impl
 {
@@ -74,7 +75,9 @@ struct DocumentView::Impl
     QPixmap currentDocumentPixmap;
     
     // the model for the current directory needed for navigating back and forth
-    QSharedPointer<SortedImageModel> model;
+    QSharedPointer<ImageSectionDataContainer> model;
+
+    ViewFlags_t cachedViewFlags = ViewFlags_t(ViewFlag::None);
 
     Impl(DocumentView* parent) : q(parent)
     {}
@@ -395,6 +398,7 @@ struct DocumentView::Impl
         q->setHorizontalScrollBarPolicy(policy);
         q->setVerticalScrollBarPolicy(policy);
         this->actionShowScrollBars->setChecked(showScrollBar);
+        this->cachedViewFlags = v;
     }
     
     void onViewModeChanged(ViewMode v)
@@ -410,7 +414,7 @@ struct DocumentView::Impl
         WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
-            QSharedPointer<Image> newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
+            QSharedPointer<Image> newEntry = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), i);
             if (newEntry)
             {
                 q->loadImage(newEntry);
@@ -533,7 +537,7 @@ struct DocumentView::Impl
             {
                 if(o == q && q->hasFocus())
                 {
-                    QSharedPointer<Image> nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+                    QSharedPointer<Image> nextImg = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), 1);
 
                     ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
@@ -635,7 +639,7 @@ DocumentView::DocumentView(QWidget *parent)
 
 DocumentView::~DocumentView() = default;
 
-void DocumentView::setModel(QSharedPointer<SortedImageModel> model)
+void DocumentView::setModel(QSharedPointer<ImageSectionDataContainer> model)
 {
     d->model = model;
 }

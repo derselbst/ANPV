@@ -413,6 +413,13 @@ bool Image::hasEquallyNamedTiff() const
     return suffix != TIF && d->hasEquallyNamedFile(TIF);
 }
 
+bool Image::hideIfNonRawAvailable(ViewFlags_t viewFlags) const
+{
+    return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        && this->isRaw()
+        && (this->hasEquallyNamedJpeg() || this->hasEquallyNamedTiff());
+}
+
 DecodingState Image::decodingState() const
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);

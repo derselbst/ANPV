@@ -80,6 +80,7 @@ public:
     bool isRaw() const;
     bool hasEquallyNamedJpeg() const;
     bool hasEquallyNamedTiff() const;
+    bool hideIfNonRawAvailable(ViewFlags_t viewFlags) const;
 
     DecodingState decodingState() const;
     QImage decodedImage();

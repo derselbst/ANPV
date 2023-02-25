@@ -149,7 +149,7 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSh
         });
 
         d->tw->addTab(dv, "");
-        dv->setModel(model);
+        dv->setModel(model->dataContainer());
         dv->loadImage(e);
         dv->setAttribute(Qt::WA_DeleteOnClose);
     }

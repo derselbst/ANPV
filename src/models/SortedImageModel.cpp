@@ -39,7 +39,8 @@ struct SortedImageModel::Impl
 {
     SortedImageModel* q;
     
-    QScopedPointer<ImageSectionDataContainer> entries;
+    // the data container might be shared with a DocumentView
+    QSharedPointer<ImageSectionDataContainer> entries;
     QScopedPointer<DirectoryWorker> directoryWatcher;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
@@ -110,13 +111,6 @@ struct SortedImageModel::Impl
         qInfo() << "forceUpdateLayout()";
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
-    }
-
-    static bool hideRawIfNonRawAvailable(ViewFlags_t viewFlags, const QSharedPointer<Image>& e)
-    {
-        return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
-                 && e->isRaw()
-                 && (e->hasEquallyNamedJpeg() || e->hasEquallyNamedTiff());
     }
 
     void onThumbnailChanged(Image* img)
@@ -238,6 +232,11 @@ SortedImageModel::~SortedImageModel()
     d->cancelAllBackgroundTasks();
 }
 
+QSharedPointer<ImageSectionDataContainer> SortedImageModel::dataContainer()
+{
+    return d->entries;
+}
+
 QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
     d->clear();
@@ -247,58 +246,6 @@ QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
 {
     d->entries->decodeAllImages(state, imageHeight);
-}
-
-QSharedPointer<Image> SortedImageModel::goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const
-{
-    return {};
-#if 0
-    xThreadGuard g(this);
-    d->waitForDirectoryWorker();
-
-    int step = (stepsFromCurrent < 0) ? -1 : 1;
-    
-    auto result = std::find_if(d->entries.begin(),
-                               d->entries.end(),
-                            [&](const Entry_t& other)
-                            { return this->image(other) == img; });
-    
-    if(result == d->entries.end())
-    {
-        qInfo() << "requested image not found";
-        return {};
-    }
-    
-    int size = d->entries.size();
-    int idx = std::distance(d->entries.begin(), result);
-    Entry_t e;
-    do
-    {
-        if(idx >= size - step || // idx + step >= size
-            idx < -step) // idx + step < 0
-        {
-            return {};
-        }
-        
-        idx += step;
-        
-        e = this->entry(idx);
-        QFileInfo eInfo = this->image(e)->fileInfo();
-        bool shouldSkip = eInfo.suffix() == "bak";
-        shouldSkip |= d->hideRawIfNonRawAvailable(this->image(e));
-        if(this->image(e)->hasDecoder() && !shouldSkip)
-        {
-            stepsFromCurrent -= step;
-        }
-        else
-        {
-            // skip unsupported files
-        }
-        
-    } while(stepsFromCurrent);
-
-    return e;
-#endif
 }
 
 Qt::ItemFlags SortedImageModel::flags(const QModelIndex& index) const
@@ -333,7 +280,7 @@ Qt::ItemFlags SortedImageModel::flags(const QSharedPointer<AbstractListItem>& it
         if ((viewFlagsLocal & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
             QSharedPointer<Image> e = this->imageFromItem(item);
-            if (e && d->hideRawIfNonRawAvailable(viewFlagsLocal, e))
+            if (e && e->hideIfNonRawAvailable(viewFlagsLocal))
             {
                 f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             }

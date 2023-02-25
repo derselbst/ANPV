@@ -19,7 +19,7 @@ class QMouseEvent;
 class QShowEvent;
 class QEvent;
 class SmartImageDecoder;
-class SortedImageModel;
+class ImageSectionDataContainer;
 
 class DocumentView : public QGraphicsView
 {
@@ -29,7 +29,7 @@ public:
     DocumentView(QWidget *parent);
     ~DocumentView() override;
 
-    void setModel(QSharedPointer<SortedImageModel>);
+    void setModel(QSharedPointer<ImageSectionDataContainer>);
     QFileInfo currentFile();
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);

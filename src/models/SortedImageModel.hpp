@@ -47,6 +47,8 @@ public:
 
     SortedImageModel(QObject* parent = nullptr);
     ~SortedImageModel() override;
+
+    QSharedPointer<ImageSectionDataContainer> dataContainer();
     
     QFuture<DecodingState> changeDirAsync(const QString& dir);
     void decodeAllImages(DecodingState state, int imageHeight);
@@ -56,7 +58,6 @@ public:
     QModelIndex index(const Image* img);
     QSharedPointer<AbstractListItem> item(const QModelIndex& idx) const;
     QSharedPointer<Image> imageFromItem(const QSharedPointer<AbstractListItem>& item) const;
-    QSharedPointer<Image> goTo(const QSharedPointer<Image>& img, int stepsFromCurrent) const;
     QList<Image*> checkedEntries();
 
     QVariant data(const QSharedPointer<AbstractListItem>& item, int role) const;

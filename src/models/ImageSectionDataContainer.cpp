@@ -462,3 +462,55 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
     }
 }
 
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFlags, const Image* img, int stepsFromCurrent) const
+{
+    std::lock_guard<std::recursive_mutex> l(d->m);
+
+    auto idx = this->getLinearIndexOfItem(img);
+    if (idx < 0)
+    {
+        qWarning() << "ImageSectionDataContainer::goTo(): requested image not found";
+        return {};
+    }
+
+    int size = this->size();
+    int step = (stepsFromCurrent < 0) ? -1 : 1;
+
+    QSharedPointer<Image> returnImg;
+    do
+    {
+        if (idx >= size - step || // idx + step >= size
+            idx < -step) // idx + step < 0
+        {
+            return {};
+        }
+
+        idx += step;
+
+        auto item = this->getItemByLinearIndex(idx);
+        if (item->getType() != ListItemType::Image)
+        {
+            continue;
+        }
+
+        returnImg = d->model->imageFromItem(item);
+        Q_ASSERT(!returnImg.isNull());
+
+
+        QFileInfo eInfo = returnImg->fileInfo();
+        bool shouldSkip = eInfo.suffix() == "bak";
+        shouldSkip |= returnImg->hideIfNonRawAvailable(viewFlags);
+        if (returnImg->hasDecoder() && !shouldSkip)
+        {
+            stepsFromCurrent -= step;
+        }
+        else
+        {
+            // skip unsupported files
+        }
+
+    } while (stepsFromCurrent);
+
+    return returnImg;
+}
+
