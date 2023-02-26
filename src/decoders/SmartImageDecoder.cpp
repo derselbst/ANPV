@@ -448,6 +448,7 @@ void SmartImageDecoder::close()
 {
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
+    d->encodedInputFile.clear();
     if(d->file)
     {
         xThreadGuard g(d->file.data());
