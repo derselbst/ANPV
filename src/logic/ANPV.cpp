@@ -115,7 +115,7 @@ struct ANPV::Impl
     
     // QObjects with parent
     QPointer<QFileSystemModel> dirModel;
-    QSharedPointer<SortedImageModel> fileModel;
+    QPointer<SortedImageModel> fileModel;
     QPointer<QActionGroup> actionGroupFileOperation;
     QPointer<QActionGroup> actionGroupViewMode;
     QPointer<QActionGroup> actionGroupViewFlag;
@@ -123,7 +123,7 @@ struct ANPV::Impl
     QString lastOpenImageDir;
     QPointer<QAction> actionExit;
     QPointer<QUndoStack> undoStack;
-    QPointer<QThread> backgroundThread;
+    QScopedPointer<QThread> backgroundThread;
     QPointer<ProgressIndicatorHelper> spinningIconHelper;
     
     // Use a simple string for the currentDir, because:
@@ -150,12 +150,10 @@ struct ANPV::Impl
             ::global = QPointer<ANPV>(q);
         }
 
-        this->backgroundThread = new QThread(nullptr);
+        this->backgroundThread.reset(new QThread(nullptr));
         this->backgroundThread->setObjectName("Background Thread");
-        connect(QApplication::instance(), &QApplication::aboutToQuit, this->backgroundThread, &QThread::quit);
-        connect(qGuiApp, &QGuiApplication::lastWindowClosed, this->backgroundThread, &QThread::quit);
-        connect(this->backgroundThread, &QThread::finished, this->backgroundThread, &QThread::deleteLater);
         backgroundThread->start(QThread::LowPriority);
+        connect(qGuiApp, &QApplication::lastWindowClosed, this->backgroundThread.get(), &QThread::quit);
         
 
         connect(QApplication::instance(), &QApplication::aboutToQuit, q, 
@@ -163,17 +161,9 @@ struct ANPV::Impl
             {
                 qInfo() << "Abouttoquit!!!";
             });
-        connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
-            [&]()
-            {
-                this->fileModel->cancelAllBackgroundTasks();
-                // move the fileModel back to the UI thread, to allow for processing deleteLater
-                this->fileModel->moveToThread(QApplication::instance()->thread());
-                this->fileModel.reset();
-                qInfo() << "lastWindowClose!";
-            });
 
-        connect(this->backgroundThread, &QThread::finished, q,
+
+        connect(this->backgroundThread.get(), &QThread::finished, q,
             [&]()
             {
                 qInfo() << "Qthread::finished()";
@@ -189,8 +179,15 @@ struct ANPV::Impl
         this->dirModel->setRootPath("");
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
-        this->fileModel.reset(new SortedImageModel(nullptr), &QObject::deleteLater);
-        this->fileModel->moveToThread(this->backgroundThread);
+        this->fileModel = new SortedImageModel(nullptr);
+        this->fileModel->moveToThread(this->backgroundThread.get());
+        connect(this->backgroundThread.get(), &QThread::finished, this->fileModel.get(), &QObject::deleteLater);
+        connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
+            [&]()
+            {
+                this->fileModel->cancelAllBackgroundTasks();
+                qInfo() << "lastWindowClose!";
+            });
         
         this->actionGroupFileOperation = new QActionGroup(q);
         this->actionExit = new QAction("Close", q);
@@ -495,7 +492,7 @@ QThread* ANPV::backgroundThread()
 {
     Q_ASSERT(d->backgroundThread != nullptr);
     xThreadGuard g(this);
-    return d->backgroundThread;
+    return d->backgroundThread.get();
 }
 
 QFileSystemModel* ANPV::dirModel()
@@ -504,7 +501,7 @@ QFileSystemModel* ANPV::dirModel()
     return d->dirModel;
 }
 
-QSharedPointer<SortedImageModel> ANPV::fileModel()
+QPointer<SortedImageModel> ANPV::fileModel()
 {
     xThreadGuard g(this);
     return d->fileModel;

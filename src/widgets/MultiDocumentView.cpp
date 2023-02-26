@@ -121,7 +121,7 @@ MultiDocumentView::MultiDocumentView(QMainWindow *parent)
 
 MultiDocumentView::~MultiDocumentView() = default;
 
-void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model)
+void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QPointer<SortedImageModel> model)
 {
     if(image.empty())
     {

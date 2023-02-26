@@ -58,7 +58,7 @@ public:
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
-    QSharedPointer<SortedImageModel> fileModel();
+    QPointer<SortedImageModel> fileModel();
 
     ViewMode viewMode();
     void setViewMode(ViewMode);

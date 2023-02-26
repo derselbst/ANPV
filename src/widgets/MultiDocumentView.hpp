@@ -18,7 +18,7 @@ public:
     MultiDocumentView(QMainWindow *parent);
     ~MultiDocumentView() override;
 
-    void addImages(const QList<QSharedPointer<Image>>& image, QSharedPointer<SortedImageModel> model);
+    void addImages(const QList<QSharedPointer<Image>>& image, QPointer<SortedImageModel> model);
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
 
