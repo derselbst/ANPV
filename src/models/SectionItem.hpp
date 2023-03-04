@@ -42,38 +42,21 @@ public:
 
     /*operator <*/
     bool operator< (const SectionItem &item) noexcept(false);
-    friend inline bool operator<(const SectionItem *item, const QDate &date) noexcept(false)
-            { return item->varId.toDate() < date; }
-    friend inline bool operator<(const SectionItem *item, const QString &str) noexcept(false)
-            { return item->varId.toString() < str; };
 
     /*operator >*/
     bool operator> (const SectionItem &item) noexcept(false);
-    friend bool operator> (const SectionItem *item, const QVariant &data) noexcept(false);
-    friend inline bool operator>(const SectionItem *item, const QDate &date) noexcept(false)
-            { return item->varId.toDate() > date; }
-    friend inline bool operator>(const SectionItem *item, const QString &str) noexcept(false)
-            { return item->varId.toString() > str; };
 
     /*operator ==*/
     inline bool operator==(const SectionItem *item) noexcept(false)
             { return this->varId == item->varId; };
     friend inline bool operator==(const SectionItem *item, const QVariant &data) noexcept(false)
             { return item->varId == data; };
-    friend inline bool operator==(const SectionItem *item, const QDate &date) noexcept(false)
-            { return item->varId.toDate() == date; }
-    friend inline bool operator==(const SectionItem *item, const QString &str) noexcept(false)
-            { return item->varId.toString() == str; };
 
     /*operator !=*/
     inline bool operator!=(const SectionItem *item) noexcept(false)
             { return this->varId != item->varId; };
     friend inline bool operator!=(const SectionItem *item, const QVariant &data) noexcept(false)
             { return item->varId != data; };
-    friend inline bool operator!=(const SectionItem *item, const QDate &date) noexcept(false)
-            { return item->varId.toDate() != date; }
-    friend inline bool operator!=(const SectionItem *item, const QString &str) noexcept(false)
-            { return item->varId.toString() != str; };
 
 private:
     struct Impl;

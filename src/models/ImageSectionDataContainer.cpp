@@ -132,13 +132,18 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             {
                 double f;
                 long l;
+                QDateTime dt;
                 auto exif = image->exif();
                 if (!exif.isNull())
                 {
                     switch (d->sectionSortField)
                     {
                     case SortField::DateRecorded:
-                        var = exif->dateRecorded().date();
+                        dt = exif->dateRecorded();
+                        if (dt.isValid())
+                        {
+                            var = dt.date();
+                        }
                         break;
                     case SortField::Aperture:
                         if (exif->aperture(f))
