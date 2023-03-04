@@ -202,21 +202,36 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
         }
     }
 
-    int offset = 0;
+    int insertIdx = 0;
     if (this->d->data.end() == it)
     {
         // no suitable section found, create a new one
         auto s = SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder));
-        it = this->d->data.insert(d->findInsertPosition(s), s);
-        offset++;
+        auto sectionInsertPos = d->findInsertPosition(s);
+        for (auto sit = this->d->data.begin(); sit != sectionInsertPos; ++sit)
+        {
+            insertIdx += (*sit)->size();
+        }
+        
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + 1); }, d->syncConnection());
+
+        it = this->d->data.insert(sectionInsertPos, s);
+        auto itemInsertIt = (*it)->findInsertPosition(item);
+        (*it)->insert(itemInsertIt, item);
+
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
     }
+    else
+    {
+        auto insertIt = (*it)->findInsertPosition(item);
+        int insertIdx = (*it)->isEnd(insertIt)
+            ? this->getLinearIndexOfItem((*(insertIt - 1)).data()) + 1
+            : this->getLinearIndexOfItem((*insertIt).data());
 
-    auto insertIt = (*it)->findInsertPosition(item);
-    int insertIdx = (*it)->isEnd(insertIt) ? this->size() : this->getLinearIndexOfItem((*insertIt).data());
-
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + offset); }, d->syncConnection());
-    (*it)->insert(insertIt, item);
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx); }, d->syncConnection());
+        (*it)->insert(insertIt, item);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
+    }
 
     l.unlock();
     d->model->welcomeImage(item, watcher);
