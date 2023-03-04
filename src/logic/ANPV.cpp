@@ -72,28 +72,23 @@ public:
     
     QIcon icon(IconType type) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::icon(type);
     }
     QIcon icon(const QFileInfo &info) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         QIcon ico = this->QFileIconProvider::icon(info);
         return ico;
     }
     QString type(const QFileInfo &info) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::type(info);
     }
     void setOptions(Options options) override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::setOptions(options);
     }
     Options options() const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::options();
     }
 };
