@@ -74,7 +74,8 @@ struct SmartPngDecoder::Impl
 
         auto width = png_get_image_width(png_ptr, self->info_ptr);
         size_t height = png_get_image_height(png_ptr, self->info_ptr);
-        self->q->updateDecodedRoiRect(QRect(0, row - 1/*row seems to be one-based*/, width, 1));
+        png_uint_32 fixedRow = std::max(1u, row) - 1; // row is sometimes 1 and sometimes zero
+        self->q->updateDecodedRoiRect(QRect(0, fixedRow, width, 1));
         if (row % 16 == 0)
         {
             self->q->cancelCallback();
