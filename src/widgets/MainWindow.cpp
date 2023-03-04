@@ -154,7 +154,7 @@ struct MainWindow::Impl
             {
                 for (QAction* a : this->actionGroupImageSortOrder->actions())
                 {
-                    if (newOrder == (Qt::SortOrder)a->data().toInt())
+                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
                     {
                         a->trigger();
                         break;
@@ -178,7 +178,7 @@ struct MainWindow::Impl
             {
                 for (QAction* a : this->actionGroupSectionSortOrder->actions())
                 {
-                    if (newOrder == (Qt::SortOrder)a->data().toInt())
+                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
                     {
                         a->trigger();
                         break;
@@ -229,7 +229,7 @@ struct MainWindow::Impl
             {
                 for (QAction* a : this->actionGroupImageSortField->actions())
                 {
-                    if (newField == (SortField)a->data().toInt())
+                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
                     {
                         a->trigger();
                         break;
@@ -263,7 +263,7 @@ struct MainWindow::Impl
             {
                 for (QAction* a : this->actionGroupSectionSortField->actions())
                 {
-                    if (newField == (SortField)a->data().toInt())
+                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
                     {
                         a->trigger();
                         break;
