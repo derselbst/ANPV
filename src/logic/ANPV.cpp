@@ -118,7 +118,7 @@ struct ANPV::Impl
     QString lastOpenImageDir;
     QPointer<QAction> actionExit;
     QPointer<QUndoStack> undoStack;
-    QScopedPointer<QThread> backgroundThread;
+    QPointer<QThread> backgroundThread;
     QPointer<ProgressIndicatorHelper> spinningIconHelper;
     
     // Use a simple string for the currentDir, because:
@@ -145,7 +145,7 @@ struct ANPV::Impl
             ::global = QPointer<ANPV>(q);
         }
 
-        this->backgroundThread.reset(new QThread(nullptr));
+        this->backgroundThread = (new QThread(q));
         this->backgroundThread->setObjectName("Background Thread");
         backgroundThread->start(QThread::LowPriority);
         connect(qGuiApp, &QApplication::lastWindowClosed, this->backgroundThread.get(), &QThread::quit);
@@ -175,8 +175,8 @@ struct ANPV::Impl
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
         this->fileModel = new SortedImageModel(nullptr);
-        this->fileModel->moveToThread(this->backgroundThread.get());
-        connect(this->backgroundThread.get(), &QThread::finished, this->fileModel.get(), &QObject::deleteLater);
+        this->fileModel->moveToThread(this->backgroundThread);
+        connect(this->backgroundThread, &QThread::finished, this->fileModel, &QObject::deleteLater);
         connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
             [&]()
             {
@@ -475,6 +475,16 @@ ANPV::ANPV(QSplashScreen *splash)
 
 ANPV::~ANPV()
 {
+    if(d->fileModel)
+    {
+        d->fileModel->cancelAllBackgroundTasks();
+    }
+    d->backgroundThread->quit();
+    if(!d->backgroundThread->wait(5000))
+    {
+        qCritical() << "backgroundThread did not terminate within time. Terminating!";
+        d->backgroundThread->terminate();
+    }
     d->writeSettings();
 }
 
