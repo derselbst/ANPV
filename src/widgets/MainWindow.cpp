@@ -649,6 +649,8 @@ MainWindow::~MainWindow() = default;
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    // cancel any background task
+    this->setBackgroundTask(QFuture<DecodingState>());
     d->writeSettings();
     QMainWindow::closeEvent(event);
 }
