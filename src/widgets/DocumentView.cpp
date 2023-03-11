@@ -69,6 +69,9 @@ struct DocumentView::Impl
     // the latest image decoder, the same that displays the current image
     QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
+    // an owning reference to the image currently displayed - in case it vaishes in the model we'll still have it rather going null
+    QSharedPointer<Image> owningRefToImage;
+    
     DecodingState latestDecodingState = DecodingState::Ready;
     
     // the full resolution image currently displayed in the scene
@@ -120,6 +123,8 @@ struct DocumentView::Impl
         exifOverlay->hide();
         
         scene->invalidate();
+        
+        owningRefToImage = nullptr;
     }
 
     void forceTriggerDecoding()
@@ -888,6 +893,11 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
     d->currentImageDecoder = dec;
+    d->owningRefToImage = dec->image();
+    if(d->owningRefToImage.isNull())
+    {
+        throw std::logic_error("Oops: DocumentView::loadImage() received a NULL image??");
+    }
     this->loadImage();
 }
 
