@@ -101,6 +101,10 @@ include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 add_subdirectory(libkdcraw)
 include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
 
+add_subdirectory(libczi)
+include_directories("${CMAKE_BINARY_DIR}/libczi/Src")
+include_directories("${CMAKE_SOURCE_DIR}/libczi/Src")
+
 
 qt_add_library(anpv-lib STATIC MANUAL_FINALIZATION
 src/widgets/AfPointOverlay.cpp
