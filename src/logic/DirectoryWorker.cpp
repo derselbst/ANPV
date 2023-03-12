@@ -17,6 +17,8 @@ struct DirectoryWorker::Impl
     DirectoryWorker* q;
     ImageSectionDataContainer* data;
     QDir currentDir;
+
+    // This list contains the fileInfos of all files in the model. We do not loop over the model itself to avoid aquiring the lock.
     QFileInfoList discoveredFiles;
     
     QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
@@ -34,7 +36,10 @@ struct DirectoryWorker::Impl
 
         for (auto it = discoveredFiles.begin(); it != discoveredFiles.end();)
         {
-            const QFileInfo& eInfo = (*it);
+            QFileInfo& eInfo = (*it);
+
+            // due to caching, call stat() as exists might otherwise return outdated garbage
+            eInfo.stat();
             if (!eInfo.exists())
             {
                 // file doesn't exist, probably deleted
@@ -63,6 +68,7 @@ struct DirectoryWorker::Impl
         // any file still in the list are new, we need to add them
         for (const QFileInfo& i : fileInfoList)
         {
+            discoveredFiles.push_back(i);
             this->data->addImageItem(i);
         }
     }
