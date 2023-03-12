@@ -38,6 +38,7 @@ friend class SmartImageDecoder;
 friend class SmartJpegDecoder;
 friend class SmartPngDecoder;
 friend class SmartTiffDecoder;
+friend class CziDecoder;
 friend class MySleepyImageDecoder;
 
 public:

@@ -143,6 +143,8 @@ src/decoders/SmartPngDecoder.cpp
 src/decoders/SmartPngDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
+src/decoders/CziDecoder.cpp
+src/decoders/CziDecoder.hpp
 src/logic/ExifWrapper.cpp
 src/logic/ExifWrapper.hpp
 src/logic/Formatter.hpp

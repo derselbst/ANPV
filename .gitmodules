@@ -4,3 +4,6 @@
 [submodule "libkdcraw"]
 	path = libkdcraw
 	url = https://invent.kde.org/tommo/libkdcraw.git
+[submodule "libczi"]
+	path = libczi
+	url = https://github.com/ZEISS/libczi.git
