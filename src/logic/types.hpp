@@ -25,9 +25,28 @@ enum class ViewFlag : ViewFlags_t
 
 class Image;
 class SmartImageDecoder;
-using Entry_t = std::pair<QSharedPointer<Image>, QSharedPointer<SmartImageDecoder>>;
 
-enum {
-    CheckAlignmentRole = Qt::UserRole,
-    DecorationAlignmentRole,
+enum class ListItemType
+{
+    Image,
+    Section
 };
+
+enum class SortField
+{
+    None, // only used for sections
+    FileName,
+    FileSize,
+    DateModified,
+    FileType,
+    Resolution,
+    DateRecorded,
+    Aperture,
+    Exposure,
+    Iso,
+    FocalLength,
+    Lens,
+    CameraModel,
+    Last
+};
+

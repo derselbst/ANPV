@@ -79,7 +79,7 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPoint
     auto dec = this->getDecoder(image, image->fileExtension());
     if (!dec)
     {
-        // if that didn't work, try to determin type by opening the file
+        // if that didn't work, try to determine type by opening the file
         dec = this->getDecoder(image, QString());
     }
     return dec;

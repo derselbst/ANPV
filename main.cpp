@@ -92,10 +92,10 @@ int main(int argc, char *argv[])
         }
         default:
         {
-            QList<Entry_t> files;
+            QList<QSharedPointer<Image>> files;
             for (int i = 1; i < argc; i++)
             {
-                files.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))), nullptr));
+                files.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))));
             }
 
             splash.showMessage("Starting the image decoding task...");

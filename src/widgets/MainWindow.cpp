@@ -28,9 +28,16 @@
 #include "CancellableProgressWidget.hpp"
 #include "WaitCursor.hpp"
 #include "xThreadGuard.hpp"
+#include "ImageSectionDataContainer.hpp"
 
 
 #include "ui_MainWindow.h"
+
+#ifndef NDEBUG
+#ifdef Q_OS_LINUX
+#include "sanitizer/asan_interface.h"
+#endif
+#endif
 
 struct MainWindow::Impl
 {
@@ -40,10 +47,13 @@ struct MainWindow::Impl
     QSortFilterProxyModel* proxyModel = nullptr;
     
     CancellableProgressWidget* cancellableWidget = nullptr;
-    
-    QActionGroup* actionGroupSortColumn = nullptr;
-    QActionGroup* actionGroupSortOrder = nullptr;
-        
+
+    QActionGroup* actionGroupSectionSortField = nullptr;
+    QActionGroup* actionGroupSectionSortOrder = nullptr;
+
+    QActionGroup* actionGroupImageSortField = nullptr;
+    QActionGroup* actionGroupImageSortOrder = nullptr;
+
     QAction *actionUndo = nullptr;
     QAction *actionRedo = nullptr;
     QAction *actionFileOperationConfigDialog = nullptr;
@@ -83,89 +93,183 @@ struct MainWindow::Impl
             {
                 PreviewAllImagesDialog d;
                 d.setImageHeight(ANPV::globalInstance()->iconHeight());
-                if(d.exec() == QDialog::Accepted)
+                if (d.exec() == QDialog::Accepted)
                 {
-                    ANPV::globalInstance()->fileModel()->decodeAllImages(DecodingState::PreviewImage, d.imageHeight());
+                    auto imgHeight = d.imageHeight();
+                    auto model = ANPV::globalInstance()->fileModel();
+                    QMetaObject::invokeMethod(ANPV::globalInstance()->fileModel().get(), [=]()
+                        {
+                            model->cancelAllBackgroundTasks();
+                            model->decodeAllImages(DecodingState::PreviewImage, imgHeight);
+                        });
                 }
             }
         );
+    }
+    
+    void createDebugActions()
+    {
+#ifndef NDEBUG
+#ifdef Q_OS_LINUX
+        QAction* action;
+        action = new QAction("Asan Profile Memory Usage", q);
+        connect(action, &QAction::triggered, q,
+            [&](bool)
+            {
+                __sanitizer_print_memory_profile(90, 10);
+            }
+        );
+            
+        QMenu* debugMenu = ui->menuFile->addMenu("Debug");
+        debugMenu->addAction(action);
+#endif
+#endif
     }
     
     void createSortActions()
     {
         QAction* action;
 
-        actionGroupSortOrder = new QActionGroup(q);
-        
-        action = new QAction("Sort Order", q);
-        action->setSeparator(true);
-        actionGroupSortOrder->addAction(action);
-        
-        action = new QAction("Ascending (small to big)", q);
-        action->setCheckable(true);
-        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setSortOrder(Qt::AscendingOrder); });
-        connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, action,
-                [=](Qt::SortOrder newOrd, Qt::SortOrder)
-                {
-                    if(newOrd == Qt::AscendingOrder)
-                    {
-                        action->trigger();
-                    }
-                });
-        actionGroupSortOrder->addAction(action);
-        
-        action = new QAction("Descending (big to small)", q);
-        action->setCheckable(true);
-        connect(action, &QAction::triggered, q, [&](bool){ ANPV::globalInstance()->setSortOrder(Qt::DescendingOrder); });
-        connect(ANPV::globalInstance(), &ANPV::sortOrderChanged, action,
-                [=](Qt::SortOrder newOrd, Qt::SortOrder)
-                {
-                    if(newOrd == Qt::DescendingOrder)
-                    {
-                        action->trigger();
-                    }
-                });
-        actionGroupSortOrder->addAction(action);
-        
-        
-        actionGroupSortColumn = new QActionGroup(q);
-        
-        action = new QAction("Sort according to", q);
-        action->setSeparator(true);
-        actionGroupSortColumn->addAction(action);
-        
-        auto makeSortAction = [&](QString&& name, SortedImageModel::Column col, bool isSlow=false)
+        auto makeOrderAction = [&](QActionGroup* actionGroup, QString&& name, Qt::SortOrder order)
         {
             QAction* action = new QAction(std::move(name), q);
             action->setCheckable(true);
+            action->setData((int)order);
+            actionGroup->addAction(action);
+        };
+
+
+        actionGroupImageSortOrder = new QActionGroup(q);
+        
+        action = new QAction("Image Sort Order", q);
+        action->setSeparator(true);
+        actionGroupImageSortOrder->addAction(action);
+
+        makeOrderAction(actionGroupImageSortOrder, "Ascending (small to big)", Qt::AscendingOrder);
+        makeOrderAction(actionGroupImageSortOrder, "Descending (big to small)", Qt::DescendingOrder);
+
+        connect(actionGroupImageSortOrder, &QActionGroup::triggered, q, [&](QAction* a) { ANPV::globalInstance()->setImageSortOrder((Qt::SortOrder)a->data().toInt()); });
+        connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, action,
+            [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+            {
+                for (QAction* a : this->actionGroupImageSortOrder->actions())
+                {
+                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
+                    {
+                        a->trigger();
+                        break;
+                    }
+                }
+            });
+
+
+        actionGroupSectionSortOrder = new QActionGroup(q);
+
+        action = new QAction("Section Sort Order", q);
+        action->setSeparator(true);
+        actionGroupSectionSortOrder->addAction(action);
+
+        makeOrderAction(actionGroupSectionSortOrder, "Ascending (small to big)", Qt::AscendingOrder);
+        makeOrderAction(actionGroupSectionSortOrder, "Descending (big to small)", Qt::DescendingOrder);
+
+        connect(actionGroupSectionSortOrder, &QActionGroup::triggered, q, [&](QAction* a) { ANPV::globalInstance()->setSectionSortOrder((Qt::SortOrder)a->data().toInt()); });
+        connect(ANPV::globalInstance(), &ANPV::sectionSortOrderChanged, action,
+            [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+            {
+                for (QAction* a : this->actionGroupSectionSortOrder->actions())
+                {
+                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
+                    {
+                        a->trigger();
+                        break;
+                    }
+                }
+            });
+        
+
+        actionGroupImageSortField = new QActionGroup(q);
+        
+        action = new QAction("Sort images according to", q);
+        action->setSeparator(true);
+        actionGroupImageSortField->addAction(action);
+        
+        auto makeSortAction = [&](QActionGroup* actionGroup, QString&& name, SortField col)
+        {
+            bool isSlow = ImageSectionDataContainer::sortedColumnNeedsPreloadingMetadata(col, col);
+            if (isSlow)
+            {
+                name += " (slow)";
+            }
+            QAction* action = new QAction(std::move(name), q);
+            action->setCheckable(true);
+            action->setData((int)col);
             if(isSlow)
             {
                 addSlowHint(action);
             }
-            connect(action, &QAction::triggered, q, [=](bool){ ANPV::globalInstance()->setPrimarySortColumn(col); });
-            connect(ANPV::globalInstance(), &ANPV::primarySortColumnChanged, action,
-                    [=](SortedImageModel::Column newCol, SortedImageModel::Column)
-                    {
-                        if(newCol == col)
-                        {
-                            action->trigger();
-                        }
-                    });
-            actionGroupSortColumn->addAction(action);
+            actionGroup->addAction(action);
         };
         
-        makeSortAction("File Name", SortedImageModel::Column::FileName);
-        makeSortAction("File Size", SortedImageModel::Column::FileSize);
-        makeSortAction("File Extension", SortedImageModel::Column::FileType);
-        makeSortAction("Modified Date", SortedImageModel::Column::DateModified);
-        makeSortAction("Image Resolution (slow)", SortedImageModel::Column::Resolution, true);
-        makeSortAction("Original Record Date (slow)", SortedImageModel::Column::DateRecorded, true);
-        makeSortAction("Aperture (slow)", SortedImageModel::Column::Aperture, true);
-        makeSortAction("Exposure (slow)", SortedImageModel::Column::Exposure, true);
-        makeSortAction("ISO (slow)", SortedImageModel::Column::Iso, true);
-        makeSortAction("Camera Model (slow)", SortedImageModel::Column::CameraModel, true);
-        makeSortAction("Focal Length (slow)", SortedImageModel::Column::FocalLength, true);
-        makeSortAction("Lens Model (slow)", SortedImageModel::Column::Lens, true);
+        makeSortAction(actionGroupImageSortField, "File Name",            SortField::FileName);
+        makeSortAction(actionGroupImageSortField, "File Size",            SortField::FileSize);
+        makeSortAction(actionGroupImageSortField, "File Extension",       SortField::FileType);
+        makeSortAction(actionGroupImageSortField, "Modified Date",        SortField::DateModified);
+        makeSortAction(actionGroupImageSortField, "Image Resolution",     SortField::Resolution);
+        makeSortAction(actionGroupImageSortField, "Original Record Date", SortField::DateRecorded);
+        makeSortAction(actionGroupImageSortField, "Aperture",             SortField::Aperture);
+        makeSortAction(actionGroupImageSortField, "Exposure",             SortField::Exposure);
+        makeSortAction(actionGroupImageSortField, "ISO",                  SortField::Iso);
+        makeSortAction(actionGroupImageSortField, "Camera Model",         SortField::CameraModel);
+        makeSortAction(actionGroupImageSortField, "Focal Length",         SortField::FocalLength);
+        makeSortAction(actionGroupImageSortField, "Lens Model",           SortField::Lens);
+
+        connect(actionGroupImageSortField, &QActionGroup::triggered, q, [](QAction* act) { ANPV::globalInstance()->setImageSortField((SortField)act->data().toInt()); });
+        connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, actionGroupImageSortField,
+            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+            {
+                for (QAction* a : this->actionGroupImageSortField->actions())
+                {
+                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
+                    {
+                        a->trigger();
+                        break;
+                    }
+                }
+            });
+
+        actionGroupSectionSortField = new QActionGroup(q);
+
+        action = new QAction("Sectioning by", q);
+        action->setSeparator(true);
+        actionGroupSectionSortField->addAction(action);
+
+        makeSortAction(actionGroupSectionSortField, "No Sections",          SortField::None);
+        makeSortAction(actionGroupSectionSortField, "File Name",            SortField::FileName);
+        makeSortAction(actionGroupSectionSortField, "File Size",            SortField::FileSize);
+        makeSortAction(actionGroupSectionSortField, "File Extension",       SortField::FileType);
+        makeSortAction(actionGroupSectionSortField, "Modified Date",        SortField::DateModified);
+        makeSortAction(actionGroupSectionSortField, "Image Resolution",     SortField::Resolution);
+        makeSortAction(actionGroupSectionSortField, "Original Record Date", SortField::DateRecorded);
+        makeSortAction(actionGroupSectionSortField, "Aperture",             SortField::Aperture);
+        makeSortAction(actionGroupSectionSortField, "Exposure",             SortField::Exposure);
+        makeSortAction(actionGroupSectionSortField, "ISO",                  SortField::Iso);
+        makeSortAction(actionGroupSectionSortField, "Camera Model",         SortField::CameraModel);
+        makeSortAction(actionGroupSectionSortField, "Focal Length",         SortField::FocalLength);
+        makeSortAction(actionGroupSectionSortField, "Lens Model",           SortField::Lens);
+
+        connect(actionGroupSectionSortField, &QActionGroup::triggered, q, [](QAction* act) { ANPV::globalInstance()->setSectionSortField((SortField)act->data().toInt()); });
+        connect(ANPV::globalInstance(), &ANPV::sectionSortOrderChanged, actionGroupSectionSortField,
+            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+            {
+                for (QAction* a : this->actionGroupSectionSortField->actions())
+                {
+                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
+                    {
+                        a->trigger();
+                        break;
+                    }
+                }
+            });
     }
     
     void refreshCopyMoveActions()
@@ -179,6 +283,7 @@ struct MainWindow::Impl
     {
         this->createViewActions();
         this->createSortActions();
+        this->createDebugActions();
 
         QUndoStack* undoStack = ANPV::globalInstance()->undoStack();
         actionUndo = undoStack->createUndoAction(q, "Undo");
@@ -232,9 +337,14 @@ struct MainWindow::Impl
         ui->menuEdit->addAction(actionFileOperationConfigDialog);
         ui->menuEdit->addSeparator();
         
-        ui->menuSort->addActions(actionGroupSortColumn->actions());
-        ui->menuSort->addActions(actionGroupSortOrder->actions());
-        
+        QMenu* sectionSortMenu = ui->menuSort->addMenu("Sections");
+        sectionSortMenu->addActions(actionGroupSectionSortField->actions());
+        sectionSortMenu->addActions(actionGroupSectionSortOrder->actions());
+
+        QMenu* imageSortMenu = ui->menuSort->addMenu("Images");
+        imageSortMenu->addActions(actionGroupImageSortField->actions());
+        imageSortMenu->addActions(actionGroupImageSortOrder->actions());
+
         ui->menuHelp->insertAction(ui->actionAbout_ANPV, QWhatsThis::createAction(q));
         QAction* sep = new QAction();
         sep->setSeparator(true);
@@ -416,8 +526,11 @@ struct MainWindow::Impl
         QModelIndexList idx = r.indexes();
         for(const QModelIndex& i : idx)
         {
-            auto img = model->image(model->entry(i));
-            size += img->fileInfo().size();
+            auto img = model->imageFromItem(model->item(i));
+            if (img)
+            {
+                size += img->fileInfo().size();
+            }
         }
     }
     
@@ -437,9 +550,9 @@ struct MainWindow::Impl
             if (count > 0)
             {
                 size_t size = 0;
-                for (Entry_t& e : imgs)
+                for (QSharedPointer<Image>& e : imgs)
                 {
-                    size += SortedImageModel::image(e)->fileInfo().size();
+                    size += e->fileInfo().size();
                 }
 
                 text += QString(
@@ -451,9 +564,9 @@ struct MainWindow::Impl
             if (count > 0)
             {
                 size_t size = 0;
-                for (Entry_t& e : chkImgs)
+                for (Image* i : chkImgs)
                 {
-                    size += SortedImageModel::image(e)->fileInfo().size();
+                    size += i->fileInfo().size();
                 }
                 if (!text.isEmpty())
                 {
@@ -476,6 +589,11 @@ MainWindow::MainWindow(QSplashScreen *splash)
     
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
+    connect(ANPV::globalInstance()->fileModel()->thread(), &QThread::finished, this,
+        [&]()
+        {
+            d->proxyModel->setSourceModel(nullptr);
+        }, Qt::BlockingQueuedConnection);
     
     splash->showMessage("Creating MainWindow Widgets");
     d->ui->setupUi(this);
@@ -531,6 +649,8 @@ MainWindow::~MainWindow() = default;
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    // cancel any background task
+    this->setBackgroundTask(QFuture<DecodingState>());
     d->writeSettings();
     QMainWindow::closeEvent(event);
 }

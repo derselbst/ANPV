@@ -35,7 +35,8 @@ struct SmartImageDecoder::Impl
     int decodingProgress=0;
     
     // the decoded image
-    QSharedPointer<Image> image;
+    // do not store the shared pointer directly, to avoid a cyclic reference between image and decoder and therefore a memory leak
+    QWeakPointer<Image> image;
     // the ROI actually decoded in the same coordinate system as the decoded image
     QRect decodedRoiRect;
     
@@ -49,7 +50,7 @@ struct SmartImageDecoder::Impl
     qint64 encodedInputBufferSize = 0;
     const unsigned char* encodedInputBufferPtr = nullptr;
     
-    Impl(SmartImageDecoder* q, QSharedPointer<Image> image) : q(q), image(image)
+    Impl(SmartImageDecoder* q) : q(q)
     {}
     
     void open(const QFileInfo& info)
@@ -119,8 +120,9 @@ struct SmartImageDecoder::Impl
     }
 };
 
-SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_unique<Impl>(this, image))
+SmartImageDecoder::SmartImageDecoder(QSharedPointer<Image> image) : d(std::make_unique<Impl>(this))
 {
+    d->image = image;
     image->setDecodingState(DecodingState::Ready);
     this->setAutoDelete(false);
 }
@@ -129,12 +131,13 @@ SmartImageDecoder::~SmartImageDecoder()
 {
     this->assertNotDecoding();
     std::lock_guard g(d->asyncApiMtx);
-    d->releaseFullImage();
 }
 
 QSharedPointer<Image> SmartImageDecoder::image()
 {
-    return d->image;
+    QSharedPointer<Image> img = d->image.toStrongRef();
+    Q_ASSERT(!img.isNull());
+    return img;
 }
 
 void SmartImageDecoder::setDecodingState(DecodingState state)

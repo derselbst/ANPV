@@ -23,6 +23,8 @@ class SmartImageDecoder;
 class CancellableProgressWidget;
 class QMimeData;
 class QAction;
+class ProgressIndicatorHelper;
+class QThread;
 
 template<typename T>
 class QFuture;
@@ -43,7 +45,9 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    void openImages(const QList<Entry_t>&);
+    QThread* backgroundThread();
+
+    void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView();
     void showThumbnailView(QSplashScreen*);
     
@@ -54,7 +58,7 @@ public:
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
-    QSharedPointer<SortedImageModel> fileModel();
+    QPointer<SortedImageModel> fileModel();
 
     ViewMode viewMode();
     void setViewMode(ViewMode);
@@ -68,14 +72,19 @@ public:
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
     
-    Qt::SortOrder sortOrder();
-    void setSortOrder(Qt::SortOrder);
-    
-    SortedImageModel::Column primarySortColumn();
-    void setPrimarySortColumn(SortedImageModel::Column);
+    Qt::SortOrder imageSortOrder();
+    void setImageSortOrder(Qt::SortOrder order);
+    SortField imageSortField();
+    void setImageSortField(SortField field);
+
+    Qt::SortOrder sectionSortOrder();
+    void setSectionSortOrder(Qt::SortOrder order);
+    SortField sectionSortField();
+    void setSectionSortField(SortField field);
     
     int iconHeight();
     void setIconHeight(int);
+    ProgressIndicatorHelper* spinningIconHelper();
     
     QPixmap noIconPixmap();
     QPixmap noPreviewPixmap();
@@ -94,8 +103,8 @@ signals:
     void currentDirChanged(QString dir, QString old);
     void viewModeChanged(ViewMode newView, ViewMode old);
     void viewFlagsChanged(ViewFlags_t, ViewFlags_t);
-    void sortOrderChanged(Qt::SortOrder newOrder, Qt::SortOrder old);
-    void primarySortColumnChanged(SortedImageModel::Column newCol, SortedImageModel::Column old);
+    void imageSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
+    void sectionSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
     void iconHeightChanged(int h, int old);
     
 public slots:

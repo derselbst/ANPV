@@ -1,5 +1,6 @@
 /* Copyright (C) 2022 Martin Pietsch <@pmfoss>
    SPDX-License-Identifier: BSD-3-Clause */
+
 /* Modified by derselbst for ANPV */
 
 #include "UrlNavigatorWidget.hpp"

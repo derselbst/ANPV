@@ -162,10 +162,20 @@ src/logic/TraceTimer.cpp
 src/logic/TraceTimer.hpp
 src/logic/ANPV.cpp
 src/logic/ANPV.hpp
+src/logic/DirectoryWorker.cpp
+src/logic/DirectoryWorker.hpp
+src/models/AbstractListItem.cpp
+src/models/AbstractListItem.hpp
+src/models/ImageSectionDataContainer.cpp
+src/models/ImageSectionDataContainer.hpp
+src/models/SectionItem.cpp
+src/models/SectionItem.hpp
 src/models/SortedImageModel.cpp
 src/models/SortedImageModel.hpp
 src/styles/CenteredBoxProxyStyle.cpp
 src/styles/CenteredBoxProxyStyle.hpp
+src/styles/ListItemDelegate.cpp
+src/styles/ListItemDelegate.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")

@@ -35,6 +35,7 @@
 #include "MultiDocumentView.hpp"
 #include "MainWindow.hpp"
 #include "WaitCursor.hpp"
+#include "ProgressIndicatorHelper.hpp"
 
 class MyDisabledFileIconProvider : public QAbstractFileIconProvider
 {
@@ -71,28 +72,23 @@ public:
     
     QIcon icon(IconType type) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::icon(type);
     }
     QIcon icon(const QFileInfo &info) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         QIcon ico = this->QFileIconProvider::icon(info);
         return ico;
     }
     QString type(const QFileInfo &info) const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::type(info);
     }
     void setOptions(Options options) override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::setOptions(options);
     }
     Options options() const override
     {
-        xThreadGuard g(QGuiApplication::instance()->thread());
         return this->QFileIconProvider::options();
     }
 };
@@ -113,15 +109,17 @@ struct ANPV::Impl
     QScopedPointer<MainWindow, QScopedPointerDeleteLater> mainWindow;
     
     // QObjects with parent
-    QFileSystemModel* dirModel = nullptr;
-    QSharedPointer<SortedImageModel> fileModel = nullptr;
-    QActionGroup* actionGroupFileOperation = nullptr;
-    QActionGroup* actionGroupViewMode = nullptr;
-    QActionGroup* actionGroupViewFlag = nullptr;
-    QAction* actionOpen = nullptr;
+    QPointer<QFileSystemModel> dirModel;
+    QPointer<SortedImageModel> fileModel;
+    QPointer<QActionGroup> actionGroupFileOperation;
+    QPointer<QActionGroup> actionGroupViewMode;
+    QPointer<QActionGroup> actionGroupViewFlag;
+    QPointer<QAction> actionOpen;
     QString lastOpenImageDir;
-    QAction* actionExit = nullptr;
-    QUndoStack* undoStack = nullptr;
+    QPointer<QAction> actionExit;
+    QPointer<QUndoStack> undoStack;
+    QPointer<QThread> backgroundThread;
+    QPointer<ProgressIndicatorHelper> spinningIconHelper;
     
     // Use a simple string for the currentDir, because:
     // QDir lacks a "null" value, as it defaults to the current working directory
@@ -130,8 +128,10 @@ struct ANPV::Impl
     QString currentDir;
     ViewMode viewMode = ViewMode::Unknown;
     ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
-    Qt::SortOrder sortOrder = static_cast<Qt::SortOrder>(-1);
-    SortedImageModel::Column primarySortColumn = SortedImageModel::Column::Unknown;
+    Qt::SortOrder imageSortOrder = static_cast<Qt::SortOrder>(-1);
+    Qt::SortOrder sectionSortOrder = static_cast<Qt::SortOrder>(-1);
+    SortField imageSortField = SortField::None;
+    SortField sectionSortField = SortField::None;
     int iconHeight = -1;
     
     Impl(ANPV* parent) : q(parent)
@@ -144,7 +144,27 @@ struct ANPV::Impl
         {
             ::global = QPointer<ANPV>(q);
         }
+
+        this->backgroundThread = (new QThread(q));
+        this->backgroundThread->setObjectName("Background Thread");
+        backgroundThread->start(QThread::LowPriority);
+        connect(qGuiApp, &QApplication::lastWindowClosed, this->backgroundThread.get(), &QThread::quit);
         
+
+        connect(QApplication::instance(), &QApplication::aboutToQuit, q, 
+            [&]()
+            {
+                qInfo() << "Abouttoquit!!!";
+            });
+
+
+        connect(this->backgroundThread.get(), &QThread::finished, q,
+            [&]()
+            {
+                qInfo() << "Qthread::finished()";
+            });
+
+
         this->iconProvider.reset(new MyUIThreadOnlyIconProvider());
         this->iconProvider->setOptions(QAbstractFileIconProvider::DontUseCustomDirectoryIcons);
         this->noIconProvider.reset(new MyDisabledFileIconProvider());
@@ -154,7 +174,15 @@ struct ANPV::Impl
         this->dirModel->setRootPath("");
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
-        this->fileModel.reset(new SortedImageModel(q));
+        this->fileModel = new SortedImageModel(nullptr);
+        this->fileModel->moveToThread(this->backgroundThread);
+        connect(this->backgroundThread, &QThread::finished, this->fileModel, &QObject::deleteLater);
+        connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
+            [&]()
+            {
+                this->fileModel->cancelAllBackgroundTasks();
+                qInfo() << "lastWindowClose!";
+            });
         
         this->actionGroupFileOperation = new QActionGroup(q);
         this->actionExit = new QAction("Close", q);
@@ -177,11 +205,11 @@ struct ANPV::Impl
                 {
                     QList<QString> files = q->getExistingFile(QApplication::focusWidget(), lastOpenImageDir);
                     
-                    QList<Entry_t> images;
+                    QList<QSharedPointer<Image>> images;
                     images.reserve(files.size());
                     for(auto& f : files)
                     {
-                        images.emplace_back(std::make_pair(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)), nullptr));
+                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)));
                     }
                     q->openImages(images);
                 });
@@ -284,8 +312,10 @@ struct ANPV::Impl
         }
         settings.setValue("viewMode", static_cast<int>(q->viewMode()));
         settings.setValue("viewFlags", q->viewFlags());
-        settings.setValue("sortOrder", static_cast<int>(q->sortOrder()));
-        settings.setValue("primarySortColumn", static_cast<int>(q->primarySortColumn()));
+        settings.setValue("imageSortOrder", static_cast<int>(q->imageSortOrder()));
+        settings.setValue("sectionSortOrder", static_cast<int>(q->sectionSortOrder()));
+        settings.setValue("imageSortField", static_cast<int>(q->imageSortField()));
+        settings.setValue("sectionSortField", static_cast<int>(q->sectionSortField()));
         settings.setValue("iconHeight", q->iconHeight());
         
         QByteArray actionsArray;
@@ -310,8 +340,10 @@ struct ANPV::Impl
 
         q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)).toUInt());
-        q->setSortOrder(static_cast<Qt::SortOrder>(settings.value("sortOrder", Qt::AscendingOrder).toInt()));
-        q->setPrimarySortColumn(static_cast<SortedImageModel::Column>(settings.value("primarySortColumn", static_cast<int>(SortedImageModel::Column::FileName)).toInt()));
+        q->setImageSortOrder(static_cast<Qt::SortOrder>(settings.value("imageSortOrder", Qt::AscendingOrder).toInt()));
+        q->setSectionSortOrder(static_cast<Qt::SortOrder>(settings.value("sectionSortOrder", Qt::AscendingOrder).toInt()));
+        q->setImageSortField(static_cast<SortField>(settings.value("imageSortField", static_cast<int>(SortField::FileName)).toInt()));
+        q->setSectionSortField(static_cast<SortField>(settings.value("sectionSortField", static_cast<int>(SortField::None)).toInt()));
         q->setIconHeight(settings.value("iconHeight", 150).toInt());
         
         QByteArray actionsArray = settings.value("actionGroupFileOperation").toByteArray();
@@ -431,6 +463,8 @@ ANPV::ANPV(QSplashScreen *splash)
     
     splash->showMessage("Creating UI Widgets");
     d->mainWindow.reset(new MainWindow(splash));
+    d->spinningIconHelper = new ProgressIndicatorHelper(d->mainWindow.get());
+
     
     splash->showMessage("Reading latest settings");
     d->readSettings();
@@ -441,6 +475,16 @@ ANPV::ANPV(QSplashScreen *splash)
 
 ANPV::~ANPV()
 {
+    if(d->fileModel)
+    {
+        d->fileModel->cancelAllBackgroundTasks();
+    }
+    d->backgroundThread->quit();
+    if(!d->backgroundThread->wait(5000))
+    {
+        qCritical() << "backgroundThread did not terminate within time. Terminating!";
+        d->backgroundThread->terminate();
+    }
     d->writeSettings();
 }
 
@@ -449,13 +493,20 @@ QAbstractFileIconProvider* ANPV::iconProvider()
     return d->iconProvider.get();
 }
 
+QThread* ANPV::backgroundThread()
+{
+    Q_ASSERT(d->backgroundThread != nullptr);
+    xThreadGuard g(this);
+    return d->backgroundThread.get();
+}
+
 QFileSystemModel* ANPV::dirModel()
 {
     xThreadGuard g(this);
     return d->dirModel;
 }
 
-QSharedPointer<SortedImageModel> ANPV::fileModel()
+QPointer<SortedImageModel> ANPV::fileModel()
 {
     xThreadGuard g(this);
     return d->fileModel;
@@ -610,37 +661,71 @@ void ANPV::setViewFlag(ViewFlag v, bool on)
     this->setViewFlags(newFlags);
 }
 
-Qt::SortOrder ANPV::sortOrder()
+Qt::SortOrder ANPV::imageSortOrder()
 {
     xThreadGuard g(this);
-    return d->sortOrder;
+    return d->imageSortOrder;
 }
 
-void ANPV::setSortOrder(Qt::SortOrder order)
+void ANPV::setImageSortOrder(Qt::SortOrder order)
 {
     xThreadGuard g(this);
-    Qt::SortOrder old = d->sortOrder;
-    if(order != old)
+    Qt::SortOrder old = d->imageSortOrder;
+    if (order != old)
     {
-        d->sortOrder = order;
-        emit this->sortOrderChanged(order, old);
+        d->imageSortOrder = order;
+        emit this->imageSortOrderChanged(d->imageSortField, order, d->imageSortField, old);
     }
 }
 
-SortedImageModel::Column ANPV::primarySortColumn()
+SortField ANPV::imageSortField()
 {
     xThreadGuard g(this);
-    return d->primarySortColumn;
+    return d->imageSortField;
 }
 
-void ANPV::setPrimarySortColumn(SortedImageModel::Column col)
+void ANPV::setImageSortField(SortField field)
 {
     xThreadGuard g(this);
-    SortedImageModel::Column old = d->primarySortColumn;
-    if(old != col)
+    SortField old = d->imageSortField;
+    if (field != old)
     {
-        d->primarySortColumn = col;
-        emit this->primarySortColumnChanged(col, old);
+        d->imageSortField = field;
+        emit this->imageSortOrderChanged(field, d->imageSortOrder, old, d->imageSortOrder);
+    }
+}
+
+Qt::SortOrder ANPV::sectionSortOrder()
+{
+    xThreadGuard g(this);
+    return d->sectionSortOrder;
+}
+
+void ANPV::setSectionSortOrder(Qt::SortOrder order)
+{
+    xThreadGuard g(this);
+    Qt::SortOrder old = d->sectionSortOrder;
+    if (order != old)
+    {
+        d->sectionSortOrder = order;
+        emit this->sectionSortOrderChanged(d->sectionSortField, order, d->sectionSortField, old);
+    }
+}
+
+SortField ANPV::sectionSortField()
+{
+    xThreadGuard g(this);
+    return d->sectionSortField;
+}
+
+void ANPV::setSectionSortField(SortField field)
+{
+    xThreadGuard g(this);
+    SortField old = d->sectionSortField;
+    if (field != old)
+    {
+        d->sectionSortField = field;
+        emit this->sectionSortOrderChanged(field, d->sectionSortOrder, old, d->sectionSortOrder);
     }
 }
 
@@ -662,6 +747,13 @@ void ANPV::setIconHeight(int h)
     }
 }
 
+// called by multiple threads
+ProgressIndicatorHelper* ANPV::spinningIconHelper()
+{
+    Q_ASSERT(d->spinningIconHelper != nullptr);
+    return d->spinningIconHelper;
+}
+
 void ANPV::showThumbnailView()
 {
     xThreadGuard g(this);
@@ -677,7 +769,7 @@ void ANPV::showThumbnailView(QSplashScreen* splash)
     splash->finish(d->mainWindow.get());
 }
 
-void ANPV::openImages(const QList<Entry_t>& image)
+void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
 {
     xThreadGuard g(this);
     if(image.isEmpty())

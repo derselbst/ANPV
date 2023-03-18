@@ -36,6 +36,7 @@
 #include "MessageWidget.hpp"
 #include "xThreadGuard.hpp"
 #include "WaitCursor.hpp"
+#include "ImageSectionDataContainer.hpp"
 
 struct DocumentView::Impl
 {
@@ -68,13 +69,18 @@ struct DocumentView::Impl
     // the latest image decoder, the same that displays the current image
     QSharedPointer<SmartImageDecoder> currentImageDecoder;
     
+    // an owning reference to the image currently displayed - in case it vaishes in the model we'll still have it rather going null
+    QSharedPointer<Image> owningRefToImage;
+    
     DecodingState latestDecodingState = DecodingState::Ready;
     
     // the full resolution image currently displayed in the scene
     QPixmap currentDocumentPixmap;
     
     // the model for the current directory needed for navigating back and forth
-    QSharedPointer<SortedImageModel> model;
+    QSharedPointer<ImageSectionDataContainer> model;
+
+    ViewFlags_t cachedViewFlags = ViewFlags_t(ViewFlag::None);
 
     Impl(DocumentView* parent) : q(parent)
     {}
@@ -117,6 +123,8 @@ struct DocumentView::Impl
         exifOverlay->hide();
         
         scene->invalidate();
+        
+        owningRefToImage = nullptr;
     }
 
     void forceTriggerDecoding()
@@ -395,6 +403,7 @@ struct DocumentView::Impl
         q->setHorizontalScrollBarPolicy(policy);
         q->setVerticalScrollBarPolicy(policy);
         this->actionShowScrollBars->setChecked(showScrollBar);
+        this->cachedViewFlags = v;
     }
     
     void onViewModeChanged(ViewMode v)
@@ -410,8 +419,11 @@ struct DocumentView::Impl
         WaitCursor w;
         if(this->currentImageDecoder && this->model)
         {
-            Entry_t newEntry = this->model->goTo(this->currentImageDecoder->image(), i);
-            q->loadImage(newEntry);
+            QSharedPointer<Image> newEntry = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), i);
+            if (newEntry)
+            {
+                q->loadImage(newEntry);
+            }
         }
     }
 
@@ -530,7 +542,7 @@ struct DocumentView::Impl
             {
                 if(o == q && q->hasFocus())
                 {
-                    Entry_t nextImg = this->model->goTo(this->currentImageDecoder->image(), 1);
+                    QSharedPointer<Image> nextImg = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), 1);
 
                     ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
@@ -632,7 +644,7 @@ DocumentView::DocumentView(QWidget *parent)
 
 DocumentView::~DocumentView() = default;
 
-void DocumentView::setModel(QSharedPointer<SortedImageModel> model)
+void DocumentView::setModel(QSharedPointer<ImageSectionDataContainer> model)
 {
     d->model = model;
 }
@@ -864,20 +876,6 @@ void DocumentView::loadImage(QString url)
     this->loadImage(DecoderFactory::globalInstance()->makeImage(info));
 }
 
-void DocumentView::loadImage(const Entry_t& e)
-{
-    auto& dec = SortedImageModel::decoder(e);
-    auto& img = SortedImageModel::image(e);
-    if(dec)
-    {
-        this->loadImage(dec);
-    }
-    else if(img)
-    {
-        this->loadImage(img);
-    }
-}
-
 void DocumentView::loadImage(QSharedPointer<Image> image)
 {
     auto dec = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
@@ -895,6 +893,11 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder>& dec)
 {
     d->clearScene();
     d->currentImageDecoder = dec;
+    d->owningRefToImage = dec->image();
+    if(d->owningRefToImage.isNull())
+    {
+        throw std::logic_error("Oops: DocumentView::loadImage() received a NULL image??");
+    }
     this->loadImage();
 }
 
