@@ -1,5 +1,5 @@
 #include "CenteredBoxProxyStyle.hpp"
-#include "types.hpp"
+#include "SortedImageModel.hpp"
 
 #include <QRect>
 #include <QStyleOptionViewItem>
@@ -12,7 +12,7 @@ QRect CenteredBoxProxyStyle::subElementRect(QStyle::SubElement element, const QS
     switch (element) {
     case SE_ItemViewItemCheckIndicator: {
         const QStyleOptionViewItem* const itemOpt = qstyleoption_cast<const QStyleOptionViewItem*>(option);
-        const QVariant alignData = itemOpt ? itemOpt->index.data(CheckAlignmentRole) : QVariant();
+        const QVariant alignData = itemOpt ? itemOpt->index.data(SortedImageModel::CheckAlignmentRole) : QVariant();
         if (itemOpt && !alignData.isNull())
         {
             return QStyle::alignedRect(itemOpt->direction, alignData.value<Qt::Alignment>(), baseRes.size()*1.5, itemOpt->rect);
@@ -21,7 +21,7 @@ QRect CenteredBoxProxyStyle::subElementRect(QStyle::SubElement element, const QS
     }
     case SE_ItemViewItemDecoration: {
         const QStyleOptionViewItem* const itemOpt = qstyleoption_cast<const QStyleOptionViewItem*>(option);
-        const QVariant alignData = itemOpt ? itemOpt->index.data(DecorationAlignmentRole) : QVariant();
+        const QVariant alignData = itemOpt ? itemOpt->index.data(SortedImageModel::DecorationAlignmentRole) : QVariant();
         if (itemOpt && !alignData.isNull())
         {
             return QStyle::alignedRect(itemOpt->direction, alignData.value<Qt::Alignment>(), baseRes.size(), itemOpt->rect);
@@ -30,8 +30,8 @@ QRect CenteredBoxProxyStyle::subElementRect(QStyle::SubElement element, const QS
     }
     case SE_ItemViewItemFocusRect: {
         const QStyleOptionViewItem* const itemOpt = qstyleoption_cast<const QStyleOptionViewItem*>(option);
-        const QVariant checkAlignData = itemOpt ? itemOpt->index.data(CheckAlignmentRole) : QVariant();
-        const QVariant decorationAlignData = itemOpt ? itemOpt->index.data(DecorationAlignmentRole) : QVariant();
+        const QVariant checkAlignData = itemOpt ? itemOpt->index.data(SortedImageModel::CheckAlignmentRole) : QVariant();
+        const QVariant decorationAlignData = itemOpt ? itemOpt->index.data(SortedImageModel::DecorationAlignmentRole) : QVariant();
         if (!checkAlignData.isNull() || !decorationAlignData.isNull()) // when it is not null, then the focus rect should be drawn over the complete cell
         {
             return option->rect;

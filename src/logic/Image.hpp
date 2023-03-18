@@ -19,6 +19,7 @@
 
 #include "DecodingState.hpp"
 #include "AfPointOverlay.hpp"
+#include "AbstractListItem.hpp"
 
 class ExifWrapper;
 class QMetaMethod;
@@ -30,7 +31,7 @@ class QMetaMethod;
  * Will also be used for other regular files and folders.
  * In this case, DecoderFactory would simply fail to find a decoder for *this and hasDecoder() will stay false.
  */
-class Image : public QObject
+class Image : public QObject, public AbstractListItem
 {
 Q_OBJECT
 
@@ -44,6 +45,8 @@ friend class MySleepyImageDecoder;
 public:
     Image(const QFileInfo&);
     ~Image() override;
+
+    QString getName() const override;
     
     Image(const Image&) = delete;
     Image& operator=(const Image&) = delete;
@@ -63,6 +66,9 @@ public:
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
+
+    QSharedPointer<SmartImageDecoder> decoder();
+    void setDecoder(const QSharedPointer<SmartImageDecoder>& dec);
     
     QSharedPointer<ExifWrapper> exif();
     
@@ -75,6 +81,7 @@ public:
     bool isRaw() const;
     bool hasEquallyNamedJpeg() const;
     bool hasEquallyNamedTiff() const;
+    bool hideIfNonRawAvailable(ViewFlags_t viewFlags) const;
 
     DecodingState decodingState() const;
     QImage decodedImage();

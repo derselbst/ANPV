@@ -21,6 +21,9 @@ struct Image::Impl
 
     DecodingState state{ DecodingState::Unknown };
     
+    // Quick reference to the decoder, possibly an owning reference as well
+    QSharedPointer<SmartImageDecoder> decoder;
+    
     // file path to the decoded input file
     const QFileInfo fileInfo;
     
@@ -87,7 +90,7 @@ struct Image::Impl
     }
 };
 
-Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
+Image::Image(const QFileInfo& url) : AbstractListItem(ListItemType::Image), d(std::make_unique<Impl>(url))
 {
     d->updateRectTimer = new QTimer(this);
     d->updateRectTimer->setInterval(100);
@@ -111,6 +114,11 @@ Image::Image(const QFileInfo& url) : d(std::make_unique<Impl>(url))
 Image::~Image()
 {
     xThreadGuard g(this);
+}
+
+QString Image::getName() const
+{
+    return this->fileInfo().fileName();
 }
 
 bool Image::hasDecoder() const
@@ -405,6 +413,13 @@ bool Image::hasEquallyNamedTiff() const
     return suffix != TIF && d->hasEquallyNamedFile(TIF);
 }
 
+bool Image::hideIfNonRawAvailable(ViewFlags_t viewFlags) const
+{
+    return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        && this->isRaw()
+        && (this->hasEquallyNamedJpeg() || this->hasEquallyNamedTiff());
+}
+
 DecodingState Image::decodingState() const
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
@@ -534,4 +549,14 @@ void Image::connectNotify(const QMetaMethod& signal)
     }
 
     QObject::connectNotify(signal);
+}
+
+QSharedPointer<SmartImageDecoder> Image::decoder()
+{
+    return d->decoder;
+}
+
+void Image::setDecoder(const QSharedPointer<SmartImageDecoder>& dec)
+{
+    d->decoder = dec;
 }

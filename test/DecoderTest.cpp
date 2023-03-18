@@ -30,6 +30,10 @@ class ImageDecoderUnderTest : public SmartImageDecoder
     friend class DecoderTest;
     bool decodeHeaderFail = false;
     bool decodingLoopFail = false;
+    
+    // The decoder no longer holds a strong ref to the image to avoid a cyclic dependency, when storing
+    // the image in the model. Therefore, backup the image here so that is won't be deleted immediately afterwards.
+    QSharedPointer<Image> backup;
 public:
     void setDecodeHeaderFail(bool b)
     {
@@ -42,7 +46,9 @@ public:
     }
     
     ImageDecoderUnderTest(QSharedPointer<Image> image) : SmartImageDecoder(image)
-    {}
+    {
+        this->backup = image;
+    }
     
 protected:
     void decodeHeader(const unsigned char* buffer, qint64 nbytes) override

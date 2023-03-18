@@ -29,12 +29,13 @@ public:
     void setModel(QAbstractItemModel *model) override;
 
     void fileOperationOnSelectedFiles(QAction*);
-    QList<Entry_t> checkedImages();
-    QList<Entry_t> selectedImages();
-    QList<Entry_t> selectedImages(const QModelIndexList& selectedIdx);
+    QList<Image*> checkedImages();
+    QList<QSharedPointer<Image>> selectedImages();
+    QList<QSharedPointer<Image>> selectedImages(const QModelIndexList& selectedIdx);
         
 protected:
     void wheelEvent(QWheelEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags flags) override;
     
 private:
