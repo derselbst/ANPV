@@ -131,6 +131,10 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
         d->data->clear();
         d->directoryDiscovery->setProgressValueAndText(0, "Looking up directory");
 
+        if (!d->currentDir.isReadable())
+        {
+            throw std::runtime_error("Cannot read directory!");
+        }
         d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
         d->watcher->addPath(d->currentDir.absolutePath());
 
