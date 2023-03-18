@@ -134,63 +134,51 @@ void CziDecoder::close()
 void CziDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 {
     // construct a shared_ptr without deleter
-    d->pseudoSharedDataPtr.reset(buffer, [](void*) {});
+    d->pseudoSharedDataPtr.reset(buffer, [](const void*) {});
 
     auto inputStream = libCZI::CreateStreamFromMemory(d->pseudoSharedDataPtr, nbytes);
 
+    this->setDecodingMessage("Parsing CZI Image");
     d->cziReader->Open(inputStream);
+
+
+    this->setDecodingMessage("Reading CZI Metadata");
     auto metadataSegment = d->cziReader->ReadMetadataSegment();
 
     const auto metadata = metadataSegment->CreateMetaFromMetadataSegment();
     const auto docInfo = metadata->GetDocumentInfo();
     auto displaySettings = docInfo->GetDisplaySettings();
 
+    auto zDimInfo = docInfo->GetDimensionZInfo();
+    if (zDimInfo != nullptr)
+    {
+        QString err = QStringLiteral("'%1' contains unsupported Z dimension").arg(this->image()->fileInfo().fileName());
+        qWarning() << err;
+    }
+
+    auto cDimInfo = docInfo->GetDimensionChannelsInfo();
+    if (cDimInfo == nullptr)
+    {
+        throw std::runtime_error("No information about channels could be obtained");
+    }
+
+    auto chanCount = cDimInfo->GetChannelCount();
+    switch (chanCount)
+    {
+    case 1:
+    case 3:
+    case 4:
+        break;
+    default:
+        throw std::runtime_error(Formatter() << "A channel count of " << chanCount << " is unsupported!");
+    }
+
     auto stat = d->cziReader->GetStatistics();
     auto pyramidStat= d->cziReader->GetPyramidStatistics();
 
-
-    d->buffer = buffer;
-    d->nbytes = nbytes;
-    d->offset = 0;
+    this->image()->setSize(QSize(stat.boundingBoxLayer0Only.w, stat.boundingBoxLayer0Only.h));
     
-    this->setDecodingMessage("Reading TIFF Header");
-    
-    d->tiff = TIFFClientOpen(TiffModule,
-                            "rm",
-                            d.get(),
-                            d->qtiffReadProc,
-                            d->qtiffWriteProc,
-                            d->qtiffSeekProc,
-                            d->qtiffCloseProc,
-                            d->qtiffSizeProc,
-                            d->qtiffMapProc,
-                            d->qtiffUnmapProc);
-                            
-    if(d->tiff == nullptr)
-    {
-        throw std::runtime_error("TIFFClientOpen() failed");
-    }
-    
-    this->setDecodingMessage("Parsing TIFF Image Directories");
-    
-    d->pageInfos = d->readPageInfos();
-    auto highResPage = d->findHighestResolution(d->pageInfos);
-    if(highResPage < 0)
-    {
-        throw std::runtime_error("This TIFF doesn't contain any directories!");
-    }
-
-    uint32_t count;
-    void *profile;
-    QColorSpace cs{QColorSpace::SRgb};
-    if (TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
-    {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-        cs = QColorSpace::fromIccProfile(iccProfile);
-    }
-    
-    this->image()->setSize(QSize(d->pageInfos[highResPage].width, d->pageInfos[highResPage].height));
-    this->image()->setColorSpace(cs);
+#if 0
     auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, highResPage);
     
     if(thumbnailPageToDecode >= 0)
@@ -214,10 +202,13 @@ void CziDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
             this->setDecodingMessage(std::move(err));
         }
     }
+#endif
 }
 
 QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
+    return QImage();
+#if 0
     const QRect fullImageRect = this->image()->fullResolutionRect();
     
     QRect targetImageRect = fullImageRect;
@@ -302,10 +293,12 @@ QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     }
     
     return image;
+#endif
 }
 
 void CziDecoder::decodeInternal(int imagePageToDecode, QImage& image, QRect roi, QTransform currentPageToFullResTransform, QSize desiredResolution, bool quiet)
 {
+#if 0
     const auto& width = d->pageInfos[imagePageToDecode].width;
     const auto& height = d->pageInfos[imagePageToDecode].height;
     
@@ -506,4 +499,5 @@ gehtnich:
 
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
+#endif
 }
