@@ -13,22 +13,6 @@
 
 #include <libCZI/libCZI.h>
 
-struct PageInfo
-{
-    uint32_t width;
-    uint32_t height;
-	uint16_t config;
-    // bits per sample
-    uint16_t bps;
-    // sample per pixel
-    uint16_t spp;
-    
-    size_t nPix()
-    {
-        return static_cast<size_t>(this->width) * height;
-    }
-};
-
 struct CziDecoder::Impl
 {
     CziDecoder* q;
@@ -36,82 +20,80 @@ struct CziDecoder::Impl
     std::shared_ptr<libCZI::ICZIReader> cziReader;
     std::shared_ptr<const void> pseudoSharedDataPtr;
     std::shared_ptr<libCZI::IBitmapData> mcComposite;
-        
-    std::vector<PageInfo> pageInfos;
+
 
     Impl(CziDecoder* q) : q(q)
     {
     }
-    
-    std::vector<PageInfo> readPageInfos()
-    {
-        std::vector<PageInfo> pageInfos;
-        return pageInfos;
-    }
 
-    static int findHighestResolution(std::vector<PageInfo>& pageInfo)
-    {
-        int ret = -1;
-        uint64_t res = 0;
-        for(size_t i=0; i<pageInfo.size(); i++)
-        {
-            auto len = pageInfo[i].nPix();
-            if(res < len)
-            {
-                ret = i;
-                res = len;
-            }
-        }
-        return ret;
-    }
-    
-    static int findThumbnailResolution(std::vector<PageInfo>& pageInfo, int highResPage)
-    {
-        int ret = -1;
-        const auto fullImgAspect = pageInfo[highResPage].width * 1.0 / pageInfo[highResPage].height;
-        auto res = pageInfo[highResPage].nPix();
-        for(size_t i=0; i<pageInfo.size(); i++)
-        {
-            auto len = pageInfo[i].nPix();
-            
-            auto aspect = pageInfo[i].width * 1.0 / pageInfo[i].height;
-            if(res > len && // current resolution smaller than previous?
-               std::fabs(aspect - fullImgAspect) < 0.1 && // aspect matches?
-               // we do not have a suitable page yet, ensure to not pick every page, i.e. it should be smaller than the double of MaxIconHeight
-               ((ret == -1 && !(pageInfo[i].width >= ANPV::MaxIconHeight*2 || pageInfo[i].height >= ANPV::MaxIconHeight*2))
-               // if we do have a suitable make, make sure it's one bigger 200px
-               || (pageInfo[i].width >= 200 || pageInfo[i].height >= 200)))
-            {
-                ret = i;
-                res = len;
-            }
-        }
-        return ret;
-    }
-    
+
     QImage::Format format(int activeChanCount)
     {
         // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
         // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
         return QImage::Format_ARGB32;
     }
-    
-    static int findSuitablePage(std::vector<PageInfo>& pageInfo, double targetScale, QSize size)
+
+
+    class MyBitmapData : public libCZI::IBitmapData
     {
-        int ret = -1;
-        double prevScale = 1;
-        
-        for(size_t i=0; i<pageInfo.size(); i++)
+        libCZI::PixelType pixT;
+        libCZI::IntSize size;
+
+        void* ptrData;
+        std::uint32_t   stride;
+        std::uint64_t   byteCount;
+
+
+    public:
+        MyBitmapData(libCZI::PixelType pixt, libCZI::IntSize size, void* ptrData, std::uint32_t stride, std::uint64_t bytes)
+            :pixT(pixt), size(size), ptrData(ptrData), stride(stride), byteCount(bytes)
+        {}
+
+        libCZI::PixelType       GetPixelType() const override
         {
-            double scale = size.width() / pageInfo[i].width;
-            if(scale <= targetScale && scale >= prevScale)
-            {
-                ret = i;
-                prevScale = scale;
-            }
+            return this->pixT;
         }
-        return ret;
+
+        libCZI::IntSize         GetSize() const override
+        {
+            return this->size;
+        }
+
+        libCZI::BitmapLockInfo  Lock() override
+        {
+            return { ptrData, ptrData, stride, byteCount };
+        }
+
+        void            Unlock() override
+        {}
+    };
+
+    std::shared_ptr<libCZI::IBitmapData> MyCreateBitmap(QImage& outImage, libCZI::PixelType pixeltype, std::uint32_t width, std::uint32_t height, std::uint32_t stride = 0, std::uint32_t extraRows = 0, std::uint32_t extraColumns = 0)
+    {
+        QImage::Format format;
+        switch (pixeltype)
+        {
+        case libCZI::PixelType::Bgra32:
+            format = QImage::Format_ARGB32;
+            break;
+        case libCZI::PixelType::Bgr24:
+            format = QImage::Format_RGB32;
+            break;
+        default:
+            throw std::logic_error("CZI Pixel type not implemented");
+        }
+
+        outImage = q->allocateImageBuffer(width, height, format);
+
+        auto* dataPtr = outImage.constBits();
+        uint8_t* buf = const_cast<uint8_t*>((dataPtr));
+
+        libCZI::IntSize is{ width,height };
+
+        return std::make_shared<MyBitmapData>(pixeltype, is, buf, outImage.bytesPerLine(), (height + extraRows * 2ULL) * outImage.bytesPerLine());
     }
+    
 };
 
 CziDecoder::CziDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
@@ -243,23 +225,39 @@ QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     dsplHlp.Initialize(dsplSettings.get(),
         [&](int chIdx)->libCZI::PixelType { return actvChBms[activeChNoToChIdx[chIdx]]->GetPixelType(); });
 
-    // pass the tile-composites we just created (and the display-settings for the those active 
-    //  channels) into the multi-channel-composor-function
-    d->mcComposite = libCZI::Compositors::ComposeMultiChannel_Bgra32(
-        255,
-        dsplHlp.GetActiveChannelsCount(),
-        std::begin(actvChBms),
-        dsplHlp.GetChannelInfosArray());
 
-    auto pixelInfo = d->mcComposite->Lock();
-    
-    QImage image(reinterpret_cast<uint8_t*>(pixelInfo.ptrDataRoi), d->mcComposite->GetWidth(), d->mcComposite->GetHeight(), pixelInfo.stride, QImage::Format_ARGB32);// , [&](void*) { d->mcComposite->Unlock(); });
+
+
+    auto srcBitmapsIterator = std::begin(actvChBms);
+
+    QImage image;
+    std::shared_ptr<libCZI::IBitmapData> destBitmap = d->MyCreateBitmap(image, libCZI::PixelType::Bgra32, (*srcBitmapsIterator)->GetWidth(), (*srcBitmapsIterator)->GetHeight());
 
     image.setOffset(roiRect.topLeft());
 
     QTransform toFullScaleTransform = scaleTrafo.inverted();
     this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
+
+
+    std::vector<libCZI::IBitmapData*> vecBm;
+    auto channelCount = dsplHlp.GetActiveChannelsCount();
+    vecBm.reserve(channelCount);
+    for (int i = 0; i < channelCount; ++i)
+    {
+        vecBm.emplace_back((*srcBitmapsIterator).get());
+        ++srcBitmapsIterator;
+    }
+
+    // pass the tile-composites we just created (and the display-settings for the those active 
+    //  channels) into the multi-channel-composor-function
+    libCZI::Compositors::ComposeMultiChannel_Bgra32(destBitmap.get(),
+        255,
+        channelCount,
+        vecBm.data(),
+        dsplHlp.GetChannelInfosArray());
+
+    
 
 
     return image;
