@@ -482,11 +482,22 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
                 auto fut = decoder->decodeAsync(state, Priority::Background, desiredResolution);
                 watcher->setFuture(fut);
                 fut.then(
-                    [=](DecodingState result)
-                    {
-                        decoder->releaseFullImage();
-                        return result;
-                    });
+                        [=](DecodingState result)
+                        {
+                            decoder->releaseFullImage();
+                            return result;
+                        }).onCanceled(
+                            [=]
+                            {
+                                decoder->releaseFullImage();
+                                return DecodingState::Cancelled;
+                            }).onFailed(
+                                [=](DecodingState result)
+                                {
+                                    decoder->releaseFullImage();
+                                    return result;
+                                }
+                            );
 
                 d->model->welcomeImage(image, watcher);
             }
