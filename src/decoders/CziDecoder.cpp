@@ -35,6 +35,7 @@ struct CziDecoder::Impl
 
     std::shared_ptr<libCZI::ICZIReader> cziReader;
     std::shared_ptr<const void> pseudoSharedDataPtr;
+    std::shared_ptr<libCZI::IBitmapData> mcComposite;
         
     std::vector<PageInfo> pageInfos;
 
@@ -88,7 +89,7 @@ struct CziDecoder::Impl
         return ret;
     }
     
-    QImage::Format format(int page)
+    QImage::Format format(int activeChanCount)
     {
         // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
         // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
@@ -126,6 +127,11 @@ CziDecoder::~CziDecoder()
 
 void CziDecoder::close()
 {
+    if (d->mcComposite)
+    {
+  //      d->mcComposite->Unlock();
+//        d->mcComposite = nullptr;
+    }
     d->pseudoSharedDataPtr = nullptr;
     d->cziReader->Close();
     SmartImageDecoder::close();
@@ -207,7 +213,56 @@ void CziDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 
 QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
-    return QImage();
+    // get the display-setting from the document's metadata
+    auto mds = d->cziReader->ReadMetadataSegment();
+    auto md = mds->CreateMetaFromMetadataSegment();
+    auto docInfo = md->GetDocumentInfo();
+    auto dsplSettings = docInfo->GetDisplaySettings();
+
+    libCZI::IntRect roi{ roiRect.x(), roiRect.y(), roiRect.width(), roiRect.height() };
+    QTransform scaleTrafo = this->fullResToPageTransform(roiRect.width(), roiRect.height());
+    float zoom = scaleTrafo.m11();
+
+    // get the tile-composite for all channels (which are marked 'active' in the display-settings)
+    std::vector<std::shared_ptr<libCZI::IBitmapData>> actvChBms;
+    int index = 0;  // index counting only the active channels
+    std::map<int, int> activeChNoToChIdx;   // we need to keep track which 'active channels" corresponds to which channel index
+    auto accessor = d->cziReader->CreateSingleChannelScalingTileAccessor();
+    libCZI::CDisplaySettingsHelper::EnumEnabledChannels(dsplSettings.get(),
+        [&](int chIdx)->bool
+        {
+            libCZI::CDimCoordinate planeCoord{ { libCZI::DimensionIndex::C, chIdx } };
+            actvChBms.emplace_back(accessor->Get(roi, &planeCoord, zoom, nullptr));
+            activeChNoToChIdx[chIdx] = index++;
+            return true;
+        });
+
+    // initialize the helper with the display-settings and provide the pixeltypes 
+    // (for each active channel)
+    libCZI::CDisplaySettingsHelper dsplHlp;
+    dsplHlp.Initialize(dsplSettings.get(),
+        [&](int chIdx)->libCZI::PixelType { return actvChBms[activeChNoToChIdx[chIdx]]->GetPixelType(); });
+
+    // pass the tile-composites we just created (and the display-settings for the those active 
+    //  channels) into the multi-channel-composor-function
+    d->mcComposite = libCZI::Compositors::ComposeMultiChannel_Bgra32(
+        255,
+        dsplHlp.GetActiveChannelsCount(),
+        std::begin(actvChBms),
+        dsplHlp.GetChannelInfosArray());
+
+    auto pixelInfo = d->mcComposite->Lock();
+    
+    QImage image(reinterpret_cast<uint8_t*>(pixelInfo.ptrDataRoi), d->mcComposite->GetWidth(), d->mcComposite->GetHeight(), pixelInfo.stride, QImage::Format_ARGB32);// , [&](void*) { d->mcComposite->Unlock(); });
+
+    image.setOffset(roiRect.topLeft());
+
+    QTransform toFullScaleTransform = scaleTrafo.inverted();
+    this->image()->setDecodedImage(image, toFullScaleTransform);
+    this->resetDecodedRoiRect();
+
+
+    return image;
 #if 0
     const QRect fullImageRect = this->image()->fullResolutionRect();
     
