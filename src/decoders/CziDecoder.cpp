@@ -21,6 +21,8 @@ struct CziDecoder::Impl
     std::shared_ptr<const void> pseudoSharedDataPtr;
     std::shared_ptr<libCZI::IBitmapData> mcComposite;
 
+    std::vector <libCZI::PyramidStatistics::PyramidLayerStatistics> pyramidLayers;
+
 
     Impl(CziDecoder* q) : q(q)
     {
@@ -165,7 +167,20 @@ void CziDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     auto pyramidStat= d->cziReader->GetPyramidStatistics();
 
     this->image()->setSize(QSize(stat.boundingBoxLayer0Only.w, stat.boundingBoxLayer0Only.h));
-    
+    auto& scenes = pyramidStat.scenePyramidStatistics;
+    for (auto& [key, val] : scenes)
+    {
+        if (key == std::numeric_limits<int>::max())
+        {
+            qWarning() << "CZI contains invalid scenes";
+            break;
+        }
+    }
+    if (scenes.size() != 1)
+    {
+        qWarning() << "CZI contains more than one scene, which is not supported currently";
+    }
+    d->pyramidLayers = scenes.begin()->second;
 #if 0
     auto thumbnailPageToDecode = d->findThumbnailResolution(d->pageInfos, highResPage);
     
@@ -202,19 +217,23 @@ QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     auto dsplSettings = docInfo->GetDisplaySettings();
 
     libCZI::IntRect roi{ roiRect.x(), roiRect.y(), roiRect.width(), roiRect.height() };
-    QTransform scaleTrafo = this->fullResToPageTransform(roiRect.width(), roiRect.height());
-    float zoom = scaleTrafo.m11();
+    QTransform scaleTrafo = this->fullResToPageTransform(desiredResolution.width(), desiredResolution.height());
+
+    QSize fullSize = this->image()->fullResolutionRect().size();
+    float zoom = libCZI::Utils::CalcZoom(libCZI::IntSize(fullSize.width(), fullSize.height()), libCZI::IntSize(desiredResolution.width(), desiredResolution.height()));
+    zoom = std::max(scaleTrafo.m11(), scaleTrafo.m22());
+    auto& pyLayer = d->pyramidLayers[0].layerInfo;
 
     // get the tile-composite for all channels (which are marked 'active' in the display-settings)
     std::vector<std::shared_ptr<libCZI::IBitmapData>> actvChBms;
     int index = 0;  // index counting only the active channels
     std::map<int, int> activeChNoToChIdx;   // we need to keep track which 'active channels" corresponds to which channel index
-    auto accessor = d->cziReader->CreateSingleChannelScalingTileAccessor();
+    auto accessor = d->cziReader->CreateSingleChannelPyramidLayerTileAccessor();
     libCZI::CDisplaySettingsHelper::EnumEnabledChannels(dsplSettings.get(),
         [&](int chIdx)->bool
         {
             libCZI::CDimCoordinate planeCoord{ { libCZI::DimensionIndex::C, chIdx } };
-            actvChBms.emplace_back(accessor->Get(roi, &planeCoord, zoom, nullptr));
+            actvChBms.emplace_back(accessor->Get(roi, &planeCoord, pyLayer, nullptr));
             activeChNoToChIdx[chIdx] = index++;
             return true;
         });
@@ -259,6 +278,7 @@ QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     
 
+    //this->updateDecodedRoiRect(QRect(image.offset(), image.size()));
 
     return image;
 #if 0
