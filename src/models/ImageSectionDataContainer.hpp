@@ -52,7 +52,7 @@ public:
     ~ImageSectionDataContainer();
 
     bool addImageItem(const QFileInfo& info);
-    void addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
+    void addImageItem(const QVariant& section, QSharedPointer<Image>& item);
     bool removeImageItem(const QFileInfo& info);
     
     QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;

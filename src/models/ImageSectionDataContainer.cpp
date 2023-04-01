@@ -100,6 +100,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             {
                 watcher.reset(new QFutureWatcher<DecodingState>());
                 watcher->moveToThread(QGuiApplication::instance()->thread());
+                d->model->welcomeImage(image, watcher);
 
                 // decode asynchronously
                 auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, QSize());
@@ -179,7 +180,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                 break;
             }
             }
-            this->addImageItem(var, image, watcher);
+            this->addImageItem(var, image);
         }
         catch (const std::runtime_error& e)
         {
@@ -193,12 +194,13 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     {
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
-    this->addImageItem(var, image, watcher);
+    d->model->welcomeImage(image, watcher);
+    this->addImageItem(var, image);
     return false;
 }
 
 /* Adds a given item (item) to a given section item (section). If the section item does not exist, it will be created. */
-void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image>& item, QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
+void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image>& item)
 {
     SectionList::iterator it;
     std::unique_lock<std::recursive_mutex> l(d->m);
@@ -241,9 +243,6 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
         (*it)->insert(insertIt, item);
         QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
     }
-
-    l.unlock();
-    d->model->welcomeImage(item, watcher);
 }
 
 bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
