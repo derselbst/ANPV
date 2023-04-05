@@ -222,7 +222,9 @@ QImage CziDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QSize fullSize = this->image()->fullResolutionRect().size();
     float zoom = libCZI::Utils::CalcZoom(libCZI::IntSize(fullSize.width(), fullSize.height()), libCZI::IntSize(desiredResolution.width(), desiredResolution.height()));
     zoom = std::max(scaleTrafo.m11(), scaleTrafo.m22());
-    auto& pyLayer = d->pyramidLayers[0].layerInfo;
+    libCZI::ISingleChannelPyramidLayerTileAccessor::PyramidLayerInfo pyLayer;
+    pyLayer.pyramidLayerNo = d->pyramidLayers[0].layerInfo.pyramidLayerNo;
+    pyLayer.minificationFactor = std::max(1u,d->pyramidLayers[0].layerInfo.minificationFactor*1u);
 
     // get the tile-composite for all channels (which are marked 'active' in the display-settings)
     std::vector<std::shared_ptr<libCZI::IBitmapData>> actvChBms;
