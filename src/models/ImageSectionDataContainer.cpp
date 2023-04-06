@@ -95,6 +95,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                 // decode synchronously
                 decoder->decode(DecodingState::Metadata, QSize());
                 decoder->close();
+                d->model->welcomeImage(image, watcher);
             }
             else
             {
