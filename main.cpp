@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     // set UI Thread to high prio
     QThread::currentThread()->setPriority(QThread::HighestPriority);
 
+    QThreadPool::globalInstance()->setThreadPriority(QThread::LowPriority);
     QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount() / 2);
 
     // create and init DecoderFactory in main thread

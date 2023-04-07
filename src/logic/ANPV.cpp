@@ -147,7 +147,7 @@ struct ANPV::Impl
 
         this->backgroundThread = (new QThread(q));
         this->backgroundThread->setObjectName("Background Thread");
-        backgroundThread->start(QThread::LowPriority);
+        backgroundThread->start(QThread::NormalPriority);
         connect(qGuiApp, &QApplication::lastWindowClosed, this->backgroundThread.get(), &QThread::quit);
         
 
