@@ -9,7 +9,7 @@ class AbstractListItem
 {
 public:
     AbstractListItem(ListItemType type);
-    ~AbstractListItem();
+    virtual ~AbstractListItem();
     
     virtual QString getName() const = 0;
     ListItemType getType() const;

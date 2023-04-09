@@ -20,7 +20,7 @@ public:
 
     SectionItem();
     SectionItem(const QVariant &itemid, SortField field, Qt::SortOrder order);
-    ~SectionItem();
+    ~SectionItem() override;
 
     QString getName() const override;
     
