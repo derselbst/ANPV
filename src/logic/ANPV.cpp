@@ -482,7 +482,7 @@ ANPV::~ANPV()
     d->backgroundThread->quit();
     if(!d->backgroundThread->wait(5000))
     {
-        qCritical() << "backgroundThread did not terminate within time. Terminating!";
+        qCritical() << "backgroundThread did not terminate within time. Terminating forcefully!";
         d->backgroundThread->terminate();
     }
     d->writeSettings();

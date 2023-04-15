@@ -16,6 +16,7 @@
 #include <QSortFilterProxyModel>
 #include <QCloseEvent>
 #include <QWhatsThis>
+#include <QMessageBox>
 
 #include "DocumentView.hpp"
 #include "PreviewAllImagesDialog.hpp"
@@ -646,6 +647,24 @@ MainWindow::MainWindow(QSplashScreen *splash)
 }
 
 MainWindow::~MainWindow() = default;
+
+bool MainWindow::event(QEvent* evt)
+{
+    if (evt->type() == QEvent::Close)
+    {
+        auto model = ANPV::globalInstance()->fileModel();
+        if (model && !model->isSafeToChangeDir())
+        {
+            QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirm closing", "You have checked images recently. If you proceed, the selection of images will be lost. Are you sure to proceed?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (reply == QMessageBox::No)
+            {
+                evt->ignore();
+                return false;
+            }
+        }
+    }
+    return QWidget::event(evt);
+}
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {

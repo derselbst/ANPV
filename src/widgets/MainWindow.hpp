@@ -25,8 +25,6 @@ Q_OBJECT
 public:
     MainWindow(QSplashScreen *splash);
     ~MainWindow() override;
-    
-    void closeEvent(QCloseEvent *event) override;
 
     void readSettings();
     void setBackgroundTask(const QFuture<DecodingState>& fut);
@@ -36,6 +34,8 @@ public slots:
     void setCurrentIndex(QSharedPointer<Image>);
 
 protected:
+    bool event(QEvent* evt) override;
+    void closeEvent(QCloseEvent* event) override;
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
