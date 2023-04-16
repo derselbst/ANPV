@@ -565,7 +565,7 @@ struct MainWindow::Impl
             if (count > 0)
             {
                 size_t size = 0;
-                for (Image* i : chkImgs)
+                for (auto& i : chkImgs)
                 {
                     size += i->fileInfo().size();
                 }

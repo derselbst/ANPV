@@ -47,7 +47,7 @@ struct SortedImageModel::Impl
     std::recursive_mutex m;
     std::map<Image*, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
     std::map<Image*, QMetaObject::Connection> spinningIconDrawConnections;
-    QList<Image*> checkedImages;
+    QList<QSharedPointer<Image>> checkedImages;
     
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
     int cachedIconHeight = 1;
@@ -92,6 +92,7 @@ struct SortedImageModel::Impl
     // stop processing, delete everything and wait until finished
     void clear()
     {
+        std::lock_guard<std::recursive_mutex> l(m);
         this->checkedImages.clear();
         cancelAllBackgroundTasks();
     }
@@ -483,13 +484,15 @@ QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<Abstr
     return nullptr;
 }
 
-QList<Image*> SortedImageModel::checkedEntries()
+QList<QSharedPointer<Image>> SortedImageModel::checkedEntries()
 {
+    std::lock_guard<std::recursive_mutex> l(d->m);
     return d->checkedImages;
 }
 
 bool SortedImageModel::isSafeToChangeDir()
 {
+    std::lock_guard<std::recursive_mutex> l(d->m);
     return d->checkedImages.size() == 0;
 }
 
@@ -512,13 +515,16 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         {
             if (c != old)
             {
+                std::lock_guard<std::recursive_mutex> l(d->m);
                 if (c == Qt::Unchecked)
                 {
                     d->checkedImages.removeAll(i);
                 }
                 else
                 {
-                    d->checkedImages.append(i);
+                    // retrieve the QSharedPointer for *i
+                    auto qimg = this->imageFromItem(this->item(this->index(i)));
+                    d->checkedImages.append(qimg);
                 }
             }
         });
@@ -527,6 +533,7 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         [&](QObject* i)
         {
             Q_ASSERT(i != nullptr);
+            std::lock_guard<std::recursive_mutex> l(d->m);
             d->checkedImages.removeAll(static_cast<Image*>(i));
         });
 

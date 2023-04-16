@@ -29,7 +29,7 @@ public:
     void setModel(QAbstractItemModel *model) override;
 
     void fileOperationOnSelectedFiles(QAction*);
-    QList<Image*> checkedImages();
+    QList<QSharedPointer<Image>> checkedImages();
     QList<QSharedPointer<Image>> selectedImages();
     QList<QSharedPointer<Image>> selectedImages(const QModelIndexList& selectedIdx);
         

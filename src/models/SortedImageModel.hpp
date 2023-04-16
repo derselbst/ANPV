@@ -58,7 +58,7 @@ public:
     QModelIndex index(const Image* img);
     QSharedPointer<AbstractListItem> item(const QModelIndex& idx) const;
     QSharedPointer<Image> imageFromItem(const QSharedPointer<AbstractListItem>& item) const;
-    QList<Image*> checkedEntries();
+    QList<QSharedPointer<Image>> checkedEntries();
 
     QVariant data(const QSharedPointer<AbstractListItem>& item, int role) const;
     Qt::ItemFlags flags(const QSharedPointer<AbstractListItem>& item) const;

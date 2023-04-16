@@ -70,7 +70,7 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<Image*> imgs = q->checkedImages();
+        QList<QSharedPointer<Image>> imgs = q->checkedImages();
         if (imgs.isEmpty())
         {
             const char* operation = QMetaEnum::fromType<ANPV::FileOperation>().key(op);
@@ -81,7 +81,7 @@ struct ThumbnailListView::Impl
         WaitCursor w;
         QList<QString> files;
         files.reserve(imgs.size());
-        for(Image*& e : imgs)
+        for(auto& e : imgs)
         {
             files.push_back(e->fileInfo().fileName());
         }
@@ -99,7 +99,7 @@ struct ThumbnailListView::Impl
                 break;
         }
         // FIXME: only uncheck those images, which have been processed successfully
-        for (Image*& e : imgs)
+        for (auto& e : imgs)
         {
             e->setChecked(Qt::Unchecked);
         }
@@ -395,7 +395,7 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     QListView::setModel(model);
 }
 
-QList<Image*> ThumbnailListView::checkedImages()
+QList<QSharedPointer<Image>> ThumbnailListView::checkedImages()
 {
     auto sourceModel = ANPV::globalInstance()->fileModel();
     return sourceModel->checkedEntries();
