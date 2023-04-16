@@ -252,18 +252,24 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
     int globalIdx = 0;
     for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
+        ++globalIdx; // increment because we've entered a new section
         SectionItem::ImageList::iterator it;
         int localIdx = (*sit)->find(info, &it);
         if (localIdx > 0)
         {
-            int endIdxToRemove = globalIdx + 1 + localIdx;
+            int endIdxToRemove = globalIdx + localIdx;
             int startIdxToRemove = endIdxToRemove;
             if ((*sit)->size() == 1)
             {
                 // There is only one item left in that section which we are going to remove. Therefore, remove the entire section
                 --startIdxToRemove;
             }
-            QMetaObject::invokeMethod(d->model, [&]() { d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove); }, d->syncConnection());
+            QMetaObject::invokeMethod(d->model, [&]()
+                {
+                    auto size = d->model->rowCount();
+                    Q_ASSERT(endIdxToRemove < size);
+                    d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove);
+                }, d->syncConnection());
 
             (*sit)->erase(it);
             if ((*sit)->size() == 0)
@@ -275,6 +281,7 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
 
             return true;
         }
+        globalIdx += (*sit)->size();
     }
 
     return false;
@@ -291,32 +298,22 @@ QSharedPointer<AbstractListItem> ImageSectionDataContainer::getItemByLinearIndex
         return nullptr;
     }
 
-    if (this->d->data.front() == this->d->data.back() && this->d->data.front()->getName().isEmpty())
+    int revidx = index;
+    for (auto it = this->d->data.begin(); it != this->d->data.end() && !retitem; ++it)
     {
-        if (index < this->d->data.front()->size())
+        if (revidx <= (*it)->size())
         {
-            retitem = this->d->data.front()->at(index);
-        }
-    }
-    else
-    {
-        int revidx = index;
-        for (auto it = this->d->data.begin(); it != this->d->data.end() && !retitem; ++it)
-        {
-            if (revidx <= (*it)->size())
+            if (revidx == 0)
             {
-                if (revidx == 0)
-                {
-                    retitem = (*it);
-                }
-                else
-                {
-                    retitem = (*it)->at(revidx - 1);
-                }
+                retitem = (*it);
             }
-
-            revidx -= (*it)->size() + 1;
+            else
+            {
+                retitem = (*it)->at(revidx - 1);
+            }
         }
+
+        revidx -= (*it)->size() + 1;
     }
 
     return retitem;
@@ -339,27 +336,17 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
         return -1;
     }
 
-    if (this->d->data.front() == this->d->data.back() && this->d->data.front()->getName().isEmpty())
+    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
-        if (this->d->data.front()->find(item, &itmidx))
+        if ((*sit) == item)
         {
             return itmidx;
         }
-    }
-    else
-    {
-        for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
-        {
-            if ((*sit) == item)
-            {
-                return itmidx;
-            }
-            itmidx++;
+        itmidx++;
 
-            if ((*sit)->find(item, &itmidx))
-            {
-                return itmidx;
-            }
+        if ((*sit)->find(item, &itmidx))
+        {
+            return itmidx;
         }
     }
 
@@ -391,28 +378,21 @@ void ImageSectionDataContainer::clear()
    its name is empty, then the number of its image items is returned. */
 int ImageSectionDataContainer::size() const
 {
-   int size = 0;
-   std::lock_guard<std::recursive_mutex> l(d->m);
- 
-   if(this->d->data.empty())
-   {
-      return size;
-   }
+    int size = 0;
+    std::lock_guard<std::recursive_mutex> l(d->m);
 
-   if(this->d->data.front() == this->d->data.back() && this->d->data.front()->getName().isEmpty())
-   {
-      size = this->d->data.front()->size();
-   }
-   else
-   {
-      size = this->d->data.size();
-      for(auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
-      {
-         size += (*it)->size();
-      }
-   }
-   
-   return size;
+    if (this->d->data.empty())
+    {
+        return size;
+    }
+
+    size = this->d->data.size();
+    for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
+    {
+        size += (*it)->size();
+    }
+
+    return size;
 }
 
 /* Invoke the sorting the images items of the section items according to given the field (field) and the order (order). */
