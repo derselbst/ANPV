@@ -6,6 +6,7 @@
 #include "ExifWrapper.hpp"
 #include "TraceTimer.hpp"
 #include "ANPV.hpp"
+#include "SmartImageDecoder.hpp"
 
 #include <QDir>
 #include <QIcon>

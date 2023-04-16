@@ -66,27 +66,37 @@ struct SortedImageModel::Impl
     void cancelAllBackgroundTasks()
     {
         std::lock_guard<std::recursive_mutex> l(m);
-        if(!backgroundTasks.empty())
+
+        // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
+        auto size = q->rowCount();
+        for (int i = 0; i < size; i++)
         {
-            for (const auto& [key,value] : backgroundTasks)
+            auto img = q->imageFromItem(this->entries->getItemByLinearIndex(i));
+            if (!img)
             {
-                auto& future = value;
-                Q_ASSERT(!future.isNull());
-                future->disconnect(q);
-                Q_ASSERT(!future.isNull());
-                future->cancel();
+                continue;
             }
 
-            for (const auto& [key, value] : backgroundTasks)
+            if (this->backgroundTasks.contains(img.data()))
             {
-                auto& future = value;
-                Q_ASSERT(!future.isNull());
-                future->waitForFinished();
+                auto& fut = this->backgroundTasks[img.data()];
+                img->decoder()->cancelOrTake(fut->future());
             }
-            layoutChangedTimer->stop();
-            backgroundTasks.clear();
-            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
         }
+
+        layoutChangedTimer->stop();
+
+        // now, wait for the decoders to actually finish
+        // it should be fine to wait while holding the lock
+        for (const auto& [key, value] : backgroundTasks)
+        {
+            auto& future = value;
+            Q_ASSERT(!future.isNull());
+            future->waitForFinished();
+        }
+
+        // backgroundTasks should become empty once the background thread has processed all the finished events
+        // and therefore, ProgressIndicatorHelper::stopRendering should be called somewhen...
     }
     
     // stop processing, delete everything and wait until finished
@@ -149,6 +159,11 @@ struct SortedImageModel::Impl
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
         std::lock_guard<std::recursive_mutex> l(m);
+        if (!this->backgroundTasks.contains(img.data()))
+        {
+            qWarning() << "Programming error?!";
+            return;
+        }
         auto watcher2 = this->backgroundTasks[img.data()];
         Q_ASSERT(watcher2 == watcher);
         watcher->disconnect(q);
@@ -174,10 +189,6 @@ struct SortedImageModel::Impl
             qInfo() << "onBackgroundTaskStarted: image surprisingly gone before background task could be started?!";
             this->onBackgroundTaskFinished(watcher, img);
             return;
-        }
-        if (this->spinningIconDrawConnections.empty())
-        {
-            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::startRendering);
         }
         this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(img); });
         q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(img); });
@@ -541,6 +552,10 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
     {
         {
             std::lock_guard<std::recursive_mutex> l(d->m);
+            if (d->backgroundTasks.empty())
+            {
+                QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::startRendering);
+            }
             d->backgroundTasks[image.data()] = watcher;
         }
         watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
