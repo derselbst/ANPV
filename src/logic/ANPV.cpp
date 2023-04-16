@@ -177,6 +177,7 @@ struct ANPV::Impl
         this->fileModel = new SortedImageModel(nullptr);
         this->fileModel->moveToThread(this->backgroundThread);
         connect(this->backgroundThread, &QThread::finished, this->fileModel, &QObject::deleteLater);
+        connect(this->backgroundThread, &QThread::finished, q, [&]() { this->fileModel = nullptr; }); // for some reason the destroyed event is not emitted or processed, leaving the pointer dangling without this
         connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
             [&]()
             {
