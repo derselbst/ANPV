@@ -26,7 +26,6 @@ struct ImageSectionDataContainer::Impl
     // mutex which protects concurrent access to members below
     std::recursive_mutex m;
     SectionList data;
-    std::map<QSharedPointer<SmartImageDecoder>, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
     SortField sectionSortField = SortField::None;
     Qt::SortOrder sectionSortOrder = Qt::DescendingOrder;
