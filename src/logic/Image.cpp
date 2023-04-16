@@ -447,7 +447,7 @@ void Image::setDecodingState(DecodingState state)
 
 QString Image::errorMessage()
 {
-    xThreadGuard g(this);
+    std::unique_lock<std::recursive_mutex> lck(d->m);
     return d->errorMessage;
 }
 
@@ -456,7 +456,6 @@ void Image::setErrorMessage(const QString& err)
     std::unique_lock<std::recursive_mutex> lck(d->m);
     if(d->errorMessage != err)
     {
-        lck.unlock();
         d->errorMessage = err;
     }
 }

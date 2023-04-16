@@ -79,8 +79,8 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     auto image = DecoderFactory::globalInstance()->makeImage(info);
     auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
 
-    // move both objects to the UI thread to ensure proper signal delivery
-    image->moveToThread(QGuiApplication::instance()->thread());
+    // Let the image live in the background thread. This allow Qt::DirectConnection between Image::destroyed and SortedDirModel to remove it from the list of checked images
+    //image->moveToThread(QGuiApplication::instance()->thread());
 
     QSharedPointer<QFutureWatcher<DecodingState>> watcher;
     QVariant var;
@@ -100,7 +100,8 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             else
             {
                 watcher.reset(new QFutureWatcher<DecodingState>());
-                watcher->moveToThread(QGuiApplication::instance()->thread());
+                // Keep the watcher in the background thread, as there seems to be no need to move it to UI thread.
+                //watcher->moveToThread(QGuiApplication::instance()->thread());
                 d->model->welcomeImage(image, watcher);
 
                 // decode asynchronously
