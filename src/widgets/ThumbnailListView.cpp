@@ -203,17 +203,16 @@ struct ThumbnailListView::Impl
         bool ok = false;
         if (selMod && !selInd.isEmpty())
         {
+            Qt::CheckState firstCheckState = static_cast<Qt::CheckState>(selInd[0].data(Qt::CheckStateRole).toInt());
             for (auto& i : selInd)
             {
                 // borrowed from QStyledItemDelegate::editorEvent()
-
                 QVariant value = i.data(Qt::CheckStateRole);
-                Qt::ItemFlags flags = q->model()->flags(i);
+                Qt::ItemFlags flags = i.flags();
                 if (!(flags & Qt::ItemIsUserCheckable) || !(flags & Qt::ItemIsEnabled) || !value.isValid())
                     continue;
 
-                Qt::CheckState state = static_cast<Qt::CheckState>(value.toInt());
-                state = getNewState(state, flags);
+                Qt::CheckState state = getNewState(firstCheckState, flags);
                 ok |= q->model()->setData(i, state, Qt::CheckStateRole);
             }
         }
