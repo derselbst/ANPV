@@ -267,7 +267,7 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
         ++globalIdx; // increment because we've entered a new section
         SectionItem::ImageList::iterator it;
         int localIdx = (*sit)->find(info, &it);
-        if (localIdx > 0)
+        if (localIdx >= 0)
         {
             int endIdxToRemove = globalIdx + localIdx;
             int startIdxToRemove = endIdxToRemove;

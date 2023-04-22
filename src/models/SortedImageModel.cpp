@@ -516,7 +516,7 @@ bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
     std::advance(first, row);
 
     auto last = first;
-    std::advance(last, count + 1);
+    std::advance(last, count);
 
     d->visibleItemList.erase(first, last);
 
