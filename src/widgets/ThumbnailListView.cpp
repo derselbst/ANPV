@@ -429,3 +429,15 @@ void ThumbnailListView::fileOperationOnSelectedFiles(QAction* action)
     QString targetDir = action->data().toString();
     d->startFileOperation(op, std::move(targetDir));
 }
+
+
+void ThumbnailListView::rowsInserted(const QModelIndex& parent, int start, int end)
+{
+    // reimplement this to avoid flickering when inserting items, caused by clearing of QIconModeViewBase's internal "tree" object, caused by:
+    // https://github.com/qt/qtbase/blob/56aa065ab57d55cc832c45b8c260153447c57188/src/widgets/itemviews/qlistview.cpp#L714-L715
+
+    // this will call  QListView::doDelayedItemsLayout();
+    this->setModelColumn(this->modelColumn());
+    // Alternatively, we could have called this->QListView::doItemsLayout();
+    QAbstractItemView::rowsInserted(parent, start, end);
+}
