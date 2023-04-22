@@ -496,11 +496,6 @@ bool SortedImageModel::insertRows(int row, std::list<QSharedPointer<AbstractList
 
     auto insertIt = d->visibleItemList.begin();
     std::advance(insertIt, row);
-    //if (insertIt != d->visibleItemList.end())
-    //{
-    //    insertIt++;
-    //}
-
     d->visibleItemList.splice(insertIt, items);
 
     this->endInsertRows();
