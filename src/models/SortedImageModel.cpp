@@ -508,7 +508,7 @@ bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
     xThreadGuard(this);
     auto rc = this->rowCount();
     Q_ASSERT(row >= 0 && count >= 0);
-    Q_ASSERT(row + count < rc);
+    Q_ASSERT(row + count <= rc);
 
     this->beginRemoveRows(parent, row, row + count - 1);
 
