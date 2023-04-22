@@ -352,6 +352,11 @@ SectionItem::ImageList::iterator SectionItem::findInsertPosition(const QSharedPo
     return upper;
 }
 
+SectionItem::ImageList::iterator SectionItem::begin()
+{
+    return d->data.begin();
+}
+
 bool SectionItem::isEnd(const SectionItem::ImageList::iterator& it) const
 {
     return it == this->d->data.end();

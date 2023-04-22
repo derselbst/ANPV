@@ -590,11 +590,6 @@ MainWindow::MainWindow(QSplashScreen *splash)
     
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
-    connect(ANPV::globalInstance()->fileModel()->thread(), &QThread::finished, this,
-        [&]()
-        {
-            d->proxyModel->setSourceModel(nullptr);
-        }, Qt::BlockingQueuedConnection);
     
     splash->showMessage("Creating MainWindow Widgets");
     d->ui->setupUi(this);

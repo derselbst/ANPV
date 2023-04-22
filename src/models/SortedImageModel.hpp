@@ -66,6 +66,8 @@ public:
     bool isSafeToChangeDir();
     void welcomeImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
 
+    bool insertRows(int row, std::list<QSharedPointer<AbstractListItem>>& items);
+
 public: // QAbstractItemModel
     
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -74,7 +76,8 @@ public: // QAbstractItemModel
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 
 public slots:
     void cancelAllBackgroundTasks();

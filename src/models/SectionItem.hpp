@@ -31,6 +31,7 @@ public:
                     Qt::SortOrder order = Qt::AscendingOrder);
 
     ImageList::iterator findInsertPosition(const QSharedPointer<Image>& img);
+    ImageList::iterator begin();
     bool isEnd(const SectionItem::ImageList::iterator& it) const;
     bool find(const AbstractListItem* item, int* externalIdx);
     int find(const QFileInfo info, ImageList::iterator* itout);

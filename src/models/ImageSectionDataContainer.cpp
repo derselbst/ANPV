@@ -206,44 +206,56 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
     SectionList::iterator it;
     std::unique_lock<std::recursive_mutex> l(d->m);
 
+    int insertIdx = 0;
     for (it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         if ((*it).data() == section)
         {
             break;
         }
+        insertIdx += (*it)->size();
     }
 
-    int insertIdx = 0;
+    std::list<QSharedPointer<AbstractListItem>> itemsForUIModel;
     if (this->d->data.end() == it)
     {
         // no suitable section found, create a new one
+        insertIdx = 0;
         auto s = SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder));
         auto sectionInsertPos = d->findInsertPosition(s);
         for (auto sit = this->d->data.begin(); sit != sectionInsertPos; ++sit)
         {
             insertIdx += (*sit)->size();
+            insertIdx++; // for the section itself
         }
-        
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx + 1); }, d->syncConnection());
 
         it = this->d->data.insert(sectionInsertPos, s);
         auto itemInsertIt = (*it)->findInsertPosition(item);
         (*it)->insert(itemInsertIt, item);
 
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
+        int check = this->getLinearIndexOfItem(item.data());
+
+        itemsForUIModel.push_back(s);
+        itemsForUIModel.push_back(item);
     }
     else
     {
         auto insertIt = (*it)->findInsertPosition(item);
-        int insertIdx = (*it)->isEnd(insertIt)
-            ? this->getLinearIndexOfItem((*(insertIt - 1)).data()) + 1
-            : this->getLinearIndexOfItem((*insertIt).data());
+        auto d = std::distance((*it)->begin(), insertIt);
 
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginInsertRows(QModelIndex(), insertIdx, insertIdx); }, d->syncConnection());
         (*it)->insert(insertIt, item);
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endInsertRows(); }, Qt::AutoConnection);
+
+        insertIdx = this->getLinearIndexOfItem(item.data());
+
+        itemsForUIModel.push_back(item);
     }
+
+    QMetaObject::invokeMethod(d->model, [insertIdx, itemsForUIModel, this]()
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(insertIdx, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
 }
 
 bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
@@ -264,12 +276,6 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
                 // There is only one item left in that section which we are going to remove. Therefore, remove the entire section
                 --startIdxToRemove;
             }
-            QMetaObject::invokeMethod(d->model, [&]()
-                {
-                    auto size = d->model->rowCount();
-                    Q_ASSERT(endIdxToRemove < size);
-                    d->model->beginRemoveRows(QModelIndex(), startIdxToRemove, endIdxToRemove);
-                }, d->syncConnection());
 
             (*sit)->erase(it);
             if ((*sit)->size() == 0)
@@ -277,7 +283,10 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
                 this->d->data.erase(sit);
             }
 
-            QMetaObject::invokeMethod(d->model, [&]() { d->model->endRemoveRows(); }, Qt::AutoConnection);
+            QMetaObject::invokeMethod(d->model, [&]()
+                {
+                    d->model->removeRows(startIdxToRemove, endIdxToRemove - startIdxToRemove + 1);
+                }, Qt::AutoConnection);
 
             return true;
         }
@@ -355,7 +364,7 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 
 void ImageSectionDataContainer::clear()
 {
-    std::lock_guard<std::recursive_mutex> l(d->m);
+    std::unique_lock<std::recursive_mutex> l(d->m);
 
     auto rowCount = this->size();
     if (rowCount != 0)
@@ -368,9 +377,10 @@ void ImageSectionDataContainer::clear()
     }
     this->d->data.clear();
 
+    l.unlock();
     if (rowCount != 0)
     {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
+        QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, d->syncConnection());
     }
 }
 
@@ -398,9 +408,9 @@ int ImageSectionDataContainer::size() const
 /* Invoke the sorting the images items of the section items according to given the field (field) and the order (order). */
 void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::SortOrder order)
 {
-    std::lock_guard<std::recursive_mutex> l(d->m);
-    
     QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
+
+    std::lock_guard<std::recursive_mutex> l(d->m);
     
     for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
@@ -415,9 +425,9 @@ void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::Sor
 /* Sorts the section item according to given the order (order). */
 void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::SortOrder order)
 {
-    std::lock_guard<std::recursive_mutex> l(d->m);
-    
     QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
+    
+    std::lock_guard<std::recursive_mutex> l(d->m);
     
     std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
     d->sectionSortOrder = order;

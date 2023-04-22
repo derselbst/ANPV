@@ -14,6 +14,8 @@
 #define _GNU_SOURCE
 #endif
 #include <cstring> // for strverscmp()
+#include <list>
+#include <iterator>
 
 #ifdef _WINDOWS
 #define NOMINMAX
@@ -42,6 +44,7 @@ struct SortedImageModel::Impl
     // the data container might be shared with a DocumentView
     QSharedPointer<ImageSectionDataContainer> entries;
     QScopedPointer<DirectoryWorker> directoryWatcher;
+    std::list<QSharedPointer<AbstractListItem>> visibleItemList;
     
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
@@ -71,7 +74,7 @@ struct SortedImageModel::Impl
         auto size = q->rowCount();
         for (int i = 0; i < size; i++)
         {
-            auto img = q->imageFromItem(this->entries->getItemByLinearIndex(i));
+            auto img = q->imageFromItem(q->item(q->index(i,0)));
             if (!img)
             {
                 continue;
@@ -103,8 +106,9 @@ struct SortedImageModel::Impl
     void clear()
     {
         std::lock_guard<std::recursive_mutex> l(m);
-        this->checkedImages.clear();
         cancelAllBackgroundTasks();
+        this->checkedImages.clear();
+        this->visibleItemList.clear();
     }
 
     void updateLayout()
@@ -146,8 +150,7 @@ struct SortedImageModel::Impl
             return;
         }
 
-        int i = this->entries->getLinearIndexOfItem(img);
-        QModelIndex idx = q->index(i, 0);
+        QModelIndex idx = q->index(img);
         if (idx.isValid())
         {
             // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
@@ -209,7 +212,11 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     connect(d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
     
     d->entries.reset(new ImageSectionDataContainer(this));
-    d->directoryWatcher.reset(new DirectoryWorker(d->entries.get(), this));
+    d->directoryWatcher.reset(new DirectoryWorker(d->entries.get()/*, this*/));
+    d->directoryWatcher->moveToThread(ANPV::globalInstance()->backgroundThread());
+    //connect(ANPV::globalInstance()->backgroundThread(), &QThread::finished, this->fileModel, &QObject::deleteLater);
+    //connect(ANPV::globalInstance()->backgroundThread(), &QThread::finished, q, [&]() { this->fileModel = nullptr; }); // for some reason the destroyed event is not emitted or processed, leaving the pointer dangling without this
+
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
             [&](int v)
@@ -262,6 +269,7 @@ void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
 
 Qt::ItemFlags SortedImageModel::flags(const QModelIndex& index) const
 {
+    xThreadGuard(this);
     if (!index.isValid())
     {
         return Qt::NoItemFlags;
@@ -273,6 +281,7 @@ Qt::ItemFlags SortedImageModel::flags(const QModelIndex& index) const
 
 Qt::ItemFlags SortedImageModel::flags(const QSharedPointer<AbstractListItem>& item) const
 {
+    xThreadGuard(this);
     if (!item)
     {
         return Qt::NoItemFlags;
@@ -309,14 +318,16 @@ int SortedImageModel::columnCount(const QModelIndex &) const
 
 int SortedImageModel::rowCount(const QModelIndex&) const
 {
-    return d->entries->size();
+    xThreadGuard(this);
+    return d->visibleItemList.size();
 }
 
 bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
+    xThreadGuard(this);
     if (index.isValid())
     {
-        QSharedPointer<AbstractListItem> item = d->entries->getItemByLinearIndex(index.row());
+        QSharedPointer<AbstractListItem> item = this->item(index);
         Image* img = dynamic_cast<Image*>(item.data());
         if (img != nullptr)
         {
@@ -334,6 +345,7 @@ bool SortedImageModel::setData(const QModelIndex& index, const QVariant& value, 
 
 QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 {
+    xThreadGuard(this);
     if (!index.isValid())
     {
         return QVariant();
@@ -345,6 +357,7 @@ QVariant SortedImageModel::data(const QModelIndex& index, int role) const
 
 QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem>& item, int role) const
 {
+    xThreadGuard(this);
     if (item)
     {
         if (role == ItemModelUserRoles::ItemName)
@@ -460,29 +473,97 @@ bool SortedImageModel::insertRows(int row, int count, const QModelIndex& parent)
     return false;
 }
 
+bool SortedImageModel::insertRows(int row, std::list<QSharedPointer<AbstractListItem>>& items)
+{
+    xThreadGuard(this);
+    if (items.empty() || row < 0)
+    {
+        Q_ASSERT(false);
+        return false;
+    }
+
+    this->beginInsertRows(QModelIndex(), row, row + items.size() - 1);
+
+    auto insertIt = d->visibleItemList.begin();
+    std::advance(insertIt, row);
+    //if (insertIt != d->visibleItemList.end())
+    //{
+    //    insertIt++;
+    //}
+
+    d->visibleItemList.splice(insertIt, items);
+
+    this->endInsertRows();
+
+    return true;
+}
+
+bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
+{
+    xThreadGuard(this);
+    auto rc = this->rowCount();
+    Q_ASSERT(row >= 0 && count >= 0);
+    Q_ASSERT(row + count < rc);
+
+    this->beginRemoveRows(parent, row, row + count - 1);
+
+    auto first = d->visibleItemList.begin();
+    std::advance(first, row);
+
+    auto last = first;
+    std::advance(last, count + 1);
+
+    d->visibleItemList.erase(first, last);
+
+    this->endRemoveRows();
+
+    return true;
+}
+
 QModelIndex SortedImageModel::index(const QSharedPointer<Image>& img)
 {
+    xThreadGuard(this);
     return this->index(img.data());
 }
 
 QModelIndex SortedImageModel::index(const Image* img)
 {
+    xThreadGuard(this);
     if(img == nullptr)
     {
         return QModelIndex();
     }
 
-    return this->index(d->entries->getLinearIndexOfItem(img), 0);
+    int k = 0;
+    for (auto& i : d->visibleItemList)
+    {
+        if (i.data() == static_cast<const AbstractListItem*>(img))
+        {
+            return this->index(k, 0);
+        }
+        k++;
+    }
+
+    return QModelIndex();
 }
 
 QSharedPointer<AbstractListItem> SortedImageModel::item(const QModelIndex& idx) const
 {
+    xThreadGuard(this);
     if (!idx.isValid())
     {
         return nullptr;
     }
 
-    return d->entries->getItemByLinearIndex(idx.row());
+    auto it = d->visibleItemList.begin();
+    std::advance(it, idx.row());
+
+    if (it == d->visibleItemList.end())
+    {
+        return nullptr;
+    }
+
+    return *it;
 }
 
 QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<AbstractListItem>& item) const
