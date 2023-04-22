@@ -283,7 +283,7 @@ bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
                 this->d->data.erase(sit);
             }
 
-            QMetaObject::invokeMethod(d->model, [&]()
+            QMetaObject::invokeMethod(d->model, [startIdxToRemove, endIdxToRemove, this]()
                 {
                     d->model->removeRows(startIdxToRemove, endIdxToRemove - startIdxToRemove + 1);
                 }, Qt::AutoConnection);
