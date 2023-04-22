@@ -49,6 +49,7 @@ struct SortedImageModel::Impl
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
     std::map<Image*, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
+
     std::map<Image*, QMetaObject::Connection> spinningIconDrawConnections;
     QList<QSharedPointer<Image>> checkedImages;
     
@@ -68,8 +69,7 @@ struct SortedImageModel::Impl
     
     void cancelAllBackgroundTasks()
     {
-        std::lock_guard<std::recursive_mutex> l(m);
-
+        xThreadGuard g(q);
         // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
         auto size = q->rowCount();
         for (int i = 0; i < size; i++)
@@ -98,14 +98,14 @@ struct SortedImageModel::Impl
             future->waitForFinished();
         }
 
-        // backgroundTasks should become empty once the background thread has processed all the finished events
+        // backgroundTasks should become empty once all the finished events have been processed
         // and therefore, ProgressIndicatorHelper::stopRendering should be called somewhen...
     }
     
     // stop processing, delete everything and wait until finished
     void clear()
     {
-        std::lock_guard<std::recursive_mutex> l(m);
+        xThreadGuard g(q);
         cancelAllBackgroundTasks();
         this->checkedImages.clear();
         this->visibleItemList.clear();
@@ -162,25 +162,31 @@ struct SortedImageModel::Impl
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
     {
         std::lock_guard<std::recursive_mutex> l(m);
-        if (!this->backgroundTasks.contains(img.data()))
+        if (this->backgroundTasks.contains(img.data()))
+        {
+            auto watcher2 = this->backgroundTasks[img.data()];
+            Q_ASSERT(watcher2 == watcher);
+            watcher->disconnect(q);
+            this->backgroundTasks.erase(img.data());
+            if (this->backgroundTasks.empty())
+            {
+                QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
+                this->updateLayout();
+            }
+        }
+        else
         {
             qWarning() << "Programming error?!";
-            return;
-        }
-        auto watcher2 = this->backgroundTasks[img.data()];
-        Q_ASSERT(watcher2 == watcher);
-        watcher->disconnect(q);
-        ANPV::globalInstance()->spinningIconHelper()->disconnect(this->spinningIconDrawConnections[img.data()]);
-        this->spinningIconDrawConnections.erase(img.data());
-        this->backgroundTasks.erase(img.data());
-        if (this->backgroundTasks.empty())
-        {
-            QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
-            this->updateLayout();
         }
 
-        // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
-        this->scheduleSpinningIconRedraw(img);
+        if (this->spinningIconDrawConnections.contains(img.data()))
+        {
+            ANPV::globalInstance()->spinningIconHelper()->disconnect(this->spinningIconDrawConnections[img.data()]);
+            this->spinningIconDrawConnections.erase(img.data());
+
+            // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
+            this->scheduleSpinningIconRedraw(img);
+        }
     }
 
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>>& watcher, const QSharedPointer<Image>& img)
@@ -200,7 +206,10 @@ struct SortedImageModel::Impl
     void scheduleSpinningIconRedraw(const QSharedPointer<Image>& img)
     {
         QModelIndex idx = q->index(img);
-        emit q->dataChanged(idx, idx, { Qt::DecorationRole });
+        if (idx.isValid())
+        {
+            emit q->dataChanged(idx, idx, { Qt::DecorationRole });
+        }
     }
 };
 
@@ -258,6 +267,7 @@ QSharedPointer<ImageSectionDataContainer> SortedImageModel::dataContainer()
 
 QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
+    xThreadGuard(this);
     d->clear();
     return d->directoryWatcher->changeDirAsync(dir);
 }
@@ -578,13 +588,13 @@ QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<Abstr
 
 QList<QSharedPointer<Image>> SortedImageModel::checkedEntries()
 {
-    std::lock_guard<std::recursive_mutex> l(d->m);
+    xThreadGuard(this);
     return d->checkedImages;
 }
 
 bool SortedImageModel::isSafeToChangeDir()
 {
-    std::lock_guard<std::recursive_mutex> l(d->m);
+    xThreadGuard(this);
     return d->checkedImages.size() == 0;
 }
 
@@ -607,7 +617,6 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         {
             if (c != old)
             {
-                std::lock_guard<std::recursive_mutex> l(d->m);
                 if (c == Qt::Unchecked)
                 {
                     d->checkedImages.removeAll(i);
@@ -625,7 +634,6 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         [&](QObject* i)
         {
             Q_ASSERT(i != nullptr);
-            std::lock_guard<std::recursive_mutex> l(d->m);
             d->checkedImages.removeAll(static_cast<Image*>(i));
         });
 
@@ -647,5 +655,6 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
 
 void SortedImageModel::cancelAllBackgroundTasks()
 {
+    xThreadGuard(this);
     d->cancelAllBackgroundTasks();
 }
