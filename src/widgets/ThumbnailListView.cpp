@@ -436,8 +436,6 @@ void ThumbnailListView::rowsInserted(const QModelIndex& parent, int start, int e
     // reimplement this to avoid flickering when inserting items, caused by clearing of QIconModeViewBase's internal "tree" object, caused by:
     // https://github.com/qt/qtbase/blob/56aa065ab57d55cc832c45b8c260153447c57188/src/widgets/itemviews/qlistview.cpp#L714-L715
 
-    // this will call  QListView::doDelayedItemsLayout();
-    this->setModelColumn(this->modelColumn());
-    // Alternatively, we could have called this->QListView::doItemsLayout();
+    // We should call this->QListView::doItemsLayout(); here to reflect the new item in the view. Instead, this is done in the model via the updateLayout timer.
     QAbstractItemView::rowsInserted(parent, start, end);
 }

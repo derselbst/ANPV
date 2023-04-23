@@ -59,6 +59,8 @@ struct SortedImageModel::Impl
     
     QPointer<QTimer> layoutChangedTimer;
 
+    QPointer<QFutureWatcher<DecodingState>> directoryWorker;
+
     Impl(SortedImageModel* parent) : q(parent)
     {}
     
@@ -70,6 +72,7 @@ struct SortedImageModel::Impl
     void cancelAllBackgroundTasks()
     {
         xThreadGuard g(q);
+        std::lock_guard<std::recursive_mutex> l(m);
         // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
         auto size = q->rowCount();
         for (int i = 0; i < size; i++)
@@ -83,32 +86,47 @@ struct SortedImageModel::Impl
             if (this->backgroundTasks.contains(img.data()))
             {
                 auto& fut = this->backgroundTasks[img.data()];
+                fut->disconnect(q);
                 img->decoder()->cancelOrTake(fut->future());
             }
         }
 
         layoutChangedTimer->stop();
 
-        // now, wait for the decoders to actually finish
+        // now, walk through the list again and wait for the decoders to actually finish
+        // do not delete all backgroundTasks as it may already contain tasks for images from a new directory
         // it should be fine to wait while holding the lock
-        for (const auto& [key, value] : backgroundTasks)
+        for (int i = 0; i < size; i++)
         {
-            auto& future = value;
-            Q_ASSERT(!future.isNull());
-            future->waitForFinished();
-        }
+            auto img = q->imageFromItem(q->item(q->index(i, 0)));
+            if (!img)
+            {
+                continue;
+            }
 
-        // backgroundTasks should become empty once all the finished events have been processed
-        // and therefore, ProgressIndicatorHelper::stopRendering should be called somewhen...
+            if (this->backgroundTasks.contains(img.data()))
+            {
+                auto& fut = this->backgroundTasks[img.data()];
+                Q_ASSERT(!fut.isNull());
+                fut->waitForFinished();
+                this->onBackgroundTaskFinished(fut, img);
+                // element removed, all iterators to backgroundTasks invalidated!
+            }
+        }
     }
     
     // stop processing, delete everything and wait until finished
     void clear()
     {
         xThreadGuard g(q);
+
+        q->beginResetModel();
+
         cancelAllBackgroundTasks();
         this->checkedImages.clear();
         this->visibleItemList.clear();
+        
+        q->endResetModel();
     }
 
     void updateLayout()
@@ -199,8 +217,8 @@ struct SortedImageModel::Impl
             this->onBackgroundTaskFinished(watcher, img);
             return;
         }
-        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [=]() { this->scheduleSpinningIconRedraw(img); });
-        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [=]() { this->scheduleSpinningIconRedraw(img); });
+        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [img, this]() { this->scheduleSpinningIconRedraw(img); });
+        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [img, this]() { this->scheduleSpinningIconRedraw(img); });
     }
 
     void scheduleSpinningIconRedraw(const QSharedPointer<Image>& img)
@@ -226,6 +244,9 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     //connect(ANPV::globalInstance()->backgroundThread(), &QThread::finished, this->fileModel, &QObject::deleteLater);
     //connect(ANPV::globalInstance()->backgroundThread(), &QThread::finished, q, [&]() { this->fileModel = nullptr; }); // for some reason the destroyed event is not emitted or processed, leaving the pointer dangling without this
 
+    d->directoryWorker = new QFutureWatcher<DecodingState>(this);
+    connect(d->directoryWorker, &QFutureWatcher<DecodingState>::started, this, [&]() { d->clear(); });
+    connect(d->directoryWorker, &QFutureWatcher<DecodingState>::canceled, this, [&]() { d->cancelAllBackgroundTasks(); });
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
             [&](int v)
@@ -262,14 +283,16 @@ SortedImageModel::~SortedImageModel()
 
 QSharedPointer<ImageSectionDataContainer> SortedImageModel::dataContainer()
 {
+    xThreadGuard(this);
     return d->entries;
 }
 
 QFuture<DecodingState> SortedImageModel::changeDirAsync(const QString& dir)
 {
     xThreadGuard(this);
-    d->clear();
-    return d->directoryWatcher->changeDirAsync(dir);
+    auto fut = d->directoryWatcher->changeDirAsync(dir);
+    d->directoryWorker->setFuture(fut);
+    return fut;
 }
 
 void SortedImageModel::decodeAllImages(DecodingState state, int imageHeight)
@@ -500,6 +523,10 @@ bool SortedImageModel::insertRows(int row, std::list<QSharedPointer<AbstractList
 
     this->endInsertRows();
 
+    // We override ThumbnailListView::rowsInserted() to avoid flickering, but the view needs a call to QListView::doItemsLayout() when inserting items to correctly show the icons.
+    // If we read a directory with reading EXIF data, the thumbnails will already be ready and therefore no layout change events will be emitted.
+    // And that's why we update the layout here.
+    d->updateLayout();
     return true;
 }
 
@@ -642,9 +669,9 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
             }
             d->backgroundTasks[image.data()] = watcher;
         }
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [=]() { d->onBackgroundTaskFinished(watcher, image); });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [=]() { d->onBackgroundTaskStarted(watcher, image); });
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [watcher, image, this]() { d->onBackgroundTaskFinished(watcher, image); });
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [watcher, image, this]() { d->onBackgroundTaskFinished(watcher, image); });
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [watcher, image, this]() { d->onBackgroundTaskStarted(watcher, image); });
     }
 }
 

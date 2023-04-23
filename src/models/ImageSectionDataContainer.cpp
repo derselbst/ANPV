@@ -367,21 +367,11 @@ void ImageSectionDataContainer::clear()
     std::unique_lock<std::recursive_mutex> l(d->m);
 
     auto rowCount = this->size();
-    if (rowCount != 0)
-    {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
-    }
     for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->clear();
     }
     this->d->data.clear();
-
-    l.unlock();
-    if (rowCount != 0)
-    {
-        QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, d->syncConnection());
-    }
 }
 
 /* Returns the number of section items and its image items. If only one section item exists and 
