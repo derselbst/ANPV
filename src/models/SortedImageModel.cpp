@@ -152,8 +152,6 @@ struct SortedImageModel::Impl
         QModelIndex m = q->index(img);
         if (m.isValid())
         {
-            // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
-            img->thumbnailTransformed(this->cachedIconHeight);
             emit q->dataChanged(m, m, { Qt::DecorationRole });
             this->updateLayout();
         }
@@ -162,18 +160,18 @@ struct SortedImageModel::Impl
     void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
     {
         xThreadGuard g(q);
-        if (newState == DecodingState::Ready)
+        if (newState == DecodingState::Error || newState == DecodingState::Fatal)
         {
-            // ignore ready state
+            // ignore any successful and cancelled states
             return;
         }
 
+        // in case of failure, refresh the thumbnail to show to error icon
         QModelIndex idx = q->index(img);
         if (idx.isValid())
         {
-            // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
-            img->thumbnailTransformed(this->cachedIconHeight);
             emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
+            this->updateLayout();
         }
     }
 
@@ -189,7 +187,8 @@ struct SortedImageModel::Impl
             if (this->backgroundTasks.empty())
             {
                 QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
-                this->updateLayout();
+                this->layoutChangedTimer->stop();
+                this->forceUpdateLayout();
             }
         }
         else

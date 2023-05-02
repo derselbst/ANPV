@@ -176,16 +176,25 @@ void Image::setThumbnail(QImage thumb)
     {
         return;
     }
+
+    // don't hold the lock when querying this
+    auto iconHeight = ANPV::globalInstance()->iconHeight();
     
     std::unique_lock<std::recursive_mutex> lck(d->m);
     if(thumb.width() > d->thumbnail.width())
     {
         d->thumbnail = thumb;
         d->thumbnailTransformed = QPixmap();
-        
+
+        if (!thumb.isNull())
+        {
+            // precompute and transform the thumbnail for the UI thread, before we are announcing that a thumbnail is available
+            this->thumbnailTransformed(iconHeight);
+        }
+
+        lck.unlock();
         if(!this->signalsBlocked())
         {
-            lck.unlock();
             emit this->thumbnailChanged(this, d->thumbnail);
         }
     }

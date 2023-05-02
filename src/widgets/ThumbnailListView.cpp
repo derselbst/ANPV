@@ -430,7 +430,6 @@ void ThumbnailListView::fileOperationOnSelectedFiles(QAction* action)
     d->startFileOperation(op, std::move(targetDir));
 }
 
-
 void ThumbnailListView::rowsInserted(const QModelIndex& parent, int start, int end)
 {
     // reimplement this to avoid flickering when inserting items, caused by clearing of QIconModeViewBase's internal "tree" object, caused by:
