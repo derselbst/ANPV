@@ -21,6 +21,8 @@
 #include <QFileDialog>
 #include <QMimeData>
 
+#include <atomic>
+
 #include "DocumentView.hpp"
 #include "DecoderFactory.hpp"
 #include "Image.hpp"
@@ -132,7 +134,8 @@ struct ANPV::Impl
     Qt::SortOrder sectionSortOrder = static_cast<Qt::SortOrder>(-1);
     SortField imageSortField = SortField::None;
     SortField sectionSortField = SortField::None;
-    int iconHeight = -1;
+    
+    std::atomic<int> iconHeight{ -1 };
     
     Impl(ANPV* parent) : q(parent)
     {
@@ -729,7 +732,7 @@ void ANPV::setSectionSortField(SortField field)
 
 int ANPV::iconHeight()
 {
-    xThreadGuard g(this);
+    // accessed by UI Thread, ThreadPool, and maybe elsewhere
     return d->iconHeight;
 }
 
