@@ -13,6 +13,7 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QMetaEnum>
+#include <QScrollBar>
 
 #include <algorithm>
 #include <cmath>
@@ -326,7 +327,13 @@ ThumbnailListView::~ThumbnailListView() = default;
 /* Changes the visible size of the item delegate for the section items. */
 void ThumbnailListView::resizeEvent(QResizeEvent* event)
 {
-    d->itemDelegate->resizeSectionSize(event->size());
+    QSize sizeWithoutScrollbar = event->size();
+    auto* vsb = this->verticalScrollBar();
+    if (vsb != nullptr && vsb->isVisible())
+    {
+        sizeWithoutScrollbar.rwidth() -= vsb->width();
+    }
+    d->itemDelegate->resizeSectionSize(sizeWithoutScrollbar);
     QListView::resizeEvent(event);
 }
 
