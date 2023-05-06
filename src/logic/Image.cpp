@@ -229,7 +229,7 @@ QPixmap Image::thumbnailTransformed(int height)
         return QPixmap();
     }
     
-    TRACETIMER(typeid(Image), 10);
+    TraceTimer t(typeid(Image), 10);
     std::unique_lock<std::recursive_mutex> lck(d->m);
     
     QPixmap pix;

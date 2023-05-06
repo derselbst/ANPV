@@ -30,9 +30,3 @@ private:
     struct Impl;
     std::unique_ptr<Impl> d;
 };
-
-#if !defined(NDEBUG) || defined(DEBUG)
-#define TRACETIMER(X,Y) TraceTimer t(X,Y)
-#else
-#define TRACETIMER(X,Y) 
-#endif
