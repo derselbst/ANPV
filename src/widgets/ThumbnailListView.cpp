@@ -30,6 +30,7 @@
 #include "MoveFileCommand.hpp"
 #include "WaitCursor.hpp"
 #include "ListItemDelegate.hpp"
+#include "TraceTimer.hpp"
 
 struct ThumbnailListView::Impl
 {
@@ -444,4 +445,10 @@ void ThumbnailListView::rowsInserted(const QModelIndex& parent, int start, int e
 
     // We should call this->QListView::doItemsLayout(); here to reflect the new item in the view. Instead, this is done in the model via the updateLayout timer.
     QAbstractItemView::rowsInserted(parent, start, end);
+}
+
+void ThumbnailListView::doItemsLayout()
+{
+    TraceTimer t(typeid(*this), 200);
+    this->QListView::doItemsLayout();
 }

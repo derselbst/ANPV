@@ -233,7 +233,7 @@ struct SortedImageModel::Impl
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent), d(std::make_unique<Impl>(this))
 {
     d->layoutChangedTimer = new QTimer(this);
-    d->layoutChangedTimer->setInterval(1000);
+    d->layoutChangedTimer->setInterval(500);
     d->layoutChangedTimer->setSingleShot(true);
     connect(d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
     
