@@ -497,7 +497,10 @@ struct MainWindow::Impl
         {
             ui->filterPatternLineEdit->setPalette(ui->filterPatternLineEdit->style()->standardPalette());
             ui->filterPatternLineEdit->setToolTip(QString());
+            // Emit layout changed to make sure all items are properly displayed
+            proxyModel->layoutAboutToBeChanged();
             proxyModel->setFilterRegularExpression(regularExpression);
+            proxyModel->layoutChanged();
         }
         else
         {
@@ -505,7 +508,9 @@ struct MainWindow::Impl
             palette.setColor(QPalette::Text, Qt::red);
             ui->filterPatternLineEdit->setPalette(palette);
             ui->filterPatternLineEdit->setToolTip(regularExpression.errorString());
+            proxyModel->layoutAboutToBeChanged();
             proxyModel->setFilterRegularExpression(QRegularExpression());
+            proxyModel->layoutChanged();
         }
     }
     
