@@ -330,6 +330,11 @@ struct DocumentView::Impl
     
     void setDocumentError(QString error)
     {
+        if (error.isEmpty())
+        {
+            messageWidget->hide();
+            return;
+        }
         messageWidget->setText(error);
         messageWidget->setMessageType(MessageWidget::MessageType::Error);
         messageWidget->setIcon(QIcon::fromTheme("dialog-error"));
@@ -820,15 +825,14 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
         d->messageWidget->hide();
         break;
     case DecodingState::Metadata:
-    {
         this->showImage(dec->image());
         break;
-    }
     case DecodingState::FullImage:
-    {
         d->thumbnailPreviewOverlay->hide();
+        [[fallthrough]];
+    case DecodingState::PreviewImage:
+        d->setDocumentError(QStringLiteral(""));
         break;
-    }
     case DecodingState::Fatal:
     case DecodingState::Error:
         d->currentDocumentPixmap = QPixmap();
