@@ -160,18 +160,23 @@ struct SortedImageModel::Impl
     void onBackgroundImageTaskStateChanged(Image* img, quint32 newState, quint32)
     {
         xThreadGuard g(q);
-        if (newState == DecodingState::Error || newState == DecodingState::Fatal)
-        {
-            // ignore any successful and cancelled states
-            return;
-        }
 
-        // in case of failure, refresh the thumbnail to show to error icon
         QModelIndex idx = q->index(img);
         if (idx.isValid())
         {
-            emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
-            this->updateLayout();
+            // in case of failure, refresh the thumbnail to show to error icon
+            if (newState == DecodingState::Error || newState == DecodingState::Fatal)
+            {
+                emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
+            }
+            else if (newState == DecodingState::Metadata)
+            {
+                emit q->dataChanged(idx, idx, { Qt::ToolTipRole });
+            }
+            else
+            {
+                // ignore any successful and cancelled states
+            }
         }
     }
 
