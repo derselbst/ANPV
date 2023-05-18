@@ -458,6 +458,14 @@ void ThumbnailListView::rowsInserted(const QModelIndex& parent, int start, int e
 
 void ThumbnailListView::doItemsLayout()
 {
-    TraceTimer t(typeid(*this), 200);
+    WaitCursor w;
+    QElapsedTimer e;
+    e.start();
     this->QListView::doItemsLayout();
+    auto t = e.elapsed();
+    auto m = ANPV::globalInstance()->fileModel();
+    if(m != nullptr)
+    {
+        m->setLayoutTimerInterval(t*2);
+    }
 }

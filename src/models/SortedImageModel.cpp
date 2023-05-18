@@ -125,6 +125,7 @@ struct SortedImageModel::Impl
         cancelAllBackgroundTasks();
         this->checkedImages.clear();
         this->visibleItemList.clear();
+        this->layoutChangedTimer->setInterval(500);
         
         q->endResetModel();
     }
@@ -683,4 +684,9 @@ void SortedImageModel::cancelAllBackgroundTasks()
 {
     xThreadGuard(this);
     d->cancelAllBackgroundTasks();
+}
+
+void SortedImageModel::setLayoutTimerInterval(qint64 t)
+{
+    d->layoutChangedTimer->setInterval(t);
 }

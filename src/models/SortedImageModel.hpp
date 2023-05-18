@@ -67,6 +67,7 @@ public:
     void welcomeImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
 
     bool insertRows(int row, std::list<QSharedPointer<AbstractListItem>>& items);
+    void setLayoutTimerInterval(qint64 t);
 
 public: // QAbstractItemModel
     
