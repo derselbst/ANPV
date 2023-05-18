@@ -831,6 +831,7 @@ void DocumentView::onDecodingStateChanged(Image* img, quint32 newState, quint32 
         d->thumbnailPreviewOverlay->hide();
         [[fallthrough]];
     case DecodingState::PreviewImage:
+        // unset any previous error in case it magically recovered
         d->setDocumentError(QStringLiteral(""));
         break;
     case DecodingState::Fatal:
