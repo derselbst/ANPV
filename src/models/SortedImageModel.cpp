@@ -275,7 +275,7 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
             [&](ViewFlags_t v, ViewFlags_t)
             {
                 d->cachedViewFlags = v;
-                d->forceUpdateLayout();
+                emit this->dataChanged(this->index(0,0), this->index(this->rowCount(),0), { Qt::EditRole, Qt::CheckStateRole });
             });
 }
 

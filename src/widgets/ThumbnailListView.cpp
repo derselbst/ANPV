@@ -237,6 +237,15 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->itemDelegate = new ListItemDelegate(this);
     this->setItemDelegate(d->itemDelegate);
 
+    connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this,
+            [&](ViewFlags_t v, ViewFlags_t)
+            {
+                // Item flags of the model have changed, but there is no itemFlagsChanged event.
+                // Reschedule a paint event for the view to make disabled items become gray.
+                // And since the QListView is inside a scrollarea, we cannot simply call this->repaint()!
+                this->viewport()->repaint();
+            });
+
     connect(this, &QListView::activated, this, [&](const QModelIndex &){ d->openSelectionInternally(); });
 
     d->actionOpenSelectionInternally = new QAction("Open", this);
