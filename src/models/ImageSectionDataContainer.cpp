@@ -78,8 +78,10 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     auto image = DecoderFactory::globalInstance()->makeImage(info);
     auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
 
-    // Let the image live in the background thread. This allow Qt::DirectConnection between Image::destroyed and SortedDirModel to remove it from the list of checked images
-    //image->moveToThread(QGuiApplication::instance()->thread());
+    // Let the image live in the same thread as the SortedDirModel. This allows Qt::DirectConnection between Image::destroyed and SortedDirModel to remove it from the list of checked images.
+    // Additionally, the image should live in the UI thread to allow direct Image::previewImageUpdated event delivery to the DocumentView, even when the background thread is busy. Otherwise the DocumentView would show an incompletely decoded image until the background thread (which would own the image by default) enqueues that particular event...
+    Q_ASSERT(QGuiApplication::instance()->thread() == d->model->thread());
+    image->moveToThread(QGuiApplication::instance()->thread());
 
     QSharedPointer<QFutureWatcher<DecodingState>> watcher;
     QVariant var;
