@@ -87,6 +87,11 @@ struct SmartImageDecoder::Impl
     {
         return this->decodingMessage;
     }
+
+    QSharedPointer<Image> imageUnsafe()
+    {
+        return this->image.toStrongRef();
+    }
     
     template<typename T>
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
@@ -135,7 +140,7 @@ SmartImageDecoder::~SmartImageDecoder()
 
 QSharedPointer<Image> SmartImageDecoder::image()
 {
-    QSharedPointer<Image> img = d->image.toStrongRef();
+    auto img = d->imageUnsafe();
     Q_ASSERT(!img.isNull());
     return img;
 }
@@ -318,34 +323,45 @@ void SmartImageDecoder::run()
     std::lock_guard g(d->asyncApiMtx);
     d->promise->start();
 
-    try
+    // reference the currently decoded image to prevent it from being deleted while decoding is still ongoing
+    auto refImg = d->imageUnsafe();
+    if (!refImg.isNull())
     {
-        // Before opening a file potentially located on a slow network drive, check whether we have already been cancelled.
-        this->cancelCallback();
+        try
+        {
+            // Before opening a file potentially located on a slow network drive, check whether we have already been cancelled.
+            this->cancelCallback();
 
-        this->open();
-        this->decode(d->targetState, d->desiredResolution, d->roiRect);
+            this->open();
+            this->decode(d->targetState, d->desiredResolution, d->roiRect);
+        }
+        catch (const UserCancellation&)
+        {
+            this->setDecodingState(DecodingState::Cancelled);
+        }
+        catch (...)
+        {
+            Formatter f;
+            f << "Uncaught exception during SmartImageDecoder::run()!";
+            QString err = f.str().c_str();
+            d->setErrorMessage(err);
+            qCritical() << err;
+            this->setDecodingState(DecodingState::Fatal);
+        }
+
+        // Immediately close ourself once done. This is important to avoid resource leaks, when the 
+        // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
+        this->close();
+
+        // this will not store the result if the future has been canceled already!
+        d->promise->addResult(d->decodingState());
     }
-    catch (const UserCancellation&)
+    else
     {
-        this->setDecodingState(DecodingState::Cancelled);
-    }
-    catch(...)
-    {
-        Formatter f;
-        f << "Uncaught exception during SmartImageDecoder::run()!";
-        QString err = f.str().c_str();
-        d->setErrorMessage(err);
-        qCritical() << err;
-        this->setDecodingState(DecodingState::Fatal);
+        qDebug() << "Image already destroyed, skipping decode";
+        d->promise->addResult(DecodingState::Cancelled);
     }
 
-    // Immediately close ourself once done. This is important to avoid resource leaks, when the 
-    // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
-    this->close();
-
-    // this will not store the result if the future has been canceled already!
-    d->promise->addResult(d->decodingState());
     d->promise->finish();
 }
 
