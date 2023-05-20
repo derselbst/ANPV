@@ -199,7 +199,7 @@ struct SortedImageModel::Impl
         }
         else
         {
-            qWarning() << "Programming error?!";
+            // Most likely, the task has been already removed by cancelAllBackgroundTasks(). Silently ignore.
         }
 
         if (this->spinningIconDrawConnections.contains(img.data()))
