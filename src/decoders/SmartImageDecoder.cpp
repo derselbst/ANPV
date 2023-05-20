@@ -323,7 +323,7 @@ void SmartImageDecoder::run()
     std::lock_guard g(d->asyncApiMtx);
     d->promise->start();
 
-    // reference the currently decoded image to prevent it from being deleted while decoding is still ongoing
+    // reference the currently decoded image to prevent it from being deleted while decoding is still ongoing (#43)
     auto refImg = d->imageUnsafe();
     if (!refImg.isNull())
     {

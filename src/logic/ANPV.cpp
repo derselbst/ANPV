@@ -177,7 +177,7 @@ struct ANPV::Impl
         this->dirModel->setRootPath("");
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
         
-        this->fileModel = new SortedImageModel(nullptr);
+        this->fileModel = new SortedImageModel(q);
         connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
             [&]()
             {
