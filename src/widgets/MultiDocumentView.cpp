@@ -42,8 +42,7 @@ struct MultiDocumentView::Impl
         
     void writeSettings()
     {
-        WaitCursor w;
-        QSettings settings;
+        auto& settings = ANPV::globalInstance()->settings();
         settings.beginGroup("MultiDocumentView");
         settings.setValue("geometry", q->saveGeometry());
         settings.endGroup();
@@ -51,8 +50,7 @@ struct MultiDocumentView::Impl
 
     void readSettings(QMainWindow *parent)
     {
-        WaitCursor w;
-        QSettings settings;
+        auto& settings = ANPV::globalInstance()->settings();
         settings.beginGroup("MultiDocumentView");
         // open the window on the primary screen
         // by moving and resize it explicitly

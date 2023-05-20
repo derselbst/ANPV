@@ -354,8 +354,7 @@ struct MainWindow::Impl
     
     void writeSettings()
     {
-        WaitCursor w;
-        QSettings settings;
+        auto& settings = ANPV::globalInstance()->settings();
 
         settings.beginGroup("MainWindow");
         settings.setValue("size", q->size());
@@ -367,11 +366,10 @@ struct MainWindow::Impl
 
     void readSettings()
     {
-        WaitCursor w;
         QScreen *ps = QGuiApplication::primaryScreen();
         QRect screenres = ps->geometry();
 
-        QSettings settings;
+        auto& settings = ANPV::globalInstance()->settings();
 
         settings.beginGroup("MainWindow");
         // open the window on the primary screen

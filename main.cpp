@@ -35,6 +35,8 @@ int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
     QApplication app(argc, argv);
+    app.setOrganizationName("derselbst");
+    app.setApplicationName("ANPV");
 
     QSplashScreen splash(QPixmap(":/images/splash.jpg"));
     splash.show();

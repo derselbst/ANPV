@@ -25,6 +25,7 @@ class QMimeData;
 class QAction;
 class ProgressIndicatorHelper;
 class QThread;
+class QSettings;
 
 template<typename T>
 class QFuture;
@@ -46,6 +47,7 @@ public:
     ~ANPV() override;
 
     QThread* backgroundThread();
+    QSettings& settings();
 
     void openImages(const QList<QSharedPointer<Image>>&);
     void showThumbnailView();

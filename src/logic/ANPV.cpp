@@ -122,6 +122,7 @@ struct ANPV::Impl
     QPointer<QUndoStack> undoStack;
     QPointer<QThread> backgroundThread;
     QPointer<ProgressIndicatorHelper> spinningIconHelper;
+    QPointer<QSettings> globalSettings;
     
     // Use a simple string for the currentDir, because:
     // QDir lacks a "null" value, as it defaults to the current working directory
@@ -278,8 +279,8 @@ struct ANPV::Impl
         actionRespect_EXIF_orientation->setToolTip(QStringLiteral("Automatically rotates the image as indicated by the EXIF metadata.If no such information is available, landscape orientation will be used by default."));
         actionRespect_EXIF_orientation->setStatusTip(actionRespect_EXIF_orientation->toolTip());
 
-
         this->undoStack = new QUndoStack(q);
+        this->globalSettings = new QSettings(QSettings::UserScope, q);
     }
     
     void connectLogic()
@@ -300,7 +301,7 @@ struct ANPV::Impl
     
     void writeSettings()
     {
-        QSettings settings;
+        auto& settings = q->settings();
 
         QString curDir = q->currentDir();
         if(!curDir.isEmpty())
@@ -337,7 +338,7 @@ struct ANPV::Impl
 
     void readSettings()
     {
-        QSettings settings;
+        auto& settings = q->settings();
 
         q->setViewMode(static_cast<ViewMode>(settings.value("viewMode", static_cast<int>(ViewMode::Fit)).toInt()));
         q->setViewFlags(settings.value("viewFlags", static_cast<ViewFlags_t>(ViewFlag::ShowScrollBars)).toUInt());
@@ -501,6 +502,11 @@ QThread* ANPV::backgroundThread()
     return d->backgroundThread.get();
 }
 
+QSettings& ANPV::settings()
+{
+    return *d->globalSettings;
+}
+
 QFileSystemModel* ANPV::dirModel()
 {
     xThreadGuard g(this);
@@ -556,8 +562,7 @@ void ANPV::setCurrentDir(const QString& str, bool force)
 QString ANPV::savedCurrentDir()
 {
     xThreadGuard g(this);
-    QSettings settings;
-    return settings.value("currentDir", qgetenv("HOME")).toString();
+    return this->settings().value("currentDir", qgetenv("HOME")).toString();
 }
 
 void ANPV::fixupAndSetCurrentDir(QString str)
