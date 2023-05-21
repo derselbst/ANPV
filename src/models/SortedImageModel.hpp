@@ -20,7 +20,6 @@ class AbstractListItem;
 class SortedImageModel : public QAbstractTableModel
 {
     Q_OBJECT
-    friend class ImageSectionDataContainer;
     
 public:
 

@@ -60,6 +60,22 @@ struct ImageSectionDataContainer::Impl
         auto upper = std::upper_bound(this->data.begin(), this->data.end(), section, this->getSortFunction(this->sectionSortOrder));
         return upper;
     }
+    
+    std::list<QSharedPointer<AbstractListItem>> flatListForUI()
+    {
+        std::list<QSharedPointer<AbstractListItem>> result;
+        for (SectionList::const_iterator sit = this->data.begin(); sit != this->data.end(); ++sit)
+        {
+            auto size = (*sit)->size();
+            for (size_t i = 0; i < size; i++)
+            {
+                auto item = (*sit)->at(i);
+                result.emplace_back(std::move(item));
+            }
+        }
+        
+        return result;
+    }
 };
 
 ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
@@ -367,8 +383,13 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 void ImageSectionDataContainer::clear()
 {
     std::unique_lock<std::recursive_mutex> l(d->m);
-
     auto rowCount = this->size();
+
+    QMetaObject::invokeMethod(d->model, [rowCount, this]()
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
+
     for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->clear();
@@ -400,32 +421,62 @@ int ImageSectionDataContainer::size() const
 /* Invoke the sorting the images items of the section items according to given the field (field) and the order (order). */
 void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::SortOrder order)
 {
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
-
     std::lock_guard<std::recursive_mutex> l(d->m);
+    auto rowCount = this->size();
     
+    if(rowCount == 0)
+    {
+        return;
+    }
+
+    QMetaObject::invokeMethod(d->model, [rowCount, this]()
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
+
     for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->sortItems(imageSortField, order);
     }
     d->imageSortField = imageSortField;
     d->imageSortOrder = order;
-    
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
+
+    auto itemsForUIModel = d->flatListForUI();
+    QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(0, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
 }
 
 /* Sorts the section item according to given the order (order). */
 void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::SortOrder order)
 {
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->beginResetModel(); }, d->syncConnection());
-    
     std::lock_guard<std::recursive_mutex> l(d->m);
+    auto rowCount = this->size();
     
+    if(rowCount == 0)
+    {
+        return;
+    }
+
+    QMetaObject::invokeMethod(d->model, [rowCount, this]()
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
+
     std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
     d->sectionSortOrder = order;
     d->sectionSortField = sectionSortField;
-    
-    QMetaObject::invokeMethod(d->model, [&]() { d->model->endResetModel(); }, Qt::AutoConnection);
+
+    auto itemsForUIModel = d->flatListForUI();
+    QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(0, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
 }
 
 void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHeight)
