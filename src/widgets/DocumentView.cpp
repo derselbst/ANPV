@@ -911,6 +911,26 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     xThreadGuard g(this);
     
     QSize fullImgSize = img->size();
+    if(!fullImgSize.isValid())
+    {
+        // this can happen if the image has been yet started decoding
+        auto fut = d->currentImageDecoder->decodeAsync(DecodingState::Metadata, Priority::Important, this->viewport()->rect().size(), QRect());
+        fut.waitForFinished();
+        auto state = fut.result();
+        if(state == DecodingState::Error || state == DecodingState::Fatal)
+        {
+            QString name = img->fileInfo().fileName();
+            d->setDocumentError(QString("Decoder failed to retrieve early metadata for file %1, error was %2").arg(name).arg(img->errorMessage()));
+            return;
+        }
+
+        fullImgSize = img->size();
+        if(!fullImgSize.isValid())
+        {
+            throw std::logic_error("Oops: Early metadata didn't report full image size, but no error was reported?!");
+        }
+    }
+
     if(fullImgSize.isValid())
     {
         this->setSceneRect(QRectF(QPointF(0,0), fullImgSize));
