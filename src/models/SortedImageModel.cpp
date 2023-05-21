@@ -124,7 +124,7 @@ struct SortedImageModel::Impl
 
         cancelAllBackgroundTasks();
         this->checkedImages.clear();
-        this->visibleItemList.clear();
+        // this->visibleItemList.clear(); Will be cleared via a delayed event by ImageSectionDataContainer::clear()
         this->layoutChangedTimer->setInterval(500);
         
         q->endResetModel();

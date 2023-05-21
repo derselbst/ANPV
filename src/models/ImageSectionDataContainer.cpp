@@ -383,7 +383,12 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 void ImageSectionDataContainer::clear()
 {
     std::unique_lock<std::recursive_mutex> l(d->m);
+    
     auto rowCount = this->size();
+    if (rowCount == 0)
+    {
+        return;
+    }
 
     QMetaObject::invokeMethod(d->model, [rowCount, this]()
         {
@@ -422,8 +427,11 @@ int ImageSectionDataContainer::size() const
 void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
-    auto rowCount = this->size();
     
+    d->imageSortField = imageSortField;
+    d->imageSortOrder = order;
+    
+    auto rowCount = this->size();
     if(rowCount == 0)
     {
         return;
@@ -438,9 +446,7 @@ void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::Sor
     {
         (*it)->sortItems(imageSortField, order);
     }
-    d->imageSortField = imageSortField;
-    d->imageSortOrder = order;
-
+    
     auto itemsForUIModel = d->flatListForUI();
     QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
         {
@@ -454,8 +460,11 @@ void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::Sor
 void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
+
+    d->sectionSortOrder = order;
+    d->sectionSortField = sectionSortField;
+
     auto rowCount = this->size();
-    
     if(rowCount == 0)
     {
         return;
@@ -467,8 +476,6 @@ void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::Sor
         }, Qt::AutoConnection);
 
     std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
-    d->sectionSortOrder = order;
-    d->sectionSortField = sectionSortField;
 
     auto itemsForUIModel = d->flatListForUI();
     QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
