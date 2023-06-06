@@ -51,7 +51,7 @@ struct SortedImageModel::Impl
     std::map<Image*, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
     std::map<Image*, QMetaObject::Connection> spinningIconDrawConnections;
-    QList<QSharedPointer<Image>> checkedImages;
+    QList<Image*> checkedImages; //should contain non-owning references only, so that it can be cleared by Image::destroyed()
     
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
     int cachedIconHeight = 1;
@@ -239,7 +239,6 @@ struct SortedImageModel::Impl
 SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent), d(std::make_unique<Impl>(this))
 {
     d->layoutChangedTimer = new QTimer(this);
-    d->layoutChangedTimer->setInterval(500);
     d->layoutChangedTimer->setSingleShot(true);
     connect(d->layoutChangedTimer, &QTimer::timeout, this, [&](){ d->forceUpdateLayout();});
     
@@ -250,7 +249,9 @@ SortedImageModel::SortedImageModel(QObject* parent) : QAbstractTableModel(parent
     //connect(ANPV::globalInstance()->backgroundThread(), &QThread::finished, q, [&]() { this->fileModel = nullptr; }); // for some reason the destroyed event is not emitted or processed, leaving the pointer dangling without this
 
     d->directoryWorker = new QFutureWatcher<DecodingState>(this);
-    connect(d->directoryWorker, &QFutureWatcher<DecodingState>::started, this, [&]() { d->clear(); });
+    connect(d->directoryWorker, &QFutureWatcher<DecodingState>::started, this, [&]() {
+        d->layoutChangedTimer->stop();
+        d->layoutChangedTimer->setInterval(500); });
     connect(d->directoryWorker, &QFutureWatcher<DecodingState>::canceled, this, [&]() { d->cancelAllBackgroundTasks(); });
 
     connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this,
@@ -549,7 +550,49 @@ bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
 
     auto last = first;
     std::advance(last, count);
+    
+    {
+        std::lock_guard<std::recursive_mutex> l(d->m);
+        for(auto it = first; it != last; ++it)
+        {
+            // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
+            auto img = this->imageFromItem(*it);
+            if (!img)
+            {
+                continue;
+            }
+            
+            if (d->backgroundTasks.contains(img.data()))
+            {
+                auto& fut = d->backgroundTasks[img.data()];
+                fut->disconnect(this);
+                img->decoder()->cancelOrTake(fut->future());
+            }
+        }
 
+        for(auto it = first; it != last; ++it)
+        {
+            // now, walk through the list again and wait for the decoders to actually finish
+            // do not delete all backgroundTasks as it may already contain tasks for images from a new directory
+            // it should be fine to wait while holding the lock
+            auto img = this->imageFromItem(*it);
+            if (!img)
+            {
+                continue;
+            }
+            
+            if (d->backgroundTasks.contains(img.data()))
+            {
+                auto& fut = d->backgroundTasks[img.data()];
+                Q_ASSERT(!fut.isNull());
+                fut->waitForFinished();
+                d->onBackgroundTaskFinished(fut, img);
+                // element removed, all iterators to backgroundTasks invalidated!
+            }
+        }
+    }
+
+    // now that all pending background tasks have been removed, we can delete the owning references to those images
     d->visibleItemList.erase(first, last);
 
     this->endRemoveRows();
@@ -613,7 +656,7 @@ QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<Abstr
     return nullptr;
 }
 
-QList<QSharedPointer<Image>> SortedImageModel::checkedEntries()
+QList<Image*> SortedImageModel::checkedEntries()
 {
     xThreadGuard(this);
     return d->checkedImages;
@@ -651,8 +694,8 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
                 else
                 {
                     // retrieve the QSharedPointer for *i
-                    auto qimg = this->imageFromItem(this->item(this->index(i)));
-                    d->checkedImages.append(qimg);
+                    // auto qimg = this->imageFromItem(this->item(this->index(i)));
+                    d->checkedImages.append(i);
                 }
             }
         });
@@ -661,6 +704,7 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
         [&](QObject* i)
         {
             Q_ASSERT(i != nullptr);
+            // i is already partly destroyed, hence we cannot dynamic_cast here
             d->checkedImages.removeAll(static_cast<Image*>(i));
         });
 

@@ -72,7 +72,7 @@ struct ThumbnailListView::Impl
             return;
         }
         
-        QList<QSharedPointer<Image>> imgs = q->checkedImages();
+        auto imgs = q->checkedImages();
         if (imgs.isEmpty())
         {
             const char* operation = QMetaEnum::fromType<ANPV::FileOperation>().key(op);
@@ -412,7 +412,7 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
     QListView::setModel(model);
 }
 
-QList<QSharedPointer<Image>> ThumbnailListView::checkedImages()
+QList<Image*> ThumbnailListView::checkedImages()
 {
     auto sourceModel = ANPV::globalInstance()->fileModel();
     return sourceModel->checkedEntries();
