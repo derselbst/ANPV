@@ -464,6 +464,9 @@ void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::Sor
     d->sectionSortOrder = order;
     d->sectionSortField = sectionSortField;
 
+    // the code below is incomplete...
+    return;
+
     auto rowCount = this->size();
     if(rowCount == 0)
     {
@@ -476,6 +479,8 @@ void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::Sor
         }, Qt::AutoConnection);
 
     std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
+
+    // ...because it is missing recreation of all section items here
 
     auto itemsForUIModel = d->flatListForUI();
     QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
