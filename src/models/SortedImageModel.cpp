@@ -66,7 +66,9 @@ struct SortedImageModel::Impl
     
     ~Impl()
     {
-        clear();
+        cancelAllBackgroundTasks();
+        this->checkedImages.clear();
+        this->visibleItemList.clear();
     }
     
     void cancelAllBackgroundTasks()
@@ -115,21 +117,6 @@ struct SortedImageModel::Impl
         }
     }
     
-    // stop processing, delete everything and wait until finished
-    void clear()
-    {
-        xThreadGuard g(q);
-
-        q->beginResetModel();
-
-        cancelAllBackgroundTasks();
-        this->checkedImages.clear();
-        // this->visibleItemList.clear(); Will be cleared via a delayed event by ImageSectionDataContainer::clear()
-        this->layoutChangedTimer->setInterval(500);
-        
-        q->endResetModel();
-    }
-
     void updateLayout()
     {
         xThreadGuard g(q);
