@@ -67,10 +67,14 @@ struct ImageSectionDataContainer::Impl
         for (SectionList::const_iterator sit = this->data.begin(); sit != this->data.end(); ++sit)
         {
             auto size = (*sit)->size();
-            for (size_t i = 0; i < size; i++)
+            if(size != 0)
             {
-                auto item = (*sit)->at(i);
-                result.emplace_back(std::move(item));
+                result.emplace_back(*sit);
+                for (size_t i = 0; i < size; i++)
+                {
+                    auto item = (*sit)->at(i);
+                    result.emplace_back(std::move(item));
+                }
             }
         }
         
