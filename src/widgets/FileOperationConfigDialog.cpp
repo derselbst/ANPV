@@ -63,7 +63,15 @@ void FileOperationConfigDialog::fillDiag()
             seqEdit->setKeySequence(action->shortcut());
             // the entries in the combo may not necessarily share the same index as the enum values
             // hence use this complicated way of setting the right index
-            comboBox->setCurrentText(metaEnumOperation.valueToKey(this->operationFromAction(action)));
+            try
+            {
+                comboBox->setCurrentText(metaEnumOperation.valueToKey(this->operationFromAction(action)));
+            }
+            catch(const std::runtime_error& e)
+            {
+                comboBox->setCurrentIndex(-1);
+                comboBox->setCurrentText("unknown");
+            }
         }
         else
         {
