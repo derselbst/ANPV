@@ -448,13 +448,15 @@ border-radius: 0px;
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>thumbnailListView</tabstop>
+  <tabstop>fileSystemTreeView</tabstop>
   <tabstop>urlNavigator</tabstop>
+  <tabstop>thumbnailListView</tabstop>
   <tabstop>iconSizeSlider</tabstop>
   <tabstop>filterPatternLineEdit</tabstop>
   <tabstop>filterSyntaxComboBox</tabstop>
   <tabstop>filterCaseSensitivityCheckBox</tabstop>
-  <tabstop>fileSystemTreeView</tabstop>
+  <tabstop>searchButton</tabstop>
+  <tabstop>resetButton</tabstop>
   <tabstop>infoBox</tabstop>
  </tabstops>
  <resources/>
