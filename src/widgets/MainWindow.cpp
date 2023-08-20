@@ -60,6 +60,7 @@ struct MainWindow::Impl
     QAction *actionFileOperationConfigDialog = nullptr;
     QAction *actionExit = nullptr;
 
+    QPointer<QAction> actionFilterFocus;
     QPointer<QAction> actionFilterSearch;
     QPointer<QAction> actionFilterReset;
 
@@ -86,16 +87,24 @@ struct MainWindow::Impl
         this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
         this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewFlag->actions());
 
+        this->actionFilterFocus = new QAction("FilterFocus", q);
+        this->actionFilterFocus->setShortcut(Qt::CTRL | Qt::Key_F);
+        this->actionFilterFocus->setShortcutContext(Qt::WindowShortcut);
+        connect(this->actionFilterFocus, &QAction::triggered, q, [&]() {this->ui->filterPatternLineEdit->setFocus(Qt::ShortcutFocusReason); });
+
         this->actionFilterSearch = new QAction("Search", q);
         this->actionFilterSearch->setShortcuts({ Qt::Key_Enter, Qt::Key_Return });
         this->actionFilterSearch->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionFilterSearch, &QAction::triggered, this->ui->searchButton, &QAbstractButton::click);
+        connect(this->actionFilterSearch, &QAction::triggered, q, [&]() {this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason); });
 
         this->actionFilterReset = new QAction("Reset", q);
         this->actionFilterReset->setShortcut(Qt::Key_Escape);
         this->actionFilterReset->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionFilterReset, &QAction::triggered, this->ui->resetButton, &QAbstractButton::click);
+        connect(this->actionFilterReset, &QAction::triggered, q, [&]() {this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason); });
 
+        this->ui->filterGroupBox->addAction(this->actionFilterFocus);
         this->ui->filterGroupBox->addAction(this->actionFilterSearch);
         this->ui->filterGroupBox->addAction(this->actionFilterReset);
 

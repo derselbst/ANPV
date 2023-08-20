@@ -451,13 +451,13 @@ border-radius: 0px;
   <tabstop>fileSystemTreeView</tabstop>
   <tabstop>urlNavigator</tabstop>
   <tabstop>thumbnailListView</tabstop>
-  <tabstop>iconSizeSlider</tabstop>
   <tabstop>filterPatternLineEdit</tabstop>
   <tabstop>filterSyntaxComboBox</tabstop>
   <tabstop>filterCaseSensitivityCheckBox</tabstop>
   <tabstop>searchButton</tabstop>
   <tabstop>resetButton</tabstop>
   <tabstop>infoBox</tabstop>
+  <tabstop>iconSizeSlider</tabstop>
  </tabstops>
  <resources/>
  <connections/>
