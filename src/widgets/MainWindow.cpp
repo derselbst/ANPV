@@ -59,7 +59,10 @@ struct MainWindow::Impl
     QAction *actionRedo = nullptr;
     QAction *actionFileOperationConfigDialog = nullptr;
     QAction *actionExit = nullptr;
-    
+
+    QPointer<QAction> actionFilterSearch;
+    QPointer<QAction> actionFilterReset;
+
     QPointer<QAction> actionBack = nullptr;
     QPointer<QAction> actionForward = nullptr;
     
@@ -82,6 +85,19 @@ struct MainWindow::Impl
         this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewMode->actions());
         this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
         this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewFlag->actions());
+
+        this->actionFilterSearch = new QAction("Search", q);
+        this->actionFilterSearch->setShortcuts({ Qt::Key_Enter, Qt::Key_Return });
+        this->actionFilterSearch->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        connect(this->actionFilterSearch, &QAction::triggered, this->ui->searchButton, &QAbstractButton::click);
+
+        this->actionFilterReset = new QAction("Reset", q);
+        this->actionFilterReset->setShortcut(Qt::Key_Escape);
+        this->actionFilterReset->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        connect(this->actionFilterReset, &QAction::triggered, this->ui->resetButton, &QAbstractButton::click);
+
+        this->ui->filterGroupBox->addAction(this->actionFilterSearch);
+        this->ui->filterGroupBox->addAction(this->actionFilterReset);
 
         connect(ui->actionReload, &QAction::triggered, q,
             [&](bool)
@@ -463,6 +479,13 @@ struct MainWindow::Impl
         QToolTip::showText(QCursor::pos(), QString("%1 px").arg(val), nullptr);
     }
     
+    void resetRegularExpression()
+    {
+        this->ui->filterPatternLineEdit->setText("");
+        this->ui->filterSyntaxComboBox->setCurrentIndex(0);
+        this->ui->filterCaseSensitivityCheckBox->setCheckState(Qt::Unchecked);
+    }
+
     void filterRegularExpressionChanged()
     {
         enum Syntax {
@@ -626,13 +649,15 @@ MainWindow::MainWindow(QSplashScreen *splash)
     connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::DirectConnection);
     connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::DirectConnection);
 
-    connect(d->ui->filterPatternLineEdit, &QLineEdit::textChanged,
-            this, [&](){ d->filterRegularExpressionChanged(); });
-    connect(d->ui->filterSyntaxComboBox, &QComboBox::currentIndexChanged,
-            this, [&](){ d->filterRegularExpressionChanged(); });
-    connect(d->ui->filterCaseSensitivityCheckBox, &QAbstractButton::toggled,
-            this, [&](){ d->filterRegularExpressionChanged(); });
-    
+    connect(d->ui->filterPatternLineEdit, &QLineEdit::returnPressed,
+        d->ui->searchButton, &QAbstractButton::click);
+    connect(d->ui->searchButton, &QAbstractButton::pressed,
+        this, [&]() { d->filterRegularExpressionChanged(); });
+    connect(d->ui->resetButton, &QAbstractButton::pressed,
+        this, [&]() { d->resetRegularExpression(); });
+    connect(d->ui->resetButton, &QAbstractButton::pressed,
+        d->ui->searchButton, &QAbstractButton::click);
+
     connect(d->proxyModel, &QSortFilterProxyModel::modelAboutToBeReset, this, [&](){ d->clearInfoBox(); });
     connect(d->proxyModel, &QSortFilterProxyModel::dataChanged, this, [&](const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles) { d->onImageCheckStateChanged(topLeft, bottomRight, roles); });
     connect(d->ui->thumbnailListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection &selected, const QItemSelection &deselected)
