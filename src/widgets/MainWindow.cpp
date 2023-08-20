@@ -522,6 +522,7 @@ struct MainWindow::Impl
             options |= QRegularExpression::CaseInsensitiveOption;
         }
 
+        WaitCursor w;
         QRegularExpression regularExpression(pattern, options);
         if (regularExpression.isValid())
         {
