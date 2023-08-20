@@ -644,7 +644,7 @@ MainWindow::MainWindow(QSplashScreen *splash)
     
     d->ui->iconSizeSlider->setRange(0, ANPV::MaxIconHeight);
     d->ui->thumbnailListView->setModel(d->proxyModel);
-    
+
     splash->showMessage("Connecting MainWindow Signals / Slots");
     
     connect(d->ui->fileSystemTreeView, &QTreeView::activated, this, [&](const QModelIndex &idx){d->onTreeActivated(idx);});

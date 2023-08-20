@@ -60,7 +60,7 @@ border-radius: 0px;
        <enum>Qt::ActionsContextMenu</enum>
       </property>
       <property name="whatsThis">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Here you see all files of the current directory. Readable images that have an embedded thumbnail preview will be displayed immediately. Those images which do not have such an embedded preview, must be decoded once to also receive a (temporary) preview.&lt;/p&gt;&lt;p&gt;Note that those previews may be of very low resolution. Double click one or more images to see them in full resolution.&lt;/p&gt;&lt;p&gt;Also note that not all image editors respect those embedded previews. I.e. they may leave garbage previews there.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;p&gt;&lt;b&gt;The Thumbnail View&lt;/b&gt;&lt;/p&gt;Here you see all files of the current directory. Readable images that have an embedded thumbnail preview will be displayed immediately. Those images which do not have such an embedded preview, must be decoded once to also receive a (temporary) preview.&lt;/p&gt;&lt;p&gt;Note that those previews may be of very low resolution. Double click one or more images to see them in full resolution.&lt;/p&gt;&lt;p&gt;Also note that not all image editors respect those embedded previews. I.e. they may leave garbage previews there.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
     </item>
@@ -257,6 +257,9 @@ border-radius: 0px;
             <property name="text">
              <string>Search</string>
             </property>
+			<property name="whatsThis">
+			 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Applies the specified filter parameters to the thumbnail view.&lt;/p&gt;&lt;p&gt;Alternatively, hitting Enter while filter has focus will apply parameters and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+			</property>
            </widget>
           </item>
           <item>
@@ -264,6 +267,9 @@ border-radius: 0px;
             <property name="text">
              <string>Reset</string>
             </property>
+			<property name="whatsThis">
+			 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reset the filter.&lt;/p&gt;&lt;p&gt;Alternatively, hitting ESC while the filter has focus will reset itself and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+			</property>
            </widget>
           </item>
          </layout>
