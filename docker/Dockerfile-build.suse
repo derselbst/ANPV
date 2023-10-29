@@ -7,7 +7,7 @@ RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel
 RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
 RUN zypper install --no-recommends -y git
 
-RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel
+RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imageformats-devel qt6-svg-devel qt6-qt5compat-devel
 
 # this is what we need for running a pipeline in the container
 RUN zypper install --no-recommends -y sudo shadow util-linux
