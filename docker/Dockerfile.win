@@ -66,11 +66,11 @@ SHELL ["cmd", "/S", "/C"]
 FROM buildtools AS vcpkg-builder
 
 ENV VCPKG_INSTALLATION_ROOT=C:\vcpkg
-ENV VCPKG_REVISION=b087c827a9f51b39493bf9e70c700ef6b80ba65a
+ENV VCPKG_REVISION=8eb57355a4ffb410a2e94c07b4dca2dffbee8e50
 
 RUN git config --global user.email "you@example.com"
 RUN git config --global user.name "Your Name"
-RUN git clone -n https://github.com/derselbst/vcpkg.git %VCPKG_INSTALLATION_ROOT%
+RUN git clone -n https://github.com/microsoft/vcpkg %VCPKG_INSTALLATION_ROOT%
 WORKDIR ${VCPKG_INSTALLATION_ROOT}
 RUN git checkout --force %VCPKG_REVISION%
 
@@ -97,6 +97,9 @@ RUN  vcpkg install --clean-after-build qtsvg:%PLATFORM%-windows-static
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows-static
 
+RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build qt5compat:%PLATFORM%-windows-static
+
 
 FROM ${FROM_IMAGE} AS powershell-builder
 
@@ -118,7 +121,7 @@ COPY --from=vcpkg-builder ["C:/vcpkg/scripts", "./vcpkg/scripts"]
 COPY --from=vcpkg-builder ["C:/vcpkg/triplets", "./vcpkg/triplets"]
 COPY --from=vcpkg-builder ["C:/vcpkg/toolsrc", "./vcpkg/toolsrc"]
 COPY --from=vcpkg-builder ["C:/vcpkg/installed", "./vcpkg/installed"]
-COPY --from=vcpkg-builder ["C:/vcpkg/downloads/tools/cmake-3.22.2-windows/cmake-3.22.2-windows-i386", "./CMake"]
+COPY --from=vcpkg-builder ["C:/vcpkg/downloads/tools/cmake-3.27.1-windows/cmake-3.27.1-windows-i386", "./CMake"]
 COPY --from=vcpkg-builder ["C:/vcpkg/.vcpkg-root", "./vcpkg/.vcpkg-root"]
 COPY --from=vcpkg-builder ["C:/Program Files (x86)/Windows Kits/10", "C:/Program Files (x86)/Windows Kits/10"]
 RUN setx path "%path%;C:\Program Files\Git\bin;C:\CMake\bin;C:\PowerShell"
