@@ -360,10 +360,8 @@ QModelIndex ThumbnailListView::moveCursor(CursorAction cursorAction, Qt::Keyboar
             return m->index(firstAvailRow, 0, QModelIndex());
         }
     }
-    else
-    {
-        return QListView::moveCursor(cursorAction, modifiers);
-    }
+    
+    return QListView::moveCursor(cursorAction, modifiers);
 }
 
 /* Changes the visible size of the item delegate for the section items. */
