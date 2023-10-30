@@ -334,6 +334,38 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
 
 ThumbnailListView::~ThumbnailListView() = default;
 
+QModelIndex ThumbnailListView::moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
+{
+    auto m = this->model();
+
+    auto findAvailableRowForward = [&](int row) {
+        int rowCount = m->rowCount();
+        if (!rowCount)
+            return -1;
+        while (row < rowCount && !(m->flags(m->index(row,0)) & Qt::ItemIsEnabled))
+            ++row;
+        if (row >= rowCount)
+            return -1;
+        return row;
+    };
+
+    // Make sure that pressing POS1 causes selection of the first active element, so that selection and scrolling actually works
+    if (cursorAction == MoveHome)
+    {
+        int firstAvailRow = findAvailableRowForward(0);
+        if (firstAvailRow >= 0)
+        {
+            // also scroll to the very top to ensure that the topmost section element is shown
+            this->scrollToTop();
+            return m->index(firstAvailRow, 0, QModelIndex());
+        }
+    }
+    else
+    {
+        return QListView::moveCursor(cursorAction, modifiers);
+    }
+}
+
 /* Changes the visible size of the item delegate for the section items. */
 void ThumbnailListView::resizeEvent(QResizeEvent* event)
 {

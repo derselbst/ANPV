@@ -36,6 +36,7 @@ public:
 protected:
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent* event) override;
+    QModelIndex moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override;
     void setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags flags) override;
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void doItemsLayout() override;
