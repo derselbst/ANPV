@@ -10,7 +10,7 @@ resources:
     image: tommoebert332/qt6-build:latest-suse
   - container: qt6Container-win
     endpoint: 'myDockerHub'
-    image: tommoebert332/qt6-build:latest-win
+    image: tommoebert332/qt6-build:win-compat5
 
 jobs:
   - job: Linux
