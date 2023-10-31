@@ -4,6 +4,8 @@
 #include "Formatter.hpp"
 #include "types.hpp"
 #include "CenteredBoxProxyStyle.hpp"
+#include "ImageSectionDataContainer.hpp"
+#include "DirectoryWorker.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -95,14 +97,33 @@ int main(int argc, char *argv[])
         }
         default:
         {
-            QList<QSharedPointer<Image>> files;
+            QSharedPointer<ImageSectionDataContainer> currentDirModel;
+            QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> imagesWithFileModel;
+            QFileInfo prevFileInfo;
             for (int i = 1; i < argc; i++)
             {
-                files.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(QString::fromLocal8Bit(argv[i]))));
+                QFileInfo fileInfo(QString::fromLocal8Bit(argv[i]));
+                auto emplacedImage = DecoderFactory::globalInstance()->makeImage(fileInfo);
+
+                if (currentDirModel == nullptr || fileInfo.canonicalPath() != prevFileInfo.canonicalPath())
+                {
+                    splash.showMessage(QString("Discover directory contents %1").arg(fileInfo.canonicalPath()));
+
+                    currentDirModel.reset(new ImageSectionDataContainer(nullptr));
+                    currentDirModel->sortSections(SortField::None, Qt::AscendingOrder);
+                    currentDirModel->sortImageItems(SortField::FileName, Qt::AscendingOrder);
+                    DirectoryWorker w(currentDirModel.data());
+                    auto task = w.changeDirAsync(fileInfo.canonicalPath());
+                    app.processEvents(QEventLoop::AllEvents);
+                    task.waitForFinished();
+                }
+
+                imagesWithFileModel.push_back({ emplacedImage, currentDirModel });
+                prevFileInfo = fileInfo;
             }
 
             splash.showMessage("Starting the image decoding task...");
-            anpv.openImages(files);
+            anpv.openImages(imagesWithFileModel);
             splash.close();
         }
         break;

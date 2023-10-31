@@ -49,7 +49,7 @@ public:
     QThread* backgroundThread();
     QSettings& settings();
 
-    void openImages(const QList<QSharedPointer<Image>>&);
+    void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>>&);
     void showThumbnailView();
     void showThumbnailView(QSplashScreen*);
     

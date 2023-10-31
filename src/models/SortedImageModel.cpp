@@ -79,7 +79,7 @@ struct SortedImageModel::Impl
         auto size = q->rowCount();
         for (int i = 0; i < size; i++)
         {
-            auto img = q->imageFromItem(q->item(q->index(i,0)));
+            auto img = AbstractListItem::imageCast(q->item(q->index(i,0)));
             if (!img)
             {
                 continue;
@@ -100,7 +100,7 @@ struct SortedImageModel::Impl
         // it should be fine to wait while holding the lock
         for (int i = 0; i < size; i++)
         {
-            auto img = q->imageFromItem(q->item(q->index(i, 0)));
+            auto img = AbstractListItem::imageCast(q->item(q->index(i, 0)));
             if (!img)
             {
                 continue;
@@ -326,7 +326,7 @@ Qt::ItemFlags SortedImageModel::flags(const QSharedPointer<AbstractListItem>& it
         ViewFlags_t viewFlagsLocal = d->cachedViewFlags;
         if ((viewFlagsLocal & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
-            QSharedPointer<Image> e = this->imageFromItem(item);
+            QSharedPointer<Image> e = AbstractListItem::imageCast(item);
             if (e && e->hideIfNonRawAvailable(viewFlagsLocal))
             {
                 f &= ~(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
@@ -396,7 +396,7 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem>& item, in
         }
         else
         {
-            auto img = this->imageFromItem(item);
+            auto img = AbstractListItem::imageCast(item);
             if (img != nullptr)
             {
                 const QFileInfo fi = img->fileInfo();
@@ -543,7 +543,7 @@ bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
         for(auto it = first; it != last; ++it)
         {
             // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
-            auto img = this->imageFromItem(*it);
+            auto img = AbstractListItem::imageCast(*it);
             if (!img)
             {
                 continue;
@@ -562,7 +562,7 @@ bool SortedImageModel::removeRows(int row, int count, const QModelIndex& parent)
             // now, walk through the list again and wait for the decoders to actually finish
             // do not delete all backgroundTasks as it may already contain tasks for images from a new directory
             // it should be fine to wait while holding the lock
-            auto img = this->imageFromItem(*it);
+            auto img = AbstractListItem::imageCast(*it);
             if (!img)
             {
                 continue;
@@ -633,16 +633,6 @@ QSharedPointer<AbstractListItem> SortedImageModel::item(const QModelIndex& idx) 
     return *it;
 }
 
-QSharedPointer<Image> SortedImageModel::imageFromItem(const QSharedPointer<AbstractListItem>& item) const
-{
-    if (item != nullptr && item->getType() == ListItemType::Image)
-    {
-        return qSharedPointerDynamicCast<Image>(item);
-    }
-
-    return nullptr;
-}
-
 QList<Image*> SortedImageModel::checkedEntries()
 {
     xThreadGuard(this);
@@ -681,7 +671,7 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image, const QS
                 else
                 {
                     // retrieve the QSharedPointer for *i
-                    // auto qimg = this->imageFromItem(this->item(this->index(i)));
+                    // auto qimg = AbstractListItem::imageCast(this->item(this->index(i)));
                     d->checkedImages.append(i);
                 }
             }

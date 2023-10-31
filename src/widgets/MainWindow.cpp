@@ -568,7 +568,7 @@ struct MainWindow::Impl
         QModelIndexList idx = r.indexes();
         for(const QModelIndex& i : idx)
         {
-            auto img = model->imageFromItem(model->item(i));
+            auto img = AbstractListItem::imageCast(model->item(i));
             if (img)
             {
                 size += img->fileInfo().size();
