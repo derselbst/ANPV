@@ -119,14 +119,14 @@ MultiDocumentView::MultiDocumentView(QMainWindow *parent)
 
 MultiDocumentView::~MultiDocumentView() = default;
 
-void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QPointer<SortedImageModel> model)
+void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>>& imageWithModel)
 {
-    if(image.empty())
+    if(imageWithModel.empty())
     {
         return;
     }
     
-    for(auto& e : image)
+    for(auto& [e, model] : imageWithModel)
     {
         DocumentView* dv = new DocumentView(this);
 
@@ -147,7 +147,7 @@ void MultiDocumentView::addImages(const QList<QSharedPointer<Image>>& image, QPo
         });
 
         d->tw->addTab(dv, "");
-        dv->setModel(model->dataContainer());
+        dv->setModel(model);
         dv->loadImage(e);
         dv->setAttribute(Qt::WA_DeleteOnClose);
     }

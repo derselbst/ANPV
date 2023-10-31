@@ -146,7 +146,12 @@ struct ThumbnailListView::Impl
         }
         else
         {
-            ANPV::globalInstance()->openImages(imgs);
+            QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> imgsWithModel;
+            for (const auto& i : imgs)
+            {
+                imgsWithModel.push_back({ i, ANPV::globalInstance()->fileModel()->dataContainer() });
+            }
+            ANPV::globalInstance()->openImages(imgsWithModel);
         }
     }
     
@@ -461,7 +466,7 @@ QList<QSharedPointer<Image>> ThumbnailListView::selectedImages(const QModelIndex
     auto& proxyModel = dynamic_cast<QSortFilterProxyModel&>(*this->model());
     for(int i=0; i<selectedIdx.size(); i++)
     {
-        auto img = sourceModel->imageFromItem(sourceModel->item(proxyModel.mapToSource(selectedIdx[i])));
+        auto img = AbstractListItem::imageCast(sourceModel->item(proxyModel.mapToSource(selectedIdx[i])));
         if (img != nullptr)
         {
             entries.push_back(img);

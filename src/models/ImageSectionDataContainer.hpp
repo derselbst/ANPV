@@ -50,6 +50,8 @@ public:
 
     ImageSectionDataContainer(SortedImageModel* model);
     ~ImageSectionDataContainer();
+    
+    void setDecodingState(DecodingState state);
 
     bool addImageItem(const QFileInfo& info);
     void addImageItem(const QVariant& section, QSharedPointer<Image>& item);
@@ -57,7 +59,10 @@ public:
     
     QSharedPointer<AbstractListItem> getItemByLinearIndex(int idx) const;
     int getLinearIndexOfItem(const AbstractListItem* item) const;
+    int getLinearIndexOfItem(QFileInfo info) const;
     QSharedPointer<Image> goTo(const ViewFlags_t& viewFlags, const Image* img, int stepsFromCurrent) const;
+    QSharedPointer<Image> goTo(const ViewFlags_t& viewFlags, QFileInfo info, int stepsFromCurrent) const;
+    QSharedPointer<Image> goTo(const ViewFlags_t& viewFlags, int idx, int stepsFromCurrent) const;
     int size() const;
     void clear();
 

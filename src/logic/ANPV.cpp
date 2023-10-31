@@ -207,11 +207,11 @@ struct ANPV::Impl
                 {
                     QList<QString> files = q->getExistingFile(QApplication::focusWidget(), lastOpenImageDir);
                     
-                    QList<QSharedPointer<Image>> images;
+                    QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> images;
                     images.reserve(files.size());
                     for(auto& f : files)
                     {
-                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)));
+                        images.emplace_back(DecoderFactory::globalInstance()->makeImage(QFileInfo(f)), this->fileModel->dataContainer());
                     }
                     q->openImages(images);
                 });
@@ -775,7 +775,7 @@ void ANPV::showThumbnailView(QSplashScreen* splash)
     splash->finish(d->mainWindow.get());
 }
 
-void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
+void ANPV::openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>>& image)
 {
     xThreadGuard g(this);
     if(image.isEmpty())
@@ -785,7 +785,7 @@ void ANPV::openImages(const QList<QSharedPointer<Image>>& image)
     }
     WaitCursor w;
     MultiDocumentView* mdv = new MultiDocumentView(d->mainWindow.get());
-    mdv->addImages(image, d->fileModel);
+    mdv->addImages(image);
     mdv->show();
 }
 

@@ -34,6 +34,7 @@ public:
     ImageList::iterator begin();
     bool isEnd(const SectionItem::ImageList::iterator& it) const;
     bool find(const AbstractListItem* item, int* externalIdx);
+    bool find(QFileInfo item, int* externalIdx);
     int find(const QFileInfo info, ImageList::iterator* itout);
     void insert(ImageList::iterator it, QSharedPointer<Image>& img);
     void erase(ImageList::iterator it);
