@@ -357,6 +357,32 @@ QSharedPointer<AbstractListItem> ImageSectionDataContainer::getItemByLinearIndex
     return retitem;
 }
 
+
+/* Return the index of a given item (item). The 2D data list are handled like a 1D list. */
+int ImageSectionDataContainer::getLinearIndexOfItem(QFileInfo info) const
+{
+    int itmidx = 0;
+
+    std::lock_guard<std::recursive_mutex> l(d->m);
+
+    if (this->d->data.empty())
+    {
+        return -1;
+    }
+
+    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    {
+        itmidx++;
+
+        if ((*sit)->find(info, &itmidx))
+        {
+            return itmidx;
+        }
+    }
+
+    return -1;
+}
+
 /* Return the index of a given item (item). The 2D data list are handled like a 1D list. */ 
 int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item) const
 {
@@ -580,6 +606,19 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFla
     std::lock_guard<std::recursive_mutex> l(d->m);
 
     auto idx = this->getLinearIndexOfItem(img);
+    return this->goTo(viewFlags, idx, stepsFromCurrent);
+}
+
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFlags, QFileInfo info, int stepsFromCurrent) const
+{
+    std::lock_guard<std::recursive_mutex> l(d->m);
+
+    auto idx = this->getLinearIndexOfItem(info);
+    return this->goTo(viewFlags, idx, stepsFromCurrent);
+}
+
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFlags, int idx, int stepsFromCurrent) const
+{
     if (idx < 0)
     {
         qWarning() << "ImageSectionDataContainer::goTo(): requested image not found";

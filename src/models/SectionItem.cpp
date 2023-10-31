@@ -374,6 +374,19 @@ bool SectionItem::find(const AbstractListItem* item, int* externalIdx)
     return it != this->d->data.end();
 }
 
+bool SectionItem::find(QFileInfo item, int* externalIdx)
+{
+    auto it = std::find_if(this->d->data.begin(), this->d->data.end(),
+        [=](const QSharedPointer<Image>& entry)
+        {
+            return entry.data()->fileInfo() == item;
+        });
+
+    *externalIdx += std::distance(this->d->data.begin(), it);
+    return it != this->d->data.end();
+}
+
+
 int SectionItem::find(const QFileInfo info, ImageList::iterator* itout)
 {
     auto it = std::find_if(this->d->data.begin(), this->d->data.end(),

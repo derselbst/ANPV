@@ -103,7 +103,6 @@ int main(int argc, char *argv[])
             for (int i = 1; i < argc; i++)
             {
                 QFileInfo fileInfo(QString::fromLocal8Bit(argv[i]));
-                auto emplacedImage = DecoderFactory::globalInstance()->makeImage(fileInfo);
 
                 if (currentDirModel == nullptr || fileInfo.canonicalPath() != prevFileInfo.canonicalPath())
                 {
@@ -118,6 +117,7 @@ int main(int argc, char *argv[])
                     task.waitForFinished();
                 }
 
+                auto emplacedImage = AbstractListItem::imageCast(currentDirModel->getItemByLinearIndex(currentDirModel->getLinearIndexOfItem(fileInfo)));
                 imagesWithFileModel.push_back({ emplacedImage, currentDirModel });
                 prevFileInfo = fileInfo;
             }
