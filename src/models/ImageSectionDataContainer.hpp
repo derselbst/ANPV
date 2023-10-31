@@ -50,6 +50,8 @@ public:
 
     ImageSectionDataContainer(SortedImageModel* model);
     ~ImageSectionDataContainer();
+    
+    void setDecodingState(DecodingState state);
 
     bool addImageItem(const QFileInfo& info);
     void addImageItem(const QVariant& section, QSharedPointer<Image>& item);
