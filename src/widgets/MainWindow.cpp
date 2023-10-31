@@ -60,6 +60,9 @@ struct MainWindow::Impl
     QAction *actionFileOperationConfigDialog = nullptr;
     QAction *actionExit = nullptr;
 
+    QMenu* imageSortMenu = nullptr;
+    QMenu* sectionSortMenu = nullptr;
+
     QPointer<QAction> actionFilterFocus;
     QPointer<QAction> actionFilterSearch;
     QPointer<QAction> actionFilterReset;
@@ -363,13 +366,15 @@ struct MainWindow::Impl
         ui->menuEdit->addAction(actionFileOperationConfigDialog);
         ui->menuEdit->addSeparator();
         
-        QMenu* sectionSortMenu = ui->menuSort->addMenu("Sections");
-        sectionSortMenu->addActions(actionGroupSectionSortField->actions());
-        sectionSortMenu->addActions(actionGroupSectionSortOrder->actions());
-
-        QMenu* imageSortMenu = ui->menuSort->addMenu("Images");
-        imageSortMenu->addActions(actionGroupImageSortField->actions());
-        imageSortMenu->addActions(actionGroupImageSortOrder->actions());
+        this->sectionSortMenu = ui->menuSort->addMenu("Sections");
+        this->sectionSortMenu->addActions(actionGroupSectionSortField->actions());
+        this->sectionSortMenu->addActions(actionGroupSectionSortOrder->actions());
+        this->sectionSortMenu->installEventFilter(q);
+        
+        this->imageSortMenu = ui->menuSort->addMenu("Images");
+        this->imageSortMenu->addActions(actionGroupImageSortField->actions());
+        this->imageSortMenu->addActions(actionGroupImageSortOrder->actions());
+        this->imageSortMenu->installEventFilter(q);
 
         ui->menuHelp->insertAction(ui->actionAbout_ANPV, QWhatsThis::createAction(q));
         QAction* sep = new QAction();
@@ -757,3 +762,19 @@ void MainWindow::readSettings()
 {
     d->readSettings();
 }
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    // Keep these menus open after clicking an action-element
+    if ((watched == this->d->imageSortMenu || watched == this->d->sectionSortMenu) && event->type() == QEvent::MouseButtonRelease)
+    {
+        auto action = static_cast<QMenu*>(watched)->activeAction();
+        if (action && action->isCheckable())
+        {
+            action->trigger();
+            return true;
+        }
+    }
+    return QObject::eventFilter(watched, event);
+}
+

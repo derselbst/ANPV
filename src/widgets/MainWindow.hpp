@@ -37,6 +37,7 @@ protected:
     bool event(QEvent* evt) override;
     void closeEvent(QCloseEvent* event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     struct Impl;
