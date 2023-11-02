@@ -97,6 +97,8 @@ RUN  vcpkg install --clean-after-build qtsvg:%PLATFORM%-windows-static
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows
 RUN  vcpkg install --clean-after-build qtimageformats:%PLATFORM%-windows-static
 
+RUN  vcpkg install --clean-after-build libjxl:%PLATFORM%-windows
+RUN  vcpkg install --clean-after-build libjxl:%PLATFORM%-windows-static
 
 FROM ${FROM_IMAGE} AS powershell-builder
 
