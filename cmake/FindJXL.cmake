@@ -9,7 +9,7 @@ Imported Targets
 
 This module provides the following imported targets, if found:
 
-``JXL::libJXL``
+``JXL::libjxl``
   The JXL library
 
 Result Variables
@@ -46,14 +46,13 @@ endif()
 
 # Forward the result to CMake
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(JXL REQUIRED_VARS "JXL_LIBRARY"
-                                                     "JXL_INCLUDE_DIR")
+find_package_handle_standard_args(JXL REQUIRED_VARS "JXL_LIBRARY" "JXL_INCLUDE_DIR")
 
 # Create the target
-if(JXL_FOUND AND NOT TARGET JXL::JXL)
-  add_library(JXL::JXL UNKNOWN IMPORTED)
+if(JXL_FOUND AND NOT TARGET JXL::libjxl)
+  add_library(JXL::libjxl UNKNOWN IMPORTED)
   set_target_properties(
-    JXL::JXL
+    JXL::libjxl
     PROPERTIES IMPORTED_LOCATION "${JXL_LIBRARY}"
                INTERFACE_COMPILE_OPTIONS "${_jxl_compile_options}"
                INTERFACE_INCLUDE_DIRECTORIES "${JXL_INCLUDE_DIR}"
