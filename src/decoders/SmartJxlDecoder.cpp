@@ -13,36 +13,24 @@
 
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
+#include <jxl/thread_parallel_runner.h>
+#include <jxl/thread_parallel_runner_cxx.h>
 
-struct PageInfo
-{
-    uint32_t width;
-    uint32_t height;
-	uint16_t config;
-    // bits per sample
-    uint16_t bps;
-    // sample per pixel
-    uint16_t spp;
-    
-    size_t nPix()
-    {
-        return static_cast<size_t>(this->width) * height;
-    }
-};
-
-constexpr const char TiffModule[] = "SmartJxlDecoder";
-
-// Note: a lot of the code has been taken from: 
-// https://github.com/qt/qtimageformats/blob/c64f19516dd2467bf5746eb24afe883bdbc15b25/src/plugins/imageformats/tiff/qtiffhandler.cpp
 
 struct SmartJxlDecoder::Impl
 {
+    constexpr static JxlPixelFormat jxlFormat = { 4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0 };
+    static inline auto parallelRunner = JxlThreadParallelRunnerMake(nullptr, 8);
+
     SmartJxlDecoder* q;
     
     JxlDecoderPtr djxl;
+    JxlBasicInfo jxlInfo;
     
     const unsigned char* buffer = nullptr;
     qint64 nbytes = 0;
+
+    unsigned char* imgBuf = nullptr;
     
     Impl(SmartJxlDecoder* q) : q(q)
     {
@@ -54,6 +42,16 @@ struct SmartJxlDecoder::Impl
         // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
         // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
         return QImage::Format_RGBA8888;
+    }
+
+    static void decoderCallback(void* opaque, size_t x, size_t y, size_t num_pixels, const void* pixels)
+    {
+        auto* self = static_cast<SmartJxlDecoder::Impl*>(opaque);
+
+        std::memcpy(&self->imgBuf[(y * self->jxlInfo.xsize + x) * self->jxlFormat.num_channels], pixels, self->jxlFormat.num_channels * num_pixels);
+
+        self->q->updateDecodedRoiRect(QRect(x,y,num_pixels,1));
+        self->q->cancelCallback();
     }
 };
 
@@ -105,7 +103,7 @@ QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     QImage image;
     this->decodeInternal(image);
-
+    this->convertColorSpace(image, false);
     this->setDecodingState(DecodingState::FullImage);
     this->setDecodingMessage("JXL decoding completed successfully.");
     this->setDecodingProgress(100);
@@ -115,8 +113,7 @@ QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
 void SmartJxlDecoder::decodeInternal(QImage& image)
 {
-    JxlBasicInfo info;
-    static const JxlPixelFormat format = {4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+    JxlBasicInfo& info = d->jxlInfo;
 
     auto ret = JxlDecoderSetInput(d->djxl.get(), d->buffer, d->nbytes);
     if (JXL_DEC_SUCCESS != ret)
@@ -179,14 +176,14 @@ nullptr /* unused */ ,
                 break;
                 
             case JXL_DEC_NEED_PREVIEW_OUT_BUFFER:
-                ret = JxlDecoderPreviewOutBufferSize(d->djxl.get(), &format, &buffer_size);
+                ret = JxlDecoderPreviewOutBufferSize(d->djxl.get(), &d->jxlFormat, &buffer_size);
                 if (JXL_DEC_SUCCESS != ret)
                     throw std::runtime_error("JxlDecoderPreviewOutBufferSize() failed");
                 
                 thumb = this->allocateImageBuffer(info.preview.xsize, info.preview.ysize, d->format());
                 Q_ASSERT(thumb.bytesPerLine() * thumb.height() == buffer_size);
                 
-                ret = JxlDecoderSetPreviewOutBuffer(d->djxl.get(), &format, const_cast<uint8_t*>(thumb.constBits()), buffer_size);
+                ret = JxlDecoderSetPreviewOutBuffer(d->djxl.get(), &d->jxlFormat, const_cast<uint8_t*>(thumb.constBits()), buffer_size);
                 if (JXL_DEC_SUCCESS != ret)
                     throw std::runtime_error("JxlDecoderSetPreviewOutBuffer() failed");
                 break;
@@ -197,19 +194,20 @@ nullptr /* unused */ ,
                 this->setDecodingMessage("A preview image is available");
                 this->convertColorSpace(thumb, true);
                 this->image()->setThumbnail(thumb);
-                goto remainderCalc;
+                break;
                 
             case JXL_DEC_NEED_IMAGE_OUT_BUFFER:
-                ret = JxlDecoderImageOutBufferSize(d->djxl.get(), &format, &buffer_size);
+                ret = JxlDecoderImageOutBufferSize(d->djxl.get(), &d->jxlFormat, &buffer_size);
                 if (JXL_DEC_SUCCESS != ret)
                     throw std::runtime_error("JxlDecoderImageOutBufferSize() failed");
             
                 image = this->allocateImageBuffer(info.xsize, info.ysize, d->format());
                 Q_ASSERT(image.bytesPerLine() * image.height() == buffer_size);
                 
-                ret = JxlDecoderSetImageOutBuffer(d->djxl.get(), &format, const_cast<uint8_t*>(image.constBits()), buffer_size);
+                d->imgBuf = const_cast<uint8_t*>(image.constBits());
+                ret = JxlDecoderSetImageOutCallback(d->djxl.get(), &d->jxlFormat, &d->decoderCallback, d.get());
                 if (JXL_DEC_SUCCESS != ret)
-                    throw std::runtime_error("JxlDecoderSetImageOutBuffer() failed");
+                    throw std::runtime_error("JxlDecoderSetImageOutCallback() failed");
                 
                 this->image()->setDecodedImage(image);
                 break;
@@ -218,28 +216,18 @@ nullptr /* unused */ ,
             case JXL_DEC_SUCCESS:
             case JXL_DEC_FULL_IMAGE:
             case JXL_DEC_FRAME_PROGRESSION:
-                seen += remaining - JxlDecoderReleaseInput(d->djxl.get());
-                this->setDecodingMessage(QString("Flushing after %1 bytes").arg(QString::number(seen)));
-//                 if (status == JXL_DEC_NEED_MORE_INPUT && JXL_DEC_SUCCESS != JxlDecoderFlushImage(d->djxl.get()))
-//                 {
-//                     this->setDecodingMessage("flush error (no preview yet)");
-//                 }
-//                 else
+                if (status == JXL_DEC_NEED_MORE_INPUT && JXL_DEC_SUCCESS != JxlDecoderFlushImage(d->djxl.get()))
+                {
+                    this->setDecodingMessage("flush error (no preview yet)");
+                }
+                else
                 {
                     this->updateDecodedRoiRect(this->image()->fullResolutionRect());
                 }
-            remainderCalc:
-                remaining = d->nbytes - seen;
-                if (remaining == 0)
-                {
-                    if (status == JXL_DEC_NEED_MORE_INPUT)
-                        throw std::runtime_error("Decoding error, end of file reached!");
-                }
-                JxlDecoderSetInput(d->djxl.get(), d->buffer + seen, remaining);
 
                 if(JXL_DEC_SUCCESS == status)
                 {
-                    return;
+                    goto leaveLoop;
                 }
                 break;
  
@@ -247,4 +235,6 @@ nullptr /* unused */ ,
                 throw std::runtime_error(Formatter() << "Unknown decoder status: " << status);
         }
     }
+leaveLoop:
+    d->imgBuf = nullptr;
 }

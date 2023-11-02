@@ -37,6 +37,11 @@ find_library(
   NAMES "jxl"
   HINTS "${PC_JXL_LIBDIR}")
 
+find_library(
+  JXL_THREADS_LIBRARY
+  NAMES "jxl_threads"
+  HINTS "${PC_JXL_LIBDIR}")
+
 # Handle transitive dependencies
 if(PC_JXL_FOUND)
   get_target_properties_from_pkg_config("${JXL_LIBRARY}" "PC_JXL" "_jxl")
@@ -46,14 +51,14 @@ endif()
 
 # Forward the result to CMake
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(JXL REQUIRED_VARS "JXL_LIBRARY" "JXL_INCLUDE_DIR")
+find_package_handle_standard_args(JXL REQUIRED_VARS "JXL_THREADS_LIBRARY" "JXL_LIBRARY" "JXL_INCLUDE_DIR")
 
 # Create the target
 if(JXL_FOUND AND NOT TARGET JXL::libjxl)
   add_library(JXL::libjxl UNKNOWN IMPORTED)
   set_target_properties(
     JXL::libjxl
-    PROPERTIES IMPORTED_LOCATION "${JXL_LIBRARY}"
+    PROPERTIES IMPORTED_LOCATION "${JXL_LIBRARY}" "${JXL_THREADS_LIBRARY}"
                INTERFACE_COMPILE_OPTIONS "${_jxl_compile_options}"
                INTERFACE_INCLUDE_DIRECTORIES "${JXL_INCLUDE_DIR}"
                INTERFACE_LINK_LIBRARIES "${_jxl_link_libraries}"
