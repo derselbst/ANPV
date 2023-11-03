@@ -57,11 +57,7 @@ jobs:
       submodules: true
     - bash: |
           set -ex
-          ls /c/vcpkg/installed/x64-windows-static/
-          ls /c/vcpkg/installed/x64-windows-static/lib
-          ls /c/vcpkg/installed/x64-windows-static/lib/pkgconfig
-          ls /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl*
-          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl*
+          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/exiv2.pc
           
           set +x
           
