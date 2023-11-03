@@ -78,8 +78,7 @@ jobs:
           Libs: "-L\${libdir}" -ljxl-static
           Libs.private: -ljxl_dec-static
           Requires.private: libhwy libbrotlicommon libbrotlienc libbrotlidec lcms2
-          Cflags: "-I\${includedir}"
-          Cflags.private: -DJXL_STATIC_DEFINE
+          Cflags: "-I\${includedir}" -DJXL_STATIC_DEFINE
           EOF
           
           cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl_threads.pc
@@ -94,8 +93,7 @@ jobs:
 
           Libs: "-L\${libdir}" -ljxl_threads-static
           Requires: 
-          Cflags: "-I\${includedir}"
-          Cflags.private: -DJXL_THREADS_STATIC_DEFINE
+          Cflags: "-I\${includedir}" -DJXL_THREADS_STATIC_DEFINE
           EOF
           
       displayName: 'Fix libjxl pkgconfig files'
