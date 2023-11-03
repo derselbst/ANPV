@@ -76,6 +76,7 @@ jobs:
           Version: 0.8.2
 
           Libs: "-L\${libdir}" -ljxl-static
+          Libs.private: -ljxl_dec-static
           Requires.private: libhwy libbrotlicommon libbrotlienc libbrotlidec lcms2
           Cflags: "-I\${includedir}"
           Cflags.private: -DJXL_STATIC_DEFINE
