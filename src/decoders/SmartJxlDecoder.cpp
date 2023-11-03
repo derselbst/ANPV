@@ -28,7 +28,7 @@ struct SmartJxlDecoder::Impl
     JxlBasicInfo jxlInfo;
     
     const unsigned char* buffer = nullptr;
-    qint64 nbytes = 0;
+    size_t nbytes = 0;
 
     unsigned char* imgBuf = nullptr;
     
@@ -51,7 +51,6 @@ struct SmartJxlDecoder::Impl
         std::memcpy(&self->imgBuf[(y * self->jxlInfo.xsize + x) * self->jxlFormat.num_channels], pixels, self->jxlFormat.num_channels * num_pixels);
 
         self->q->updateDecodedRoiRect(QRect(x,y,num_pixels,1));
-        self->q->cancelCallback();
     }
 };
 
@@ -91,20 +90,20 @@ void SmartJxlDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     JxlDecoderRewind(d->djxl.get());
-#if 0
+
     auto ret = JxlDecoderSetParallelRunner(d->djxl.get(), JxlThreadParallelRunner, d->parallelRunner.get());
     if (JXL_DEC_SUCCESS != ret)
     {
         qWarning() << "JxlDecoderSetParallelRunner() failed, using single threaded decoder";
     }
-
+#if 0
     ret = JxlDecoderSetProgressiveDetail(d->djxl.get(), kPasses);
     if (JXL_DEC_SUCCESS != ret)
     {
         throw std::runtime_error("JxlDecoderSetProgressiveDetail() failed");
     }
 #endif
-    auto ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FRAME_PROGRESSION | JXL_DEC_FULL_IMAGE | JXL_DEC_FRAME);
+    ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO /* | JXL_DEC_FRAME | JXL_DEC_FRAME_PROGRESSION*/ | JXL_DEC_FULL_IMAGE);
     if (JXL_DEC_SUCCESS != ret)
     {
         throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
@@ -114,6 +113,7 @@ QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     
     
     QImage image;
+    this->resetDecodedRoiRect();
     this->decodeInternal(image);
     this->convertColorSpace(image, false);
     this->setDecodingState(DecodingState::FullImage);
@@ -128,18 +128,17 @@ void SmartJxlDecoder::decodeInternal(QImage& image)
     JxlBasicInfo& info = d->jxlInfo;
     JxlFrameHeader frameHeader;
 
-    auto ret = JxlDecoderSetInput(d->djxl.get(), d->buffer, d->nbytes);
+    constexpr size_t ChunkSize = 1*1024*1024;
+    size_t remaining = std::min(d->nbytes, ChunkSize);
+    size_t seen = 0;
+    size_t buffer_size;
+    auto ret = JxlDecoderSetInput(d->djxl.get(), d->buffer, remaining);
     if (JXL_DEC_SUCCESS != ret)
     {
         throw std::runtime_error("JxlDecoderSetInput() failed");
     }
     
-    size_t remaining = d->nbytes;
-    size_t seen = 0;
-    size_t buffer_size;
-    
     std::vector<uint8_t> icc_profile;
-    
     QImage thumb;
 
     for (;;)
@@ -202,8 +201,6 @@ nullptr /* unused */ ,
                 break;
 
             case JXL_DEC_PREVIEW_IMAGE:
-                seen += remaining - JxlDecoderReleaseInput(d->djxl.get());
-                
                 this->setDecodingMessage("A preview image is available");
                 this->convertColorSpace(thumb, true);
                 this->image()->setThumbnail(thumb);
@@ -234,18 +231,28 @@ nullptr /* unused */ ,
                 break;
 
             case JXL_DEC_NEED_MORE_INPUT:
-            case JXL_DEC_SUCCESS:
-            case JXL_DEC_FULL_IMAGE:
+                qDebug() << QTime::currentTime() << "JXL_DEC_NEED_MORE_INPUT";
+                seen += remaining - JxlDecoderReleaseInput(d->djxl.get());
+                remaining = std::min(d->nbytes - seen, ChunkSize);
+                if (seen == d->nbytes)
+                {
+                    throw std::runtime_error("End of file reached before JXL decoding has finished :(");
+                }
+                this->cancelCallback();
+                JxlDecoderSetInput(d->djxl.get(), d->buffer + seen, remaining);
+                break;
+                
             case JXL_DEC_FRAME_PROGRESSION:
-                if (status == JXL_DEC_NEED_MORE_INPUT && JXL_DEC_SUCCESS != JxlDecoderFlushImage(d->djxl.get()))
+                ret = JxlDecoderFlushImage(d->djxl.get());
+                if (JXL_DEC_SUCCESS != ret)
                 {
                     this->setDecodingMessage("flush error (no preview yet)");
                 }
-                else
-                {
-                    this->updateDecodedRoiRect(this->image()->fullResolutionRect());
-                }
+                break;
 
+            case JXL_DEC_SUCCESS:
+            case JXL_DEC_FULL_IMAGE:
+                this->updateDecodedRoiRect(this->image()->fullResolutionRect());
                 if(JXL_DEC_SUCCESS == status)
                 {
                     goto leaveLoop;
