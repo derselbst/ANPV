@@ -113,8 +113,6 @@ jobs:
                         INTERFACE_COMPILE_OPTIONS "\${_exiv2_compile_options}"
                         INTERFACE_LINK_LIBRARIES "\${_exiv2_link_libraries}"
                         INTERFACE_LINK_DIRECTORIES "\${_exiv2_link_directories}")
-
-                )
             endif()
 
             include(FeatureSummary)
