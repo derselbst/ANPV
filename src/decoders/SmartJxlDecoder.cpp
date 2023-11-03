@@ -91,14 +91,20 @@ void SmartJxlDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     JxlDecoderRewind(d->djxl.get());
-
+#if 0
     auto ret = JxlDecoderSetParallelRunner(d->djxl.get(), JxlThreadParallelRunner, d->parallelRunner.get());
     if (JXL_DEC_SUCCESS != ret)
     {
         qWarning() << "JxlDecoderSetParallelRunner() failed, using single threaded decoder";
     }
-    
-    ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FRAME_PROGRESSION | JXL_DEC_FULL_IMAGE);
+
+    ret = JxlDecoderSetProgressiveDetail(d->djxl.get(), kPasses);
+    if (JXL_DEC_SUCCESS != ret)
+    {
+        throw std::runtime_error("JxlDecoderSetProgressiveDetail() failed");
+    }
+#endif
+    auto ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FRAME_PROGRESSION | JXL_DEC_FULL_IMAGE | JXL_DEC_FRAME);
     if (JXL_DEC_SUCCESS != ret)
     {
         throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
@@ -120,6 +126,7 @@ QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 void SmartJxlDecoder::decodeInternal(QImage& image)
 {
     JxlBasicInfo& info = d->jxlInfo;
+    JxlFrameHeader frameHeader;
 
     auto ret = JxlDecoderSetInput(d->djxl.get(), d->buffer, d->nbytes);
     if (JXL_DEC_SUCCESS != ret)
@@ -201,7 +208,15 @@ nullptr /* unused */ ,
                 this->convertColorSpace(thumb, true);
                 this->image()->setThumbnail(thumb);
                 break;
-                
+
+            case JXL_DEC_FRAME:
+                ret = JxlDecoderGetFrameHeader(d->djxl.get(), &frameHeader);
+                if (JXL_DEC_SUCCESS != ret)
+                    throw std::runtime_error("JxlDecoderGetFrameHeader() failed");
+
+                this->cancelCallback();
+                break;
+
             case JXL_DEC_NEED_IMAGE_OUT_BUFFER:
                 ret = JxlDecoderImageOutBufferSize(d->djxl.get(), &d->jxlFormat, &buffer_size);
                 if (JXL_DEC_SUCCESS != ret)
