@@ -55,6 +55,44 @@ jobs:
     steps:
     - checkout: self
       submodules: true
+    - bash: |
+          set -e
+          ls /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl*
+          cat /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl*
+          
+          cat << EOF > /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl.pc
+          prefix=\${pcfiledir}/../..
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: libjxl
+          Description: Loads and saves JPEG XL files
+          Version: 0.8.2
+
+          Libs: "-L\${libdir}" -ljxl-static
+          Requires.private: libhwy libbrotlicommon libbrotlienc libbrotlidec lcms2
+          Cflags: "-I\${includedir}"
+          Cflags.private: -DJXL_STATIC_DEFINE
+          EOF
+          
+          cat << EOF > /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl_threads.pc
+          prefix=\${pcfiledir}/../..
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: libjxl_threads
+          Description: JPEG XL multi-thread runner using std::threads.
+          Version: 0.8.2
+
+          Libs: "-L\${libdir}" -ljxl_threads-static
+          Requires: 
+          Cflags: "-I\${includedir}"
+          Cflags.private: -DJXL_THREADS_STATIC_DEFINE
+          EOF
+          
+      displayName: 'Fix libjxl pkgconfig files'
     - script: |
           @ECHO ON
           mkdir build
