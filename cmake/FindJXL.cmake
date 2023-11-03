@@ -24,8 +24,8 @@ This will define the following variables:
 
 # Use pkg-config if available
 find_package(PkgConfig QUIET)
-pkg_check_modules(PC_JXL QUIET jxl)
-pkg_check_modules(PC_JXL_THREADS QUIET libjxl_threads)
+pkg_check_modules(PC_JXL libjxl)
+pkg_check_modules(PC_JXL_THREADS libjxl_threads)
 
 # Find the headers and library
 find_path(
