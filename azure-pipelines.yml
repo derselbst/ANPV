@@ -56,11 +56,16 @@ jobs:
     - checkout: self
       submodules: true
     - bash: |
-          set -e
-          ls /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl*
-          cat /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl*
+          set -ex
+          ls /c/vcpkg/installed/x64-windows-static/
+          ls /c/vcpkg/installed/x64-windows-static/lib
+          ls /c/vcpkg/installed/x64-windows-static/lib/pkgconfig
+          ls /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl*
+          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl*
           
-          cat << EOF > /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl.pc
+          set +x
+          
+          cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl.pc
           prefix=\${pcfiledir}/../..
           exec_prefix=\${prefix}
           libdir=\${exec_prefix}/lib
@@ -76,7 +81,7 @@ jobs:
           Cflags.private: -DJXL_STATIC_DEFINE
           EOF
           
-          cat << EOF > /c/vcpkg/installed/x64-windows/lib/pkgconfig/libjxl_threads.pc
+          cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl_threads.pc
           prefix=\${pcfiledir}/../..
           exec_prefix=\${prefix}
           libdir=\${exec_prefix}/lib
