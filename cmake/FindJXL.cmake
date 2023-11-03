@@ -40,12 +40,12 @@ find_path(
 
 find_library(
   JXL_LIBRARY
-  NAMES "jxl"
+  NAMES "jxl" "jxl-static"
   HINTS "${PC_JXL_LIBDIR}")
 
 find_library(
   JXL_THREADS_LIBRARY
-  NAMES "jxl_threads"
+  NAMES "jxl_threads" "jxl_threads-static"
   HINTS "${PC_JXL_THREADS_LIBDIR}")
 
 # Handle transitive dependencies
