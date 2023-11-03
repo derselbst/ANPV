@@ -35,11 +35,6 @@ struct SmartJxlDecoder::Impl
     Impl(SmartJxlDecoder* q) : q(q)
     {
         this->djxl = JxlDecoderMake(nullptr);
-        auto ret = JxlDecoderSetParallelRunner(this->djxl.get(), JxlThreadParallelRunner, this->parallelRunner.get());
-        if (JXL_DEC_SUCCESS != ret)
-        {
-            qWarning() << "JxlDecoderSetParallelRunner() failed, using single threaded decoder";
-        }
     }
         
     QImage::Format format()
@@ -96,8 +91,14 @@ void SmartJxlDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     JxlDecoderRewind(d->djxl.get());
+
+    auto ret = JxlDecoderSetParallelRunner(d->djxl.get(), JxlThreadParallelRunner, d->parallelRunner.get());
+    if (JXL_DEC_SUCCESS != ret)
+    {
+        qWarning() << "JxlDecoderSetParallelRunner() failed, using single threaded decoder";
+    }
     
-    auto ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FRAME_PROGRESSION | JXL_DEC_FULL_IMAGE);
+    ret = JxlDecoderSubscribeEvents(d->djxl.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FRAME_PROGRESSION | JXL_DEC_FULL_IMAGE);
     if (JXL_DEC_SUCCESS != ret)
     {
         throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
