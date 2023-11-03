@@ -57,9 +57,27 @@ jobs:
       submodules: true
     - bash: |
           set -ex
-          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/exiv2.pc
+          ls /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/
+          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/INIReader.pc
+          cat /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/inih.pc
           
           set +x
+          
+          cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/exiv2.pc
+          prefix=\${pcfiledir}/../..
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: exiv2
+          Description: Exif/IPTC/Xmp C++ metadata library and tools plus ICC Profiles, Previews and more.
+          Version: 0.28.0
+          URL: https://exiv2.org
+
+          Libs: "-L\${libdir}" -lexiv2
+          Requires.private: INIReader
+          Cflags: "-I\${includedir}"
+          EOF
           
           cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl.pc
           prefix=\${pcfiledir}/../..
