@@ -58,6 +58,7 @@ jobs:
     - bash: |
             set -e
 
+            # KDE's exiv2 find module does not respect private dependencies specified in the pkgconfig file of exiv2 needed for static linking
             cat << EOF > /c/vcpkg/installed/x64-windows-static/share/ECM/find-modules/FindLibExiv2.cmake
             find_package(PkgConfig QUIET)
             pkg_check_modules(PC_EXIV2 exiv2)
@@ -122,6 +123,8 @@ jobs:
             )
             EOF
 
+            # libjxl's pkgconfig files do not work on windows, because they renamed the static libs
+            # https://github.com/libjxl/libjxl/pull/2754
             cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl.pc
             prefix=\${pcfiledir}/../..
             exec_prefix=\${prefix}
