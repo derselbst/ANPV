@@ -7,20 +7,20 @@
 #include <cstdio>
 #include <cmath>
 #include <cstring>
+#include <thread>
 #include <QDebug>
 #include <QtGlobal>
 #include <QColorSpace>
 
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
-#include <jxl/thread_parallel_runner.h>
 #include <jxl/thread_parallel_runner_cxx.h>
 
 
 struct SmartJxlDecoder::Impl
 {
-    constexpr static JxlPixelFormat jxlFormat = { 4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0 };
-    static inline auto parallelRunner = JxlThreadParallelRunnerMake(nullptr, 8);
+    static const inline JxlPixelFormat jxlFormat = { 4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0 };
+    static inline auto parallelRunner = JxlThreadParallelRunnerMake(nullptr, std::thread::hardware_concurrency());
 
     SmartJxlDecoder* q;
     
@@ -35,6 +35,11 @@ struct SmartJxlDecoder::Impl
     Impl(SmartJxlDecoder* q) : q(q)
     {
         this->djxl = JxlDecoderMake(nullptr);
+        auto ret = JxlDecoderSetParallelRunner(this->djxl.get(), JxlThreadParallelRunner, this->parallelRunner.get());
+        if (JXL_DEC_SUCCESS != ret)
+        {
+            qWarning() << "JxlDecoderSetParallelRunner() failed, using single threaded decoder";
+        }
     }
         
     QImage::Format format()
