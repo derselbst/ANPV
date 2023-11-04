@@ -41,20 +41,21 @@ ExifOverlay::ExifOverlay(QWidget* parent)
 
 ExifOverlay::~ExifOverlay() = default;
 
-void ExifOverlay::setMetadata(QSharedPointer<Image> dec)
+// sets the metadata for the overlay and returns the desired visibility of the widget
+bool ExifOverlay::setMetadata(QSharedPointer<Image> dec)
 {
     QString s = dec->formatInfoString();
     
     if(s.isEmpty())
     {
-        this->hide();
+        return false;
     }
     else
     {
         this->setText(s);
         this->setMessageType(MessageWidget::MessageType::Positive);
         this->adjustSize();
-        this->show();
+        return true;
     }
 }
 

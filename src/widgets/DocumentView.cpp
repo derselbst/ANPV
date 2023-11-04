@@ -57,6 +57,7 @@ struct DocumentView::Impl
     QGraphicsPixmapItem* currentPixmapOverlay = nullptr;
 
     QAction* actionShowScrollBars = nullptr;
+    QAction* actionShowInfoBox = nullptr;
 
     AfPointOverlay* afPointOverlay = nullptr;
 
@@ -471,13 +472,13 @@ struct DocumentView::Impl
     {
         QAction* act;
         
-        act = new QAction(QIcon::fromTheme("go-next"), "Go Next", q);
+        act = new QAction(QIcon::fromTheme("go-next"), "Next File", q);
         act->setShortcut({Qt::Key_Right});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->goTo(+1); });
         q->addAction(act);
 
-        act = new QAction(QIcon::fromTheme("go-previous"), "Go Previous", q);
+        act = new QAction(QIcon::fromTheme("go-previous"), "Previous File", q);
         act->setShortcut({Qt::Key_Left});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&]() { this->goTo(-1); });
@@ -487,6 +488,34 @@ struct DocumentView::Impl
         act->setShortcut({Qt::Key_Space});
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&]() { this->onToggleSelect(); });
+        q->addAction(act);
+
+        act = new QAction(q);
+        act->setSeparator(true);
+        q->addAction(act);
+
+        act = new QAction("Mirror", q);
+        act->setShortcut({ Qt::Key_F });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { q->scale(-1, 1); });
+        q->addAction(act);
+
+        act = new QAction("Flip", q);
+        act->setShortcut({ Qt::CTRL | Qt::Key_F });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { q->scale(1, -1); });
+        q->addAction(act);
+
+        act = new QAction("Rotate Clockwise", q);
+        act->setShortcut({ Qt::Key_R });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { q->rotate(90); });
+        q->addAction(act);
+
+        act = new QAction("Rotate Counter-Clockwise", q);
+        act->setShortcut({ Qt::Key_L });
+        act->setShortcutContext(Qt::WidgetShortcut);
+        connect(act, &QAction::triggered, q, [&]() { q->rotate(-90); });
         q->addAction(act);
 
         act = new QAction(q);
@@ -505,8 +534,16 @@ struct DocumentView::Impl
 
         this->actionShowScrollBars = new QAction("Show Scroll Bars", q);
         this->actionShowScrollBars->setCheckable(true);
-        connect(this->actionShowScrollBars, &QAction::toggled, q, [&](bool checked){ ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
+        connect(this->actionShowScrollBars, &QAction::toggled, q, [&](bool checked) { ANPV::globalInstance()->setViewFlag(ViewFlag::ShowScrollBars, checked); });
         q->addAction(this->actionShowScrollBars);
+
+        this->actionShowInfoBox = new QAction("Show Info Box", q);
+        this->actionShowInfoBox->setCheckable(true);
+        this->actionShowInfoBox->setChecked(true);
+        this->actionShowInfoBox->setShortcut({ Qt::Key_I });
+        this->actionShowInfoBox->setShortcutContext(Qt::WidgetShortcut);
+        connect(this->actionShowInfoBox, &QAction::toggled, q, [&](bool checked) { this->exifOverlay->setVisible(checked); });
+        q->addAction(this->actionShowInfoBox);
         
         act = new QAction("Set Background Color", q);
         connect(act, &QAction::triggered, q, [&](){ this->onSetBackgroundColor(); });
@@ -982,7 +1019,8 @@ void DocumentView::showImage(QSharedPointer<Image> img)
     }
     
     d->addThumbnailPreview(img);
-    d->exifOverlay->setMetadata(img);
+    bool visible = d->exifOverlay->setMetadata(img);
+    d->exifOverlay->setVisible(visible && d->actionShowInfoBox->isChecked());
 }
 
 void DocumentView::loadImage()

@@ -18,7 +18,7 @@ public:
     void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
-    void setMetadata(QSharedPointer<Image>);
+    bool setMetadata(QSharedPointer<Image>);
 
 private:
     struct Impl;

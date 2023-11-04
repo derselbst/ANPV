@@ -238,7 +238,7 @@ struct ANPV::Impl
         actionNo_Change->setStatusTip(actionNo_Change->toolTip());
         actionNo_Change->setShortcut({ Qt::Key_F3 });
 
-        QAction* actionFit_in_FOV = makeViewModeAction(QStringLiteral("Fit in FOV"), ViewMode::Fit);
+        QAction* actionFit_in_FOV = makeViewModeAction(QStringLiteral("Fit in Field of View"), ViewMode::Fit);
         actionFit_in_FOV->setToolTip(QStringLiteral("When switching between images, fit the entire image into the Field Of View, i.e. the available space of the window."));
         actionFit_in_FOV->setStatusTip(actionFit_in_FOV->toolTip());
         actionFit_in_FOV->setShortcut({ Qt::Key_F4 });
@@ -270,7 +270,7 @@ struct ANPV::Impl
         actionShow_AF_Points->setStatusTip(actionShow_AF_Points->toolTip());
         actionShow_AF_Points->setShortcut({ Qt::Key_F7 });
 
-        QAction* actionCenter_AF_focus_point = makeViewFlagAction(QStringLiteral("Center around AF focus point"), ViewFlag::CenterAf);
+        QAction* actionCenter_AF_focus_point = makeViewFlagAction(QStringLiteral("Center image around AF points"), ViewFlag::CenterAf);
         actionCenter_AF_focus_point->setToolTip(QStringLiteral("This will preserve the zoom factor, while making sure to transpose the image so that the AF points which are \"in-focus\" are located in the center of the FOV. If no AF data is available, no transposing takes place."));
         actionCenter_AF_focus_point->setStatusTip(actionCenter_AF_focus_point->toolTip());
         actionCenter_AF_focus_point->setShortcut({ Qt::Key_F8 });
