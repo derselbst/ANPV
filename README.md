@@ -33,11 +33,12 @@ Also, this project is designed as **viewer**! A viewer does not support editing 
 
 # Format Support Status
 
-| Decode feature / Supported file format | JFIF | TIFF | PNG | JXL | RAWs |
+| Feature / Supported file format | JFIF | TIFF | PNG | JXL | RAWs |
 |---|---|---|---|---|---|
 | Supported compression algorithms | ✔️ JPEG | ✅ (all encodings supported by libtiff, but none of the "none-Adobe registered codecs", e.g. no JPEG XL) | ✔️ PNG | ✔️ JPEG / JPEG XL | ⚠️ Embedded JPEG previews only! | 
 | EXIF Support |  ✔️ | ✅ (not yet for BigTIFF) | ⚠️ Should work, never seen it working though | ⚠️ Supported by file format, an implementation detail might be missing in ANPV | ✔️
 | Embedded Thumbnails |  ✅ (retrieved from EXIF metadata) | ✔️ (retrieved from EXIF metadata and potentially available image pyramids) | ❌ Might work through EXIF, never seen it working though | ⚠️ Supported by file format, implemented in ANPV, never seen it working though | ✅ (retrieved from EXIF metadata) |
+| ICC color profile handling | ✔️ | ✔️ | ✔️ | ✔️ | n/a, check the JFIF column |
 | Region-of-interest decode support | ✔️ | ✔️ (works best for tiled-TIFFs) | ❌ (libpng API limitation) | ❌ (libjxl API limitation) | n/a, check the JFIF column |
 | On-the-fly decode rescaling | ✔️ libjpeg-turbo only | ✅ Image Pyramid must be included in TIFF file | ❌ (libpng API or file format limitation) | ❌ (libjxl API limitation) | n/a, check the JFIF column |
 | Multi-threaded decoding | ❌ | ❌ | ❌ | ✅ (works, might be defeated in practice due to chunked input consumption) | n/a, check the JFIF column |
