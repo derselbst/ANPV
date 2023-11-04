@@ -31,6 +31,7 @@
 #include "SmartImageDecoder.hpp"
 #include "HardLinkFileCommand.hpp"
 #include "MoveFileCommand.hpp"
+#include "DeleteFileCommand.hpp"
 #include "FileOperationConfigDialog.hpp"
 #include "CancellableProgressWidget.hpp"
 #include "xThreadGuard.hpp"
@@ -886,6 +887,39 @@ void ANPV::moveFiles(QList<QString>&& fileNames, QString&& source, QString&& des
         box.exec();
     }, Qt::QueuedConnection); // use queued connection, to avoid displaying the WaitCursor when operation failed
     
+    this->undoStack()->push(cmd);
+}
+
+void ANPV::deleteFiles(QList<QString>&& fileNames, QString&& source)
+{
+    xThreadGuard g(this);
+    DeleteFileCommand* cmd = new DeleteFileCommand(std::move(fileNames), std::move(source));
+
+    connect(cmd, &DeleteFileCommand::failed, this, [&](QList<QPair<QString, QString>> failedFilesWithReason)
+    {
+        QMessageBox box(QMessageBox::Critical,
+            "Delete operation failed",
+            "Some files could not be deleted. See details below.",
+            QMessageBox::Ok,
+            QApplication::focusWidget());
+
+        QString details;
+        for (int i = 0; i < failedFilesWithReason.size(); i++)
+        {
+            QPair<QString, QString>& p = failedFilesWithReason[i];
+            details += p.first;
+
+            if (!p.second.isEmpty())
+            {
+                details += QString(": ") + p.second;
+                details += "\n";
+            }
+        }
+        box.setDetailedText(details);
+        box.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        box.exec();
+    }, Qt::QueuedConnection); // use queued connection, to avoid displaying the WaitCursor when operation failed
+
     this->undoStack()->push(cmd);
 }
 

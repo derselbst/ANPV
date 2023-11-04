@@ -54,19 +54,23 @@ struct ThumbnailListView::Impl
     QString lastTargetDirectory;
     void onFileOperation(ANPV::FileOperation op)
     {
-        QString dir = ANPV::globalInstance()->getExistingDirectory(q, lastTargetDirectory);
+        QString dir;
+        if (op != ANPV::FileOperation::Delete)
+        {
+            dir = ANPV::globalInstance()->getExistingDirectory(q, lastTargetDirectory);
+            if (dir.isEmpty())
+            {
+                // user canceled dialog
+                return;
+            }
+        }
         this->startFileOperation(op, std::move(dir));
     }
     
     void startFileOperation(ANPV::FileOperation op, QString&& dest)
     {
-        if(dest.isEmpty())
-        {
-            return;
-        }
-
         QDir currentDir = ANPV::globalInstance()->currentDir();
-        if(QDir(dest) == currentDir)
+        if(op != ANPV::FileOperation::Delete && QDir(dest) == currentDir)
         {
             QMessageBox::information(q, "That doesn't work", "Destination folder cannot be equal with source folder!");
             return;
@@ -95,6 +99,9 @@ struct ThumbnailListView::Impl
                 break;
             case ANPV::FileOperation::HardLink:
                 ANPV::globalInstance()->hardLinkFiles(std::move(files), currentDir.absolutePath(), std::move(dest));
+                break;
+            case ANPV::FileOperation::Delete:
+                ANPV::globalInstance()->deleteFiles(std::move(files), currentDir.absolutePath());
                 break;
             default:
                 QMessageBox::information(q, "Not yet implemented", "not yet impl");
@@ -295,9 +302,9 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
-    d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move To Trash", this);
+    d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move checked files to trash", this);
     d->actionDelete->setShortcuts(QKeySequence::Delete);
-    d->actionDelete->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    d->actionDelete->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
     connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Delete); });
     
     this->addAction(d->actionOpenSelectionInternally);
