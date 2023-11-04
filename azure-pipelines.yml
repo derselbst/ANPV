@@ -3,6 +3,17 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+
+trigger:
+  paths:
+    include:
+      - '*'
+    exclude:
+      - 'docker/'
+      - 'docker-compose.yml'
+      - '.gitignore'
+      - 'README.md'
+
 resources:
   containers:
   - container: qt6Container-linux
