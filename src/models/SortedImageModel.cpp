@@ -454,19 +454,22 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem>& item, in
                     return img->thumbnailTransformed(d->cachedIconHeight);
                 }
                 case Qt::ToolTipRole:
+                {
+                    QString info;
                     switch (img->decodingState())
                     {
-                    case Ready:
-                        return "Decoding not yet started";
-                    case Cancelled:
-                        return "Decoding cancelled";
                     case Error:
                     case Fatal:
                         return img->errorMessage();
                     default:
-                        return img->formatInfoString();
+                        info = img->formatInfoString();
                     }
-
+                    if (info.isEmpty())
+                    {
+                        info = "Decoding not yet started";
+                    }
+                    return info;
+                }
                 case Qt::TextAlignmentRole:
                 {
                     constexpr Qt::Alignment alignment = Qt::AlignHCenter | Qt::AlignVCenter;
