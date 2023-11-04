@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
 project (ANPV VERSION 1.0 LANGUAGES CXX)
 
+list( APPEND CMAKE_MODULE_PATH ${ANPV_SOURCE_DIR}/cmake )
+
+include ( PkgConfigHelpers ) # Needed for Find modules using pkg-config
+
 ### setup binary output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BUILD_DIR})
 
@@ -95,6 +99,8 @@ find_package(TIFF REQUIRED)
 
 find_package(PNG REQUIRED)
 
+find_package(JXL REQUIRED)
+
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 
@@ -143,6 +149,8 @@ src/decoders/SmartPngDecoder.cpp
 src/decoders/SmartPngDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
+src/decoders/SmartJxlDecoder.cpp
+src/decoders/SmartJxlDecoder.hpp
 src/logic/ExifWrapper.cpp
 src/logic/ExifWrapper.hpp
 src/logic/Formatter.hpp
@@ -179,7 +187,7 @@ src/styles/ListItemDelegate.hpp
 ANPV.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF KExiv2 KDcraw)
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2 KDcraw)
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
