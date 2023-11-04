@@ -20,13 +20,13 @@
 struct SmartJxlDecoder::Impl
 {
     static const inline JxlPixelFormat jxlFormat = { 4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0 };
-    static inline auto parallelRunner = JxlThreadParallelRunnerMake(nullptr, std::thread::hardware_concurrency());
-
+    
     SmartJxlDecoder* q;
     
     JxlDecoderPtr djxl;
     JxlBasicInfo jxlInfo;
-    
+    JxlThreadParallelRunnerPtr parallelRunner;
+
     const unsigned char* buffer = nullptr;
     size_t nbytes = 0;
 
@@ -68,6 +68,7 @@ SmartJxlDecoder::~SmartJxlDecoder()
 void SmartJxlDecoder::close()
 {
     JxlDecoderReset(d->djxl.get());
+    d->parallelRunner = nullptr;
     d->buffer = nullptr;
     
     SmartImageDecoder::close();
@@ -93,6 +94,8 @@ void SmartJxlDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
     JxlDecoderRewind(d->djxl.get());
+
+    d->parallelRunner = JxlThreadParallelRunnerMake(nullptr, std::thread::hardware_concurrency());
 
     auto ret = JxlDecoderSetParallelRunner(d->djxl.get(), JxlThreadParallelRunner, d->parallelRunner.get());
     if (JXL_DEC_SUCCESS != ret)
