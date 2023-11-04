@@ -585,7 +585,7 @@ struct DocumentView::Impl
                 if(o == q && q->hasFocus())
                 {
                     QSharedPointer<Image> nextImg = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), 1);
-
+                    
                     ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
                     QFileInfo source = this->currentImageDecoder->image()->fileInfo();
@@ -602,7 +602,11 @@ struct DocumentView::Impl
                             ANPV::globalInstance()->hardLinkFiles({ source.fileName() }, source.absoluteDir().absolutePath(), std::move(targetDir));
                             break;
                         case ANPV::FileOperation::Delete:
+                            // cancel any pending decoding to release the file handle and avoid a "File being used by other process" error on Windows
+                            this->currentImageDecoder->cancelOrTake(this->taskFuture.future());
+                            this->taskFuture.waitForFinished();
                             ANPV::globalInstance()->deleteFiles({ source.fileName() }, source.absoluteDir().absolutePath());
+                            q->loadImage(nextImg);
                             break;
                         default:
                             QMessageBox::information(q, "Not yet implemented", "not yet impl");
