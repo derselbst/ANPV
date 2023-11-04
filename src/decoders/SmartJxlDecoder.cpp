@@ -257,14 +257,13 @@ nullptr /* unused */ ,
                 }
                 break;
 
-            case JXL_DEC_SUCCESS:
             case JXL_DEC_FULL_IMAGE:
+                // Not sure if this is required, the decoderCallback should update the entire image over time...
                 this->updateDecodedRoiRect(this->image()->fullResolutionRect());
-                if(JXL_DEC_SUCCESS == status)
-                {
-                    goto leaveLoop;
-                }
                 break;
+
+            case JXL_DEC_SUCCESS:
+                goto leaveLoop;
  
             default:
                 throw std::runtime_error(Formatter() << "Unknown decoder status: " << status);
