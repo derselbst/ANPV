@@ -302,11 +302,6 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
-    d->actionDelete = new QAction(QIcon::fromTheme("edit-delete"), "Move checked files to trash", this);
-    d->actionDelete->setShortcuts(QKeySequence::Delete);
-    d->actionDelete->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
-    connect(d->actionDelete, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Delete); });
-    
     this->addAction(d->actionOpenSelectionInternally);
     this->addAction(d->actionOpenSelectionExternally);
     this->addAction(d->actionOpenFolder);

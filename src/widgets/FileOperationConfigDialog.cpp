@@ -15,11 +15,16 @@ FileOperationConfigDialog::FileOperationConfigDialog(QActionGroup* fileOperation
     
     connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &FileOperationConfigDialog::accept);
     connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &FileOperationConfigDialog::reject);
-    
-    connect(ui->pushButton, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit); });
-    connect(ui->pushButton_2, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_2); });
-    connect(ui->pushButton_3, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_3); });
-    connect(ui->pushButton_4, &QPushButton::clicked, this, [&](){ this->onBrowseClicked(ui->lineEdit_4); });
+
+    connect(ui->pushButton, &QPushButton::clicked, this, [&]() { this->onBrowseClicked(ui->lineEdit); });
+    connect(ui->pushButton_2, &QPushButton::clicked, this, [&]() { this->onBrowseClicked(ui->lineEdit_2); });
+    connect(ui->pushButton_3, &QPushButton::clicked, this, [&]() { this->onBrowseClicked(ui->lineEdit_3); });
+    connect(ui->pushButton_4, &QPushButton::clicked, this, [&]() { this->onBrowseClicked(ui->lineEdit_4); });
+
+    connect(ui->comboBox, &QComboBox::currentIndexChanged, this, [&](int index) { ui->lineEdit->setEnabled(index + 1 != ANPV::FileOperation::Delete); ui->pushButton->setEnabled(index + 1 != ANPV::FileOperation::Delete); });
+    connect(ui->comboBox_2, &QComboBox::currentIndexChanged, this, [&](int index) { ui->lineEdit_2->setEnabled(index+1 != ANPV::FileOperation::Delete); ui->pushButton_2->setEnabled(index + 1 != ANPV::FileOperation::Delete); });
+    connect(ui->comboBox_3, &QComboBox::currentIndexChanged, this, [&](int index) { ui->lineEdit_3->setEnabled(index+1 != ANPV::FileOperation::Delete); ui->pushButton_3->setEnabled(index + 1 != ANPV::FileOperation::Delete); });
+    connect(ui->comboBox_4, &QComboBox::currentIndexChanged, this, [&](int index) { ui->lineEdit_4->setEnabled(index+1 != ANPV::FileOperation::Delete); ui->pushButton_4->setEnabled(index + 1 != ANPV::FileOperation::Delete); });
     
     this->fillDiag();
 }
@@ -91,21 +96,33 @@ void FileOperationConfigDialog::accept()
     auto actionBuilder = [&](QComboBox* comboBox, QKeySequenceEdit* seqEdit, QLineEdit* lineEdit)
     {
         QAction* action = nullptr;
-        
+
+        QString title = comboBox->currentText();
+        bool isDeleteAction = title == QMetaEnum::fromType<ANPV::FileOperation>().valueToKey(ANPV::FileOperation::Delete);
         QString targetDir = lineEdit->text();
         QFileInfo targetDirInfo = QFileInfo(targetDir);
-        if(targetDirInfo.isDir())
+        if(isDeleteAction || targetDirInfo.isDir())
         {
             QKeySequence seq = seqEdit->keySequence();
             
-            QString title = comboBox->currentText();
-            title += " to ";
-            title += targetDir;
+            if (!isDeleteAction)
+            {
+                title += " to ";
+                title += targetDir;
+            }
+            else
+            {
+                title += " to trash";
+            }
             action = new QAction(ANPV::globalInstance());
             action->setText(title);
             action->setShortcut(seq);
             action->setData(targetDir);
             action->setShortcutContext(Qt::WidgetShortcut);
+            if (isDeleteAction)
+            {
+                action->setIcon(QIcon::fromTheme("edit-delete"));
+            }
             
             return action;
         }

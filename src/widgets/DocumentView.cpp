@@ -564,14 +564,14 @@ struct DocumentView::Impl
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->onClipboardPaste(); });
         q->addAction(act);
-        
+
         act = new QAction(q);
         act->setSeparator(true);
         q->addAction(act);
         
         QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
         q->addActions(fileActions->actions());
-        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction* act)
+        connect(fileActions, &QActionGroup::triggered, q, [&](QAction* act)
         {
             if(!this->currentImageDecoder)
             {
@@ -599,7 +599,10 @@ struct DocumentView::Impl
                             q->loadImage(nextImg);
                             break;
                         case ANPV::FileOperation::HardLink:
-                            ANPV::globalInstance()->hardLinkFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            ANPV::globalInstance()->hardLinkFiles({ source.fileName() }, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            break;
+                        case ANPV::FileOperation::Delete:
+                            ANPV::globalInstance()->deleteFiles({ source.fileName() }, source.absoluteDir().absolutePath());
                             break;
                         default:
                             QMessageBox::information(q, "Not yet implemented", "not yet impl");
