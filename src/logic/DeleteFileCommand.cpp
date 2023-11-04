@@ -37,15 +37,6 @@ void DeleteFileCommand::undo()
 	auto itOrig =filesToDelete.begin();
     for(; itTrash != trashFilePaths.end(); )
 	{
-		const QFileInfo trashFileInfo(*itTrash);
-		if (!trashFileInfo.isWritable())
-		{
-			failedRestores.append({*itOrig, "No write permission for the trash-file"});
-			itTrash = trashFilePaths.erase(itTrash);
-			itOrig = filesToDelete.erase(itOrig);
-			continue;
-		}
-
 		QString origAbsFilePath(restoreDir.absoluteFilePath(*itOrig));
 		if(QFileInfo(origAbsFilePath).exists())
 		{
