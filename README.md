@@ -5,6 +5,7 @@
 <img src="images/ANPV.png" height="50" alt="ANPV Icon">
 
 [![Build Status](https://dev.azure.com/tommbrt/tommbrt/_apis/build/status/derselbst.ANPV?branchName=master)](https://dev.azure.com/tommbrt/tommbrt/_build/latest?definitionId=7&branchName=master)
+[![build result](https://build.opensuse.org/projects/home:derselbst/packages/anpv/badge.svg?type=percent)](https://build.opensuse.org/package/show/home:derselbst/anpv)
 
 ![ANPV Screenshot](ANPV.png)
 
