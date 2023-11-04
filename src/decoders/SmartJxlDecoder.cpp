@@ -31,6 +31,7 @@ struct SmartJxlDecoder::Impl
     size_t nbytes = 0;
 
     unsigned char* imgBuf = nullptr;
+    size_t pixelsSeen;
     
     Impl(SmartJxlDecoder* q) : q(q)
     {
@@ -50,7 +51,9 @@ struct SmartJxlDecoder::Impl
 
         std::memcpy(&self->imgBuf[(y * self->jxlInfo.xsize + x) * self->jxlFormat.num_channels], pixels, self->jxlFormat.num_channels * num_pixels);
 
-        self->q->updateDecodedRoiRect(QRect(x,y,num_pixels,1));
+        self->pixelsSeen += num_pixels;
+        self->q->setDecodingProgress(self->pixelsSeen * 100.0f / (self->jxlInfo.xsize * self->jxlInfo.ysize));
+        self->q->updateDecodedRoiRect(QRect(x, y, num_pixels, 1));
     }
 };
 
@@ -222,6 +225,7 @@ nullptr /* unused */ ,
                 image = this->allocateImageBuffer(info.xsize, info.ysize, d->format());
                 Q_ASSERT(image.bytesPerLine() * image.height() == buffer_size);
                 
+                d->pixelsSeen = 0;
                 d->imgBuf = const_cast<uint8_t*>(image.constBits());
                 ret = JxlDecoderSetImageOutCallback(d->djxl.get(), &d->jxlFormat, &d->decoderCallback, d.get());
                 if (JXL_DEC_SUCCESS != ret)
