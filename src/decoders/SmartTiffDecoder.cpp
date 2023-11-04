@@ -4,11 +4,8 @@
 #include "Image.hpp"
 #include "ANPV.hpp"
 
-#include <cstdio>
-#include <cmath>
 #include <cstring>
 #include <QDebug>
-#include <QtGlobal>
 #include <QColorSpace>
 
 #include "tiff.h"

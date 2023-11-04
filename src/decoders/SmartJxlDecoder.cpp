@@ -4,12 +4,9 @@
 #include "Image.hpp"
 #include "ANPV.hpp"
 
-#include <cstdio>
-#include <cmath>
 #include <cstring>
 #include <thread>
 #include <QDebug>
-#include <QtGlobal>
 #include <QColorSpace>
 
 #include <jxl/decode.h>

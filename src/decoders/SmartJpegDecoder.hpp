@@ -4,11 +4,6 @@
 #include "DecodingState.hpp"
 #include "SmartImageDecoder.hpp"
 
-#include <QObject>
-#include <QSize>
-#include <QFile>
-#include <functional>
-
 
 class SmartJpegDecoder : public SmartImageDecoder
 {
