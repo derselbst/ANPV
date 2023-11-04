@@ -25,22 +25,22 @@ DeleteFileCommand::~DeleteFileCommand() = default;
 void DeleteFileCommand::undo()
 {
 	QList<QPair<QString, QString>> failedRestores;
-	
+
 	QDir restoreDir(sourceFolder);
-	
-	if(trashFilePaths.size() != filesToDelete.size())
+
+	if (trashFilePaths.size() != filesToDelete.size())
 	{
 		throw std::logic_error("Oops, these lists should have equal size");
 	}
-	
-	auto itTrash=trashFilePaths.begin();
-	auto itOrig =filesToDelete.begin();
-    for(; itTrash != trashFilePaths.end(); )
+
+	auto itTrash = trashFilePaths.begin();
+	auto itOrig = filesToDelete.begin();
+	for (; itTrash != trashFilePaths.end(); )
 	{
 		QString origAbsFilePath(restoreDir.absoluteFilePath(*itOrig));
-		if(QFileInfo(origAbsFilePath).exists())
+		if (QFileInfo(origAbsFilePath).exists())
 		{
-			failedRestores.append({*itOrig, "A file at the restore location seems to exist already, refusing to overwrite that"});
+			failedRestores.append({ *itOrig, "A file at the restore location seems to exist already, refusing to overwrite that" });
 			itTrash = trashFilePaths.erase(itTrash);
 			itOrig = filesToDelete.erase(itOrig);
 			continue;
@@ -49,7 +49,7 @@ void DeleteFileCommand::undo()
 		bool success = QFile::rename(*itTrash, origAbsFilePath);
 		if (!success)
 		{
-			failedRestores.append({*itOrig, "Unspecified error while restoring the file"});
+			failedRestores.append({ *itOrig, "Unspecified error while restoring the file" });
 			itTrash = trashFilePaths.erase(itTrash);
 			itOrig = filesToDelete.erase(itOrig);
 			continue;
@@ -58,67 +58,66 @@ void DeleteFileCommand::undo()
 		itTrash = trashFilePaths.erase(itTrash);
 		itOrig++;
 	}
-	
-	Q_ASSERT(trashFilePaths.size() == 0);
-	
-    if(!failedRestores.empty())
-    {
-        emit failed(failedRestores);
-    }
-    
-    if(filesToDelete.empty())
-    {
-        this->setObsolete(true);
-    }
-    else
-    {
-        emit succeeded(filesToDelete);
-    }
 
+	Q_ASSERT(trashFilePaths.size() == 0);
+
+	if (!failedRestores.empty())
+	{
+		emit failed(failedRestores);
+	}
+
+	if (filesToDelete.empty())
+	{
+		this->setObsolete(true);
+	}
+	else
+	{
+		emit succeeded(filesToDelete);
+	}
 }
 
 void DeleteFileCommand::redo()
 {
-    QList<QPair<QString, QString>> failedDels;
-	
+	QList<QPair<QString, QString>> failedDels;
+
 	Q_ASSERT(trashFilePaths.size() == 0);
-	
+
 	QDir sourceDir(sourceFolder);
-    for(auto it=filesToDelete.begin(); it != filesToDelete.end(); )
+	for (auto it = filesToDelete.begin(); it != filesToDelete.end(); )
 	{
 		QString absoluteFilePath = sourceDir.absoluteFilePath(*it);
 		QFile file(absoluteFilePath);
-		if(!file.exists())
+		if (!file.exists())
 		{
-			failedDels.append({*it, "does not exist"});
+			failedDels.append({ *it, "does not exist" });
 			it = filesToDelete.erase(it);
 			continue;
 		}
-		
+
 		bool success = file.moveToTrash();
 		if (!success || QFile::exists(absoluteFilePath))
 		{
-			failedDels.append({*it, "deletion failed, file might be currently in use"});
+			failedDels.append({ *it, "deletion failed, file might be currently in use" });
 			it = filesToDelete.erase(it);
 			continue;
 		}
-		
+
 		this->trashFilePaths.append(QFileInfo(file).absoluteFilePath());
 		it++;
 	}
-	
-    if(!failedDels.empty())
-    {
-        emit failed(failedDels);
-    }
-    
-    if(filesToDelete.empty())
-    {
-        this->setObsolete(true);
-    }
-    else
-    {
-        emit succeeded(filesToDelete);
-    }
+
+	if (!failedDels.empty())
+	{
+		emit failed(failedDels);
+	}
+
+	if (filesToDelete.empty())
+	{
+		this->setObsolete(true);
+	}
+	else
+	{
+		emit succeeded(filesToDelete);
+	}
 }
 
