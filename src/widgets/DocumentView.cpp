@@ -632,6 +632,7 @@ DocumentView::DocumentView(QWidget *parent)
     this->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
     this->setDragMode(QGraphicsView::ScrollHandDrag);
+    this->setFrameShape(QFrame::NoFrame);
     
     d->scene = new QGraphicsScene(this);
     
