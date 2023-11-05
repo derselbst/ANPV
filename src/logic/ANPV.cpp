@@ -332,6 +332,7 @@ struct ANPV::Impl
                 out << a->data();
                 out << a->shortcut();
                 out << a->shortcutContext();
+                out << a->icon().name();
             }
         }
         settings.setValue("actionGroupFileOperation", actionsArray);
@@ -355,7 +356,7 @@ struct ANPV::Impl
             QDataStream in(actionsArray);
             in.setVersion(QDataStream::Qt_6_2);
             QVariant data;
-            QString text;
+            QString text, iconTheme;
             QKeySequence seq;
             Qt::ShortcutContext ctx;
             while(!in.atEnd())
@@ -364,10 +365,12 @@ struct ANPV::Impl
                 in >> data;
                 in >> seq;
                 in >> ctx;
+                in >> iconTheme;
                 QAction* action = new QAction(text, q);
                 action->setData(data);
                 action->setShortcut(seq);
                 action->setShortcutContext(ctx);
+                action->setIcon(QIcon::fromTheme(iconTheme));
                 this->actionGroupFileOperation->addAction(action);
             }
         }
