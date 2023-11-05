@@ -254,22 +254,22 @@ border-radius: 0px;
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <widget class="QPushButton" name="searchButton">
+            <property name="whatsThis">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Applies the specified filter parameters to the thumbnail view.&lt;/p&gt;&lt;p&gt;Alternatively, hitting Enter while filter has focus will apply parameters and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Search</string>
             </property>
-			<property name="whatsThis">
-			 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Applies the specified filter parameters to the thumbnail view.&lt;/p&gt;&lt;p&gt;Alternatively, hitting Enter while filter has focus will apply parameters and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-			</property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="resetButton">
+            <property name="whatsThis">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reset the filter.&lt;/p&gt;&lt;p&gt;Alternatively, hitting ESC while the filter has focus will reset itself and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Reset</string>
             </property>
-			<property name="whatsThis">
-			 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reset the filter.&lt;/p&gt;&lt;p&gt;Alternatively, hitting ESC while the filter has focus will reset itself and bring thumbnail view back in focus.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-			</property>
            </widget>
           </item>
          </layout>
@@ -419,6 +419,9 @@ border-radius: 0px;
    </property>
   </action>
   <action name="actionReload">
+   <property name="icon">
+    <iconset theme="view-refresh"/>
+   </property>
    <property name="text">
     <string>Reload</string>
    </property>
@@ -427,6 +430,9 @@ border-radius: 0px;
    </property>
   </action>
   <action name="actionPreview_all_images">
+   <property name="icon">
+    <iconset theme="document-print-preview"/>
+   </property>
    <property name="text">
     <string>Preview all images</string>
    </property>

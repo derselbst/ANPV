@@ -188,9 +188,10 @@ struct ANPV::Impl
             });
         
         this->actionGroupFileOperation = new QActionGroup(q);
-        this->actionExit = new QAction("Close", q);
+        this->actionExit = new QAction("Quit", q);
         this->actionExit->setShortcuts(QKeySequence::Quit);
         this->actionExit->setShortcutContext(Qt::ApplicationShortcut);
+        this->actionExit->setIcon(QIcon::fromTheme("application-exit"));
         connect(this->actionExit, &QAction::triggered, q,
                 [&]()
                 {
@@ -203,6 +204,7 @@ struct ANPV::Impl
         this->actionOpen = new QAction("Open Image", q);
         this->actionOpen->setShortcut({Qt::CTRL | Qt::Key_O});
         this->actionOpen->setShortcutContext(Qt::ApplicationShortcut);
+        this->actionOpen->setIcon(QIcon::fromTheme("document-open"));
         connect(this->actionOpen, &QAction::triggered, q,
                 [&]()
                 {
@@ -234,7 +236,7 @@ struct ANPV::Impl
             return action;
         };
 
-        QAction* actionNo_Change = makeViewModeAction(QStringLiteral("No Change"), ViewMode::None);
+        QAction* actionNo_Change = makeViewModeAction(QStringLiteral("No View Change"), ViewMode::None);
         actionNo_Change->setToolTip(QStringLiteral("Do not change the scale, rotation or transformation when switching between images."));
         actionNo_Change->setStatusTip(actionNo_Change->toolTip());
         actionNo_Change->setShortcut({ Qt::Key_F3 });
@@ -243,6 +245,7 @@ struct ANPV::Impl
         actionFit_in_FOV->setToolTip(QStringLiteral("When switching between images, fit the entire image into the Field Of View, i.e. the available space of the window."));
         actionFit_in_FOV->setStatusTip(actionFit_in_FOV->toolTip());
         actionFit_in_FOV->setShortcut({ Qt::Key_F4 });
+        actionFit_in_FOV->setIcon(QIcon::fromTheme("zoom-fit-best"));
 
         actionGroupViewFlag = new QActionGroup(q);
         actionGroupViewFlag->setExclusive(false);

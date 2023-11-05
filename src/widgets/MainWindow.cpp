@@ -165,6 +165,14 @@ struct MainWindow::Impl
             action->setCheckable(true);
             action->setData((int)order);
             actionGroup->addAction(action);
+            if(order == Qt::AscendingOrder)
+            {
+                action->setIcon(QIcon::fromTheme("view-sort-ascending"));
+            }
+            else
+            {
+                action->setIcon(QIcon::fromTheme("view-sort-descending"));
+            }
         };
 
 
