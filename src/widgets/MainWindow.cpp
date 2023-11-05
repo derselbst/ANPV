@@ -386,6 +386,7 @@ struct MainWindow::Impl
 
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
+        ui->actionAbout_Qt->setIcon(q->style()->standardIcon(QStyle::SP_TitleBarMenuButton));
     }
 
     void createMenus()

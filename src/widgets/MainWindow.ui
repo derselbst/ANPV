@@ -298,8 +298,7 @@ border-radius: 0px;
   </widget>
   <action name="actionAbout_ANPV">
    <property name="icon">
-    <iconset theme=":/images/ANPV.ico">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme=":/images/ANPV.ico"/>
    </property>
    <property name="text">
     <string>About ANPV</string>
