@@ -276,31 +276,32 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
 
     d->actionCheck = new QAction("Check selected images", this);
     d->actionCheck->setShortcut(Qt::Key_Insert);
-    d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    d->actionCheck->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->checkCheckState); });
 
     d->actionUncheck = new QAction("Uncheck selected images", this);
-    d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    d->actionUncheck->setShortcut(Qt::SHIFT | Qt::Key_Insert);
+    d->actionUncheck->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionUncheck, &QAction::triggered, this, [&]() { d->checkSelectedImages(d->uncheckCheckState); });
 
-    d->actionCopyToFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy filepath to clipboard", this);
+    d->actionCopyToFilePath = new QAction(QIcon::fromTheme("edit-copy"), "Copy absolute path of selected files to clipboard", this);
     connect(d->actionCopyToFilePath, &QAction::triggered, this, [&]() { d->onCopyFilePath(); });
 
+    d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut selected files to clipboard", this);
+    d->actionMove->setShortcut(QKeySequence::Cut);
+    d->actionMove->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
+    
+    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy selected files to clipboard", this);
+    d->actionCopy->setShortcut(QKeySequence::Copy);
+    d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
+    
     d->actionMoveTo = new QAction(QIcon::fromTheme("edit-cut"), "Move checked files to", this);
     connect(d->actionMoveTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::Move); });
     
     d->actionCopyTo = new QAction(QIcon::fromTheme("edit-copy"), "HardLink checked files to", this);
     connect(d->actionCopyTo, &QAction::triggered, this, [&](){ d->onFileOperation(ANPV::FileOperation::HardLink); });
-    
-    d->actionMove = new QAction(QIcon::fromTheme("edit-cut"), "Cut", this);
-    d->actionMove->setShortcut(QKeySequence::Cut);
-    d->actionMove->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
-    connect(d->actionMove, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Move); });
-    
-    d->actionCopy = new QAction(QIcon::fromTheme("edit-copy"), "Copy", this);
-    d->actionCopy->setShortcut(QKeySequence::Copy);
-    d->actionCopy->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
-    connect(d->actionCopy, &QAction::triggered, this, [&](){ d->onCopyToClipboard(ANPV::FileOperation::Copy); });
     
     this->addAction(d->actionOpenSelectionInternally);
     this->addAction(d->actionOpenSelectionExternally);
@@ -309,29 +310,22 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     QAction* sep = new QAction(this);
     sep->setSeparator(true);
     this->addAction(sep);
-    
     this->addAction(d->actionCopyToFilePath);
+    this->addAction(d->actionMove);
+    this->addAction(d->actionCopy);
     
     sep = new QAction(this);
     sep->setSeparator(true);
     this->addAction(sep);
-    
     this->addAction(d->actionToggle);
     this->addAction(d->actionCheck);
     this->addAction(d->actionUncheck);
-
+    
     sep = new QAction(this);
     sep->setSeparator(true);
     this->addAction(sep);
-    
     this->addAction(d->actionMoveTo);
     this->addAction(d->actionCopyTo);
-    
-    sep = new QAction(this);
-    sep->setSeparator(true);
-    this->addAction(sep);
-    this->addAction(d->actionMove);
-    this->addAction(d->actionCopy);
     
     sep = new QAction(this);
     sep->setSeparator(true);
