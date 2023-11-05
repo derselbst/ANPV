@@ -564,14 +564,14 @@ struct DocumentView::Impl
         act->setShortcutContext(Qt::WidgetShortcut);
         connect(act, &QAction::triggered, q, [&](){ this->onClipboardPaste(); });
         q->addAction(act);
-        
+
         act = new QAction(q);
         act->setSeparator(true);
         q->addAction(act);
         
         QActionGroup* fileActions = ANPV::globalInstance()->copyMoveActionGroup();
         q->addActions(fileActions->actions());
-        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction* act)
+        connect(fileActions, &QActionGroup::triggered, q, [&](QAction* act)
         {
             if(!this->currentImageDecoder)
             {
@@ -585,7 +585,7 @@ struct DocumentView::Impl
                 if(o == q && q->hasFocus())
                 {
                     QSharedPointer<Image> nextImg = this->model->goTo(this->cachedViewFlags, this->currentImageDecoder->image().get(), 1);
-
+                    
                     ANPV::FileOperation op = FileOperationConfigDialog::operationFromAction(act);
                     QString targetDir = act->data().toString();
                     QFileInfo source = this->currentImageDecoder->image()->fileInfo();
@@ -599,7 +599,14 @@ struct DocumentView::Impl
                             q->loadImage(nextImg);
                             break;
                         case ANPV::FileOperation::HardLink:
-                            ANPV::globalInstance()->hardLinkFiles({source.fileName()}, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            ANPV::globalInstance()->hardLinkFiles({ source.fileName() }, source.absoluteDir().absolutePath(), std::move(targetDir));
+                            break;
+                        case ANPV::FileOperation::Delete:
+                            // cancel any pending decoding to release the file handle and avoid a "File being used by other process" error on Windows
+                            this->currentImageDecoder->cancelOrTake(this->taskFuture.future());
+                            this->taskFuture.waitForFinished();
+                            ANPV::globalInstance()->deleteFiles({ source.fileName() }, source.absoluteDir().absolutePath());
+                            q->loadImage(nextImg);
                             break;
                         default:
                             QMessageBox::information(q, "Not yet implemented", "not yet impl");

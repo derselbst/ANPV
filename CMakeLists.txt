@@ -172,6 +172,8 @@ src/logic/ANPV.cpp
 src/logic/ANPV.hpp
 src/logic/DirectoryWorker.cpp
 src/logic/DirectoryWorker.hpp
+src/logic/DeleteFileCommand.cpp
+src/logic/DeleteFileCommand.hpp
 src/models/AbstractListItem.cpp
 src/models/AbstractListItem.hpp
 src/models/ImageSectionDataContainer.cpp

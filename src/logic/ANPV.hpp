@@ -57,6 +57,7 @@ public:
     Q_ENUM(FileOperation);
     void hardLinkFiles(QList<QString>&& files, QString&& source, QString&& destination);
     void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
+    void deleteFiles(QList<QString>&& files, QString&& source);
     
     QAbstractFileIconProvider* iconProvider();
     QFileSystemModel* dirModel();
