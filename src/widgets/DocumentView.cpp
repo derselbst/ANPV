@@ -497,24 +497,28 @@ struct DocumentView::Impl
         act = new QAction("Mirror", q);
         act->setShortcut({ Qt::Key_F });
         act->setShortcutContext(Qt::WidgetShortcut);
+        act->setIcon(QIcon::fromTheme("object-flip-horizontal"));
         connect(act, &QAction::triggered, q, [&]() { q->scale(-1, 1); });
         q->addAction(act);
 
         act = new QAction("Flip", q);
         act->setShortcut({ Qt::CTRL | Qt::Key_F });
         act->setShortcutContext(Qt::WidgetShortcut);
+        act->setIcon(QIcon::fromTheme("object-flip-vertical"));
         connect(act, &QAction::triggered, q, [&]() { q->scale(1, -1); });
         q->addAction(act);
 
         act = new QAction("Rotate Clockwise", q);
         act->setShortcut({ Qt::Key_R });
         act->setShortcutContext(Qt::WidgetShortcut);
+        act->setIcon(QIcon::fromTheme("object-rotate-right"));
         connect(act, &QAction::triggered, q, [&]() { q->rotate(90); });
         q->addAction(act);
 
         act = new QAction("Rotate Counter-Clockwise", q);
         act->setShortcut({ Qt::Key_L });
         act->setShortcutContext(Qt::WidgetShortcut);
+        act->setIcon(QIcon::fromTheme("object-rotate-left"));
         connect(act, &QAction::triggered, q, [&]() { q->rotate(-90); });
         q->addAction(act);
 
