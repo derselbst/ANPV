@@ -17,19 +17,19 @@
 
 struct SmartPngDecoder::Impl
 {
-    SmartPngDecoder* q;
-    
+    SmartPngDecoder *q;
+
     png_structp cinfo = nullptr;
     png_infop info_ptr = nullptr;
     png_infop einfo_ptr = nullptr;
 
-    const unsigned char* inputBufferBegin = nullptr;
+    const unsigned char *inputBufferBegin = nullptr;
     qint64 inputBufferLength = 0;
-    const unsigned char* inputBufferPtr = nullptr;
+    const unsigned char *inputBufferPtr = nullptr;
 
     int numPasses;
 
-    Impl(SmartPngDecoder* parent) : q(parent)
+    Impl(SmartPngDecoder *parent) : q(parent)
     {
     }
 
@@ -40,10 +40,11 @@ struct SmartPngDecoder::Impl
 
     static void my_read_fn(png_structp png_ptr, png_bytep data, size_t len)
     {
-        auto* self = static_cast<SmartPngDecoder::Impl*>(png_get_io_ptr(png_ptr));
+        auto *self = static_cast<SmartPngDecoder::Impl *>(png_get_io_ptr(png_ptr));
 
         size_t remaining = self->inputBufferRemaining();
-        if (remaining < len)
+
+        if(remaining < len)
         {
             png_error(png_ptr, "Attempted to read beyond end of file");
         }
@@ -60,23 +61,24 @@ struct SmartPngDecoder::Impl
          * actually OK in this case.
          */
     }
-    
+
     static void my_output_message(png_structp png_ptr, png_const_charp message)
     {
-        auto* self = static_cast<SmartPngDecoder::Impl*>(png_get_error_ptr(png_ptr));
+        auto *self = static_cast<SmartPngDecoder::Impl *>(png_get_error_ptr(png_ptr));
 
         self->q->setDecodingMessage(message);
     }
 
     static void my_progress_callback(png_structp png_ptr, png_uint_32 row, int pass)
     {
-        auto* self = static_cast<SmartPngDecoder::Impl*>(png_get_io_ptr(png_ptr));
+        auto *self = static_cast<SmartPngDecoder::Impl *>(png_get_io_ptr(png_ptr));
 
         auto width = png_get_image_width(png_ptr, self->info_ptr);
         size_t height = png_get_image_height(png_ptr, self->info_ptr);
         png_uint_32 fixedRow = std::max(1u, row) - 1; // row is sometimes 1 and sometimes zero
         self->q->updateDecodedRoiRect(QRect(0, fixedRow, width, 1));
-        if (row % 16 == 0)
+
+        if(row % 16 == 0)
         {
             self->q->cancelCallback();
 
@@ -91,8 +93,8 @@ struct SmartPngDecoder::Impl
     {
         auto bit_depth = png_get_bit_depth(this->cinfo, this->info_ptr);
         return bit_depth == 16
-            ? QImage::Format_RGBA64
-            : QImage::Format_ARGB32;
+               ? QImage::Format_RGBA64
+               : QImage::Format_ARGB32;
     }
 };
 
@@ -104,12 +106,12 @@ SmartPngDecoder::~SmartPngDecoder()
     this->assertNotDecoding();
 }
 
-void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
+void SmartPngDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
 {
     d->inputBufferBegin = d->inputBufferPtr = buffer;
     d->inputBufferLength = nbytes;
 
-    auto& cinfo = d->cinfo;
+    auto &cinfo = d->cinfo;
     cinfo = nullptr;
     d->info_ptr = d->einfo_ptr = nullptr;
 
@@ -121,7 +123,7 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     d->info_ptr = png_create_info_struct(cinfo);
     d->einfo_ptr = png_create_info_struct(cinfo);
 
-    if (cinfo == nullptr || d->info_ptr == nullptr || d->einfo_ptr == nullptr)
+    if(cinfo == nullptr || d->info_ptr == nullptr || d->einfo_ptr == nullptr)
     {
         throw std::bad_alloc();
     }
@@ -131,7 +133,8 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     // SECTION BELOW CLOBBERED BY setjmp() / longjmp()!
     // Declare all non-trivially destructable objects here.
     QColorSpace iccProfile{ QColorSpace::SRgb };
-    if (setjmp(png_jmpbuf(cinfo)))
+
+    if(setjmp(png_jmpbuf(cinfo)))
     {
         // If we get here, the JPEG code has signaled an error.
         throw std::runtime_error("Error while decoding the PNG header");
@@ -143,60 +146,62 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     int bit_depth, color_type, interlace_type, compression_type, filter_type;
     png_get_IHDR(cinfo, d->info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, &compression_type, &filter_type);
 
-    if (color_type == PNG_COLOR_TYPE_PALETTE)
+    if(color_type == PNG_COLOR_TYPE_PALETTE)
     {
         png_set_palette_to_rgb(cinfo);
     }
 
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+    if(color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
     {
         png_set_expand_gray_1_2_4_to_8(cinfo);
     }
 
-    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+    if(color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
     {
         png_set_gray_to_rgb(cinfo);
     }
 
-    if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_tRNS))
+    if(png_get_valid(cinfo, d->info_ptr, PNG_INFO_tRNS))
     {
         png_set_tRNS_to_alpha(cinfo);
     }
-    else if (!(color_type & PNG_COLOR_MASK_ALPHA))
+    else if(!(color_type & PNG_COLOR_MASK_ALPHA))
     {
         png_set_filler(cinfo, 0xffff,
-            QSysInfo::ByteOrder == QSysInfo::BigEndian
-            ? PNG_FILLER_BEFORE
-            : PNG_FILLER_AFTER);
+                       QSysInfo::ByteOrder == QSysInfo::BigEndian
+                       ? PNG_FILLER_BEFORE
+                       : PNG_FILLER_AFTER);
     }
 
-    if (bit_depth == 16 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
+    if(bit_depth == 16 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
     {
         png_set_swap(cinfo);
     }
 
-    if (bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::BigEndian)
+    if(bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::BigEndian)
     {
         png_set_swap_alpha(cinfo);
     }
 
-    if (bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
+    if(bit_depth == 8 && QSysInfo::ByteOrder == QSysInfo::LittleEndian)
     {
         png_set_bgr(cinfo);
     }
 
-    switch (interlace_type)
+    switch(interlace_type)
     {
     case PNG_INTERLACE_NONE:
     case PNG_INTERLACE_ADAM7:
         break;
+
     default:
         throw std::runtime_error(Formatter() << "Unsupported interlace type: " << interlace_type);
     }
 
     uint32_t num_exif;
-    unsigned char* exif;
-    if (png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
+    unsigned char *exif;
+
+    if(png_get_eXIf_1(cinfo, d->info_ptr, &num_exif, &exif) != 0)
     {
         qDebug() << "Cool, we've got exif data in " << this->image()->fileInfo().fileName();
     }
@@ -204,36 +209,41 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
     png_charp name;
     png_bytep profile;
     png_uint_32 proflen;
-    if (png_get_iCCP(cinfo, d->info_ptr, &name, &compression_type, &profile, &proflen) != 0)
+
+    if(png_get_iCCP(cinfo, d->info_ptr, &name, &compression_type, &profile, &proflen) != 0)
     {
         Q_ASSERT(compression_type == PNG_COMPRESSION_TYPE_BASE);
-        iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<char*>(profile), proflen));
+        iccProfile = QColorSpace::fromIccProfile(QByteArray::fromRawData(reinterpret_cast<char *>(profile), proflen));
     }
-    else if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_sRGB))
+    else if(png_get_valid(cinfo, d->info_ptr, PNG_INFO_sRGB))
     {
         int rendering_intent = -1;
+
         // We don't actually care about the rendering_intent, just that it is valid
-        if (png_get_sRGB(cinfo, d->info_ptr, &rendering_intent) && rendering_intent >= 0 && rendering_intent <= 3)
+        if(png_get_sRGB(cinfo, d->info_ptr, &rendering_intent) && rendering_intent >= 0 && rendering_intent <= 3)
         {
             iccProfile = QColorSpace::SRgb;
         }
     }
-    else if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_gAMA))
+    else if(png_get_valid(cinfo, d->info_ptr, PNG_INFO_gAMA))
     {
         double fileGamma = 0.0;
         png_get_gAMA(cinfo, d->info_ptr, &fileGamma);
-        if (fileGamma > 0.0f)
+
+        if(fileGamma > 0.0f)
         {
-            if (png_get_valid(cinfo, d->info_ptr, PNG_INFO_cHRM))
+            if(png_get_valid(cinfo, d->info_ptr, PNG_INFO_cHRM))
             {
                 double white_x, white_y, red_x, red_y;
                 double green_x, green_y, blue_x, blue_y;
-                if (png_get_cHRM(cinfo, d->info_ptr,
-                    &white_x, &white_y, &red_x, &red_y,
-                    &green_x, &green_y, &blue_x, &blue_y))
+
+                if(png_get_cHRM(cinfo, d->info_ptr,
+                                &white_x, &white_y, &red_x, &red_y,
+                                &green_x, &green_y, &blue_x, &blue_y))
                 {
                     QColorSpace col(QPointF(white_x, white_y), QPointF(red_x, red_y), QPointF(green_x, green_y), QPointF(blue_x, blue_y), QColorSpace::TransferFunction::Gamma, fileGamma);
-                    if (col.isValid())
+
+                    if(col.isValid())
                     {
                         iccProfile = col;
                     }
@@ -253,7 +263,7 @@ void SmartPngDecoder::decodeHeader(const unsigned char* buffer, qint64 nbytes)
 
 QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 {
-    auto& cinfo = d->cinfo;
+    auto &cinfo = d->cinfo;
 
     auto width = png_get_image_width(cinfo, d->info_ptr);
     auto height = png_get_image_height(cinfo, d->info_ptr);
@@ -263,42 +273,45 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     png_uint_32 res_x, res_y;
     int unit;
-    if (png_get_pHYs(cinfo, d->info_ptr, &res_x, &res_y, &unit) && unit == PNG_RESOLUTION_METER)
+
+    if(png_get_pHYs(cinfo, d->info_ptr, &res_x, &res_y, &unit) && unit == PNG_RESOLUTION_METER)
     {
         // RESOLUTIONUNIT must be read and set now, because QImage::setDotsPerMeterXY() calls detach() and therefore copies the entire image!!!
         image.setDotsPerMeterX(res_x);
         image.setDotsPerMeterY(res_y);
     }
 
-    auto* dataPtrBackup = image.constBits();
+    auto *dataPtrBackup = image.constBits();
     this->image()->setDecodedImage(image);
     this->resetDecodedRoiRect();
 
-    std::vector<unsigned char*> bufferSetup;
+    std::vector<unsigned char *> bufferSetup;
     bufferSetup.resize(height);
-    for (size_t i = 0; i < bufferSetup.size(); i++)
+
+    for(size_t i = 0; i < bufferSetup.size(); i++)
     {
-        bufferSetup[i] = const_cast<unsigned char*>(image.constScanLine(i));
+        bufferSetup[i] = const_cast<unsigned char *>(image.constScanLine(i));
     }
 
     // the entire section below is clobbered by setjmp/longjmp
     // hence, declare any objects with nontrivial destructors here
-    if (setjmp(png_jmpbuf(cinfo)))
+    if(setjmp(png_jmpbuf(cinfo)))
     {
         // If we get here, the JPEG code has signaled an error.
         throw std::runtime_error("Error while decoding the PNG image");
     }
-    
+
     d->numPasses = 1;
     int interlace_type = png_get_interlace_type(cinfo, d->info_ptr);
-    if (interlace_type == PNG_INTERLACE_ADAM7)
+
+    if(interlace_type == PNG_INTERLACE_ADAM7)
     {
         d->numPasses = png_set_interlace_handling(cinfo);
     }
 
     this->setDecodingMessage("Consuming and decoding PNG input file");
 
-    for (int pass = 0; pass < d->numPasses; pass++)
+    for(int pass = 0; pass < d->numPasses; pass++)
     {
         png_read_rows(cinfo, bufferSetup.data(), nullptr, height);
         this->cancelCallback();
@@ -310,7 +323,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     this->setDecodingMessage("PNG decoding completed successfully.");
     this->setDecodingState(DecodingState::FullImage);
-    
+
     Q_ASSERT(image.constBits() == dataPtrBackup);
     return image;
 }
@@ -318,7 +331,7 @@ QImage SmartPngDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 void SmartPngDecoder::close()
 {
     png_destroy_read_struct(&d->cinfo, &d->info_ptr, &d->einfo_ptr);
-    
+
     SmartImageDecoder::close();
 }
 

@@ -23,20 +23,20 @@ public:
     ~SectionItem() override;
 
     QString getName() const override;
-    
+
     void setItemID(const QVariant &itemid);
     QVariant getItemID() const;
 
     void sortItems(SortField field,
-                    Qt::SortOrder order = Qt::AscendingOrder);
+                   Qt::SortOrder order = Qt::AscendingOrder);
 
-    ImageList::iterator findInsertPosition(const QSharedPointer<Image>& img);
+    ImageList::iterator findInsertPosition(const QSharedPointer<Image> &img);
     ImageList::iterator begin();
-    bool isEnd(const SectionItem::ImageList::iterator& it) const;
-    bool find(const AbstractListItem* item, int* externalIdx);
-    bool find(QFileInfo item, int* externalIdx);
-    int find(const QFileInfo info, ImageList::iterator* itout);
-    void insert(ImageList::iterator it, QSharedPointer<Image>& img);
+    bool isEnd(const SectionItem::ImageList::iterator &it) const;
+    bool find(const AbstractListItem *item, int *externalIdx);
+    bool find(QFileInfo item, int *externalIdx);
+    int find(const QFileInfo info, ImageList::iterator *itout);
+    void insert(ImageList::iterator it, QSharedPointer<Image> &img);
     void erase(ImageList::iterator it);
     size_t size() const;
     QSharedPointer<AbstractListItem> at(int idx) const;
@@ -50,15 +50,23 @@ public:
 
     /*operator ==*/
     inline bool operator==(const SectionItem *item) noexcept(false)
-            { return this->varId == item->varId; };
+    {
+        return this->varId == item->varId;
+    };
     friend inline bool operator==(const SectionItem *item, const QVariant &data) noexcept(false)
-            { return item->varId == data; };
+    {
+        return item->varId == data;
+    };
 
     /*operator !=*/
     inline bool operator!=(const SectionItem *item) noexcept(false)
-            { return this->varId != item->varId; };
+    {
+        return this->varId != item->varId;
+    };
     friend inline bool operator!=(const SectionItem *item, const QVariant &data) noexcept(false)
-            { return item->varId != data; };
+    {
+        return item->varId != data;
+    };
 
 private:
     struct Impl;

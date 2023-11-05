@@ -11,12 +11,12 @@ class ANPV;
 
 class PreviewAllImagesDialog : public QDialog
 {
-Q_OBJECT
+    Q_OBJECT
     struct Impl;
     std::unique_ptr<Impl> d;
-    
+
 public:
-    PreviewAllImagesDialog(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    PreviewAllImagesDialog(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
     ~PreviewAllImagesDialog();
     void setImageHeight(int height);
     int imageHeight();

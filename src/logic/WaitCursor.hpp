@@ -10,8 +10,8 @@ public:
     {
         QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     }
-    WaitCursor(const WaitCursor&) = delete;
-    WaitCursor(WaitCursor&&) = delete;
+    WaitCursor(const WaitCursor &) = delete;
+    WaitCursor(WaitCursor &&) = delete;
     ~WaitCursor()
     {
         QApplication::restoreOverrideCursor();

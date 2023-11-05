@@ -17,14 +17,14 @@ using source_loc = std::experimental::source_location;
 class TraceTimer
 {
 public:
-    TraceTimer(const std::type_info& ti, int maxMs, const source_loc& location = source_loc::current());
+    TraceTimer(const std::type_info &ti, int maxMs, const source_loc &location = source_loc::current());
     ~TraceTimer();
 
     TraceTimer(const TraceTimer &) = delete;
-    TraceTimer(TraceTimer&&) = delete;
+    TraceTimer(TraceTimer &&) = delete;
 
-    void setInfo(const char* str);
-    void setInfo(std::string&& str);
+    void setInfo(const char *str);
+    void setInfo(std::string &&str);
 
 private:
     struct Impl;

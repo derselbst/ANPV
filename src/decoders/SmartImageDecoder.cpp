@@ -18,12 +18,12 @@
 
 struct SmartImageDecoder::Impl
 {
-    SmartImageDecoder* q;
-    
+    SmartImageDecoder *q;
+
     // assertNotDecoding() doesn't gives us a guarantee. But at least for deletion we need this guarantee.
     // That's the job of this mutex.
     mutable std::recursive_mutex asyncApiMtx;
-    
+
     QScopedPointer<QPromise<DecodingState>> promise;
     // the targetState requested by decodeAsync() (not the final state reached!)
     DecodingState targetState;
@@ -32,41 +32,42 @@ struct SmartImageDecoder::Impl
     // the ROI requested by decodeAsync() (not the final ROI reached!)
     QRect roiRect;
     QString decodingMessage;
-    int decodingProgress=0;
-    
+    int decodingProgress = 0;
+
     // the decoded image
     // do not store the shared pointer directly, to avoid a cyclic reference between image and decoder and therefore a memory leak
     QWeakPointer<Image> image;
     // the ROI actually decoded in the same coordinate system as the decoded image
     QRect decodedRoiRect;
-    
+
     // May or may not contain (a part of) the encoded input file
     // It does for embedded JPEG preview in CR2
     QByteArray encodedInputFile;
-    
+
     // DO NOT STORE THE QFILE DIRECTLY!
     // QFile is a QObject! It has thread affinity! Creating it by the worker thread and destrorying it by the UI thread will lead to memory corruption!
     QScopedPointer<QFile> file;
     qint64 encodedInputBufferSize = 0;
-    const unsigned char* encodedInputBufferPtr = nullptr;
-    
-    Impl(SmartImageDecoder* q) : q(q)
+    const unsigned char *encodedInputBufferPtr = nullptr;
+
+    Impl(SmartImageDecoder *q) : q(q)
     {}
-    
-    void open(const QFileInfo& info)
+
+    void open(const QFileInfo &info)
     {
         if(this->file != nullptr && this->file->isOpen())
         {
             throw std::logic_error("File is already open!");
         }
-        
+
         this->file.reset(new QFile(info.absoluteFilePath()));
-        if (!this->file->open(QIODevice::ReadOnly))
+
+        if(!this->file->open(QIODevice::ReadOnly))
         {
             throw std::runtime_error(Formatter() << "Unable to open file '" << info.absoluteFilePath().toStdString() << "', error was: " << this->file->errorString().toStdString());
         }
     }
-    
+
     DecodingState decodingState()
     {
         return q->image()->decodingState();
@@ -77,8 +78,8 @@ struct SmartImageDecoder::Impl
         q->image()->setDecodedImage(QImage());
         q->resetDecodedRoiRect();
     }
-    
-    void setErrorMessage(const QString& err)
+
+    void setErrorMessage(const QString &err)
     {
         q->image()->setErrorMessage(err);
     }
@@ -92,33 +93,38 @@ struct SmartImageDecoder::Impl
     {
         return this->image.toStrongRef();
     }
-    
+
     template<typename T>
     QImage allocateImageBuffer(uint32_t width, uint32_t height, QImage::Format format)
     {
         const size_t needed = size_t(width) * height;
         const size_t rowStride = width * sizeof(T);
+
         try
         {
             q->setDecodingMessage("Allocating image output buffer");
 
-            std::unique_ptr<T, decltype(&free)> mem(static_cast<T*>(calloc(needed, sizeof(T))), &::free);
+            std::unique_ptr<T, decltype(&free)> mem(static_cast<T *>(calloc(needed, sizeof(T))), &::free);
+
             if(mem.get() == nullptr)
             {
                 throw std::bad_alloc();
             }
-            QImage image(reinterpret_cast<uint8_t*>(mem.get()), width, height, rowStride, format, &free, mem.get());
+
+            QImage image(reinterpret_cast<uint8_t *>(mem.get()), width, height, rowStride, format, &free, mem.get());
+
             if(image.isNull())
             {
                 throw std::runtime_error("QImage ctor created a NULL image...");
             }
+
             mem.release();
 
             // enter the PreviewImage state, even if the image is currently blank, so listeners can start listening for decoding updates
             q->setDecodingState(DecodingState::PreviewImage);
             return image;
         }
-        catch (const std::bad_alloc&)
+        catch(const std::bad_alloc &)
         {
             throw std::runtime_error(Formatter() << "Unable to allocate " << (needed * sizeof(T)) / 1024. / 1024. << " MiB for the decoded image with dimensions " << width << "x" << height << " px");
         }
@@ -164,7 +170,7 @@ void SmartImageDecoder::open()
     {
         d->open(this->image()->fileInfo());
     }
-    catch(const std::exception& e)
+    catch(const std::exception &e)
     {
         d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Fatal);
@@ -183,13 +189,14 @@ void SmartImageDecoder::init()
         }
 
         xThreadGuard g(d->file.data());
-        
+
         // mmap() the file-> Do NOT use MAP_PRIVATE! See https://stackoverflow.com/a/7222430
         qint64 mapSize = d->file->size();
-        const unsigned char* fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
-        
+        const unsigned char *fileMapped = d->file->map(0, mapSize, QFileDevice::NoOptions);
+
         d->encodedInputBufferSize = mapSize;
         d->encodedInputBufferPtr = fileMapped;
+
         if(!this->image()->isRaw())
         {
             if(fileMapped == nullptr)
@@ -204,47 +211,49 @@ void SmartImageDecoder::init()
             // use KDcraw for getting the embedded preview
             bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(d->encodedInputFile, filePath);
 
-            if (!ret)
+            if(!ret)
             {
                 // if the embedded preview loading failed, load half preview instead.
                 // That's slower but it works even for images containing
                 // small (160x120px) or none embedded preview.
-                if (!KDcrawIface::KDcraw::loadHalfPreview(d->encodedInputFile, filePath))
+                if(!KDcrawIface::KDcraw::loadHalfPreview(d->encodedInputFile, filePath))
                 {
                     throw std::runtime_error(Formatter() << "KDcraw failed to open RAW file '" << d->file->fileName().toStdString() << "'");
                 }
             }
-            
-            d->encodedInputBufferPtr = reinterpret_cast<const unsigned char*>(d->encodedInputFile.constData());
+
+            d->encodedInputBufferPtr = reinterpret_cast<const unsigned char *>(d->encodedInputFile.constData());
             d->encodedInputBufferSize = d->encodedInputFile.size();
         }
-        
+
         this->cancelCallback();
-        
+
         this->decodeHeader(d->encodedInputBufferPtr, d->encodedInputBufferSize);
-        
+
         QSharedPointer<ExifWrapper> exifWrapper(new ExifWrapper());
         // intentionally use the original file to read EXIF data, as this may not be available in d->encodedInputBuffer
-        exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char*>(fileMapped), mapSize));
+        exifWrapper->loadFromData(QByteArray::fromRawData(reinterpret_cast<const char *>(fileMapped), mapSize));
         this->image()->setExif(exifWrapper);
-        
+
         QImage thumb = this->image()->thumbnail();
+
         if(thumb.isNull())
         {
             thumb = exifWrapper->thumbnail();
+
             if(!thumb.isNull())
             {
                 this->convertColorSpace(thumb, true);
                 this->image()->setThumbnail(thumb);
             }
         }
-        
+
         // initialize cache
         (void)this->image()->cachedAutoFocusPoints();
 
         this->setDecodingState(DecodingState::Metadata);
     }
-    catch(const std::exception& e)
+    catch(const std::exception &e)
     {
         d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Fatal);
@@ -255,14 +264,15 @@ void SmartImageDecoder::init()
 // Do not wait for finished()
 void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
 {
-    if (d->promise.isNull())
+    if(d->promise.isNull())
     {
         qDebug() << "There isn't anything to cancel.";
         return;
     }
 
     bool taken = QThreadPool::globalInstance()->tryTake(this);
-    if (taken)
+
+    if(taken)
     {
         // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
         d->promise->start();
@@ -273,7 +283,8 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
     }
 
     bool isFinished = taskFuture.isFinished();
-    if (!isFinished)
+
+    if(!isFinished)
     {
         taskFuture.cancel();
     }
@@ -291,7 +302,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
     {
         QFuture<DecodingState> taskFuture = d->promise->future();
         DecodingState imageState = this->image()->decodingState();
-        
+
         // if the requested state is the same as we already have decoded and this is not some potentially incomplete-preview-image state
         if(targetState != DecodingState::PreviewImage && targetState == d->targetState && targetState == imageState)
         {
@@ -325,7 +336,8 @@ void SmartImageDecoder::run()
 
     // reference the currently decoded image to prevent it from being deleted while decoding is still ongoing (#43)
     auto refImg = d->imageUnsafe();
-    if (!refImg.isNull())
+
+    if(!refImg.isNull())
     {
         try
         {
@@ -335,11 +347,11 @@ void SmartImageDecoder::run()
             this->open();
             this->decode(d->targetState, d->desiredResolution, d->roiRect);
         }
-        catch (const UserCancellation&)
+        catch(const UserCancellation &)
         {
             this->setDecodingState(DecodingState::Cancelled);
         }
-        catch (...)
+        catch(...)
         {
             Formatter f;
             f << "Uncaught exception during SmartImageDecoder::run()!";
@@ -349,7 +361,7 @@ void SmartImageDecoder::run()
             this->setDecodingState(DecodingState::Fatal);
         }
 
-        // Immediately close ourself once done. This is important to avoid resource leaks, when the 
+        // Immediately close ourself once done. This is important to avoid resource leaks, when the
         // event loop of the UI thread gets too busy and it'll take long to react on the finished() events.
         this->close();
 
@@ -370,23 +382,25 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
     try
     {
         this->cancelCallback();
+
         do
         {
             this->init();
-            
+
             if(targetState == DecodingState::PreviewImage || targetState == DecodingState::FullImage)
             {
                 QImage decodedImg = this->decodingLoop(desiredResolution, roiRect);
-                
+
                 // if this assert fails, either an unintended QImage::copy() happened, or an intended QImage::copy() happend but a call to this->image()->setDecodedImage() is missing,
                 // or multiple decoders are concurrently decoding the same image.
                 Q_ASSERT(this->image()->decodedImage().constBits() == decodedImg.constBits());
-                
+
                 // if thumbnail is still null and we've decoded not just a part of the image
-                if (this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
+                if(this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
                 {
                     QSize thumbnailSize;
                     static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
+
                     if(thumbnailSizeMax.width() * thumbnailSizeMax.height() < desiredResolution.width() * desiredResolution.height())
                     {
                         thumbnailSize = thumbnailSizeMax;
@@ -395,48 +409,54 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                     {
                         thumbnailSize = desiredResolution;
                     }
+
                     this->image()->setThumbnail(decodedImg.scaled(thumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 }
             }
-        } while(false);
+        }
+        while(false);
     }
-    catch(const UserCancellation&)
+    catch(const UserCancellation &)
     {
         this->setDecodingState(DecodingState::Cancelled);
     }
-    catch(const std::exception& e)
+    catch(const std::exception &e)
     {
         d->setErrorMessage(e.what());
         this->setDecodingState(DecodingState::Error);
     }
 }
 
-void SmartImageDecoder::convertColorSpace(QImage& image, bool silent, QTransform currentPageToFullResTransform)
+void SmartImageDecoder::convertColorSpace(QImage &image, bool silent, QTransform currentPageToFullResTransform)
 {
     auto depth = image.depth();
+
     if(depth != 32 && depth != 64)
     {
         throw std::logic_error(Formatter() << "SmartImageDecoder::convertColorSpace(): case not implemented for images with depth " << depth << " bits");
     }
-    
+
     static const QColorSpace srgbSpace(QColorSpace::SRgb);
     QColorSpace csp = this->image()->colorSpace();
-    if (csp.isValid() && csp != srgbSpace)
+
+    if(csp.isValid() && csp != srgbSpace)
     {
-        if (!silent)
+        if(!silent)
         {
             this->setDecodingMessage("Transforming colorspace...");
         }
+
         QColorTransform colorTransform = csp.transformationToColorSpace(srgbSpace);
 
-        auto* dataPtr = image.constBits();
+        auto *dataPtr = image.constBits();
         const size_t width = image.width();
         const size_t rowStride = width * (depth == 64 ? sizeof(QRgba64) : sizeof(QRgb));
         const size_t height = image.height();
         const size_t yStride = static_cast<size_t>(std::ceil((384 * 1024.0) / width)); // convert 3 KiB at max
-        for (size_t y = 0; y < height; y+=yStride)
+
+        for(size_t y = 0; y < height; y += yStride)
         {
-            auto& destPixel = const_cast<uchar*>(dataPtr)[y * rowStride + 0];
+            auto &destPixel = const_cast<uchar *>(dataPtr)[y * rowStride + 0];
             auto linesToConvertNow = std::min(height - y, yStride);
 
             // Unfortunately, QColorTransform only allows to map single RGB values, but not an entire scanline.
@@ -447,7 +467,8 @@ void SmartImageDecoder::convertColorSpace(QImage& image, bool silent, QTransform
             tempImg.applyColorTransform(colorTransform);
 
             this->cancelCallback();
-            if (!silent)
+
+            if(!silent)
             {
                 QPoint off = image.offset();
                 // the offset is in full resolution coordinates, we need to translate it to current resolution
@@ -465,6 +486,7 @@ void SmartImageDecoder::close()
     d->encodedInputBufferSize = 0;
     d->encodedInputBufferPtr = nullptr;
     d->encodedInputFile.clear();
+
     if(d->file)
     {
         xThreadGuard g(d->file.data());
@@ -477,7 +499,7 @@ void SmartImageDecoder::reset()
 {
     this->assertNotDecoding();
     std::lock_guard g(d->asyncApiMtx);
-    
+
     d->setErrorMessage(QString());
     this->releaseFullImage();
     this->setDecodingState(DecodingState::Ready);
@@ -488,13 +510,14 @@ void SmartImageDecoder::releaseFullImage()
     std::lock_guard g(d->asyncApiMtx);
     d->releaseFullImage();
     auto state = d->decodingState();
+
     if(state == DecodingState::PreviewImage || state == DecodingState::FullImage)
     {
         this->setDecodingState(DecodingState::Metadata);
     }
 }
 
-void SmartImageDecoder::setDecodingMessage(QString&& msg)
+void SmartImageDecoder::setDecodingMessage(QString &&msg)
 {
     if(d->promise && d->decodingMessage != msg)
     {
@@ -508,7 +531,7 @@ void SmartImageDecoder::setDecodingProgress(int prog)
     if(d->promise && d->decodingProgress != prog)
     {
         d->decodingProgress = prog;
-        d->promise->setProgressValueAndText(prog , d->decodingMessage);
+        d->promise->setProgressValueAndText(prog, d->decodingMessage);
     }
 }
 
@@ -523,7 +546,7 @@ QRect SmartImageDecoder::decodedRoiRect()
     return d->decodedRoiRect;
 }
 
-void SmartImageDecoder::updateDecodedRoiRect(const QRect& r)
+void SmartImageDecoder::updateDecodedRoiRect(const QRect &r)
 {
     Q_ASSERT(r.isValid());
     d->decodedRoiRect = d->decodedRoiRect.isValid() ? d->decodedRoiRect.united(r) : r;
@@ -557,15 +580,16 @@ void SmartImageDecoder::assertNotDecoding()
     {
         return;
     }
-    
+
     bool isRun = d->promise->future().isRunning();
+
     if(isRun)
     {
         throw std::logic_error("Operation not allowed, decoding is still ongoing.");
     }
 }
 
-QImage SmartImageDecoder::allocateImageBuffer(const QSize& s, QImage::Format format)
+QImage SmartImageDecoder::allocateImageBuffer(const QSize &s, QImage::Format format)
 {
     return this->allocateImageBuffer(s.width(), s.height(), format);
 }
@@ -574,45 +598,47 @@ QImage SmartImageDecoder::allocateImageBuffer(uint32_t width, uint32_t height, Q
 {
     switch(format)
     {
-        case QImage::Format_RGB32:
-        case QImage::Format_ARGB32:
-        case QImage::Format_ARGB32_Premultiplied:
-        case QImage::Format_RGBX8888:
-        case QImage::Format_RGBA8888:
-        case QImage::Format_RGBA8888_Premultiplied:
-            return d->allocateImageBuffer<uint32_t>(width, height, format);
+    case QImage::Format_RGB32:
+    case QImage::Format_ARGB32:
+    case QImage::Format_ARGB32_Premultiplied:
+    case QImage::Format_RGBX8888:
+    case QImage::Format_RGBA8888:
+    case QImage::Format_RGBA8888_Premultiplied:
+        return d->allocateImageBuffer<uint32_t>(width, height, format);
 
-        case QImage::Format_RGBX64:
-        case QImage::Format_RGBA64:
-        case QImage::Format_RGBA64_Premultiplied:
-            return d->allocateImageBuffer<uint64_t>(width, height, format);
+    case QImage::Format_RGBX64:
+    case QImage::Format_RGBA64:
+    case QImage::Format_RGBA64_Premultiplied:
+        return d->allocateImageBuffer<uint64_t>(width, height, format);
 
-        default:
-            throw std::logic_error(Formatter() << "QImage Format '" << format << "' not supported currently");
+    default:
+        throw std::logic_error(Formatter() << "QImage Format '" << format << "' not supported currently");
     }
 }
 
 
 // A transform that can be used to translate coordinates, which are in the domain of the full image resolution,
 // to coordinates which are in domain of the provided resolution.
-QTransform SmartImageDecoder::fullResToPageTransform(const QSize& desiredResolution)
+QTransform SmartImageDecoder::fullResToPageTransform(const QSize &desiredResolution)
 {
-    if (!desiredResolution.isValid())
+    if(!desiredResolution.isValid())
     {
         throw std::logic_error("desiredResolution must be valid!");
     }
+
     return this->fullResToPageTransform(desiredResolution.width(), desiredResolution.height());
 }
 
 QTransform SmartImageDecoder::fullResToPageTransform(unsigned w, unsigned h)
 {
-    if (w == 0 || h == 0)
+    if(w == 0 || h == 0)
     {
         throw std::logic_error("w and h must be >0 !");
     }
 
     QRect fullResRect = this->image()->fullResolutionRect();
-    if (fullResRect.isEmpty())
+
+    if(fullResRect.isEmpty())
     {
         throw std::logic_error("fullResolutionRect must not be empty!");
     }

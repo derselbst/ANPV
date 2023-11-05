@@ -13,7 +13,7 @@ class CancellableProgressDialog : public QProgressDialog
     QFutureWatcher<T> futureWatcher;
     QString operationName;
 public:
-    explicit CancellableProgressDialog(const QFuture<T>& future, const QString& operationName=QString(), QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags()) : QProgressDialog(parent, flags)
+    explicit CancellableProgressDialog(const QFuture<T> &future, const QString &operationName = QString(), QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags()) : QProgressDialog(parent, flags)
     {
         QObject::connect(this, &QProgressDialog::canceled, &futureWatcher, &QFutureWatcher<T>::cancel);
 
@@ -34,8 +34,11 @@ public:
             QObject::connect(&futureWatcher, &QFutureWatcher<T>::progressTextChanged,
                              this,
                              [this](QString progressMsg)
-                             { this->setLabelText(this->operationName + progressMsg);});
+            {
+                this->setLabelText(this->operationName + progressMsg);
+            });
         }
+
         futureWatcher.setFuture(future);
     }
 

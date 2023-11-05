@@ -11,8 +11,8 @@ public:
     AbstractListItem(ListItemType type);
     virtual ~AbstractListItem();
 
-    static QSharedPointer<Image> imageCast(const QSharedPointer<AbstractListItem>& item);
-    
+    static QSharedPointer<Image> imageCast(const QSharedPointer<AbstractListItem> &item);
+
     virtual QString getName() const = 0;
     ListItemType getType() const;
 

@@ -13,20 +13,20 @@
 
 class ListItemDelegate : public QStyledItemDelegate
 {
-   public:
-      ListItemDelegate(QObject *parent = nullptr);
-      void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+public:
+    ListItemDelegate(QObject *parent = nullptr);
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
-      QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 
-      void resizeSectionSize(const QSize &newsize);
+    void resizeSectionSize(const QSize &newsize);
 
-   protected:
-      void paintSection(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+protected:
+    void paintSection(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
-   private:
-      /* size of a section item */
-      QSize szSectionSize;
+private:
+    /* size of a section item */
+    QSize szSectionSize;
 };
 
 #endif /*H_IBIMAGEITEMDELEGATE*/

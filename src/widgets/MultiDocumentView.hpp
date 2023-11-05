@@ -12,13 +12,13 @@ class ImageSectionDataContainer;
 
 class MultiDocumentView : public QMainWindow
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
     MultiDocumentView(QMainWindow *parent);
     ~MultiDocumentView() override;
 
-    void addImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>>& imageWithModel);
+    void addImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> &imageWithModel);
     void keyPressEvent(QKeyEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
 

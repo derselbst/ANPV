@@ -4,17 +4,17 @@
 #include <cmath>
 
 
-int MoonPhase::fromDateTime(const QDateTime& t)
+int MoonPhase::fromDateTime(const QDateTime &t)
 {
-    static const QDateTime historicFullMoon(QDate(1999, 12, 22), QTime(18,31,18));
+    static const QDateTime historicFullMoon(QDate(1999, 12, 22), QTime(18, 31, 18));
     static const qint64 historicFullMoonSec = historicFullMoon.toSecsSinceEpoch();
-    
+
     static const double cycle = std::floor(29.530588861 * 86400);
-    
+
     qint64 now = t.toSecsSinceEpoch();
-    
+
     auto phase = std::round((((now - historicFullMoonSec) / cycle) - floor((now - historicFullMoonSec) / cycle)) * 100);
-    
+
     return static_cast<int>(phase);
 }
 

@@ -20,24 +20,24 @@ class QFuture;
 
 class MainWindow : public QMainWindow
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
     MainWindow(QSplashScreen *splash);
     ~MainWindow() override;
 
     void readSettings();
-    void setBackgroundTask(const QFuture<DecodingState>& fut);
-    
+    void setBackgroundTask(const QFuture<DecodingState> &fut);
+
 public slots:
-    void hideProgressWidget(CancellableProgressWidget* w);
+    void hideProgressWidget(CancellableProgressWidget *w);
     void setCurrentIndex(QSharedPointer<Image>);
 
 protected:
-    bool event(QEvent* evt) override;
-    void closeEvent(QCloseEvent* event) override;
+    bool event(QEvent *evt) override;
+    void closeEvent(QCloseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     struct Impl;

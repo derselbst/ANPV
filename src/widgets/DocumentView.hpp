@@ -23,7 +23,7 @@ class ImageSectionDataContainer;
 
 class DocumentView : public QGraphicsView
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
     DocumentView(QWidget *parent);
@@ -33,15 +33,15 @@ public:
     QFileInfo currentFile();
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
-    void loadImage(const QSharedPointer<SmartImageDecoder>& dec);
-    
+    void loadImage(const QSharedPointer<SmartImageDecoder> &dec);
+
 public slots:
     void zoomIn();
     void zoomOut();
-    void onPreviewImageUpdated(Image* img, QRect r);
-    void onImageRefinement(Image* self, QImage img, QTransform);
-    void onDecodingStateChanged(Image* self, quint32 newState, quint32 oldState);
-    void onCheckStateChanged(Image* img, int state, int old);
+    void onPreviewImageUpdated(Image *img, QRect r);
+    void onImageRefinement(Image *self, QImage img, QTransform);
+    void onDecodingStateChanged(Image *self, quint32 newState, quint32 oldState);
+    void onCheckStateChanged(Image *img, int state, int old);
 
 signals:
     void imageChanged(QSharedPointer<Image>);
@@ -50,7 +50,7 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
-    void showEvent(QShowEvent* event) override;
+    void showEvent(QShowEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
 
     void loadImage();

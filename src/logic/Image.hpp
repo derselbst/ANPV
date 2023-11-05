@@ -33,48 +33,48 @@ class QMetaMethod;
  */
 class Image : public QObject, public AbstractListItem
 {
-Q_OBJECT
+    Q_OBJECT
 
-friend class SmartImageDecoder;
-friend class SmartJpegDecoder;
-friend class SmartJxlDecoder;
-friend class SmartPngDecoder;
-friend class SmartTiffDecoder;
-friend class MySleepyImageDecoder;
+    friend class SmartImageDecoder;
+    friend class SmartJpegDecoder;
+    friend class SmartJxlDecoder;
+    friend class SmartPngDecoder;
+    friend class SmartTiffDecoder;
+    friend class MySleepyImageDecoder;
 
 public:
-    Image(const QFileInfo&);
+    Image(const QFileInfo &);
     ~Image() override;
 
     QString getName() const override;
-    
-    Image(const Image&) = delete;
-    Image& operator=(const Image&) = delete;
-    
+
+    Image(const Image &) = delete;
+    Image &operator=(const Image &) = delete;
+
     bool hasDecoder() const;
-    
-    const QFileInfo& fileInfo() const;
+
+    const QFileInfo &fileInfo() const;
     QSize size() const;
     QRect fullResolutionRect() const;
-    
+
     QTransform userTransform() const;
     void setUserTransform(QTransform);
 
     Qt::CheckState checked();
     void setChecked(Qt::CheckState b);
-    
+
     QImage thumbnail();
     QPixmap thumbnailTransformed(int height);
     QIcon icon();
 
     QSharedPointer<SmartImageDecoder> decoder();
-    void setDecoder(const QSharedPointer<SmartImageDecoder>& dec);
-    
+    void setDecoder(const QSharedPointer<SmartImageDecoder> &dec);
+
     QSharedPointer<ExifWrapper> exif();
-    
+
     QColorSpace colorSpace();
     QString namedColorSpace();
-    
+
     QString formatInfoString();
 
     QString fileExtension() const;
@@ -93,26 +93,26 @@ public slots:
     void lookupIconFromFileType();
 
 signals:
-    void decodingStateChanged(Image* self, quint32 newState, quint32 oldState);
-    void thumbnailChanged(Image* self, QImage);
-    void decodedImageChanged(Image* self, QImage img, QTransform sc);
-    void previewImageUpdated(Image* self, QRect r);
-    void checkStateChanged(Image* self, int newState, int oldState);
+    void decodingStateChanged(Image *self, quint32 newState, quint32 oldState);
+    void thumbnailChanged(Image *self, QImage);
+    void decodedImageChanged(Image *self, QImage img, QTransform sc);
+    void previewImageUpdated(Image *self, QRect r);
+    void checkStateChanged(Image *self, int newState, int oldState);
 
 protected:
-    void connectNotify(const QMetaMethod& signal) override;
+    void connectNotify(const QMetaMethod &signal) override;
 
     void setSize(QSize);
     void setThumbnail(QImage);
     void setIcon(QIcon ico);
     void setExif(QSharedPointer<ExifWrapper>);
     void setColorSpace(QColorSpace);
-    
+
     void setDecodingState(DecodingState state);
-    void setDecodedImage(QImage, QTransform s=QTransform());
-    void setErrorMessage(const QString&);
-    
-    void updatePreviewImage(const QRect& r);
+    void setDecodedImage(QImage, QTransform s = QTransform());
+    void setErrorMessage(const QString &);
+
+    void updatePreviewImage(const QRect &r);
 
 private:
     struct Impl;

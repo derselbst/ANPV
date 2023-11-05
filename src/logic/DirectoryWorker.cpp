@@ -14,33 +14,35 @@
 
 struct DirectoryWorker::Impl
 {
-    DirectoryWorker* q;
-    ImageSectionDataContainer* data;
+    DirectoryWorker *q;
+    ImageSectionDataContainer *data;
     QDir currentDir;
 
     // This list contains the fileInfos of all files in the model. We do not loop over the model itself to avoid aquiring the lock.
     QFileInfoList discoveredFiles;
-    
+
     QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
     QScopedPointer<QFileSystemWatcher> watcher;
 
-    void onDirectoryChanged(const QString& path)
+    void onDirectoryChanged(const QString &path)
     {
         xThreadGuard g(q);
-        if (path != this->currentDir.absolutePath())
+
+        if(path != this->currentDir.absolutePath())
         {
             return;
         }
 
         QFileInfoList fileInfoList = currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
 
-        for (auto it = discoveredFiles.begin(); it != discoveredFiles.end();)
+        for(auto it = discoveredFiles.begin(); it != discoveredFiles.end();)
         {
-            QFileInfo& eInfo = (*it);
+            QFileInfo &eInfo = (*it);
 
             // due to caching, call stat() as exists might otherwise return outdated garbage
             eInfo.stat();
-            if (!eInfo.exists())
+
+            if(!eInfo.exists())
             {
                 // file doesn't exist, probably deleted
                 this->data->removeImageItem(eInfo);
@@ -49,11 +51,13 @@ struct DirectoryWorker::Impl
             }
 
             auto result = std::find_if(fileInfoList.begin(),
-                fileInfoList.end(),
-                [&](const QFileInfo& other)
-                { return eInfo == other; });
+                                       fileInfoList.end(),
+                                       [&](const QFileInfo & other)
+            {
+                return eInfo == other;
+            });
 
-            if (result != fileInfoList.end())
+            if(result != fileInfoList.end())
             {
                 // we already know about that file, remove it from the current list
                 fileInfoList.erase(result);
@@ -62,17 +66,18 @@ struct DirectoryWorker::Impl
             {
                 // shouldn't happen??
             }
+
             ++it;
         }
 
         // any file still in the list are new, we need to add them
-        for (const QFileInfo& i : fileInfoList)
+        for(const QFileInfo &i : fileInfoList)
         {
             discoveredFiles.push_back(i);
             this->data->addImageItem(i);
         }
     }
-    
+
     void throwIfDirectoryDiscoveryCancelled()
     {
         if(this->directoryDiscovery->isCanceled())
@@ -83,7 +88,7 @@ struct DirectoryWorker::Impl
 
     void cancelAndWaitForDirectoryDiscovery() const
     {
-        if (directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
+        if(directoryDiscovery != nullptr && !directoryDiscovery->future().isFinished())
         {
             directoryDiscovery->future().cancel();
             directoryDiscovery->future().waitForFinished();
@@ -94,13 +99,16 @@ struct DirectoryWorker::Impl
 
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
-DirectoryWorker::DirectoryWorker(ImageSectionDataContainer* data, QObject *parent)
-   : d(std::make_unique<Impl>()), QObject(parent)
+DirectoryWorker::DirectoryWorker(ImageSectionDataContainer *data, QObject *parent)
+    : d(std::make_unique<Impl>()), QObject(parent)
 {
     d->q = this;
     d->data = data;
     d->watcher.reset(new QFileSystemWatcher(this));
-    connect(d->watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString& p) { d->onDirectoryChanged(p); });
+    connect(d->watcher.data(), &QFileSystemWatcher::directoryChanged, this, [&](const QString & p)
+    {
+        d->onDirectoryChanged(p);
+    });
     connect(this, &DirectoryWorker::discoverDirectory, this, &DirectoryWorker::onDiscoverDirectory, Qt::QueuedConnection);
 }
 
@@ -110,7 +118,7 @@ DirectoryWorker::~DirectoryWorker()
     d->data = nullptr;
 }
 
-QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString& dir)
+QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString &dir)
 {
     d->cancelAndWaitForDirectoryDiscovery();
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
@@ -123,6 +131,7 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
     d->watcher->removePath(d->currentDir.absolutePath());
     d->currentDir = QDir(newDir);
     int entriesProcessed = 0;
+
     try
     {
         d->directoryDiscovery->start();
@@ -131,15 +140,17 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
         d->data->clear();
         d->directoryDiscovery->setProgressValueAndText(0, "Looking up directory");
 
-        if (!d->currentDir.isReadable())
+        if(!d->currentDir.isReadable())
         {
             throw std::runtime_error("Cannot read directory!");
         }
+
         d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
         d->watcher->addPath(d->currentDir.absolutePath());
 
         const int entriesToProcess = d->discoveredFiles.size();
-        if (entriesToProcess > 0)
+
+        if(entriesToProcess > 0)
         {
             d->directoryDiscovery->setProgressRange(0, entriesToProcess);
 
@@ -147,9 +158,10 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
             d->directoryDiscovery->setProgressValueAndText(0, msg);
 
             unsigned readableImages = 0;
-            for (auto it = d->discoveredFiles.begin(); it != d->discoveredFiles.end(); ++it)
+
+            for(auto it = d->discoveredFiles.begin(); it != d->discoveredFiles.end(); ++it)
             {
-                if (d->data->addImageItem(*it))
+                if(d->data->addImageItem(*it))
                 {
                     ++readableImages;
                 }
@@ -165,7 +177,8 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
         {
             d->directoryDiscovery->setProgressRange(0, 1);
             entriesProcessed++;
-            if (d->currentDir.exists())
+
+            if(d->currentDir.exists())
             {
                 d->directoryDiscovery->setProgressValueAndText(entriesProcessed, "Directory is empty, nothing to see here.");
             }
@@ -177,19 +190,20 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
 
         d->directoryDiscovery->addResult(DecodingState::FullImage);
     }
-    catch (const UserCancellation&)
+    catch(const UserCancellation &)
     {
         d->directoryDiscovery->addResult(DecodingState::Cancelled);
     }
-    catch (const std::exception& e)
+    catch(const std::exception &e)
     {
         d->directoryDiscovery->setProgressValueAndText(entriesProcessed, QString("Exception occurred while loading the directory: %1").arg(e.what()));
         d->directoryDiscovery->addResult(DecodingState::Error);
     }
-    catch (...)
+    catch(...)
     {
         d->directoryDiscovery->setProgressValueAndText(entriesProcessed, "Fatal error occurred while loading the directory");
         d->directoryDiscovery->addResult(DecodingState::Error);
     }
+
     d->directoryDiscovery->finish();
 }

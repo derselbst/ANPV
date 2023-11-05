@@ -45,7 +45,7 @@ struct AbstractListItem::Impl
 AbstractListItem::~AbstractListItem() = default;
 
 AbstractListItem::AbstractListItem(ListItemType type)
-   : d(std::make_unique<Impl>())
+    : d(std::make_unique<Impl>())
 {
     d->type = type;
 }
@@ -55,9 +55,9 @@ ListItemType AbstractListItem::getType() const
     return d->type;
 }
 
-QSharedPointer<Image> AbstractListItem::imageCast(const QSharedPointer<AbstractListItem>& item)
+QSharedPointer<Image> AbstractListItem::imageCast(const QSharedPointer<AbstractListItem> &item)
 {
-    if (item != nullptr && item->getType() == ListItemType::Image)
+    if(item != nullptr && item->getType() == ListItemType::Image)
     {
         return qSharedPointerDynamicCast<Image>(item);
     }

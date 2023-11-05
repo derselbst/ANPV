@@ -20,11 +20,11 @@
 
 struct ImageSectionDataContainer::Impl
 {
-    ImageSectionDataContainer* q = nullptr;
+    ImageSectionDataContainer *q = nullptr;
 
     // might stay null for standalone ImageSectionDataContainers
-    SortedImageModel* model = nullptr;
-    
+    SortedImageModel *model = nullptr;
+
     // mutex which protects concurrent access to members below
     std::recursive_mutex m;
     SectionList data;
@@ -34,59 +34,69 @@ struct ImageSectionDataContainer::Impl
 
     SortField imageSortField = SortField::None;
     Qt::SortOrder imageSortOrder = Qt::DescendingOrder;
-    
+
     DecodingState targetState = DecodingState::Metadata;
 
     Qt::ConnectionType syncConnection()
     {
-        if (QThread::currentThread() == this->model->thread())
+        if(QThread::currentThread() == this->model->thread())
         {
             return Qt::DirectConnection;
         }
+
         return Qt::BlockingQueuedConnection;
     }
-    
-    std::function<bool(const SectionList::value_type& left, const SectionList::value_type& right)> getSortFunction(Qt::SortOrder order)
+
+    std::function<bool(const SectionList::value_type &left, const SectionList::value_type &right)> getSortFunction(Qt::SortOrder order)
     {
-        switch (order)
+        switch(order)
         {
         default:
         case Qt::AscendingOrder:
-            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return left->getName().isEmpty() || (*left) < (*right); };
+            return [](const SectionList::value_type & left, const SectionList::value_type & right)
+            {
+                return left->getName().isEmpty() || (*left) < (*right);
+            };
 
         case Qt::DescendingOrder:
-            return [](const SectionList::value_type& left, const SectionList::value_type& right) { return left->getName().isEmpty() || (*left) > (*right); };
+            return [](const SectionList::value_type & left, const SectionList::value_type & right)
+            {
+                return left->getName().isEmpty() || (*left) > (*right);
+            };
         };
     }
 
-    SectionList::iterator findInsertPosition(const SectionList::value_type& section)
+    SectionList::iterator findInsertPosition(const SectionList::value_type &section)
     {
         auto upper = std::upper_bound(this->data.begin(), this->data.end(), section, this->getSortFunction(this->sectionSortOrder));
         return upper;
     }
-    
+
     std::list<QSharedPointer<AbstractListItem>> flatListForUI()
     {
         std::list<QSharedPointer<AbstractListItem>> result;
-        for (SectionList::const_iterator sit = this->data.begin(); sit != this->data.end(); ++sit)
+
+        for(SectionList::const_iterator sit = this->data.begin(); sit != this->data.end(); ++sit)
         {
             auto size = (*sit)->size();
+
             if(size != 0)
             {
                 result.emplace_back(*sit);
-                for (size_t i = 0; i < size; i++)
+
+                for(size_t i = 0; i < size; i++)
                 {
                     auto item = (*sit)->at(i);
                     result.emplace_back(std::move(item));
                 }
             }
         }
-        
+
         return result;
     }
 };
 
-ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel* model) : d(std::make_unique<Impl>())
+ImageSectionDataContainer::ImageSectionDataContainer(SortedImageModel *model) : d(std::make_unique<Impl>())
 {
     d->q = this;
     d->model = model;
@@ -102,7 +112,7 @@ void ImageSectionDataContainer::setDecodingState(DecodingState state)
     d->targetState = state;
 }
 
-bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
+bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
     auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
@@ -114,14 +124,16 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 
     QSharedPointer<QFutureWatcher<DecodingState>> watcher;
     QVariant var;
-    if (decoder)
+
+    if(decoder)
     {
         try
         {
             image->setDecoder(decoder);
-            if (d->targetState != DecodingState::Ready)
+
+            if(d->targetState != DecodingState::Ready)
             {
-                if (this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
+                if(this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
                 {
                     decoder->open();
                     // decode synchronously
@@ -143,7 +155,8 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
             }
 
             QString str;
-            switch (d->sectionSortField)
+
+            switch(d->sectionSortField)
             {
             case SortField::DateModified:
                 var = info.lastModified().date();
@@ -151,7 +164,8 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 
             case SortField::FileName:
                 str = image->getName();
-                if (str[0].isDigit())
+
+                if(str[0].isDigit())
                 {
                     str = QStringLiteral("#");
                 }
@@ -159,6 +173,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
                 {
                     str = str.left(1).toUpper();
                 }
+
                 var = str;
                 break;
 
@@ -168,56 +183,71 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 
             case SortField::None:
                 break;
+
             default:
             {
                 double f;
                 long l;
                 QDateTime dt;
                 auto exif = image->exif();
-                if (!exif.isNull())
+
+                if(!exif.isNull())
                 {
-                    switch (d->sectionSortField)
+                    switch(d->sectionSortField)
                     {
                     case SortField::DateRecorded:
                         dt = exif->dateRecorded();
-                        if (dt.isValid())
+
+                        if(dt.isValid())
                         {
                             var = dt.date();
                         }
+
                         break;
+
                     case SortField::Aperture:
-                        if (exif->aperture(f))
+                        if(exif->aperture(f))
                         {
                             var = f;
                         }
+
                         break;
+
                     case SortField::Exposure:
                         var = exif->exposureTime();
                         break;
+
                     case SortField::Iso:
-                        if (exif->iso(l))
+                        if(exif->iso(l))
                         {
                             var = qlonglong(l);
                         }
+
                         break;
+
                     case SortField::FocalLength:
                         var = exif->focalLength();
                         break;
+
                     case SortField::Lens:
                         var = exif->lens();
                         break;
+
                     case SortField::CameraModel:
                         throw std::logic_error("ItemImageCameraModel not yet implemented");
+
                     default:
                         throw std::logic_error("requested section sort type not yet implemented");
                     }
                 }
+
                 break;
             }
             }
+
             this->addImageItem(var, image);
         }
-        catch (const std::runtime_error& e)
+        catch(const std::runtime_error &e)
         {
             // Runtime errors that occurred while opening the file or decoding the image, should be ignored here.
             // Just keep adding the file to the list, any error will be visible in the ThumbnailView later.
@@ -229,35 +259,40 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo& info)
     {
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
+
     d->model ? d->model->welcomeImage(image, watcher) : (void)0;
     this->addImageItem(var, image);
     return false;
 }
 
 /* Adds a given item (item) to a given section item (section). If the section item does not exist, it will be created. */
-void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPointer<Image>& item)
+void ImageSectionDataContainer::addImageItem(const QVariant &section, QSharedPointer<Image> &item)
 {
     SectionList::iterator it;
     std::unique_lock<std::recursive_mutex> l(d->m);
 
     int insertIdx = 0;
-    for (it = this->d->data.begin(); it != this->d->data.end(); ++it)
+
+    for(it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
-        if ((*it).data() == section)
+        if((*it).data() == section)
         {
             break;
         }
+
         insertIdx += (*it)->size();
     }
 
     std::list<QSharedPointer<AbstractListItem>> itemsForUIModel;
-    if (this->d->data.end() == it)
+
+    if(this->d->data.end() == it)
     {
         // no suitable section found, create a new one
         insertIdx = 0;
         auto s = SectionList::value_type(new SectionItem(section, d->imageSortField, d->imageSortOrder));
         auto sectionInsertPos = d->findInsertPosition(s);
-        for (auto sit = this->d->data.begin(); sit != sectionInsertPos; ++sit)
+
+        for(auto sit = this->d->data.begin(); sit != sectionInsertPos; ++sit)
         {
             insertIdx += (*sit)->size();
             insertIdx++; // for the section itself
@@ -283,75 +318,82 @@ void ImageSectionDataContainer::addImageItem(const QVariant& section, QSharedPoi
 
         itemsForUIModel.push_back(item);
     }
-    
-    if (d->model)
+
+    if(d->model)
     {
         QMetaObject::invokeMethod(d->model, [insertIdx, itemsForUIModel, this]()
-            {
-                auto copy = itemsForUIModel;
-                d->model->insertRows(insertIdx, copy);
-                Q_ASSERT(copy.empty());
-            }, Qt::AutoConnection);
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(insertIdx, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
     }
 }
 
-bool ImageSectionDataContainer::removeImageItem(const QFileInfo& info)
+bool ImageSectionDataContainer::removeImageItem(const QFileInfo &info)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
     int globalIdx = 0;
-    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+
+    for(SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
         ++globalIdx; // increment because we've entered a new section
         SectionItem::ImageList::iterator it;
         int localIdx = (*sit)->find(info, &it);
-        if (localIdx >= 0)
+
+        if(localIdx >= 0)
         {
             int endIdxToRemove = globalIdx + localIdx;
             int startIdxToRemove = endIdxToRemove;
-            if ((*sit)->size() == 1)
+
+            if((*sit)->size() == 1)
             {
                 // There is only one item left in that section which we are going to remove. Therefore, remove the entire section
                 --startIdxToRemove;
             }
 
             (*sit)->erase(it);
-            if ((*sit)->size() == 0)
+
+            if((*sit)->size() == 0)
             {
                 this->d->data.erase(sit);
             }
 
-            if (d->model)
+            if(d->model)
             {
                 QMetaObject::invokeMethod(d->model, [startIdxToRemove, endIdxToRemove, this]()
-                    {
-                        d->model->removeRows(startIdxToRemove, endIdxToRemove - startIdxToRemove + 1);
-                    }, Qt::AutoConnection);
+                {
+                    d->model->removeRows(startIdxToRemove, endIdxToRemove - startIdxToRemove + 1);
+                }, Qt::AutoConnection);
             }
+
             return true;
         }
+
         globalIdx += (*sit)->size();
     }
 
     return false;
 }
 
-/* Return the item of a given index (index). The 2D data list are handled like a 1D list. */ 
+/* Return the item of a given index (index). The 2D data list are handled like a 1D list. */
 QSharedPointer<AbstractListItem> ImageSectionDataContainer::getItemByLinearIndex(int index) const
 {
     QSharedPointer<AbstractListItem> retitem;
     std::lock_guard<std::recursive_mutex> l(d->m);
 
-    if (this->d->data.empty() && index < 0)
+    if(this->d->data.empty() && index < 0)
     {
         return nullptr;
     }
 
     int revidx = index;
-    for (auto it = this->d->data.begin(); it != this->d->data.end() && !retitem; ++it)
+
+    for(auto it = this->d->data.begin(); it != this->d->data.end() && !retitem; ++it)
     {
-        if (revidx <= (*it)->size())
+        if(revidx <= (*it)->size())
         {
-            if (revidx == 0)
+            if(revidx == 0)
             {
                 retitem = (*it);
             }
@@ -375,16 +417,16 @@ int ImageSectionDataContainer::getLinearIndexOfItem(QFileInfo info) const
 
     std::lock_guard<std::recursive_mutex> l(d->m);
 
-    if (this->d->data.empty())
+    if(this->d->data.empty())
     {
         return -1;
     }
 
-    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    for(SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
         itmidx++;
 
-        if ((*sit)->find(info, &itmidx))
+        if((*sit)->find(info, &itmidx))
         {
             return itmidx;
         }
@@ -393,32 +435,33 @@ int ImageSectionDataContainer::getLinearIndexOfItem(QFileInfo info) const
     return -1;
 }
 
-/* Return the index of a given item (item). The 2D data list are handled like a 1D list. */ 
-int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item) const
+/* Return the index of a given item (item). The 2D data list are handled like a 1D list. */
+int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem *item) const
 {
     int itmidx = 0;
 
-    if (!item)
+    if(!item)
     {
         return -1;
     }
 
     std::lock_guard<std::recursive_mutex> l(d->m);
 
-    if (this->d->data.empty())
+    if(this->d->data.empty())
     {
         return -1;
     }
 
-    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    for(SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
-        if ((*sit) == item)
+        if((*sit) == item)
         {
             return itmidx;
         }
+
         itmidx++;
 
-        if ((*sit)->find(item, &itmidx))
+        if((*sit)->find(item, &itmidx))
         {
             return itmidx;
         }
@@ -430,42 +473,45 @@ int ImageSectionDataContainer::getLinearIndexOfItem(const AbstractListItem* item
 void ImageSectionDataContainer::clear()
 {
     std::unique_lock<std::recursive_mutex> l(d->m);
-    
+
     auto rowCount = this->size();
-    if (rowCount == 0)
+
+    if(rowCount == 0)
     {
         return;
     }
 
-    if (d->model)
+    if(d->model)
     {
         QMetaObject::invokeMethod(d->model, [rowCount, this]()
-            {
-                d->model->removeRows(0, rowCount);
-            }, Qt::AutoConnection);
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
     }
 
-    for (SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
+    for(SectionList::iterator it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->clear();
     }
+
     this->d->data.clear();
 }
 
-/* Returns the number of section items and its image items. If only one section item exists and 
+/* Returns the number of section items and its image items. If only one section item exists and
    its name is empty, then the number of its image items is returned. */
 int ImageSectionDataContainer::size() const
 {
     int size = 0;
     std::lock_guard<std::recursive_mutex> l(d->m);
 
-    if (this->d->data.empty())
+    if(this->d->data.empty())
     {
         return size;
     }
 
     size = this->d->data.size();
-    for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
+
+    for(auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         size += (*it)->size();
     }
@@ -477,38 +523,39 @@ int ImageSectionDataContainer::size() const
 void ImageSectionDataContainer::sortImageItems(SortField imageSortField, Qt::SortOrder order)
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
-    
+
     d->imageSortField = imageSortField;
     d->imageSortOrder = order;
-    
+
     auto rowCount = this->size();
+
     if(rowCount == 0)
     {
         return;
     }
 
-    if (d->model)
+    if(d->model)
     {
         QMetaObject::invokeMethod(d->model, [rowCount, this]()
-            {
-                d->model->removeRows(0, rowCount);
-            }, Qt::AutoConnection);
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
     }
 
-    for (auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
+    for(auto it = this->d->data.begin(); it != this->d->data.end(); ++it)
     {
         (*it)->sortItems(imageSortField, order);
     }
-    
-    if (d->model)
+
+    if(d->model)
     {
         auto itemsForUIModel = d->flatListForUI();
         QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
-            {
-                auto copy = itemsForUIModel;
-                d->model->insertRows(0, copy);
-                Q_ASSERT(copy.empty());
-            }, Qt::AutoConnection);
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(0, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
     }
 }
 
@@ -524,31 +571,33 @@ void ImageSectionDataContainer::sortSections(SortField sectionSortField, Qt::Sor
     return;
 
     auto rowCount = this->size();
+
     if(rowCount == 0)
     {
         return;
     }
-    
-    if (d->model)
+
+    if(d->model)
     {
         QMetaObject::invokeMethod(d->model, [rowCount, this]()
-            {
-                d->model->removeRows(0, rowCount);
-            }, Qt::AutoConnection);
+        {
+            d->model->removeRows(0, rowCount);
+        }, Qt::AutoConnection);
     }
+
     std::sort(this->d->data.begin(), this->d->data.end(), d->getSortFunction(order));
 
     // ...because it is missing recreation of all section items here
 
-    if (d->model)
+    if(d->model)
     {
         auto itemsForUIModel = d->flatListForUI();
         QMetaObject::invokeMethod(d->model, [itemsForUIModel, this]()
-            {
-                auto copy = itemsForUIModel;
-                d->model->insertRows(0, copy);
-                Q_ASSERT(copy.empty());
-            }, Qt::AutoConnection);
+        {
+            auto copy = itemsForUIModel;
+            d->model->insertRows(0, copy);
+            Q_ASSERT(copy.empty());
+        }, Qt::AutoConnection);
     }
 }
 
@@ -556,23 +605,28 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
 {
     std::unique_lock<std::recursive_mutex> l(d->m);
 
-    for (SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
+    for(SectionList::const_iterator sit = this->d->data.begin(); sit != this->d->data.end(); ++sit)
     {
         auto size = (*sit)->size();
-        for (size_t i = 0; i < size; i++)
+
+        for(size_t i = 0; i < size; i++)
         {
             auto item = (*sit)->at(i);
             auto image = AbstractListItem::imageCast(item);
-            const QSharedPointer<SmartImageDecoder>& decoder = image->decoder();
-            if (decoder)
+            const QSharedPointer<SmartImageDecoder> &decoder = image->decoder();
+
+            if(decoder)
             {
                 bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
-                if (taken)
+
+                if(taken)
                 {
-                    qWarning() << "Decoder '0x" << (void*)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
+                    qWarning() << "Decoder '0x" << (void *)decoder.get() << "' was surprisingly taken from the ThreadPool's Queue???";
                 }
+
                 QImage thumb = image->thumbnail();
-                if (state == DecodingState::PreviewImage && !thumb.isNull())
+
+                if(state == DecodingState::PreviewImage && !thumb.isNull())
                 {
                     qDebug() << "Skipping preview decoding of " << image->fileInfo().fileName() << " as it already has a thumbnail of sufficient size.";
                     continue;
@@ -582,28 +636,28 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
 
                 QSize fullResSize = image->size();
                 QSize desiredResolution = fullResSize.isValid()
-                    ? fullResSize.scaled(1, imageHeight, Qt::KeepAspectRatioByExpanding)
-                    : QSize(imageHeight, imageHeight);
+                                          ? fullResSize.scaled(1, imageHeight, Qt::KeepAspectRatioByExpanding)
+                                          : QSize(imageHeight, imageHeight);
                 // decode asynchronously
                 auto fut = decoder->decodeAsync(state, Priority::Background, desiredResolution);
                 watcher->setFuture(fut);
                 fut.then(
-                        [=](DecodingState result)
-                        {
-                            decoder->releaseFullImage();
-                            return result;
-                        }).onCanceled(
-                            [=]
-                            {
-                                decoder->releaseFullImage();
-                                return DecodingState::Cancelled;
-                            }).onFailed(
-                                [=](DecodingState result)
-                                {
-                                    decoder->releaseFullImage();
-                                    return result;
-                                }
-                            );
+                    [ = ](DecodingState result)
+                {
+                    decoder->releaseFullImage();
+                    return result;
+                }).onCanceled(
+                    [ = ]
+                {
+                    decoder->releaseFullImage();
+                    return DecodingState::Cancelled;
+                }).onFailed(
+                    [ = ](DecodingState result)
+                {
+                    decoder->releaseFullImage();
+                    return result;
+                }
+                );
 
                 d->model ? d->model->welcomeImage(image, watcher) : (void)0;
             }
@@ -611,7 +665,7 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
     }
 }
 
-QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFlags, const Image* img, int stepsFromCurrent) const
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t &viewFlags, const Image *img, int stepsFromCurrent) const
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
 
@@ -619,7 +673,7 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFla
     return this->goTo(viewFlags, idx, stepsFromCurrent);
 }
 
-QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFlags, QFileInfo info, int stepsFromCurrent) const
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t &viewFlags, QFileInfo info, int stepsFromCurrent) const
 {
     std::lock_guard<std::recursive_mutex> l(d->m);
 
@@ -627,9 +681,9 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t& viewFla
     return this->goTo(viewFlags, idx, stepsFromCurrent);
 }
 
-QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFlags, int idx, int stepsFromCurrent) const
+QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t &viewFlags, int idx, int stepsFromCurrent) const
 {
-    if (idx < 0)
+    if(idx < 0)
     {
         qWarning() << "ImageSectionDataContainer::goTo(): requested image not found";
         return {};
@@ -639,10 +693,11 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFl
     int step = (stepsFromCurrent < 0) ? -1 : 1;
 
     QSharedPointer<Image> returnImg;
+
     do
     {
-        if (idx >= size - step || // idx + step >= size
-            idx < -step) // idx + step < 0
+        if(idx >= size - step ||  // idx + step >= size
+                idx < -step) // idx + step < 0
         {
             return {};
         }
@@ -650,7 +705,8 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFl
         idx += step;
 
         auto item = this->getItemByLinearIndex(idx);
-        if (item->getType() != ListItemType::Image)
+
+        if(item->getType() != ListItemType::Image)
         {
             continue;
         }
@@ -662,7 +718,8 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFl
         QFileInfo eInfo = returnImg->fileInfo();
         bool shouldSkip = eInfo.suffix() == "bak";
         shouldSkip |= returnImg->hideIfNonRawAvailable(viewFlags);
-        if (returnImg->hasDecoder() && !shouldSkip)
+
+        if(returnImg->hasDecoder() && !shouldSkip)
         {
             stepsFromCurrent -= step;
         }
@@ -671,7 +728,8 @@ QSharedPointer<Image> ImageSectionDataContainer::goTo(const ViewFlags_t & viewFl
             // skip unsupported files
         }
 
-    } while (stepsFromCurrent);
+    }
+    while(stepsFromCurrent);
 
     return returnImg;
 }

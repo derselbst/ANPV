@@ -10,14 +10,14 @@ class ANPV;
 
 class ProgressIndicatorHelper : public QObject
 {
-Q_OBJECT
+    Q_OBJECT
     struct Impl;
     std::unique_ptr<Impl> d;
-    
+
 public:
-    ProgressIndicatorHelper(QObject* parent = nullptr);
+    ProgressIndicatorHelper(QObject *parent = nullptr);
     ~ProgressIndicatorHelper();
-    QPixmap getProgressIndicator(const QFutureWatcher<DecodingState>& future);
+    QPixmap getProgressIndicator(const QFutureWatcher<DecodingState> &future);
 
 public slots:
     void startRendering();

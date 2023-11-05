@@ -13,10 +13,10 @@ class DirectoryWorker : public QObject
     Q_OBJECT
 
 public:
-    DirectoryWorker(ImageSectionDataContainer* data = nullptr, QObject* parent = nullptr);
+    DirectoryWorker(ImageSectionDataContainer *data = nullptr, QObject *parent = nullptr);
     ~DirectoryWorker();
 
-    QFuture<DecodingState> changeDirAsync(const QString& dir);
+    QFuture<DecodingState> changeDirAsync(const QString &dir);
 
 signals:
     void discoverDirectory(QString newDir);

@@ -6,7 +6,7 @@
 
 namespace Ui
 {
-    class FileOperationConfigDialog;
+class FileOperationConfigDialog;
 }
 
 class QActionGroup;
@@ -17,17 +17,17 @@ class FileOperationConfigDialog : public QDialog
 {
     Q_OBJECT
 
-    public:
-    explicit FileOperationConfigDialog(QActionGroup* fileOperationActionGroup, QWidget *parent = nullptr);
+public:
+    explicit FileOperationConfigDialog(QActionGroup *fileOperationActionGroup, QWidget *parent = nullptr);
     ~FileOperationConfigDialog() override;
 
-    static ANPV::FileOperation operationFromAction(QAction*);
+    static ANPV::FileOperation operationFromAction(QAction *);
     void accept() override;
-    
+
 private:
     Ui::FileOperationConfigDialog *ui = nullptr;
-    QActionGroup* fileOperationActionGroup;
-    
+    QActionGroup *fileOperationActionGroup;
+
     void fillDiag();
-    void onBrowseClicked(QLineEdit* lineEdit);
+    void onBrowseClicked(QLineEdit *lineEdit);
 };

@@ -111,7 +111,8 @@ public:
      * Available message types.
      * The background colors are chosen depending on the message type.
      */
-    enum MessageType {
+    enum MessageType
+    {
         Positive,
         Information,
         Warning,

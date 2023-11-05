@@ -33,11 +33,11 @@ class QFuture;
 
 class ANPV : public QObject
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
     static constexpr int MaxIconHeight = 500/*px*/;
-    static ANPV* globalInstance();
+    static ANPV *globalInstance();
     static QString formatByteHtmlString(float fsize);
     static void setClipboardDataCut(QMimeData *mimeData, bool cut);
     static void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
@@ -46,35 +46,35 @@ public:
     ANPV(QSplashScreen *splash);
     ~ANPV() override;
 
-    QThread* backgroundThread();
-    QSettings& settings();
+    QThread *backgroundThread();
+    QSettings &settings();
 
-    void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>>&);
+    void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> &);
     void showThumbnailView();
-    void showThumbnailView(QSplashScreen*);
-    
+    void showThumbnailView(QSplashScreen *);
+
     enum FileOperation { Move, Copy, HardLink, Delete };
     Q_ENUM(FileOperation);
-    void hardLinkFiles(QList<QString>&& files, QString&& source, QString&& destination);
-    void moveFiles(QList<QString>&& files, QString&& source, QString&& destination);
-    void deleteFiles(QList<QString>&& files, QString&& source);
-    
-    QAbstractFileIconProvider* iconProvider();
-    QFileSystemModel* dirModel();
+    void hardLinkFiles(QList<QString> &&files, QString &&source, QString &&destination);
+    void moveFiles(QList<QString> &&files, QString &&source, QString &&destination);
+    void deleteFiles(QList<QString> &&files, QString &&source);
+
+    QAbstractFileIconProvider *iconProvider();
+    QFileSystemModel *dirModel();
     QPointer<SortedImageModel> fileModel();
 
     ViewMode viewMode();
     void setViewMode(ViewMode);
 
     ViewFlags_t viewFlags();
-    void setViewFlag(ViewFlag, bool on=true);
+    void setViewFlag(ViewFlag, bool on = true);
     void setViewFlags(ViewFlags_t);
-    
+
     QString currentDir();
-    void setCurrentDir(const QString& str, bool force);
+    void setCurrentDir(const QString &str, bool force);
     QString savedCurrentDir();
     void fixupAndSetCurrentDir(QString str);
-    
+
     Qt::SortOrder imageSortOrder();
     void setImageSortOrder(Qt::SortOrder order);
     SortField imageSortField();
@@ -84,23 +84,23 @@ public:
     void setSectionSortOrder(Qt::SortOrder order);
     SortField sectionSortField();
     void setSectionSortField(SortField field);
-    
+
     int iconHeight();
     void setIconHeight(int);
-    ProgressIndicatorHelper* spinningIconHelper();
-    
+    ProgressIndicatorHelper *spinningIconHelper();
+
     QPixmap noIconPixmap();
     QPixmap noPreviewPixmap();
-    
-    QAction* actionOpen();
-    QAction* actionExit();
-    QActionGroup* copyMoveActionGroup();
-    QActionGroup* viewFlagActionGroup();
-    QActionGroup* viewModeActionGroup();
-    QUndoStack* undoStack();
-    
-    QList<QString> getExistingFile(QWidget* parent, QString& proposedDirToOpen);
-    QString getExistingDirectory(QWidget* parent, QString& proposedDirToOpen);
+
+    QAction *actionOpen();
+    QAction *actionExit();
+    QActionGroup *copyMoveActionGroup();
+    QActionGroup *viewFlagActionGroup();
+    QActionGroup *viewModeActionGroup();
+    QUndoStack *undoStack();
+
+    QList<QString> getExistingFile(QWidget *parent, QString &proposedDirToOpen);
+    QString getExistingDirectory(QWidget *parent, QString &proposedDirToOpen);
 
 signals:
     void currentDirChanged(QString dir, QString old);
@@ -109,11 +109,11 @@ signals:
     void imageSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
     void sectionSortOrderChanged(SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder);
     void iconHeightChanged(int h, int old);
-    
+
 public slots:
     void about();
-    void setCurrentDir(const QString& str);
-    
+    void setCurrentDir(const QString &str);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> d;

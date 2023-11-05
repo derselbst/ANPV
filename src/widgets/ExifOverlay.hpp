@@ -12,11 +12,11 @@ class QEvent;
 class ExifOverlay : public MessageWidget
 {
 public:
-    ExifOverlay(QWidget* parent = nullptr);
+    ExifOverlay(QWidget *parent = nullptr);
     ~ExifOverlay() override;
-    
-    void enterEvent(QEnterEvent* event) override;
-    void leaveEvent(QEvent* event) override;
+
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
     bool setMetadata(QSharedPointer<Image>);
 

@@ -8,4 +8,4 @@ class UserCancellation : public std::exception
 public:
     UserCancellation() = default;
     ~UserCancellation() override = default;
-}; 
+};

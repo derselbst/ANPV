@@ -42,26 +42,26 @@
 
 struct MainWindow::Impl
 {
-    MainWindow* q = nullptr;
+    MainWindow *q = nullptr;
     std::unique_ptr<Ui::MainWindow> ui = std::make_unique<Ui::MainWindow>();
-    
-    QSortFilterProxyModel* proxyModel = nullptr;
-    
-    CancellableProgressWidget* cancellableWidget = nullptr;
 
-    QActionGroup* actionGroupSectionSortField = nullptr;
-    QActionGroup* actionGroupSectionSortOrder = nullptr;
+    QSortFilterProxyModel *proxyModel = nullptr;
 
-    QActionGroup* actionGroupImageSortField = nullptr;
-    QActionGroup* actionGroupImageSortOrder = nullptr;
+    CancellableProgressWidget *cancellableWidget = nullptr;
+
+    QActionGroup *actionGroupSectionSortField = nullptr;
+    QActionGroup *actionGroupSectionSortOrder = nullptr;
+
+    QActionGroup *actionGroupImageSortField = nullptr;
+    QActionGroup *actionGroupImageSortOrder = nullptr;
 
     QAction *actionUndo = nullptr;
     QAction *actionRedo = nullptr;
     QAction *actionFileOperationConfigDialog = nullptr;
     QAction *actionExit = nullptr;
 
-    QMenu* imageSortMenu = nullptr;
-    QMenu* sectionSortMenu = nullptr;
+    QMenu *imageSortMenu = nullptr;
+    QMenu *sectionSortMenu = nullptr;
 
     QPointer<QAction> actionFilterFocus;
     QPointer<QAction> actionFilterSearch;
@@ -69,22 +69,22 @@ struct MainWindow::Impl
 
     QPointer<QAction> actionBack = nullptr;
     QPointer<QAction> actionForward = nullptr;
-    
-    Impl(MainWindow* parent) : q(parent)
+
+    Impl(MainWindow *parent) : q(parent)
     {
     }
-    
-    void addSlowHint(QAction* action)
+
+    void addSlowHint(QAction *action)
     {
         static const char tip[] = "This option requires to read EXIF metadata from the file. Therefore, performance greatly suffers when accessing directories that contain many files.";
         action->setToolTip(tip);
         action->setStatusTip(tip);
     }
-    
+
     void createViewActions()
     {
-        QActionGroup* viewMode = ANPV::globalInstance()->viewModeActionGroup();
-        QActionGroup* viewFlag = ANPV::globalInstance()->viewFlagActionGroup();
+        QActionGroup *viewMode = ANPV::globalInstance()->viewModeActionGroup();
+        QActionGroup *viewFlag = ANPV::globalInstance()->viewFlagActionGroup();
         this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
         this->ui->menuView->insertActions(this->ui->menuView->actions().at(0), viewMode->actions());
         this->ui->menuView->insertSeparator(this->ui->menuView->actions().at(0));
@@ -93,78 +93,89 @@ struct MainWindow::Impl
         this->actionFilterFocus = new QAction("FilterFocus", q);
         this->actionFilterFocus->setShortcut(Qt::CTRL | Qt::Key_F);
         this->actionFilterFocus->setShortcutContext(Qt::WindowShortcut);
-        connect(this->actionFilterFocus, &QAction::triggered, q, [&]() {this->ui->filterPatternLineEdit->setFocus(Qt::ShortcutFocusReason); });
+        connect(this->actionFilterFocus, &QAction::triggered, q, [&]()
+        {
+            this->ui->filterPatternLineEdit->setFocus(Qt::ShortcutFocusReason);
+        });
 
         this->actionFilterSearch = new QAction("Search", q);
         this->actionFilterSearch->setShortcuts({ Qt::Key_Enter, Qt::Key_Return });
         this->actionFilterSearch->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionFilterSearch, &QAction::triggered, this->ui->searchButton, &QAbstractButton::click);
-        connect(this->actionFilterSearch, &QAction::triggered, q, [&]() {this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason); });
+        connect(this->actionFilterSearch, &QAction::triggered, q, [&]()
+        {
+            this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason);
+        });
 
         this->actionFilterReset = new QAction("Reset", q);
         this->actionFilterReset->setShortcut(Qt::Key_Escape);
         this->actionFilterReset->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionFilterReset, &QAction::triggered, this->ui->resetButton, &QAbstractButton::click);
-        connect(this->actionFilterReset, &QAction::triggered, q, [&]() {this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason); });
+        connect(this->actionFilterReset, &QAction::triggered, q, [&]()
+        {
+            this->ui->thumbnailListView->setFocus(Qt::ShortcutFocusReason);
+        });
 
         this->ui->filterGroupBox->addAction(this->actionFilterFocus);
         this->ui->filterGroupBox->addAction(this->actionFilterSearch);
         this->ui->filterGroupBox->addAction(this->actionFilterReset);
 
         connect(ui->actionReload, &QAction::triggered, q,
-            [&](bool)
-            {
-                ANPV::globalInstance()->setCurrentDir(ANPV::globalInstance()->currentDir(), true);
-            }
-        );
+                [&](bool)
+        {
+            ANPV::globalInstance()->setCurrentDir(ANPV::globalInstance()->currentDir(), true);
+        }
+               );
         connect(ui->actionPreview_all_images, &QAction::triggered, q,
-            [&](bool)
+                [&](bool)
+        {
+            PreviewAllImagesDialog d;
+            d.setImageHeight(ANPV::globalInstance()->iconHeight());
+
+            if(d.exec() == QDialog::Accepted)
             {
-                PreviewAllImagesDialog d;
-                d.setImageHeight(ANPV::globalInstance()->iconHeight());
-                if (d.exec() == QDialog::Accepted)
+                auto imgHeight = d.imageHeight();
+                auto model = ANPV::globalInstance()->fileModel();
+                QMetaObject::invokeMethod(ANPV::globalInstance()->fileModel().get(), [ = ]()
                 {
-                    auto imgHeight = d.imageHeight();
-                    auto model = ANPV::globalInstance()->fileModel();
-                    QMetaObject::invokeMethod(ANPV::globalInstance()->fileModel().get(), [=]()
-                        {
-                            model->cancelAllBackgroundTasks();
-                            model->decodeAllImages(DecodingState::PreviewImage, imgHeight);
-                        });
-                }
+                    model->cancelAllBackgroundTasks();
+                    model->decodeAllImages(DecodingState::PreviewImage, imgHeight);
+                });
             }
-        );
+        }
+               );
     }
-    
+
     void createDebugActions()
     {
 #ifndef NDEBUG
 #ifdef Q_OS_LINUX
-        QAction* action;
+        QAction *action;
         action = new QAction("Asan Profile Memory Usage", q);
         connect(action, &QAction::triggered, q,
-            [&](bool)
-            {
-                __sanitizer_print_memory_profile(90, 10);
-            }
-        );
-            
-        QMenu* debugMenu = ui->menuFile->addMenu("Debug");
+                [&](bool)
+        {
+            __sanitizer_print_memory_profile(90, 10);
+        }
+               );
+
+        QMenu *debugMenu = ui->menuFile->addMenu("Debug");
         debugMenu->addAction(action);
 #endif
 #endif
     }
-    
+
     void createSortActions()
     {
-        QAction* action;
+        QAction *action;
 
-        auto makeOrderAction = [&](QActionGroup* actionGroup, QString&& name, Qt::SortOrder order)
+        auto makeOrderAction = [&](QActionGroup * actionGroup, QString && name, Qt::SortOrder order)
         {
-            QAction* action = new QAction(std::move(name), q);
+            QAction *action = new QAction(std::move(name), q);
             action->setCheckable(true);
             action->setData((int)order);
             actionGroup->addAction(action);
+
             if(order == Qt::AscendingOrder)
             {
                 action->setIcon(QIcon::fromTheme("view-sort-ascending"));
@@ -177,7 +188,7 @@ struct MainWindow::Impl
 
 
         actionGroupImageSortOrder = new QActionGroup(q);
-        
+
         action = new QAction("Image Sort Order", q);
         action->setSeparator(true);
         actionGroupImageSortOrder->addAction(action);
@@ -185,19 +196,22 @@ struct MainWindow::Impl
         makeOrderAction(actionGroupImageSortOrder, "Ascending (small to big)", Qt::AscendingOrder);
         makeOrderAction(actionGroupImageSortOrder, "Descending (big to small)", Qt::DescendingOrder);
 
-        connect(actionGroupImageSortOrder, &QActionGroup::triggered, q, [&](QAction* a) { ANPV::globalInstance()->setImageSortOrder((Qt::SortOrder)a->data().toInt()); });
+        connect(actionGroupImageSortOrder, &QActionGroup::triggered, q, [&](QAction * a)
+        {
+            ANPV::globalInstance()->setImageSortOrder((Qt::SortOrder)a->data().toInt());
+        });
         connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, action,
-            [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+                [ = ](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+        {
+            for(QAction *a : this->actionGroupImageSortOrder->actions())
             {
-                for (QAction* a : this->actionGroupImageSortOrder->actions())
+                if(!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
                 {
-                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
-                    {
-                        a->trigger();
-                        break;
-                    }
+                    a->trigger();
+                    break;
                 }
-            });
+            }
+        });
 
 
         actionGroupSectionSortOrder = new QActionGroup(q);
@@ -209,44 +223,51 @@ struct MainWindow::Impl
         makeOrderAction(actionGroupSectionSortOrder, "Ascending (small to big)", Qt::AscendingOrder);
         makeOrderAction(actionGroupSectionSortOrder, "Descending (big to small)", Qt::DescendingOrder);
 
-        connect(actionGroupSectionSortOrder, &QActionGroup::triggered, q, [&](QAction* a) { ANPV::globalInstance()->setSectionSortOrder((Qt::SortOrder)a->data().toInt()); });
+        connect(actionGroupSectionSortOrder, &QActionGroup::triggered, q, [&](QAction * a)
+        {
+            ANPV::globalInstance()->setSectionSortOrder((Qt::SortOrder)a->data().toInt());
+        });
         connect(ANPV::globalInstance(), &ANPV::sectionSortOrderChanged, action,
-            [=](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+                [ = ](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+        {
+            for(QAction *a : this->actionGroupSectionSortOrder->actions())
             {
-                for (QAction* a : this->actionGroupSectionSortOrder->actions())
+                if(!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
                 {
-                    if (!a->isSeparator() && newOrder == (Qt::SortOrder)a->data().toInt())
-                    {
-                        a->trigger();
-                        break;
-                    }
+                    a->trigger();
+                    break;
                 }
-            });
-        
+            }
+        });
+
 
         actionGroupImageSortField = new QActionGroup(q);
-        
+
         action = new QAction("Sort images according to", q);
         action->setSeparator(true);
         actionGroupImageSortField->addAction(action);
-        
-        auto makeSortAction = [&](QActionGroup* actionGroup, QString&& name, SortField col)
+
+        auto makeSortAction = [&](QActionGroup * actionGroup, QString && name, SortField col)
         {
             bool isSlow = ImageSectionDataContainer::sortedColumnNeedsPreloadingMetadata(col, col);
-            if (isSlow)
+
+            if(isSlow)
             {
                 name += " (slow)";
             }
-            QAction* action = new QAction(std::move(name), q);
+
+            QAction *action = new QAction(std::move(name), q);
             action->setCheckable(true);
             action->setData((int)col);
+
             if(isSlow)
             {
                 addSlowHint(action);
             }
+
             actionGroup->addAction(action);
         };
-        
+
         makeSortAction(actionGroupImageSortField, "File Name",            SortField::FileName);
         makeSortAction(actionGroupImageSortField, "File Size",            SortField::FileSize);
         makeSortAction(actionGroupImageSortField, "File Extension",       SortField::FileType);
@@ -260,19 +281,22 @@ struct MainWindow::Impl
         makeSortAction(actionGroupImageSortField, "Focal Length",         SortField::FocalLength);
         makeSortAction(actionGroupImageSortField, "Lens Model",           SortField::Lens);
 
-        connect(actionGroupImageSortField, &QActionGroup::triggered, q, [](QAction* act) { ANPV::globalInstance()->setImageSortField((SortField)act->data().toInt()); });
+        connect(actionGroupImageSortField, &QActionGroup::triggered, q, [](QAction * act)
+        {
+            ANPV::globalInstance()->setImageSortField((SortField)act->data().toInt());
+        });
         connect(ANPV::globalInstance(), &ANPV::imageSortOrderChanged, actionGroupImageSortField,
-            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+                [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+        {
+            for(QAction *a : this->actionGroupImageSortField->actions())
             {
-                for (QAction* a : this->actionGroupImageSortField->actions())
+                if(!a->isSeparator() && newField == (SortField)a->data().toInt())
                 {
-                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
-                    {
-                        a->trigger();
-                        break;
-                    }
+                    a->trigger();
+                    break;
                 }
-            });
+            }
+        });
 
         actionGroupSectionSortField = new QActionGroup(q);
 
@@ -294,35 +318,38 @@ struct MainWindow::Impl
         makeSortAction(actionGroupSectionSortField, "Focal Length",         SortField::FocalLength);
         makeSortAction(actionGroupSectionSortField, "Lens Model",           SortField::Lens);
 
-        connect(actionGroupSectionSortField, &QActionGroup::triggered, q, [](QAction* act) { ANPV::globalInstance()->setSectionSortField((SortField)act->data().toInt()); });
+        connect(actionGroupSectionSortField, &QActionGroup::triggered, q, [](QAction * act)
+        {
+            ANPV::globalInstance()->setSectionSortField((SortField)act->data().toInt());
+        });
         connect(ANPV::globalInstance(), &ANPV::sectionSortOrderChanged, actionGroupSectionSortField,
-            [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+                [&](SortField newField, Qt::SortOrder newOrder, SortField oldField, Qt::SortOrder oldOrder)
+        {
+            for(QAction *a : this->actionGroupSectionSortField->actions())
             {
-                for (QAction* a : this->actionGroupSectionSortField->actions())
+                if(!a->isSeparator() && newField == (SortField)a->data().toInt())
                 {
-                    if (!a->isSeparator() && newField == (SortField)a->data().toInt())
-                    {
-                        a->trigger();
-                        break;
-                    }
+                    a->trigger();
+                    break;
                 }
-            });
+            }
+        });
     }
-    
+
     void refreshCopyMoveActions()
     {
-        QActionGroup* actionGroupFileOperation = ANPV::globalInstance()->copyMoveActionGroup();
+        QActionGroup *actionGroupFileOperation = ANPV::globalInstance()->copyMoveActionGroup();
         ui->thumbnailListView->addActions(actionGroupFileOperation->actions());
         ui->menuEdit->addActions(actionGroupFileOperation->actions());
     }
-    
+
     void createActions()
     {
         this->createViewActions();
         this->createSortActions();
         this->createDebugActions();
 
-        QUndoStack* undoStack = ANPV::globalInstance()->undoStack();
+        QUndoStack *undoStack = ANPV::globalInstance()->undoStack();
         actionUndo = undoStack->createUndoAction(q, "Undo");
         actionUndo->setShortcuts(QKeySequence::Undo);
         actionUndo->setShortcutContext(Qt::ApplicationShortcut);
@@ -330,11 +357,12 @@ struct MainWindow::Impl
         actionRedo = undoStack->createRedoAction(q, "Redo");
         actionRedo->setShortcuts(QKeySequence::Redo);
         actionRedo->setShortcutContext(Qt::ApplicationShortcut);
-        
-        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction* act)
+
+        connect(ANPV::globalInstance()->copyMoveActionGroup(), &QActionGroup::triggered, q, [&](QAction * act)
         {
-            QList<QObject*> objs = act->associatedObjects();
-            for(QObject* o : objs)
+            QList<QObject *> objs = act->associatedObjects();
+
+            for(QObject *o : objs)
             {
                 if((o == ui->thumbnailListView && ui->thumbnailListView->hasFocus()) || (o == ui->menuEdit && ui->menuEdit->hasFocus()))
                 {
@@ -347,19 +375,19 @@ struct MainWindow::Impl
         actionFileOperationConfigDialog = new QAction("File Copy/Move Configuration", q);
         connect(actionFileOperationConfigDialog, &QAction::triggered, q, [&](bool)
         {
-            FileOperationConfigDialog* dia = new FileOperationConfigDialog(ANPV::globalInstance()->copyMoveActionGroup(), q);
+            FileOperationConfigDialog *dia = new FileOperationConfigDialog(ANPV::globalInstance()->copyMoveActionGroup(), q);
             connect(dia, &QDialog::accepted, q, [&]()
             {
                 this->refreshCopyMoveActions();
             });
-            
+
             dia->open();
         });
 
         connect(ui->actionAbout_ANPV, &QAction::triggered, ANPV::globalInstance(), &ANPV::about);
         connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
     }
-    
+
     void createMenus()
     {
         ui->menuFile->addAction(ANPV::globalInstance()->actionOpen());
@@ -367,32 +395,32 @@ struct MainWindow::Impl
         ui->menuFile->addAction(actionBack);
         ui->menuFile->addAction(actionForward);
         ui->menuFile->addAction(ANPV::globalInstance()->actionExit());
-        
+
         ui->menuEdit->addAction(actionUndo);
         ui->menuEdit->addAction(actionRedo);
         ui->menuEdit->addSeparator();
         ui->menuEdit->addAction(actionFileOperationConfigDialog);
         ui->menuEdit->addSeparator();
-        
+
         this->sectionSortMenu = ui->menuSort->addMenu("Sections");
         this->sectionSortMenu->addActions(actionGroupSectionSortField->actions());
         this->sectionSortMenu->addActions(actionGroupSectionSortOrder->actions());
         this->sectionSortMenu->installEventFilter(q);
-        
+
         this->imageSortMenu = ui->menuSort->addMenu("Images");
         this->imageSortMenu->addActions(actionGroupImageSortField->actions());
         this->imageSortMenu->addActions(actionGroupImageSortOrder->actions());
         this->imageSortMenu->installEventFilter(q);
 
         ui->menuHelp->insertAction(ui->actionAbout_ANPV, QWhatsThis::createAction(q));
-        QAction* sep = new QAction();
+        QAction *sep = new QAction();
         sep->setSeparator(true);
         ui->menuHelp->insertAction(ui->actionAbout_ANPV, sep);
     }
-    
+
     void writeSettings()
     {
-        auto& settings = ANPV::globalInstance()->settings();
+        auto &settings = ANPV::globalInstance()->settings();
 
         settings.beginGroup("MainWindow");
         settings.setValue("size", q->size());
@@ -407,7 +435,7 @@ struct MainWindow::Impl
         QScreen *ps = QGuiApplication::primaryScreen();
         QRect screenres = ps->geometry();
 
-        auto& settings = ANPV::globalInstance()->settings();
+        auto &settings = ANPV::globalInstance()->settings();
 
         settings.beginGroup("MainWindow");
         // open the window on the primary screen
@@ -417,49 +445,52 @@ struct MainWindow::Impl
         q->restoreGeometry(settings.value("geometry").toByteArray());
         q->restoreState(settings.value("windowState").toByteArray());
         settings.endGroup();
-        
+
         this->refreshCopyMoveActions();
     }
-    
-    void onDirectoryTreeLoaded(const QString&)
+
+    void onDirectoryTreeLoaded(const QString &)
     {
     }
-    
+
     void resizeTreeColumn(const QModelIndex &index)
     {
         ui->fileSystemTreeView->resizeColumnToContents(0);
         ui->fileSystemTreeView->scrollTo(index);
     }
-    
+
     QDir rememberedActivatedDir;
-    void onTreeActivated(const QModelIndex& idx)
+    void onTreeActivated(const QModelIndex &idx)
     {
         QFileInfo info = ANPV::globalInstance()->dirModel()->fileInfo(idx);
         rememberedActivatedDir = info.absoluteFilePath();
         ANPV::globalInstance()->setCurrentDir(info.absoluteFilePath());
     }
-    
+
     QDir rememberedUrlNavigatorActivatedDir;
-    void onUrlNavigatorNavigationTriggered(const QUrl& url)
+    void onUrlNavigatorNavigationTriggered(const QUrl &url)
     {
         QString path = url.path();
-        if (!url.isValid() || path.isEmpty())
+
+        if(!url.isValid() || path.isEmpty())
         {
             qInfo() << "onUrlNavigatorNavigationTriggered() got a null or empty url:" << url << " | " << path;
             return;
         }
 
 #ifdef Q_OS_WIN
-        if (path[0] == '/')
+
+        if(path[0] == '/')
         {
             path.remove(0, 1);
         }
+
 #endif
         rememberedUrlNavigatorActivatedDir = path;
         ANPV::globalInstance()->setCurrentDir(path);
     }
-    
-    void onCurrentDirChanged(QString& newDir, QString&)
+
+    void onCurrentDirChanged(QString &newDir, QString &)
     {
         QModelIndex mo = ANPV::globalInstance()->dirModel()->index(newDir);
         ui->fileSystemTreeView->setCurrentIndex(mo);
@@ -478,7 +509,7 @@ struct MainWindow::Impl
 
         q->setWindowTitle(newDir + " :: ANPV");
     }
-    
+
     void onIconHeightChanged(int h, int)
     {
         if(!ui->iconSizeSlider->isSliderDown())
@@ -487,20 +518,21 @@ struct MainWindow::Impl
             // this is the initial change event, set the value of the slider
             ui->iconSizeSlider->setValue(h);
         }
+
         ui->iconSizeSlider->setToolTip(QString("Icon height: %1 px").arg(h));
     }
-    
+
     void onIconSizeSliderValueChanged(int val)
     {
         ANPV::globalInstance()->setIconHeight(val);
     }
-    
+
     void onIconSizeSliderMoved(int val)
     {
         onIconSizeSliderValueChanged(val);
         QToolTip::showText(QCursor::pos(), QString("%1 px").arg(val), nullptr);
     }
-    
+
     void resetRegularExpression()
     {
         this->ui->filterPatternLineEdit->setText("");
@@ -510,34 +542,41 @@ struct MainWindow::Impl
 
     void filterRegularExpressionChanged()
     {
-        enum Syntax {
+        enum Syntax
+        {
             FixedString,
             Wildcard,
             RegularExpression
         };
-        
+
         Syntax s = Syntax(ui->filterSyntaxComboBox->currentIndex());
         QString pattern = ui->filterPatternLineEdit->text();
-        switch (s) {
+
+        switch(s)
+        {
         case Wildcard:
             pattern = QRegularExpression::wildcardToRegularExpression(pattern);
             break;
+
         case FixedString:
             pattern = QRegularExpression::escape(pattern);
             break;
+
         default:
             break;
         }
 
         QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
-        if (!ui->filterCaseSensitivityCheckBox->isChecked())
+
+        if(!ui->filterCaseSensitivityCheckBox->isChecked())
         {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
 
         WaitCursor w;
         QRegularExpression regularExpression(pattern, options);
-        if (regularExpression.isValid())
+
+        if(regularExpression.isValid())
         {
             ui->filterPatternLineEdit->setPalette(ui->filterPatternLineEdit->style()->standardPalette());
             ui->filterPatternLineEdit->setToolTip(QString());
@@ -557,15 +596,15 @@ struct MainWindow::Impl
             proxyModel->layoutChanged();
         }
     }
-    
+
     void clearInfoBox()
     {
         this->ui->infoBox->setText("");
     }
 
-    void onImageCheckStateChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles)
+    void onImageCheckStateChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
     {
-        if (!roles.contains(Qt::CheckStateRole))
+        if(!roles.contains(Qt::CheckStateRole))
         {
             return;
         }
@@ -574,21 +613,23 @@ struct MainWindow::Impl
         auto model = ANPV::globalInstance()->fileModel();
         QItemSelectionRange r(this->proxyModel->mapToSource(topLeft), this->proxyModel->mapToSource(bottomRight));
         QModelIndexList idx = r.indexes();
-        for(const QModelIndex& i : idx)
+
+        for(const QModelIndex &i : idx)
         {
             auto img = AbstractListItem::imageCast(model->item(i));
-            if (img)
+
+            if(img)
             {
                 size += img->fileInfo().size();
             }
         }
     }
-    
+
     void onThumbnailListViewSelectionChanged(const QItemSelection &, const QItemSelection &)
     {
         auto imgs = this->ui->thumbnailListView->selectedImages();
         auto chkImgs = this->ui->thumbnailListView->checkedImages();
-        
+
         if(imgs.isEmpty() && chkImgs.isEmpty())
         {
             this->clearInfoBox();
@@ -597,54 +638,61 @@ struct MainWindow::Impl
         {
             QString text;
             size_t count = imgs.size();
-            if (count > 0)
+
+            if(count > 0)
             {
                 size_t size = 0;
-                for (QSharedPointer<Image>& e : imgs)
+
+                for(QSharedPointer<Image> &e : imgs)
                 {
                     size += e->fileInfo().size();
                 }
 
                 text += QString(
-                    "%1 items selected<br />"
-                    "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
+                            "%1 items selected<br />"
+                            "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
             }
 
             count = chkImgs.size();
-            if (count > 0)
+
+            if(count > 0)
             {
                 size_t size = 0;
-                for (auto& i : chkImgs)
+
+                for(auto &i : chkImgs)
                 {
                     size += i->fileInfo().size();
                 }
-                if (!text.isEmpty())
+
+                if(!text.isEmpty())
                 {
                     text += "<br /><br />";
                 }
+
                 text += QString(
-                    "%1 items checked<br />"
-                    "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
+                            "%1 items checked<br />"
+                            "%2").arg(QString::number(count)).arg(ANPV::formatByteHtmlString(size));
             }
+
             this->ui->infoBox->setText(text);
         }
     }
 };
 
 MainWindow::MainWindow(QSplashScreen *splash)
- : QMainWindow(), d(std::make_unique<Impl>(this))
+    : QMainWindow(), d(std::make_unique<Impl>(this))
 {
     this->setWindowTitle("ANPV");
     this->setWindowFlags(this->windowFlags() | Qt::WindowContextHelpButtonHint);
-    
+
     d->proxyModel = new QSortFilterProxyModel(this);
     d->proxyModel->setSourceModel(ANPV::globalInstance()->fileModel().get());
-    
+
     splash->showMessage("Creating MainWindow Widgets");
     d->ui->setupUi(this);
     d->createActions();
     d->createMenus();
-    
+
     splash->showMessage("Initializing MainWindow Widgets");
     d->ui->fileSystemTreeView->setHeaderHidden(true);
     d->ui->fileSystemTreeView->setModel(ANPV::globalInstance()->dirModel());
@@ -655,60 +703,99 @@ MainWindow::MainWindow(QSplashScreen *splash)
     d->ui->fileSystemTreeView->setSelectionBehavior(QAbstractItemView::SelectRows);
     d->ui->fileSystemTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
     d->ui->fileSystemTreeView->setRootIndex(ANPV::globalInstance()->dirModel()->index(ANPV::globalInstance()->dirModel()->rootPath()));
-    
+
     d->ui->iconSizeSlider->setRange(0, ANPV::MaxIconHeight);
     d->ui->thumbnailListView->setModel(d->proxyModel);
 
     splash->showMessage("Connecting MainWindow Signals / Slots");
-    
-    connect(d->ui->fileSystemTreeView, &QTreeView::activated, this, [&](const QModelIndex &idx){d->onTreeActivated(idx);});
-    connect(d->ui->fileSystemTreeView, &QTreeView::expanded, this, [&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
-    connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this,[&](const QModelIndex &idx){d->resizeTreeColumn(idx);});
-    connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString& s){d->onDirectoryTreeLoaded(s);});
 
-    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QString newD, QString old){ d->onCurrentDirChanged(newD,old);}, Qt::QueuedConnection);
-    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old){ d->onIconHeightChanged(h,old);}, Qt::DirectConnection);
-    
-    connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value){d->onIconSizeSliderMoved(value);}, Qt::DirectConnection);
-    connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value){d->onIconSizeSliderValueChanged(value);}, Qt::DirectConnection);
+    connect(d->ui->fileSystemTreeView, &QTreeView::activated, this, [&](const QModelIndex & idx)
+    {
+        d->onTreeActivated(idx);
+    });
+    connect(d->ui->fileSystemTreeView, &QTreeView::expanded, this, [&](const QModelIndex & idx)
+    {
+        d->resizeTreeColumn(idx);
+    });
+    connect(d->ui->fileSystemTreeView, &QTreeView::collapsed, this, [&](const QModelIndex & idx)
+    {
+        d->resizeTreeColumn(idx);
+    });
+    connect(ANPV::globalInstance()->dirModel(), &QFileSystemModel::directoryLoaded, this, [&](const QString & s)
+    {
+        d->onDirectoryTreeLoaded(s);
+    });
+
+    connect(ANPV::globalInstance(), &ANPV::currentDirChanged, this, [&](QString newD, QString old)
+    {
+        d->onCurrentDirChanged(newD, old);
+    }, Qt::QueuedConnection);
+    connect(ANPV::globalInstance(), &ANPV::iconHeightChanged, this, [&](int h, int old)
+    {
+        d->onIconHeightChanged(h, old);
+    }, Qt::DirectConnection);
+
+    connect(d->ui->iconSizeSlider, &QSlider::sliderMoved, this, [&](int value)
+    {
+        d->onIconSizeSliderMoved(value);
+    }, Qt::DirectConnection);
+    connect(d->ui->iconSizeSlider, &QSlider::valueChanged, this, [&](int value)
+    {
+        d->onIconSizeSliderValueChanged(value);
+    }, Qt::DirectConnection);
 
     connect(d->ui->filterPatternLineEdit, &QLineEdit::returnPressed,
-        d->ui->searchButton, &QAbstractButton::click);
+            d->ui->searchButton, &QAbstractButton::click);
     connect(d->ui->searchButton, &QAbstractButton::pressed,
-        this, [&]() { d->filterRegularExpressionChanged(); });
+            this, [&]()
+    {
+        d->filterRegularExpressionChanged();
+    });
     connect(d->ui->resetButton, &QAbstractButton::pressed,
-        this, [&]() { d->resetRegularExpression(); });
+            this, [&]()
+    {
+        d->resetRegularExpression();
+    });
     connect(d->ui->resetButton, &QAbstractButton::pressed,
-        d->ui->searchButton, &QAbstractButton::click);
+            d->ui->searchButton, &QAbstractButton::click);
 
-    connect(d->proxyModel, &QSortFilterProxyModel::modelAboutToBeReset, this, [&](){ d->clearInfoBox(); });
-    connect(d->proxyModel, &QSortFilterProxyModel::dataChanged, this, [&](const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles) { d->onImageCheckStateChanged(topLeft, bottomRight, roles); });
-    connect(d->ui->thumbnailListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection &selected, const QItemSelection &deselected)
+    connect(d->proxyModel, &QSortFilterProxyModel::modelAboutToBeReset, this, [&]()
+    {
+        d->clearInfoBox();
+    });
+    connect(d->proxyModel, &QSortFilterProxyModel::dataChanged, this, [&](const QModelIndex & topLeft, const QModelIndex & bottomRight, const QList<int> &roles)
+    {
+        d->onImageCheckStateChanged(topLeft, bottomRight, roles);
+    });
+    connect(d->ui->thumbnailListView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection & selected, const QItemSelection & deselected)
     {
         d->onThumbnailListViewSelectionChanged(selected, deselected);
     });
 
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
-    connect(d->ui->urlNavigator, &UrlNavigatorWidget::pathChangedByUser, ANPV::globalInstance(), QOverload<const QString&>::of(&ANPV::setCurrentDir));
+    connect(d->ui->urlNavigator, &UrlNavigatorWidget::pathChangedByUser, ANPV::globalInstance(), QOverload<const QString &>::of(&ANPV::setCurrentDir));
 }
 
 MainWindow::~MainWindow() = default;
 
-bool MainWindow::event(QEvent* evt)
+bool MainWindow::event(QEvent *evt)
 {
-    if (evt->type() == QEvent::Close)
+    if(evt->type() == QEvent::Close)
     {
         auto model = ANPV::globalInstance()->fileModel();
-        if (model && !model->isSafeToChangeDir())
+
+        if(model && !model->isSafeToChangeDir())
         {
             QMessageBox::StandardButton reply = QMessageBox::question(this, "Confirm closing", "You have checked images recently. If you proceed, the selection of images will be lost. Are you sure to proceed?", QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-            if (reply == QMessageBox::No)
+
+            if(reply == QMessageBox::No)
             {
                 evt->ignore();
                 return false;
             }
         }
     }
+
     return QWidget::event(evt);
 }
 
@@ -723,23 +810,27 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
     auto button = event->button();
+
     switch(button)
     {
-        case Qt::BackButton:
-            d->actionBack->trigger();
-            event->accept();
-            return;
-        case Qt::ForwardButton:
-            d->actionForward->trigger();
-            event->accept();
-            return;
-        default:
-            break;
+    case Qt::BackButton:
+        d->actionBack->trigger();
+        event->accept();
+        return;
+
+    case Qt::ForwardButton:
+        d->actionForward->trigger();
+        event->accept();
+        return;
+
+    default:
+        break;
     }
+
     QMainWindow::mousePressEvent(event);
 }
 
-void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
+void MainWindow::setBackgroundTask(const QFuture<DecodingState> &fut)
 {
     xThreadGuard g(this);
 
@@ -747,7 +838,7 @@ void MainWindow::setBackgroundTask(const QFuture<DecodingState>& fut)
     d->ui->cancellableWidget->show();
 }
 
-void MainWindow::hideProgressWidget(CancellableProgressWidget*)
+void MainWindow::hideProgressWidget(CancellableProgressWidget *)
 {
     xThreadGuard g(this);
 
@@ -757,6 +848,7 @@ void MainWindow::hideProgressWidget(CancellableProgressWidget*)
 void MainWindow::setCurrentIndex(QSharedPointer<Image> img)
 {
     QModelIndex wantedIdx = ANPV::globalInstance()->fileModel()->index(img);
+
     if(!wantedIdx.isValid())
     {
         return;
@@ -771,18 +863,20 @@ void MainWindow::readSettings()
     d->readSettings();
 }
 
-bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
     // Keep these menus open after clicking an action-element
-    if ((watched == this->d->imageSortMenu || watched == this->d->sectionSortMenu) && event->type() == QEvent::MouseButtonRelease)
+    if((watched == this->d->imageSortMenu || watched == this->d->sectionSortMenu) && event->type() == QEvent::MouseButtonRelease)
     {
-        auto action = static_cast<QMenu*>(watched)->activeAction();
-        if (action && action->isCheckable())
+        auto action = static_cast<QMenu *>(watched)->activeAction();
+
+        if(action && action->isCheckable())
         {
             action->trigger();
             return true;
         }
     }
+
     return QObject::eventFilter(watched, event);
 }
 

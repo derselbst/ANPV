@@ -72,22 +72,30 @@ void MessageWidgetPrivate::createLayout()
     content->resize(q->size());
     qDeleteAll(buttons);
     buttons.clear();
-    Q_FOREACH (QAction *action, q->actions()) {
+
+    Q_FOREACH(QAction *action, q->actions())
+    {
         QToolButton *button = new QToolButton(content);
         button->setDefaultAction(action);
         button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         buttons.append(button);
     }
-    if (wordWrap) {
+
+    if(wordWrap)
+    {
         QGridLayout *layout = new QGridLayout(content);
         // Set alignment to make sure icon does not move down if text wraps
         layout->addWidget(iconLabel, 0, 0, 1, 1, Qt::AlignHCenter | Qt::AlignTop);
         layout->addWidget(textLabel, 0, 1);
-        if (!buttons.isEmpty()) {
+
+        if(!buttons.isEmpty())
+        {
             // Use an additional layout in row 1 for the buttons.
             QHBoxLayout *buttonLayout = new QHBoxLayout(content);
             buttonLayout->addStretch();
-            Q_FOREACH (QToolButton *button, buttons) {
+
+            Q_FOREACH(QToolButton *button, buttons)
+            {
                 // For some reason, calling show() is necessary if wordwrap is true,
                 // otherwise the buttons do not show up. It is not needed if
                 // wordwrap is false.
@@ -95,39 +103,52 @@ void MessageWidgetPrivate::createLayout()
                 buttonLayout->addWidget(button);
             }
         }
-    } else {
+    }
+    else
+    {
         QHBoxLayout *layout = new QHBoxLayout(content);
         layout->addWidget(iconLabel);
         layout->addWidget(textLabel);
-        for (QToolButton *button : qAsConst(buttons)) {
+
+        for(QToolButton *button : qAsConst(buttons))
+        {
             layout->addWidget(button);
         }
     };
-    if (q->isVisible()) {
+
+    if(q->isVisible())
+    {
         q->setFixedHeight(content->sizeHint().height());
     }
+
     q->updateGeometry();
 }
 void MessageWidgetPrivate::applyStyleSheet()
 {
     QColor bgBaseColor;
+
     // We have to hardcode colors here because KWidgetsAddons is a tier 1 framework
     // and therefore can't depend on any other KDE Frameworks
     // The following RGB color values come from the "default" scheme in kcolorscheme.cpp
-    switch (messageType) {
+    switch(messageType)
+    {
     case MessageWidget::Positive:
         bgBaseColor.setRgb(39, 174,  96); // Window: ForegroundPositive
         break;
+
     case MessageWidget::Information:
         bgBaseColor.setRgb(61, 174, 233); // Window: ForegroundActive
         break;
+
     case MessageWidget::Warning:
         bgBaseColor.setRgb(246, 116, 0); // Window: ForegroundNeutral
         break;
+
     case MessageWidget::Error:
         bgBaseColor.setRgb(218, 68, 83); // Window: ForegroundNegative
         break;
     }
+
     const qreal bgBaseColorAlpha = 0.2;
     bgBaseColor.setAlphaF(bgBaseColorAlpha);
     const QPalette palette = QGuiApplication::palette();
@@ -141,13 +162,13 @@ void MessageWidgetPrivate::applyStyleSheet()
     const QColor bgFinalColor = QColor(newRed, newGreen, newBlue);
     content->setStyleSheet(
         QString::fromLatin1(".QFrame {"
-                              "background-color: %1;"
-                              "border-radius: 4px;"
-                              "border: 2px solid %2;"
-                              "margin: %3px;"
-                              "}"
-                              ".QLabel { color: %4; }"
-                             )
+                            "background-color: %1;"
+                            "border-radius: 4px;"
+                            "border: 2px solid %2;"
+                            "margin: %3px;"
+                            "}"
+                            ".QLabel { color: %4; }"
+                           )
         .arg(bgFinalColor.name())
         .arg(border.name())
         // DefaultFrameWidth returns the size of the external margin + border width. We know our border is 1px, so we subtract this from the frame normal QStyle FrameWidth to get our margin
@@ -157,16 +178,20 @@ void MessageWidgetPrivate::applyStyleSheet()
 }
 void MessageWidgetPrivate::updateLayout()
 {
-    if (content->layout()) {
+    if(content->layout())
+    {
         createLayout();
     }
 }
 int MessageWidgetPrivate::bestContentHeight() const
 {
     int height = content->heightForWidth(q->width());
-    if (height == -1) {
+
+    if(height == -1)
+    {
         height = content->sizeHint().height();
     }
+
     return height;
 }
 //---------------------------------------------------------------------
@@ -219,16 +244,23 @@ QSize MessageWidget::minimumSizeHint() const
 }
 bool MessageWidget::event(QEvent *event)
 {
-    if (event->type() == QEvent::Polish && !d->content->layout()) {
+    if(event->type() == QEvent::Polish && !d->content->layout())
+    {
         d->createLayout();
-    } else if (event->type() == QEvent::PaletteChange) {
+    }
+    else if(event->type() == QEvent::PaletteChange)
+    {
         d->applyStyleSheet();
-    } else if (event->type() == QEvent::Show && !d->ignoreShowEventDoingAnimatedShow) {
-        if ((height() != d->content->height()) || (d->content->pos().y() != 0)) {
+    }
+    else if(event->type() == QEvent::Show && !d->ignoreShowEventDoingAnimatedShow)
+    {
+        if((height() != d->content->height()) || (d->content->pos().y() != 0))
+        {
             d->content->move(0, 0);
             setFixedHeight(d->content->height());
         }
     }
+
     return QFrame::event(event);
 }
 void MessageWidget::resizeEvent(QResizeEvent *event)
@@ -253,10 +285,12 @@ void MessageWidget::setWordWrap(bool wordWrap)
     policy.setHeightForWidth(wordWrap);
     setSizePolicy(policy);
     d->updateLayout();
+
     // Without this, when user does wordWrap -> !wordWrap -> wordWrap, a minimum
     // height is set, causing the widget to be too high.
     // Mostly visible in test programs.
-    if (wordWrap) {
+    if(wordWrap)
+    {
         setMinimumHeight(0);
     }
 }
@@ -285,9 +319,13 @@ QIcon MessageWidget::icon() const
 void MessageWidget::setIcon(const QIcon &icon)
 {
     d->icon = icon;
-    if (d->icon.isNull()) {
+
+    if(d->icon.isNull())
+    {
         d->iconLabel->hide();
-    } else {
+    }
+    else
+    {
         const int size = style()->pixelMetric(QStyle::PM_ToolBarIconSize);
         d->iconLabel->setPixmap(d->icon.pixmap(size));
         d->iconLabel->show();
