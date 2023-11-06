@@ -36,6 +36,7 @@ using namespace std::chrono_literals;
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
+    Q_INIT_RESOURCE(oxygen);
     QApplication app(argc, argv);
     app.setOrganizationName("derselbst");
     app.setApplicationName("ANPV");
@@ -55,7 +56,12 @@ int main(int argc, char *argv[])
     (void)DecoderFactory::globalInstance();
 
     splash.showMessage("Setting application-wide style");
+
     app.setStyle(new CenteredBoxProxyStyle(QStyleFactory::create("Fusion")));
+    if (QIcon::themeName().isEmpty())
+    {
+        QIcon::setThemeName("oxygen");
+    }
 
     try
     {
