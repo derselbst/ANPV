@@ -33,7 +33,7 @@ Also, this project is designed as **viewer**! A viewer does not support editing 
 
 # Format Support Status
 
-| Feature / Supported file format | JFIF | TIFF | PNG | JXL | RAWs |
+| Feature / Supported file format | [JFIF](https://en.wikipedia.org/wiki/JPEG_File_Interchange_Format) | [TIFF](https://en.wikipedia.org/wiki/TIFF) | [PNG](https://en.wikipedia.org/wiki/PNG) | [JXL](https://en.wikipedia.org/wiki/JPEG_XL) | RAWs |
 |---|---|---|---|---|---|
 | Supported compression algorithms | ✔️ JPEG | ✅ (all encodings supported by libtiff, but none of the "none-Adobe registered codecs", e.g. no JPEG XL) | ✔️ PNG | ✔️ JPEG / JPEG XL | ⚠️ Embedded JPEG previews only! | 
 | EXIF Support |  ✔️ | ✅ (not yet for BigTIFF) | ⚠️ Should work, never seen it working though | ⚠️ Supported by file format, an implementation detail might be missing in ANPV | ✔️
