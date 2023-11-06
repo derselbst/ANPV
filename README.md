@@ -33,7 +33,7 @@ Also, this project is designed as **viewer**! A viewer does not support editing 
 
 # Format Support Status
 
-| Feature / Supported file format | [JFIF](https://en.wikipedia.org/wiki/JPEG_File_Interchange_Format) | [TIFF](https://en.wikipedia.org/wiki/TIFF) | [PNG](https://en.wikipedia.org/wiki/PNG) | [JXL](https://en.wikipedia.org/wiki/JPEG_XL) | RAWs |
+| Feature / Supported file format | [![JFIF](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/JPEG_format_logo.svg/64px-JPEG_format_logo.svg.png)](https://en.wikipedia.org/wiki/JPEG_File_Interchange_Format) | [![TIFF](https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Gartoon_mimetypes_tiff.svg/90px-Gartoon_mimetypes_tiff.svg.png)](https://en.wikipedia.org/wiki/TIFF) | [![PNG](http://www.libpng.org/pub/png/img_png/pnglogo--povray-3.7--black826--800x600.png)](https://en.wikipedia.org/wiki/PNG) | [![JXL](https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/JPEG_XL_logo.svg/64px-JPEG_XL_logo.svg.png)](https://en.wikipedia.org/wiki/JPEG_XL) | RAWs |
 |---|---|---|---|---|---|
 | Supported compression algorithms | ✔️ JPEG | ✅ (all encodings supported by libtiff, but none of the "none-Adobe registered codecs", e.g. no JPEG XL) | ✔️ PNG | ✔️ JPEG / JPEG XL | ⚠️ Embedded JPEG previews only! | 
 | EXIF Support |  ✔️ | ✅ (not yet for BigTIFF) | ⚠️ Should work, never seen it working though | ⚠️ Supported by file format, an implementation detail might be missing in ANPV | ✔️
