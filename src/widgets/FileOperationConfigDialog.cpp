@@ -158,7 +158,7 @@ void FileOperationConfigDialog::accept()
 
             if(isDeleteAction)
             {
-                action->setIcon(QIcon::fromTheme("edit-delete"));
+                action->setIcon(QIcon::fromTheme("trash-empty", QIcon::fromTheme("user-trash", QIcon::fromTheme("edit-delete"))));
             }
 
             return action;
