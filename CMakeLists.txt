@@ -186,7 +186,8 @@ src/styles/CenteredBoxProxyStyle.cpp
 src/styles/CenteredBoxProxyStyle.hpp
 src/styles/ListItemDelegate.cpp
 src/styles/ListItemDelegate.hpp
-ANPV.qrc)
+ANPV.qrc
+icons/oxygen/oxygen.qrc)
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2 KDcraw)

@@ -4,3 +4,6 @@
 [submodule "libkdcraw"]
 	path = libkdcraw
 	url = https://invent.kde.org/tommo/libkdcraw.git
+[submodule "icons/oxygen/base"]
+	path = icons/oxygen/base
+	url = https://invent.kde.org/frameworks/oxygen-icons.git
