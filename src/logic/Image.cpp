@@ -387,29 +387,30 @@ QString Image::formatInfoString()
         {
             infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
         }
+    }
 
-        infoStr += QString("<b>===stat()===</b><br><br>");
+    infoStr += QString("<b>===stat()===</b><br><br>");
+    if (this->fileInfo().isFile())
+    {
         infoStr += "File Size: ";
         infoStr += ANPV::formatByteHtmlString(this->fileInfo().size());
         infoStr += "<br><br>";
+    }
 
-        QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
+    QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
+    if(t.isValid())
+    {
+        infoStr += "File created on:<br>";
+        infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
+        infoStr += t.toString("  hh:mm:ss<br><br>");
+    }
 
-        if(t.isValid())
-        {
-            infoStr += "File created on:<br>";
-            infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
-            infoStr += t.toString("  hh:mm:ss<br><br>");
-        }
-
-        t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
-
-        if(t.isValid())
-        {
-            infoStr += "File modified on:<br>";
-            infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
-            infoStr += t.toString("hh:mm:ss");
-        }
+    t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
+    if(t.isValid())
+    {
+        infoStr += "File modified on:<br>";
+        infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
+        infoStr += t.toString("hh:mm:ss");
     }
 
     return infoStr;

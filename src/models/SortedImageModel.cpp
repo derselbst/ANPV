@@ -508,24 +508,33 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, in
 
                 case Qt::ToolTipRole:
                 {
-                    QString info;
-
-                    switch(img->decodingState())
+                    switch (img->decodingState())
                     {
                     case Error:
                     case Fatal:
                         return img->errorMessage();
 
                     default:
-                        info = img->formatInfoString();
-                    }
-
-                    if(info.isEmpty())
                     {
-                        info = "Decoding not yet started";
-                    }
+                        QString info;
+                        bool decodePending = false;
+                        if(fi.isFile())
+                        {
+                            std::lock_guard<std::recursive_mutex> l(d->m);
+                            decodePending = d->backgroundTasks.contains(img.data());
+                        }
+                        if (decodePending)
+                        {
+                            info = QStringLiteral("Decoding not yet started");
+                        }
+                        else
+                        {
+                            info = img->formatInfoString();
+                        }
 
-                    return info;
+                        return info;
+                    }
+                    }
                 }
 
                 case Qt::TextAlignmentRole:
