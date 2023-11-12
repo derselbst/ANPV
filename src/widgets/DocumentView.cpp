@@ -57,11 +57,12 @@ struct DocumentView::Impl
     QGraphicsPixmapItem *currentPixmapOverlay = nullptr;
 
     QAction *actionShowScrollBars = nullptr;
-    QAction *actionShowInfoBox = nullptr;
+    QAction* actionShowInfoBox = nullptr;
+    QAction* actionShowImageLayout = nullptr;
 
     AfPointOverlay *afPointOverlay = nullptr;
 
-    QGraphicsRectItem *debugOverlay1 = nullptr;
+    QGraphicsPathItem *debugOverlay1 = nullptr;
 
     std::unique_ptr<ExifOverlay> exifOverlay = std::make_unique<ExifOverlay>(q);
 
@@ -600,6 +601,17 @@ struct DocumentView::Impl
         });
         q->addAction(this->actionShowInfoBox);
 
+
+        this->actionShowImageLayout = new QAction("Show Image Layout", q);
+        this->actionShowImageLayout->setCheckable(true);
+        this->actionShowImageLayout->setChecked(true);
+        this->actionShowImageLayout->setShortcutContext(Qt::WidgetShortcut);
+        connect(this->actionShowImageLayout, &QAction::toggled, q, [&](bool checked)
+            {
+                this->debugOverlay1->setVisible(checked);
+            });
+        q->addAction(this->actionShowImageLayout);
+
         act = new QAction("Set Background Color", q);
         connect(act, &QAction::triggered, q, [&]()
         {
@@ -720,11 +732,31 @@ DocumentView::DocumentView(QWidget *parent)
     d->afPointOverlay->setZValue(100);
     d->scene->addItem(d->afPointOverlay);
 
-    d->debugOverlay1 = new QGraphicsRectItem;
+    d->debugOverlay1 = new QGraphicsPathItem;
     d->debugOverlay1->setZValue(100000);
-    d->debugOverlay1->setPen(QPen(Qt::green, 6, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
+    QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
+    dbgPen.setCosmetic(true);
+    d->debugOverlay1->setPen(dbgPen);
     d->scene->addItem(d->debugOverlay1);
     d->debugOverlay1->hide();
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::finished, this, [&]()
+        {
+            const QPainterPath* dbg = this->d->currentImageDecoder->imageLayout();
+            if (dbg != nullptr)
+            {
+                d->debugOverlay1->setPath(*dbg);
+                d->debugOverlay1->setVisible(d->actionShowImageLayout->isChecked());
+            }
+        });
+
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::started, this, [&]()
+        {
+            d->debugOverlay1->hide();
+        });
+    connect(&d->taskFuture, &QFutureWatcher<DecodingState>::canceled, this, [&]()
+        {
+            d->debugOverlay1->hide();
+        });
 
     this->setScene(d->scene);
 

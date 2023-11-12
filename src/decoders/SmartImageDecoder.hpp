@@ -11,6 +11,7 @@
 
 class ExifWrapper;
 class Image;
+class QPainterPath;
 
 enum class Priority : int
 {
@@ -53,6 +54,8 @@ public:
 
     QTransform fullResToPageTransform(const QSize &desiredResolution);
     QTransform fullResToPageTransform(unsigned w, unsigned h);
+
+    virtual const QPainterPath* imageLayout();
 
 protected:
     virtual void decodeHeader(const unsigned char *buffer, qint64 nbytes) = 0;

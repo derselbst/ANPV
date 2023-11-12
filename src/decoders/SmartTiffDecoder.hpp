@@ -14,6 +14,8 @@ public:
     SmartTiffDecoder(const SmartTiffDecoder &) = delete;
     SmartTiffDecoder &operator=(const SmartTiffDecoder &) = delete;
 
+    const QPainterPath* imageLayout() override;
+
 protected:
     void decodeHeader(const unsigned char *buffer, qint64 nbytes) override;
     QImage decodingLoop(QSize desiredResolution, QRect roiRect) override;

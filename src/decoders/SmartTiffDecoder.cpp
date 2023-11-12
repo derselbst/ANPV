@@ -42,6 +42,7 @@ struct SmartTiffDecoder::Impl
     qint64 nbytes = 0;
 
     std::vector<PageInfo> pageInfos;
+    QPainterPath debugTiffLayout;
 
     Impl(SmartTiffDecoder *q) : q(q)
     {
@@ -476,6 +477,7 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     QTransform toFullScaleTransform = scaleTrafo.inverted();
     this->image()->setDecodedImage(image, toFullScaleTransform);
     this->resetDecodedRoiRect();
+    d->debugTiffLayout.clear();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution, false);
     this->convertColorSpace(image, false, toFullScaleTransform);
 
@@ -556,11 +558,12 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 QRect tileRect(x, y, widthToCopy, linesToCopy);
 
                 QRect areaToCopy = tileRect.intersected(roi);
-
                 if(areaToCopy.isEmpty())
                 {
                     continue;
                 }
+
+                d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(tileRect));
 
                 auto ret = TIFFReadRGBATile(d->tiff, x, y, tileBuf.data());
 
@@ -678,11 +681,12 @@ gehtnich:
                 QRect stripRect(0, y, width, rowsToDecode);
 
                 QRect areaToCopy = stripRect.intersected(roi);
-
                 if(areaToCopy.isEmpty())
                 {
                     continue;
                 }
+
+                d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(stripRect));
 
                 auto ret = TIFFReadRGBAStrip(d->tiff, strip * rowsperstrip, stripBuf.data());
 
@@ -717,4 +721,10 @@ gehtnich:
 
     this->setDecodingMessage("TIFF decoding completed successfully.");
     this->setDecodingProgress(100);
+}
+
+
+const QPainterPath* SmartTiffDecoder::imageLayout()
+{
+    return &d->debugTiffLayout;
 }

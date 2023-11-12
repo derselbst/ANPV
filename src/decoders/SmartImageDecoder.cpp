@@ -652,3 +652,8 @@ QTransform SmartImageDecoder::fullResToPageTransform(unsigned w, unsigned h)
 
     return scaleTrafo;
 }
+
+const QPainterPath* SmartImageDecoder::imageLayout()
+{
+    return nullptr;
+}
