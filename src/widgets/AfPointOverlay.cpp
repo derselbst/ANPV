@@ -48,13 +48,13 @@ void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *, 
         case AfType::Selected:
             pen.setColor(Qt::yellow);
             pen.setStyle(Qt::SolidLine);
-            pen.setWidth(4);
+            pen.setWidth(3);
             break;
 
         case AfType::HasFocus:
             pen.setColor(Qt::red);
             pen.setStyle(Qt::SolidLine);
-            pen.setWidth(4);
+            pen.setWidth(3);
             break;
 
         case AfType::Normal:
@@ -64,6 +64,7 @@ void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *, 
             break;
         }
 
+        pen.setCosmetic(true);
         painter->setPen(pen);
         painter->drawRect(rect);
     }
