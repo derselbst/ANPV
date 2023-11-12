@@ -20,6 +20,7 @@ class QShowEvent;
 class QEvent;
 class SmartImageDecoder;
 class ImageSectionDataContainer;
+class QSettings;
 
 class DocumentView : public QGraphicsView
 {
@@ -34,6 +35,9 @@ public:
     void loadImage(QSharedPointer<Image> image);
     void loadImage(QString url);
     void loadImage(const QSharedPointer<SmartImageDecoder> &dec);
+
+    void readSettings(QSettings& settings);
+    void writeSettings(QSettings& settings);
 
 public slots:
     void zoomIn();

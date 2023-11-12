@@ -46,6 +46,11 @@ struct MultiDocumentView::Impl
         settings.beginGroup("MultiDocumentView");
         settings.setValue("geometry", q->saveGeometry());
         settings.endGroup();
+
+        settings.beginGroup("DocumentView");
+        auto& dv = dynamic_cast<DocumentView&>(*this->tw->currentWidget());
+        dv.writeSettings(settings);
+        settings.endGroup();
     }
 
     void readSettings(QMainWindow *parent)
@@ -165,6 +170,11 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
         dv->setModel(model);
         dv->loadImage(e);
         dv->setAttribute(Qt::WA_DeleteOnClose);
+
+        auto& settings = ANPV::globalInstance()->settings();
+        settings.beginGroup("DocumentView");
+        dv->readSettings(settings);
+        settings.endGroup();
     }
 
     d->tw->currentWidget()->setFocus(Qt::PopupFocusReason);

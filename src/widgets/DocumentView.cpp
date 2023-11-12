@@ -20,6 +20,7 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QMimeData>
+#include <QSettings>
 
 #include <vector>
 #include <algorithm>
@@ -1187,4 +1188,22 @@ QFileInfo DocumentView::currentFile()
     }
 
     return QFileInfo();
+}
+
+void DocumentView::readSettings(QSettings& settings)
+{
+    d->actionShowImageLayout->setChecked(settings.value("showImageLayout", false).toBool());
+    d->actionShowInfoBox->setChecked(settings.value("showInfoBox", true).toBool());
+    d->actionShowScrollBars->setChecked(settings.value("showScrollBars", true).toBool());
+    
+    QColor col = settings.value("sceneBackgroundColor", d->scene->backgroundBrush().color()).value<QColor>();
+    d->scene->setBackgroundBrush(QBrush(col));
+}
+
+void DocumentView::writeSettings(QSettings& settings)
+{
+    settings.setValue("showImageLayout", d->actionShowImageLayout->isChecked());
+    settings.setValue("showInfoBox", d->actionShowInfoBox->isChecked());
+    settings.setValue("showScrollBars", d->actionShowScrollBars->isChecked());
+    settings.setValue("sceneBackgroundColor", d->scene->backgroundBrush().color());
 }
