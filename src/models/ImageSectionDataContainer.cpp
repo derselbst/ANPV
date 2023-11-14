@@ -115,7 +115,17 @@ void ImageSectionDataContainer::setDecodingState(DecodingState state)
 bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
-    auto decoder = QSharedPointer<SmartImageDecoder>(DecoderFactory::globalInstance()->getDecoder(image).release());
+
+    // try to derive decoder from fileExtension
+    auto dec = DecoderFactory::globalInstance()->getDecoder(image, image->fileExtension());
+    if (!dec && d->targetState != DecodingState::Ready)
+    {
+        // if that didn't work, try to determine type by opening the file,
+        // but do not do this when the application is starting up to open a single image to avoid long startup times.
+        dec = DecoderFactory::globalInstance()->getDecoder(image, QString());
+    }
+
+    auto decoder = QSharedPointer<SmartImageDecoder>(dec.release());
 
     // Let the image live in the same thread as the SortedDirModel. This allows Qt::DirectConnection between Image::destroyed and SortedDirModel to remove it from the list of checked images.
     // Additionally, the image should live in the UI thread to allow direct Image::previewImageUpdated event delivery to the DocumentView, even when the background thread is busy. Otherwise the DocumentView would show an incompletely decoded image until the background thread (which would own the image by default) enqueues that particular event...
