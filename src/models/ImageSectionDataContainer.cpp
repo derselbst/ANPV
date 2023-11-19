@@ -35,8 +35,6 @@ struct ImageSectionDataContainer::Impl
     SortField imageSortField = SortField::None;
     Qt::SortOrder imageSortOrder = Qt::DescendingOrder;
 
-    DecodingState targetState = DecodingState::Metadata;
-
     Qt::ConnectionType syncConnection()
     {
         if(QThread::currentThread() == this->model->thread())
@@ -107,18 +105,13 @@ ImageSectionDataContainer::~ImageSectionDataContainer()
     qDebug() << "~ImageDatacontainer";
 }
 
-void ImageSectionDataContainer::setDecodingState(DecodingState state)
-{
-    d->targetState = state;
-}
-
 bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
 
     // try to derive decoder from fileExtension
     auto dec = DecoderFactory::globalInstance()->getDecoder(image, image->fileExtension());
-    if (!dec && d->targetState != DecodingState::Ready)
+    if (!dec && d->model != nullptr)
     {
         // if that didn't work, try to determine type by opening the file,
         // but do not do this when the application is starting up to open a single image to avoid long startup times.
@@ -141,25 +134,25 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
         {
             image->setDecoder(decoder);
 
-            if(d->targetState != DecodingState::Ready)
+            if(d->model != nullptr)
             {
                 if(this->sortedColumnNeedsPreloadingMetadata(d->sectionSortField, d->imageSortField))
                 {
                     decoder->open();
                     // decode synchronously
-                    decoder->decode(d->targetState, QSize());
+                    decoder->decode(DecodingState::Metadata, QSize());
                     decoder->close();
-                    d->model ? d->model->welcomeImage(image, watcher) : (void)0;
+                    d->model->welcomeImage(image, watcher);
                 }
                 else
                 {
                     watcher.reset(new QFutureWatcher<DecodingState>());
                     // Keep the watcher in the background thread, as there seems to be no need to move it to UI thread.
                     //watcher->moveToThread(QGuiApplication::instance()->thread());
-                    d->model ? d->model->welcomeImage(image, watcher) : (void)0;
+                    d->model->welcomeImage(image, watcher);
 
                     // decode asynchronously
-                    auto fut = decoder->decodeAsync(d->targetState, Priority::Background, QSize());
+                    auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, QSize());
                     watcher->setFuture(fut);
                 }
             }

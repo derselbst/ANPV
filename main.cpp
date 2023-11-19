@@ -115,7 +115,6 @@ int main(int argc, char *argv[])
                     splash.showMessage(QString("Discover directory contents %1").arg(fileInfo.canonicalPath()));
 
                     currentDirModel.reset(new ImageSectionDataContainer(nullptr));
-                    currentDirModel->setDecodingState(DecodingState::Ready);
                     currentDirModel->sortSections(SortField::None, Qt::AscendingOrder);
                     currentDirModel->sortImageItems(SortField::FileName, Qt::AscendingOrder);
                     DirectoryWorker w(currentDirModel.data());
