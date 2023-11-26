@@ -533,7 +533,8 @@ QString ExifWrapper::darkFrameSubtraction()
     {
         if(l == -1)
         {
-            if(d->mExivHandle.getExifTagLong("Exif.Canon.LightingOpt", l, 4))
+            if(d->mExivHandle.getExifTagLong("Exif.Canon.LightingOpt", l, 4) || // Exiv 0.27 and older
+                d->mExivHandle.getExifTagLong("Exif.CanonLiOp.LongExposureNoiseReduction", l))
             {
                 // translate Canon LightingOpt Tags to old value
                 switch(l)
