@@ -7,8 +7,8 @@
 #include "xThreadGuard.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
+#include "LibRawHelper.hpp"
 
-#include <KDCRAW/KDcraw>
 #include <QtDebug>
 #include <QPromise>
 #include <QThreadPool>
@@ -206,21 +206,7 @@ void SmartImageDecoder::init()
         }
         else
         {
-            QString filePath = this->image()->fileInfo().absoluteFilePath();
-
-            // use KDcraw for getting the embedded preview
-            bool ret = KDcrawIface::KDcraw::loadEmbeddedPreview(d->encodedInputFile, filePath);
-
-            if(!ret)
-            {
-                // if the embedded preview loading failed, load half preview instead.
-                // That's slower but it works even for images containing
-                // small (160x120px) or none embedded preview.
-                if(!KDcrawIface::KDcraw::loadHalfPreview(d->encodedInputFile, filePath))
-                {
-                    throw std::runtime_error(Formatter() << "KDcraw failed to open RAW file '" << d->file->fileName().toStdString() << "'");
-                }
-            }
+            LibRawHelper::extractThumbnail(d->encodedInputFile, fileMapped, mapSize);
 
             d->encodedInputBufferPtr = reinterpret_cast<const unsigned char *>(d->encodedInputFile.constData());
             d->encodedInputBufferSize = d->encodedInputFile.size();
