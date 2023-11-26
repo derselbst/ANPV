@@ -7,13 +7,13 @@
 #include "TraceTimer.hpp"
 #include "ANPV.hpp"
 #include "SmartImageDecoder.hpp"
+#include "LibRawHelper.hpp"
 
 #include <QDir>
 #include <QIcon>
 #include <QAbstractFileIconProvider>
 #include <QMetaMethod>
 #include <QTimer>
-#include <KDCRAW/KDcraw>
 #include <mutex>
 
 struct Image::Impl
@@ -425,7 +425,7 @@ QString Image::fileExtension() const
 bool Image::isRaw() const
 {
     const QString formatHint = this->fileExtension();
-    bool isRaw = KDcrawIface::KDcraw::rawFilesList().contains(formatHint);
+    bool isRaw = LibRawHelper::rawFilesList().contains(formatHint);
     return isRaw;
 }
 

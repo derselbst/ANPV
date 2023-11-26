@@ -2,6 +2,7 @@
 #include "LibRawHelper.hpp"
 
 #include "Formatter.hpp"
+#include "rawfiles.h"
 
 // libraw basically include the entire Windoof API, messing up any C++ source code that uses std::min
 #include <libraw.h>
@@ -11,6 +12,7 @@
 #include <libraw_config.h>
 #endif
 
+static const QStringList rawFiles = QString::fromLatin1(raw_file_extentions).remove(QLatin1String("*.")).split(QLatin1Char(' '));
 
 void LibRawHelper::extractThumbnail(QByteArray& encodedThumbnailOut, const void* fileBuf, qint64 buflen)
 {
@@ -58,3 +60,9 @@ void LibRawHelper::extractThumbnail(QByteArray& encodedThumbnailOut, const void*
 
 	loadEmbeddedPreview(encodedThumbnailOut, raw);
 }
+
+const QStringList& LibRawHelper::rawFilesList()
+{
+    return rawFiles;
+}
+

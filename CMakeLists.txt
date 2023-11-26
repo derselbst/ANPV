@@ -108,9 +108,6 @@ find_package(JXL REQUIRED)
 add_subdirectory(libkexiv2)
 include_directories("${CMAKE_BINARY_DIR}/libkexiv2/src")
 
-add_subdirectory(libkdcraw)
-include_directories("${CMAKE_BINARY_DIR}/libkdcraw/src")
-
 
 qt_add_library(anpv-lib STATIC MANUAL_FINALIZATION
 src/widgets/AfPointOverlay.cpp
@@ -200,7 +197,7 @@ icons/oxygen/oxygen.qrc)
 
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg LibRaw::LibRaw PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2 KDcraw)
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg LibRaw::LibRaw PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2)
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 
 qt_add_executable(anpv MANUAL_FINALIZATION "main.cpp" "images/ANPV.rc")
@@ -224,9 +221,6 @@ set_target_properties(anpv anpv-lib
 
 if(WIN32)
   if(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
-    pkg_check_modules ( CMS REQUIRED lcms2 IMPORTED_TARGET GLOBAL )
-    target_link_libraries(KDcraw PUBLIC PkgConfig::CMS) # raw.lib(dcraw_fileio.cpp.obj) : error LNK2019: unresolved external symbol cmsOpenProfileFromFile referenced in function "protected: void __cdecl LibRaw::apply_profile(char const *,char const *)"
-    
     pkg_check_modules ( JASPER REQUIRED jasper IMPORTED_TARGET )
     target_link_libraries(anpv PRIVATE PkgConfig::JASPER) # raw.lib(dcraw_common.cpp.obj) : error LNK2019: unresolved external symbol jas_init referenced in function "protected: void __cdecl LibRaw::redcine_load_raw(void)"
     
