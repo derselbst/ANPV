@@ -142,8 +142,8 @@ struct SectionItem::Impl
                 }
                 else if constexpr(SortCol == SortField::Iso)
                 {
-                    long liso, riso;
-                    liso = riso = std::numeric_limits<long>::max();
+                    int64_t liso, riso;
+                    liso = riso = std::numeric_limits<int64_t>::max();
 
                     lexif->iso(liso);
                     rexif->iso(riso);

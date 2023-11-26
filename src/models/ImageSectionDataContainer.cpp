@@ -190,7 +190,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
             default:
             {
                 double f;
-                long l;
+                int64_t l;
                 QDateTime dt;
                 auto exif = image->exif();
 

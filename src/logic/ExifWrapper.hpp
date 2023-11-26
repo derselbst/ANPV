@@ -50,7 +50,7 @@ public:
     bool exposureTime(long &num, long &den);
 
     QString iso();
-    bool iso(long &num);
+    bool iso(int64_t &num);
 
     QString lens();
 

@@ -27,10 +27,10 @@ struct ExifWrapper::Impl
     int dotsPerMeter(const QString &keyName)
     {
         QString keyVal = QStringLiteral("Exif.Image.") + keyName;
-        long res, val;
+        int64_t res, val;
 
-        if(!mExivHandle.getExifTagLong("Exif.Image.ResolutionUnit", res) ||
-                !mExivHandle.getExifTagLong(keyVal.toLocal8Bit().data(), val))
+        if(!mExivHandle.getExifTagInt64("Exif.Image.ResolutionUnit", res) ||
+                !mExivHandle.getExifTagInt64(keyVal.toLocal8Bit().data(), val))
         {
             return 0;
         }
@@ -244,14 +244,14 @@ QImage ExifWrapper::thumbnail()
 
     if(!image.isNull())
     {
-        long x1, y1, x2, y2;
+        int64_t x1, y1, x2, y2;
 
         constexpr const char *canonThumbKey = "Exif.Canon.ThumbnailImageValidArea";
 
-        if(d->mExivHandle.getExifTagLong(canonThumbKey, x1, 0) &&
-                d->mExivHandle.getExifTagLong(canonThumbKey, x2, 1) &&
-                d->mExivHandle.getExifTagLong(canonThumbKey, y1, 2) &&
-                d->mExivHandle.getExifTagLong(canonThumbKey, y2, 3))
+        if(d->mExivHandle.getExifTagInt64(canonThumbKey, x1, 0) &&
+                d->mExivHandle.getExifTagInt64(canonThumbKey, x2, 1) &&
+                d->mExivHandle.getExifTagInt64(canonThumbKey, y1, 2) &&
+                d->mExivHandle.getExifTagInt64(canonThumbKey, y2, 3))
         {
             // ensure ThumbnailImageValidArea actually specifies a rectangle, i.e. there must be 4 coordinates
             QRect validArea(QPoint(x1, y1), QPoint(x2, y2));
@@ -261,21 +261,21 @@ QImage ExifWrapper::thumbnail()
         {
             constexpr const char *sonyThumbKey = "Exif.Sony1.PreviewImageSize";
 
-            if(d->mExivHandle.getExifTagLong(sonyThumbKey, x1, 0) &&
-                    d->mExivHandle.getExifTagLong(sonyThumbKey, y1, 1))
+            if(d->mExivHandle.getExifTagInt64(sonyThumbKey, x1, 0) &&
+                    d->mExivHandle.getExifTagInt64(sonyThumbKey, y1, 1))
             {
                 // Unfortunately, Sony does not provide an exif tag that specifies the valid area of the
                 // embedded thumbnail. Need to derive it from the size of the preview image instead.
-                const long prevHeight = x1;
-                const long prevWidth = y1;
+                const int64_t prevHeight = x1;
+                const int64_t prevWidth = y1;
 
                 const double scale = prevWidth / image.width();
 
                 // the embedded thumb only needs to be cropped vertically
-                const long validThumbAreaHeight = std::ceil(prevHeight / scale);
-                const long totalHeightOfBlackArea = image.height() - validThumbAreaHeight;
+                const int64_t validThumbAreaHeight = std::ceil(prevHeight / scale);
+                const int64_t totalHeightOfBlackArea = image.height() - validThumbAreaHeight;
                 // black bars on top and bottom should be equal in height
-                const long offsetFromTop = totalHeightOfBlackArea / 2;
+                const int64_t offsetFromTop = totalHeightOfBlackArea / 2;
 
                 const QRect validArea(QPoint(0, offsetFromTop), QSize(image.width(), validThumbAreaHeight));
                 image = image.copy(validArea);
@@ -288,11 +288,11 @@ QImage ExifWrapper::thumbnail()
 
 std::optional<std::tuple<std::vector<AfPoint>, QSize>> ExifWrapper::autoFocusPoints()
 {
-    long afValidPoints, imageWidth, imageHeight;
+    int64_t afValidPoints, imageWidth, imageHeight;
 
-    if(d->mExivHandle.getExifTagLong("Exif.Canon.AFValidPoints",      afValidPoints) &&
-            d->mExivHandle.getExifTagLong("Exif.Canon.AFCanonImageWidth",  imageWidth) &&
-            d->mExivHandle.getExifTagLong("Exif.Canon.AFCanonImageHeight", imageHeight))
+    if(d->mExivHandle.getExifTagInt64("Exif.Canon.AFValidPoints",      afValidPoints) &&
+            d->mExivHandle.getExifTagInt64("Exif.Canon.AFCanonImageWidth",  imageWidth) &&
+            d->mExivHandle.getExifTagInt64("Exif.Canon.AFCanonImageHeight", imageHeight))
     {
         QString model = d->mExivHandle.getExifTagString("Exif.Canon.ModelID");
 
@@ -325,21 +325,21 @@ std::optional<std::tuple<std::vector<AfPoint>, QSize>> ExifWrapper::autoFocusPoi
 
             for(long i = 0; i < afValidPoints; i++)
             {
-                long rectWidth, rectHeight, x, y;
+                int64_t rectWidth, rectHeight, x, y;
 
                 // should be unsigned because bitmasks
-                long foc, sel, dis;
+                int64_t foc, sel, dis;
 
-                if(d->mExivHandle.getExifTagLong("Exif.Canon.AFAreaWidths",    rectWidth,  i) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFAreaHeights",   rectHeight, i) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFXPositions",    x,          i) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFYPositions",    y,          i) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsInFocus", foc,        i / 16) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsSelected", sel,        i / 16) &&
-                        d->mExivHandle.getExifTagLong("Exif.Canon.AFPointsUnusable", dis,        i / 16))
+                if(d->mExivHandle.getExifTagInt64("Exif.Canon.AFAreaWidths",    rectWidth,  i) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFAreaHeights",   rectHeight, i) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFXPositions",    x,          i) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFYPositions",    y,          i) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFPointsInFocus", foc,        i / 16) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFPointsSelected", sel,        i / 16) &&
+                        d->mExivHandle.getExifTagInt64("Exif.Canon.AFPointsUnusable", dis,        i / 16))
                 {
-                    long rectPosX = x + imageWidth / 2 - rectWidth / 2;
-                    long rectPosY = flipY * y + imageHeight / 2 - rectHeight / 2;
+                    int64_t rectPosX = x + imageWidth / 2 - rectWidth / 2;
+                    int64_t rectPosY = flipY * y + imageHeight / 2 - rectHeight / 2;
 
                     QRect rectAF(rectPosX, rectPosY, rectWidth, rectHeight);
 
@@ -467,14 +467,14 @@ QString ExifWrapper::exposureTime()
     }
 }
 
-bool ExifWrapper::iso(long &num)
+bool ExifWrapper::iso(int64_t &num)
 {
-    return d->mExivHandle.getExifTagLong("Exif.Photo.ISOSpeedRatings", num);
+    return d->mExivHandle.getExifTagInt64("Exif.Photo.ISOSpeedRatings", num);
 }
 
 QString ExifWrapper::iso()
 {
-    long i;
+    int64_t i;
 
     if(this->iso(i))
     {
@@ -525,16 +525,16 @@ QDateTime ExifWrapper::dateRecorded()
 
 QString ExifWrapper::darkFrameSubtraction()
 {
-    long l;
+    int64_t l;
 
-    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.NoiseReduction", l) ||
-            d->mExivHandle.getExifTagLong("Exif.CanonFi.NoiseReduction", l)
+    if(d->mExivHandle.getExifTagInt64("Exif.CanonCf.NoiseReduction", l) ||
+            d->mExivHandle.getExifTagInt64("Exif.CanonFi.NoiseReduction", l)
       )
     {
         if(l == -1)
         {
-            if(d->mExivHandle.getExifTagLong("Exif.Canon.LightingOpt", l, 4) || // Exiv 0.27 and older
-                d->mExivHandle.getExifTagLong("Exif.CanonLiOp.LongExposureNoiseReduction", l))
+            if(d->mExivHandle.getExifTagInt64("Exif.Canon.LightingOpt", l, 4) || // Exiv 0.27 and older
+                d->mExivHandle.getExifTagInt64("Exif.CanonLiOp.LongExposureNoiseReduction", l))
             {
                 // translate Canon LightingOpt Tags to old value
                 switch(l)
@@ -578,9 +578,9 @@ QString ExifWrapper::darkFrameSubtraction()
 
 bool ExifWrapper::isMirrorLockupEnabled(bool &isEnabled)
 {
-    long l;
+    int64_t l;
 
-    if(d->mExivHandle.getExifTagLong("Exif.CanonCf.MirrorLockup", l))
+    if(d->mExivHandle.getExifTagInt64("Exif.CanonCf.MirrorLockup", l))
     {
         isEnabled = l != 0;
         return true;
@@ -593,7 +593,7 @@ QString ExifWrapper::formatToString()
 {
     Formatter f;
 
-    long n;
+    int64_t n;
     double r;
     bool b;
     QString s;
