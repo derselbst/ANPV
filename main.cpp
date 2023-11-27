@@ -6,6 +6,7 @@
 #include "CenteredBoxProxyStyle.hpp"
 #include "ImageSectionDataContainer.hpp"
 #include "DirectoryWorker.hpp"
+#include "TomsSplash.hpp"
 
 #include <QApplication>
 #include <QGraphicsScene>
@@ -13,7 +14,6 @@
 #include <QFutureWatcher>
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
-#include <QSplashScreen>
 #include <QScreen>
 #include <QtDebug>
 #include <QFileInfo>
@@ -41,10 +41,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName("derselbst");
     app.setApplicationName("ANPV");
 
-    QSplashScreen splash(QPixmap(":/images/splash.jpg"));
-    splash.show();
+    TomsSplash splash;
 
-    splash.showMessage("Initialize Decoder Factory");
+    splash.showMessage(QStringLiteral("Initialize Decoder Factory"));
     
     // set UI Thread to high prio
     QThread::currentThread()->setPriority(QThread::HighestPriority);
@@ -55,8 +54,8 @@ int main(int argc, char *argv[])
     // create and init DecoderFactory in main thread
     (void)DecoderFactory::globalInstance();
 
-    splash.showMessage("Setting application-wide style");
-
+    splash.showMessage(QStringLiteral("Setting application-wide style"));
+    
     app.setStyle(new CenteredBoxProxyStyle(QStyleFactory::create("Fusion")));
     if (QIcon::themeName().isEmpty())
     {

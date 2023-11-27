@@ -135,6 +135,7 @@ src/widgets/PreviewAllImagesDialog.hpp
 src/widgets/PreviewAllImagesDialog.ui
 src/widgets/ProgressIndicatorHelper.cpp
 src/widgets/ProgressIndicatorHelper.hpp
+src/widgets/TomsSplash.hpp
 src/widgets/ThumbnailListView.cpp
 src/widgets/ThumbnailListView.hpp
 src/widgets/UrlNavigatorWidget.cpp

@@ -1,7 +1,6 @@
 #include "ANPV.hpp"
 
 #include <QWidget>
-#include <QSplashScreen>
 #include <QGuiApplication>
 #include <QApplication>
 #include <QPixmap>
@@ -39,6 +38,7 @@
 #include "MainWindow.hpp"
 #include "WaitCursor.hpp"
 #include "ProgressIndicatorHelper.hpp"
+#include "TomsSplash.hpp"
 
 class MyDisabledFileIconProvider : public QAbstractFileIconProvider
 {
@@ -474,7 +474,7 @@ ANPV::ANPV() : d(std::make_unique<Impl>(this))
     d->drawNoPreviewPixmap();
 }
 
-ANPV::ANPV(QSplashScreen *splash)
+ANPV::ANPV(TomsSplash *splash)
     : d(std::make_unique<Impl>(this))
 {
     QCoreApplication::setOrganizationName("derselbst");
@@ -813,7 +813,7 @@ void ANPV::showThumbnailView()
     d->mainWindow->activateWindow();
 }
 
-void ANPV::showThumbnailView(QSplashScreen *splash)
+void ANPV::showThumbnailView(TomsSplash *splash)
 {
     this->showThumbnailView();
     splash->finish(d->mainWindow.get());

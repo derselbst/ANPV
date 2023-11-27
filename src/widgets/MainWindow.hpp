@@ -11,7 +11,7 @@
 #include "ANPV.hpp"
 
 class Image;
-class QSplashScreen;
+class TomsSplash;
 class SmartImageDecoder;
 class CancellableProgressWidget;
 
@@ -23,7 +23,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QSplashScreen *splash);
+    MainWindow(TomsSplash *splash);
     ~MainWindow() override;
 
     void readSettings();

@@ -13,7 +13,7 @@
 #include "types.hpp"
 
 class MoveFileCommand;
-class QSplashScreen;
+class TomsSplash;
 class QFileSystemModel;
 class QActionGroup;
 class QUndoStack;
@@ -43,7 +43,7 @@ public:
     static void setUrls(QMimeData *mimeData, const QList<QUrl> &localUrls);
 
     ANPV();
-    ANPV(QSplashScreen *splash);
+    ANPV(TomsSplash *splash);
     ~ANPV() override;
 
     QThread *backgroundThread();
@@ -51,7 +51,7 @@ public:
 
     void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> &);
     void showThumbnailView();
-    void showThumbnailView(QSplashScreen *);
+    void showThumbnailView(TomsSplash *);
 
     enum FileOperation { Move, Copy, HardLink, Delete };
     Q_ENUM(FileOperation);

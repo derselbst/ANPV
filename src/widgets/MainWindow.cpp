@@ -1,7 +1,6 @@
 #include "MainWindow.hpp"
 
 #include <QWidget>
-#include <QSplashScreen>
 #include <QGuiApplication>
 #include <QApplication>
 #include <QScreen>
@@ -30,6 +29,7 @@
 #include "WaitCursor.hpp"
 #include "xThreadGuard.hpp"
 #include "ImageSectionDataContainer.hpp"
+#include "TomsSplash.hpp"
 
 
 #include "ui_MainWindow.h"
@@ -680,7 +680,7 @@ struct MainWindow::Impl
     }
 };
 
-MainWindow::MainWindow(QSplashScreen *splash)
+MainWindow::MainWindow(TomsSplash *splash)
     : QMainWindow(), d(std::make_unique<Impl>(this))
 {
     this->setWindowTitle("ANPV");
