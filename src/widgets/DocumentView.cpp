@@ -39,11 +39,14 @@
 #include "WaitCursor.hpp"
 #include "ImageSectionDataContainer.hpp"
 
+constexpr qint64 MaxFovTimerInterval = 600;
+
 struct DocumentView::Impl
 {
     DocumentView *q = nullptr;
 
     QTimer fovChangedTimer;
+    QElapsedTimer decodeTimer;
     std::optional<QTransform> previousFovTransform;
 
     QPointer<QGraphicsScene> scene;
@@ -146,7 +149,7 @@ struct DocumentView::Impl
             // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
             // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
             // cause the timer restart from being until the user has stopped all viewport changes.
-            this->fovChangedTimer.start(600);
+            this->fovChangedTimer.start();
         }
     }
 
@@ -313,6 +316,7 @@ struct DocumentView::Impl
             fut = this->currentImageDecoder->decodeAsync(DecodingState::PreviewImage, Priority::Important, viewportRect.size(), QRect());
         }
 
+        decodeTimer.start();
         this->taskFuture.setFuture(fut);
     }
 
@@ -748,6 +752,7 @@ DocumentView::DocumentView(QWidget *parent)
                 d->debugOverlay1->setPath(*dbg);
                 d->debugOverlay1->setVisible(d->actionShowImageLayout->isChecked());
             }
+            d->fovChangedTimer.setInterval(std::min(MaxFovTimerInterval, d->decodeTimer.elapsed()));
         });
 
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::started, this, [&]()
@@ -785,6 +790,7 @@ DocumentView::DocumentView(QWidget *parent)
     d->createActions();
 
     d->fovChangedTimer.setSingleShot(true);
+    d->fovChangedTimer.setInterval(MaxFovTimerInterval);
     connect(&d->fovChangedTimer, &QTimer::timeout, this, [&]()
     {
         d->onFOVChanged();
