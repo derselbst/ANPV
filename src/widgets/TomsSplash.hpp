@@ -1,5 +1,6 @@
 
 #include <QSplashScreen>
+#include <QStringLiteral>
 
 class TomsSplash : public QSplashScreen
 {
@@ -14,31 +15,31 @@ public:
         constexpr unsigned int len = sizeof(frameFile) / sizeof(frameFile[0]);
         if (currentFrame < len)
         {
-            this->setPixmap(QPixmap(QLatin1String(frameFile[currentFrame++]), "jpg", Qt::NoFormatConversion));
+            this->setPixmap(QPixmap(frameFile[currentFrame++], "jpg", Qt::NoFormatConversion));
         }
         QSplashScreen::showMessage(message, Qt::AlignLeft | Qt::AlignTop);
     }
 
 private:
-    static constexpr const char* frameFile[] =
+    static const inline QString frameFile[] =
     {
-        ":/images/splash/1.jpg",
-        ":/images/splash/2.jpg",
-        ":/images/splash/3.jpg",
-        ":/images/splash/4.jpg",
-        ":/images/splash/5.jpg",
-        ":/images/splash/6.jpg",
-        ":/images/splash/7.jpg",
-        ":/images/splash/8.jpg",
-        ":/images/splash/9.jpg",
-        ":/images/splash/10.jpg",
-        ":/images/splash/11.jpg",
-        ":/images/splash/12.jpg",
-        ":/images/splash/13.jpg",
-        ":/images/splash/14.jpg",
-        ":/images/splash/15.jpg",
-        ":/images/splash/16.jpg",
-        ":/images/splash/17.jpg",
+        QStringLiteral(":/images/splash/1.jpg"),
+        QStringLiteral(":/images/splash/2.jpg"),
+        QStringLiteral(":/images/splash/3.jpg"),
+        QStringLiteral(":/images/splash/4.jpg"),
+        QStringLiteral(":/images/splash/5.jpg"),
+        QStringLiteral(":/images/splash/6.jpg"),
+        QStringLiteral(":/images/splash/7.jpg"),
+        QStringLiteral(":/images/splash/8.jpg"),
+        QStringLiteral(":/images/splash/9.jpg"),
+        QStringLiteral(":/images/splash/10.jpg"),
+        QStringLiteral(":/images/splash/11.jpg"),
+        QStringLiteral(":/images/splash/12.jpg"),
+        QStringLiteral(":/images/splash/13.jpg"),
+        QStringLiteral(":/images/splash/14.jpg"),
+        QStringLiteral(":/images/splash/15.jpg"),
+        QStringLiteral(":/images/splash/16.jpg"),
+        QStringLiteral(":/images/splash/17.jpg"),
     };
 
     unsigned currentFrame = 4;
