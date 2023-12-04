@@ -59,6 +59,7 @@ struct DocumentView::Impl
     QGraphicsPixmapItem *thumbnailPreviewOverlay = nullptr;
 
     QGraphicsPixmapItem *currentPixmapOverlay = nullptr;
+    QGraphicsPixmapItem *previousDecodedPixmapOverlay = nullptr;
 
     QAction *actionShowScrollBars = nullptr;
     QAction* actionShowInfoBox = nullptr;
@@ -723,14 +724,20 @@ DocumentView::DocumentView(QWidget *parent)
     d->thumbnailPreviewOverlay->setZValue(-10);
     d->scene->addItem(d->thumbnailPreviewOverlay);
 
+    d->previousDecodedPixmapOverlay = new QGraphicsPixmapItem;
+    d->previousDecodedPixmapOverlay->setZValue(-9);
+    d->previousDecodedPixmapOverlay->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+    d->previousDecodedPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
+    d->scene->addItem(d->previousDecodedPixmapOverlay);
+
     d->currentPixmapOverlay = new QGraphicsPixmapItem;
-    d->currentPixmapOverlay->setZValue(-9);
+    d->currentPixmapOverlay->setZValue(-8);
     d->currentPixmapOverlay->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
     d->currentPixmapOverlay->setTransformationMode(Qt::SmoothTransformation);
     d->scene->addItem(d->currentPixmapOverlay);
 
     d->smoothPixmapOverlay = new QGraphicsPixmapItem;
-    d->smoothPixmapOverlay->setZValue(-8);
+    d->smoothPixmapOverlay->setZValue(-7);
     d->scene->addItem(d->smoothPixmapOverlay);
 
     d->afPointOverlay = new AfPointOverlay;
@@ -753,6 +760,11 @@ DocumentView::DocumentView(QWidget *parent)
                 d->debugOverlay1->setVisible(d->actionShowImageLayout->isChecked());
             }
             d->fovChangedTimer.setInterval(std::min(MaxFovTimerInterval, d->decodeTimer.elapsed()));
+
+            d->previousDecodedPixmapOverlay->setTransform(d->currentPixmapOverlay->transform(), false);
+            d->previousDecodedPixmapOverlay->setOffset(d->currentPixmapOverlay->offset());
+            d->previousDecodedPixmapOverlay->setPixmap(d->currentPixmapOverlay->pixmap());
+            d->previousDecodedPixmapOverlay->show();
         });
 
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::started, this, [&]()
