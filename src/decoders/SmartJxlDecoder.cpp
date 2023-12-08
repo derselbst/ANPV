@@ -122,7 +122,6 @@ QImage SmartJxlDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
 
     QImage image;
-    this->resetDecodedRoiRect();
     this->decodeInternal(image);
     this->convertColorSpace(image, false);
     this->setDecodingState(DecodingState::FullImage);

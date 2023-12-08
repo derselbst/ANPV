@@ -307,6 +307,8 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
     d->roiRect = roiRect;
     d->promise.reset(new QPromise<DecodingState>());
     d->promise->setProgressRange(0, 100);
+    // Stop the image update rect timer now, before starting decoding, to avoid a race condition due to delayed events if being called from the decoder worker thread
+    this->resetDecodedRoiRect();
     QFuture<DecodingState> fut = d->promise->future();
 
     // The threadpool will take over this instance after calling start. From there on this instance must be seen as deleted and no further calls must be made

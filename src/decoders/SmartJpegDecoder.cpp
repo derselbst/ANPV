@@ -210,7 +210,6 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     image.setOffset(currentResToFullResTrafo.mapRect(scaledRoi).topLeft());
 
     this->image()->setDecodedImage(image, currentResToFullResTrafo);
-    this->resetDecodedRoiRect();
 
     bufferSetup.resize(image.height() / cinfo.rec_outbuf_height);
 

@@ -476,7 +476,6 @@ QImage SmartTiffDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     QTransform toFullScaleTransform = scaleTrafo.inverted();
     this->image()->setDecodedImage(image, toFullScaleTransform);
-    this->resetDecodedRoiRect();
     d->debugTiffLayout.clear();
     this->decodeInternal(imagePageToDecode, image, mappedRoi, toFullScaleTransform, desiredResolution, false);
     this->convertColorSpace(image, false, toFullScaleTransform);
