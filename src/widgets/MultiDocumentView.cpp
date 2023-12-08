@@ -75,18 +75,15 @@ struct MultiDocumentView::Impl
     {
         WaitCursor w;
 
-        if(ANPV::globalInstance()->currentDir().isEmpty())
-        {
-            auto *dv = qobject_cast<DocumentView *>(this->tw->currentWidget());
+        bool previouslyVisible = ANPV::globalInstance()->showThumbnailView();
 
-            if(dv)
-            {
-                QFileInfo inf = dv->currentFile();
-                ANPV::globalInstance()->setCurrentDir(inf.dir().absolutePath());
-            }
+        auto* dv = qobject_cast<DocumentView*>(this->tw->currentWidget());
+        if (dv)
+        {
+            QFileInfo inf = dv->currentFile();
+            ANPV::globalInstance()->setCurrentDir(inf.dir().absolutePath(), !previouslyVisible);
         }
 
-        ANPV::globalInstance()->showThumbnailView();
         q->close();
     }
 };

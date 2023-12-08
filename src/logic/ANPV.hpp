@@ -50,7 +50,7 @@ public:
     QSettings &settings();
 
     void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> &);
-    void showThumbnailView();
+    bool showThumbnailView();
     void showThumbnailView(TomsSplash *);
 
     enum FileOperation { Move, Copy, HardLink, Delete };

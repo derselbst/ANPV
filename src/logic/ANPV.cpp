@@ -804,13 +804,16 @@ ProgressIndicatorHelper *ANPV::spinningIconHelper()
     return d->spinningIconHelper;
 }
 
-void ANPV::showThumbnailView()
+bool ANPV::showThumbnailView()
 {
     xThreadGuard g(this);
+    bool wasVisible = d->mainWindow->isVisible();
     d->mainWindow->show();
     d->mainWindow->setWindowState((d->mainWindow->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     d->mainWindow->raise();
     d->mainWindow->activateWindow();
+
+    return wasVisible;
 }
 
 void ANPV::showThumbnailView(TomsSplash *splash)
