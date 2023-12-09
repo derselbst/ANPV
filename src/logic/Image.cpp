@@ -535,7 +535,7 @@ void Image::updatePreviewImage(const QRect &r)
     {
         // reset and stop timer
         d->cachedUpdateRect = QRect();
-        QMetaObject::invokeMethod(d->updateRectTimer, &QTimer::stop, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(d->updateRectTimer, &QTimer::stop, Qt::AutoConnection);
         return;
     }
 
@@ -551,7 +551,7 @@ void Image::updatePreviewImage(const QRect &r)
         {
             d->updateRectTimer->start();
         }
-    }, Qt::QueuedConnection);
+    }, Qt::AutoConnection);
 }
 
 void Image::connectNotify(const QMetaMethod &signal)
