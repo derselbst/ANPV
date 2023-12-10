@@ -119,6 +119,9 @@ struct DocumentView::Impl
         currentPixmapOverlay->setScale(1);
         currentPixmapOverlay->hide();
 
+        previousDecodedPixmapOverlay->setPixmap(QPixmap());
+        previousDecodedPixmapOverlay->hide();
+
         thumbnailPreviewOverlay->setPixmap(QPixmap());
         thumbnailPreviewOverlay->hide();
 
