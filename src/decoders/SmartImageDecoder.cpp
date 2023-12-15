@@ -339,6 +339,10 @@ void SmartImageDecoder::run()
         {
             this->setDecodingState(DecodingState::Cancelled);
         }
+        catch (const std::exception& e)
+        {
+            // already handled in open() or decode(), ignore
+        }
         catch(...)
         {
             Formatter f;
