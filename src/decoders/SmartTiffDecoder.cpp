@@ -15,11 +15,12 @@ struct PageInfo
 {
     uint32_t width;
     uint32_t height;
-    uint16_t config;
-    // bits per sample
-    uint16_t bps;
-    // sample per pixel
-    uint16_t spp;
+    // default config is chunky
+    uint16_t config = 1;
+    // bits per sample, default is bool??
+    uint16_t bps = 1;
+    // sample per pixel, default is gray
+    uint16_t spp = 1;
 
     size_t nPix()
     {
@@ -217,12 +218,10 @@ struct SmartTiffDecoder::Impl
                 throw std::runtime_error("Error while reading TIFF dimensions");
             }
 
-            if(!TIFFGetField(tiff, TIFFTAG_PLANARCONFIG, &info.config) ||
-                    !TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &info.bps) ||
-                    !TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &info.spp))
-            {
-                throw std::runtime_error("Error while reading TIFF tags");
-            }
+            // these tags are optional, they may or may not be available
+            TIFFGetField(tiff, TIFFTAG_PLANARCONFIG, &info.config);
+            TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &info.bps);
+            TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &info.spp);
         }
         while(TIFFReadDirectory(tiff));
 
@@ -514,12 +513,9 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     uint16_t samplesPerPixel = d->pageInfos[imagePageToDecode].spp;
     uint16_t bitsPerSample = d->pageInfos[imagePageToDecode].bps;
 
-    uint16_t comp;
-
-    if(!TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp))
-    {
-        throw std::runtime_error("Failed to read TIFFTAG_COMPRESSION");
-    }
+    // default is no compression
+    uint16_t comp = 1;
+    TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
 
     if(!TIFFIsCODECConfigured(comp))
     {
@@ -609,6 +605,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
 
         if(!TIFFGetField(d->tiff, TIFFTAG_ROWSPERSTRIP, &rowsperstrip))
         {
+            // intentionally fail and do not rely on the default value here, to get a predetermined breaking point for e.g. Canon RAWs
             throw std::runtime_error("Failed to read RowsPerStip. Not a TIFF file?");
         }
 
