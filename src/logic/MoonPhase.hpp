@@ -8,6 +8,6 @@ class MoonPhase
     enum { Full, Waning, Waxing, New };
 
 public:
-    static int fromDateTime(const QDateTime &t);
-    static QString formatToString(int phase);
+    static double fromDateTime(const QDateTime &t);
+    static QString formatToString(double phase);
 };

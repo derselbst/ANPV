@@ -644,11 +644,11 @@ QString ExifWrapper::formatToString()
 
     if(dt.isValid())
     {
-        int phase = MoonPhase::fromDateTime(dt);
+        double phase = MoonPhase::fromDateTime(dt);
         f << "<br>Originally recorded on:<br>"
           << dt.toString("yyyy-MM-dd (dddd)<br>").toStdString()
           << dt.toString("hh:mm:ss<br>").toStdString()
-          << MoonPhase::formatToString(phase).toStdString() << " (" << phase << "%)";
+          << MoonPhase::formatToString(phase).toStdString();
     }
 
     return QString(f.str().c_str());
