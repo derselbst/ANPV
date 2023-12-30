@@ -9,6 +9,6 @@ class MoonPhase
 
 public:
     static int fromDateTime(const QDateTime &t);
-    static double calculateBrightness(int phase);
+    static int calculateBrightness(int phase);
     static QString formatToString(int phase);
 };

@@ -8,7 +8,7 @@ add_dependencies(check buildtests)
 
 
 macro ( ADD_ANPV_TEST _test )
-    ADD_EXECUTABLE(${_test} ${_test}.cpp )
+    ADD_EXECUTABLE(${_test} ${_test}.cpp ${_test}.hpp )
     
     # only build this unit test when explicitly requested by "make check"
     set_target_properties(${_test} PROPERTIES EXCLUDE_FROM_ALL TRUE)

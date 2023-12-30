@@ -9,7 +9,7 @@ int MoonPhase::fromDateTime(const QDateTime &t)
     constexpr double MeanSynodicMonth = 29.530588861; // 29.53058867; // 
     constexpr double cycle = /*std::floor*/(MeanSynodicMonth * 86400);
 
-    static const QDateTime historicFullMoon(QDate(1999, 12, 22), QTime(18, 31, 18));
+    static const QDateTime historicFullMoon(QDate(2020, 4, 8), QTime(4, 35, 35));
     static const qint64 historicFullMoonSec = historicFullMoon.toSecsSinceEpoch();
 
     qint64 now = t.toSecsSinceEpoch();
@@ -20,15 +20,15 @@ int MoonPhase::fromDateTime(const QDateTime &t)
     return static_cast<int>(phase);
 }
 
-double MoonPhase::calculateBrightness(int phase)
+int MoonPhase::calculateBrightness(int phase)
 {
     double brightness = 0.0;
 
-    if (phase <= 2 || 98 <= phase)
+    if (phase <= 3 || 97 <= phase)
     {
         brightness = 100.0; // Vollmond
     }
-    else if (2 < phase && phase < 48)
+    else if (3 < phase && phase < 48)
     {
         brightness = 50.0 + (48 - phase) * 50.0 / 46.0; // Abnehmender Mond
     }
@@ -41,16 +41,16 @@ double MoonPhase::calculateBrightness(int phase)
         brightness = 50.0 + (phase - 52) * 50.0 / 46.0; // Zunehmender Mond
     }
 
-    return brightness;
+    return static_cast<int>(brightness + 0.5);
 }
 
 QString MoonPhase::formatToString(int phase)
 {
-    if(phase <= 2 || 98 <= phase)
+    if(phase <= 3 || 97 <= phase)
     {
         return "Full Moon";
     }
-    else if(2 < phase && phase < 48)
+    else if(3 < phase && phase < 48)
     {
         return "Waning Moon";
     }
