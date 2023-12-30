@@ -4,50 +4,36 @@
 #include <cmath>
 
 
-double MoonPhase::fromDateTime(const QDateTime &t)
+int MoonPhase::fromDateTime(const QDateTime &t)
 {
-    constexpr double MeanSynodicMonth = 29.53058867;
+    static const QDateTime historicFullMoon(QDate(1999, 12, 22), QTime(18, 31, 18));
+    static const qint64 historicFullMoonSec = historicFullMoon.toSecsSinceEpoch();
 
-    auto day = t.date().day();
-    auto month = t.date().month();
-    auto year = t.date().year();
+    static const double cycle = std::floor(29.530588861 * 86400);
 
-    // Umwandlung des Datums in Julianisches Datum
-    int jd = day - 32075 + 1461 * (year + 4800 + (month - 14) / 12) / 4 + 367 * (month - 2 - (month - 14) / 12 * 12) / 12 - 3 * ((year + 4900 + (month - 14) / 12) / 100) / 4;
+    qint64 now = t.toSecsSinceEpoch();
 
-    // Berechnung der Mondphase (simplifizierte Formel)
-    double phase = jd - 2451550.1;
-    phase = phase - std::floor(phase / MeanSynodicMonth) * MeanSynodicMonth;
+    auto phase = std::round((((now - historicFullMoonSec) / cycle) - floor((now - historicFullMoonSec) / cycle)) * 100);
 
-    return phase;
+    return static_cast<int>(phase);
 }
 
-QString MoonPhase::formatToString(double phase)
+QString MoonPhase::formatToString(int phase)
 {
-    // Berechnung der relativen Helligkeit
-    double brightness = 0;
-    QString phaseName;
-
-    if (phase < 1 || phase >= 29)
+    if(phase <= 2 || 98 <= phase)
     {
-        phaseName = QStringLiteral("New Moon (%1%)");
-        brightness = 0;
+        return "Full Moon";
     }
-    else if (phase < 7.4)
+    else if(2 < phase && phase < 48)
     {
-        phaseName = QStringLiteral("Waxing Moon (%1%)");
-        brightness = phase / 7.4 * 50;
+        return "Waning Moon";
     }
-    else if (phase < 22.1)
+    else if(48 <= phase && phase <= 52)
     {
-        phaseName = QStringLiteral("Full Moon (%1%)");
-        brightness = (22.1 - phase) / 14.7 * 50 + 50;
+        return "New Moon";
     }
     else
     {
-        phaseName = QStringLiteral("Waning Moon (%1%)");
-        brightness = (29 - phase) / 7.4 * 50;
+        return "Waxing Moon";
     }
-
-    return phaseName.arg(QString::number(static_cast<long>(brightness+0.5)));
 }
