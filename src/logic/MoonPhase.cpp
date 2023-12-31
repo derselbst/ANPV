@@ -30,7 +30,7 @@ int MoonPhase::calculateBrightness(int phase)
     }
     else if (3 < phase && phase < 48)
     {
-        brightness = 50.0 + (48 - phase) * 50.0 / 46.0; // Abnehmender Mond
+        brightness = (48 - phase) * 100.0 / 46.0; // Abnehmender Mond
     }
     else if (48 <= phase && phase <= 52)
     {
@@ -38,7 +38,7 @@ int MoonPhase::calculateBrightness(int phase)
     }
     else
     {
-        brightness = 50.0 + (phase - 52) * 50.0 / 46.0; // Zunehmender Mond
+        brightness = (phase - 52) * 100.0 / 46.0; // Zunehmender Mond
     }
 
     return static_cast<int>(brightness + 0.5);

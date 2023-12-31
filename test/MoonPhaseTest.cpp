@@ -86,41 +86,41 @@ void MoonPhaseTest::testPhase()
     moonTime = QDateTime(QDate(1999, 12, 29), QTime(18, 0, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaningMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 77);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 54);
 
     moonTime = QDateTime(QDate(2022, 06, 21), QTime(05, 10, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaningMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 77);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 54);
 
     moonTime = QDateTime(QDate(2022, 07, 20), QTime(16, 18, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaningMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 78);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 57);
 
 
     // Test Waxing Moon
     moonTime = QDateTime(QDate(2000, 1, 13), QTime(18, 0, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaxingMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 74);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 48);
 
     moonTime = QDateTime(QDate(2022, 7, 7), QTime(04, 14, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaxingMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 77);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 54);
 
     // AAAD0551
     moonTime = QDateTime(QDate(2020, 6, 26), QTime(23, 15, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaxingMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 70);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 39);
 
     // AAAE2137
     moonTime = QDateTime(QDate(2020, 9, 19), QTime(20, 54, 0));
     phase = MoonPhase::fromDateTime(moonTime);
     verifyWaxingMoon(phase);
-    QCOMPARE(MoonPhase::calculateBrightness(phase), 57);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 13);
 
     // historic full moon
     moonTime = QDateTime(QDate(2023, 6, 4), QTime(5, 42, 0));
@@ -133,4 +133,17 @@ void MoonPhaseTest::testPhase()
     phase = MoonPhase::fromDateTime(moonTime);
     verifyFullMoon(phase);
     QCOMPARE(MoonPhase::calculateBrightness(phase), 100);
+
+
+    // half moon waning
+    moonTime = QDateTime(QDate(2023, 5, 12), QTime(20, 0, 0));
+    phase = MoonPhase::fromDateTime(moonTime);
+    verifyWaningMoon(phase);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 50);
+
+    // half moon waxing
+    moonTime = QDateTime(QDate(2023, 5, 27), QTime(13, 0, 0));
+    phase = MoonPhase::fromDateTime(moonTime);
+    verifyWaxingMoon(phase);
+    QCOMPARE(MoonPhase::calculateBrightness(phase), 50);
 }
