@@ -4,50 +4,62 @@
 #include <cmath>
 
 
-double MoonPhase::fromDateTime(const QDateTime &t)
+int MoonPhase::fromDateTime(const QDateTime &t)
 {
-    constexpr double MeanSynodicMonth = 29.53058867;
+    constexpr double MeanSynodicMonth = 29.530588861; // 29.53058867; // 
+    constexpr double cycle = /*std::floor*/(MeanSynodicMonth * 86400);
 
-    auto day = t.date().day();
-    auto month = t.date().month();
-    auto year = t.date().year();
+    static const QDateTime historicFullMoon(QDate(2020, 4, 8), QTime(4, 35, 35));
+    static const qint64 historicFullMoonSec = historicFullMoon.toSecsSinceEpoch();
 
-    // Umwandlung des Datums in Julianisches Datum
-    int jd = day - 32075 + 1461 * (year + 4800 + (month - 14) / 12) / 4 + 367 * (month - 2 - (month - 14) / 12 * 12) / 12 - 3 * ((year + 4900 + (month - 14) / 12) / 100) / 4;
+    qint64 now = t.toSecsSinceEpoch();
 
-    // Berechnung der Mondphase (simplifizierte Formel)
-    double phase = jd - 2451550.1;
-    phase = phase - std::floor(phase / MeanSynodicMonth) * MeanSynodicMonth;
+    auto phase = ((((now - historicFullMoonSec) / cycle) - floor((now - historicFullMoonSec) / cycle)) * 100);
+    phase = std::round(phase);
 
-    return phase;
+    return static_cast<int>(phase);
 }
 
-QString MoonPhase::formatToString(double phase)
+int MoonPhase::calculateBrightness(int phase)
 {
-    // Berechnung der relativen Helligkeit
-    double brightness = 0;
-    QString phaseName;
+    double brightness = 0.0;
 
-    if (phase < 1 || phase >= 29)
+    if (phase <= 3 || 97 <= phase)
     {
-        phaseName = QStringLiteral("New Moon (%1%)");
-        brightness = 0;
+        brightness = 100.0; // Vollmond
     }
-    else if (phase < 7.4)
+    else if (3 < phase && phase < 48)
     {
-        phaseName = QStringLiteral("Waxing Moon (%1%)");
-        brightness = phase / 7.4 * 50;
+        brightness = (48 - phase) * 100.0 / 46.0; // Abnehmender Mond
     }
-    else if (phase < 22.1)
+    else if (48 <= phase && phase <= 52)
     {
-        phaseName = QStringLiteral("Full Moon (%1%)");
-        brightness = (22.1 - phase) / 14.7 * 50 + 50;
+        brightness = 0.0; // Neumond
     }
     else
     {
-        phaseName = QStringLiteral("Waning Moon (%1%)");
-        brightness = (29 - phase) / 7.4 * 50;
+        brightness = (phase - 52) * 100.0 / 46.0; // Zunehmender Mond
     }
 
-    return phaseName.arg(QString::number(static_cast<long>(brightness+0.5)));
+    return static_cast<int>(brightness + 0.5);
+}
+
+QString MoonPhase::formatToString(int phase)
+{
+    if(phase <= 3 || 97 <= phase)
+    {
+        return "Full Moon";
+    }
+    else if(3 < phase && phase < 48)
+    {
+        return "Waning Moon";
+    }
+    else if(48 <= phase && phase <= 52)
+    {
+        return "New Moon";
+    }
+    else
+    {
+        return "Waxing Moon";
+    }
 }
