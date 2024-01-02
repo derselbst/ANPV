@@ -797,7 +797,7 @@ bool MainWindow::event(QEvent *evt)
         }
     }
 
-    return QWidget::event(evt);
+    return QMainWindow::event(evt);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -878,6 +878,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
         }
     }
 
-    return QObject::eventFilter(watched, event);
+    return QMainWindow::eventFilter(watched, event);
 }
 
