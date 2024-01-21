@@ -48,6 +48,7 @@ public slots:
     void onCheckStateChanged(Image *img, int state, int old);
 
 signals:
+    void imageAboutToBeChanged(QSharedPointer<Image>);
     void imageChanged(QSharedPointer<Image>);
 
 protected:

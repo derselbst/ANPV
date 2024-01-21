@@ -145,6 +145,13 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
     {
         DocumentView *dv = new DocumentView(this);
 
+        connect(dv, &DocumentView::imageAboutToBeChanged, this,
+            [=](QSharedPointer<Image> img)
+            {
+                // disconnect Image::thumbnailChanged signal
+                img->disconnect(this);
+            });
+
         connect(dv, &DocumentView::imageChanged, this,
                 [ = ](QSharedPointer<Image> img)
         {
@@ -155,27 +162,42 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
                 QString text = img->fileInfo().fileName();
                 d->tw->setTabText(idx, text);
 
-                // The image might not yet have a thumbnail
-                connect(img.get(), &Image::thumbnailChanged, this,
-                    [=](Image* sender, QImage thumb)
-                    {
-                        if (!thumb.isNull())
-                        {
-                            QPixmap pix = sender->thumbnailTransformed(d->tw->iconSize().height());
-                            d->tw->setTabIcon(idx, pix);
-                            // update title and icon of window, if this Image is the one currently active
-                            if (d->tw->currentIndex() == idx)
-                            {
-                                this->setWindowIcon(pix);
-                            }
-                        }
-
-                    }, Qt::SingleShotConnection);
-
-                // update title and icon of window, if this Image is the one currently active
-                if (d->tw->currentIndex() == idx)
+                QImage thumb = img->thumbnail();
+                if (!thumb.isNull())
                 {
-                    this->setWindowTitle(text);
+                    QPixmap pix = img->thumbnailTransformed(d->tw->iconSize().height());
+                    d->tw->setTabIcon(idx, pix);
+
+                    // update title and icon of window, if this Image is the one currently active
+                    if (d->tw->currentIndex() == idx)
+                    {
+                        this->setWindowTitle(text);
+                        this->setWindowIcon(pix);
+                    }
+                }
+                else
+                {
+                    // The image might not yet have a thumbnail
+                    connect(img.get(), &Image::thumbnailChanged, this,
+                        [=](Image* sender, QImage thumb)
+                        {
+                            if (!thumb.isNull())
+                            {
+                                QPixmap pix = sender->thumbnailTransformed(d->tw->iconSize().height());
+                                d->tw->setTabIcon(idx, pix);
+                                // update title and icon of window, if this Image is the one currently active
+                                if (d->tw->currentIndex() == idx)
+                                {
+                                    this->setWindowIcon(pix);
+                                }
+                            }
+                        });
+
+                    // update title and icon of window, if this Image is the one currently active
+                    if (d->tw->currentIndex() == idx)
+                    {
+                        this->setWindowTitle(text);
+                    }
                 }
             }
         });

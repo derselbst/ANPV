@@ -1089,6 +1089,7 @@ void DocumentView::loadImage(QSharedPointer<Image> image)
 
 void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder> &dec)
 {
+    emit this->imageAboutToBeChanged(d->owningRefToImage);
     d->clearScene();
     d->currentImageDecoder = dec;
     d->owningRefToImage = dec->image();
