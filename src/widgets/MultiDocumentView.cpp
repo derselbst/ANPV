@@ -150,15 +150,32 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
         {
             int idx = d->tw->indexOf(dv);
 
-            if(idx >= 0)
+            if (idx >= 0)
             {
-                d->tw->setTabIcon(idx, img->thumbnailTransformed(d->tw->iconSize().height()));
-                d->tw->setTabText(idx, img->fileInfo().fileName());
+                QString text = img->fileInfo().fileName();
+                d->tw->setTabText(idx, text);
+
+                // The image might not yet have a thumbnail
+                connect(img.get(), &Image::thumbnailChanged, this,
+                    [=](Image* sender, QImage thumb)
+                    {
+                        if (!thumb.isNull())
+                        {
+                            QPixmap pix = sender->thumbnailTransformed(d->tw->iconSize().height());
+                            d->tw->setTabIcon(idx, pix);
+                            // update title and icon of window, if this Image is the one currently active
+                            if (d->tw->currentIndex() == idx)
+                            {
+                                this->setWindowIcon(pix);
+                            }
+                        }
+
+                    }, Qt::SingleShotConnection);
 
                 // update title and icon of window, if this Image is the one currently active
-                if(d->tw->currentIndex() == idx)
+                if (d->tw->currentIndex() == idx)
                 {
-                    d->onCurrentTabChanged(idx);
+                    this->setWindowTitle(text);
                 }
             }
         });
