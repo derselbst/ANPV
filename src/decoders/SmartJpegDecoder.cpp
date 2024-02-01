@@ -70,6 +70,59 @@ struct SmartJpegDecoder::Impl
 
         self->q->setDecodingMessage(buffer);
     }
+
+    J_COLOR_SPACE determineJpegOutputFormat(J_COLOR_SPACE input)
+    {
+        switch (input)
+        {
+        case JCS_GRAYSCALE:
+        case JCS_RGB:
+        case JCS_EXT_RGB:
+        case JCS_EXT_RGBX:
+        case JCS_EXT_BGR:
+        case JCS_EXT_BGRX:
+        case JCS_EXT_XBGR:
+        case JCS_EXT_XRGB:
+        case JCS_EXT_RGBA:
+        case JCS_EXT_BGRA:
+        case JCS_EXT_ABGR:
+        case JCS_EXT_ARGB:
+        case JCS_RGB565:
+            return JCS_EXT_BGRX;
+
+        /* JCS_YCbCr, JCS_CMYK, JCS_YCCK */
+        default:
+            return input;
+        }
+    }
+
+    QImage::Format determineQImageFormat(J_COLOR_SPACE input)
+    {
+        switch (input)
+        {
+        case JCS_GRAYSCALE:
+        case JCS_RGB:
+        case JCS_EXT_RGB:
+        case JCS_EXT_RGBX:
+        case JCS_EXT_BGR:
+        case JCS_EXT_BGRX:
+        case JCS_EXT_XBGR:
+        case JCS_EXT_XRGB:
+        case JCS_EXT_RGBA:
+        case JCS_EXT_BGRA:
+        case JCS_EXT_ABGR:
+        case JCS_EXT_ARGB:
+        case JCS_RGB565:
+            return QImage::Format_ARGB32;
+
+        case JCS_CMYK:
+            return QImage::Format_RGBA8888;
+
+        /* JCS_YCbCr, JCS_YCCK */
+        default:
+            throw std::logic_error("case not implemented for JCS_YCbCr / JCS_YCCK");
+        }
+    }
 };
 
 SmartJpegDecoder::SmartJpegDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
@@ -124,7 +177,7 @@ void SmartJpegDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
 
     // set overall decompression parameters
     cinfo.buffered_image = true; /* select buffered-image mode */
-    cinfo.out_color_space = JCS_EXT_BGRX;
+    cinfo.out_color_space = d->determineJpegOutputFormat(cinfo.out_color_space /*do not use jpeg_color_space, out_color_space is prepopulated by libjpeg */);
 
     this->setDecodingMessage("Calculating output dimensions");
 
@@ -204,7 +257,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     const JDIMENSION lastScanlineToDecode = scaledRoi.bottom();
     Q_ASSERT(lastScanlineToDecode <= cinfo.output_height);
 
-    image = this->allocateImageBuffer(scaledRoi.width(), scaledRoi.height(), QImage::Format_ARGB32);
+    image = this->allocateImageBuffer(scaledRoi.width(), scaledRoi.height(), d->determineQImageFormat(cinfo.out_color_space));
     auto *dataPtrBackup = image.constBits();
     currentResToFullResTrafo = fullResToCurrentRes.inverted();
     image.setOffset(currentResToFullResTrafo.mapRect(scaledRoi).topLeft());
