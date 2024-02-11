@@ -77,27 +77,13 @@ int main(int argc, char *argv[])
         {
             QString arg = QString::fromLocal8Bit(argv[1]);
             QFileInfo info(arg);
-            if (info.exists())
+            if (info.exists() && info.isDir())
             {
-                if (info.isDir())
-                {
-                    anpv.setCurrentDir(info.absoluteFilePath());
-                    anpv.showThumbnailView(&splash);
-                    break;
-                }
-                else if (info.isFile())
-                {
-                    // fallthrough
-                }
+                anpv.setCurrentDir(info.absoluteFilePath());
+                anpv.showThumbnailView(&splash);
+                break;
             }
-            else
-            {
-                Formatter f;
-                f << "Path '" << argv[1] << "' not found";
-                QMessageBox::critical(nullptr, "ANPV", f.str().c_str());
-                qCritical() << f.str().c_str();
-                return -1;
-            }
+            // else
             [[fallthrough]];
         }
         default:
@@ -108,6 +94,15 @@ int main(int argc, char *argv[])
             for (int i = 1; i < argc; i++)
             {
                 QFileInfo fileInfo(QString::fromLocal8Bit(argv[i]));
+
+                if (!fileInfo.exists())
+                {
+                    Formatter f;
+                    f << "Path '" << argv[i] << "' not found";
+                    QMessageBox::critical(nullptr, "ANPV", f.str().c_str());
+                    qCritical() << f.str().c_str();
+                    return -1;
+                }
 
                 if (currentDirModel == nullptr || fileInfo.canonicalPath() != prevFileInfo.canonicalPath())
                 {
@@ -123,6 +118,11 @@ int main(int argc, char *argv[])
                 }
 
                 auto emplacedImage = AbstractListItem::imageCast(currentDirModel->getItemByLinearIndex(currentDirModel->getLinearIndexOfItem(fileInfo)));
+                if (emplacedImage.isNull())
+                {
+                    throw std::logic_error("This shouldn't happen: emplacedImage is null!");
+                }
+
                 imagesWithFileModel.push_back({ emplacedImage, currentDirModel });
                 prevFileInfo = fileInfo;
             }
