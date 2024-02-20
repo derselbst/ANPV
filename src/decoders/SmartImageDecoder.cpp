@@ -388,7 +388,8 @@ void SmartImageDecoder::decode(DecodingState targetState, QSize desiredResolutio
                 Q_ASSERT(this->image()->decodedImage().constBits() == decodedImg.constBits());
 
                 // if thumbnail is still null and we've decoded not just a part of the image
-                if(this->image()->thumbnail().isNull() && (!roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect())))
+                bool fullImageIsDecoded = (decodedImg.size() == this->image()->fullResolutionRect().size() || !roiRect.isValid() || roiRect.contains(this->image()->fullResolutionRect()));
+                if(this->image()->thumbnail().isNull() && fullImageIsDecoded)
                 {
                     QSize thumbnailSize;
                     static const QSize thumbnailSizeMax(ANPV::MaxIconHeight, ANPV::MaxIconHeight);
