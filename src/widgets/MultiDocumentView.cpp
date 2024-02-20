@@ -162,17 +162,17 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
                 QString text = img->fileInfo().fileName();
                 d->tw->setTabText(idx, text);
 
+                QPixmap icon = img->thumbnailTransformed(d->tw->iconSize().height());
                 QImage thumb = img->thumbnail();
                 if (!thumb.isNull())
                 {
-                    QPixmap pix = img->thumbnailTransformed(d->tw->iconSize().height());
-                    d->tw->setTabIcon(idx, pix);
+                    d->tw->setTabIcon(idx, icon);
 
                     // update title and icon of window, if this Image is the one currently active
                     if (d->tw->currentIndex() == idx)
                     {
                         this->setWindowTitle(text);
-                        this->setWindowIcon(pix);
+                        this->setWindowIcon(icon);
                     }
                 }
                 else
@@ -193,10 +193,14 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
                             }
                         });
 
+                    d->tw->setTabIcon(idx, icon);
+
                     // update title and icon of window, if this Image is the one currently active
                     if (d->tw->currentIndex() == idx)
                     {
                         this->setWindowTitle(text);
+                        // this will set the "no thumbnail" thumbnail until a real thumbnail has been generated
+                        this->setWindowIcon(icon);
                     }
                 }
             }
