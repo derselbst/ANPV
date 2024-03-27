@@ -180,7 +180,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
         case JXL_DEC_COLOR_ENCODING:
             // Get the ICC color profile of the pixel data
             ret = JxlDecoderGetICCProfileSize(d->djxl.get(),
-#if JPEGXL_NUMERIC_VERSION < JPEGXL_COMPUTE_NUMERIC_VERSION(1,0,0)
+#if JPEGXL_NUMERIC_VERSION < JPEGXL_COMPUTE_NUMERIC_VERSION(0,10,0)
                                               nullptr /* unused */,
 #endif
                                               JXL_COLOR_PROFILE_TARGET_ORIGINAL, &buffer_size);
@@ -192,7 +192,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
 
             icc_profile.resize(buffer_size);
             ret = JxlDecoderGetColorAsICCProfile(d->djxl.get(),
-#if JPEGXL_NUMERIC_VERSION < JPEGXL_COMPUTE_NUMERIC_VERSION(1,0,0)
+#if JPEGXL_NUMERIC_VERSION < JPEGXL_COMPUTE_NUMERIC_VERSION(0,10,0)
                                                  nullptr /* unused */,
 #endif
                                                  JXL_COLOR_PROFILE_TARGET_ORIGINAL, icc_profile.data(), icc_profile.size());
