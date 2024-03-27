@@ -40,6 +40,7 @@ class Image : public QObject, public AbstractListItem
     friend class SmartJxlDecoder;
     friend class SmartPngDecoder;
     friend class SmartTiffDecoder;
+    friend class MangoDecoder;
     friend class MySleepyImageDecoder;
 
 public:

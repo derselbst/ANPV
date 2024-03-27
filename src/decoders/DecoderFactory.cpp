@@ -6,6 +6,7 @@
 #include "SmartPngDecoder.hpp"
 #include "SmartTiffDecoder.hpp"
 #include "SmartJxlDecoder.hpp"
+#include "MangoDecoder.hpp"
 #include "DocumentView.hpp"
 #include "Image.hpp"
 
@@ -118,14 +119,16 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPoint
         {
             return std::make_unique<SmartTiffDecoder>(image);
         }
-        else if(format == "png")
-        {
-            return std::make_unique<SmartPngDecoder>(image);
-        }
-        else if(format == "jxl")
-        {
-            return std::make_unique<SmartJxlDecoder>(image);
-        }
+        // else if(format == "png")
+        // {
+        //     return std::make_unique<SmartPngDecoder>(image);
+        // }
+        // else if(format == "jxl")
+        // {
+        //     return std::make_unique<SmartJxlDecoder>(image);
+        // }
+        
+        return std::make_unique<MangoDecoder>(image);
     }
 
     return nullptr;

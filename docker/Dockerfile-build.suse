@@ -1,4 +1,4 @@
-FROM opensuse/tumbleweed
+FROM opensuse/leap:15.5
 
 RUN zypper refresh
 
@@ -13,3 +13,4 @@ RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imagefo
 RUN zypper install --no-recommends -y sudo shadow util-linux
 
 RUN zypper install --no-recommends -y libjxl-devel
+RUN zypper install --no-recommends -y clang
