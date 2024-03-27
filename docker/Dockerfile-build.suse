@@ -3,7 +3,7 @@ FROM opensuse/leap:15.5
 RUN zypper refresh
 
 # this is for basic development of ANPV, excluding QT6
-RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ libraw-devel libtiff-devel libjpeg-devel libexiv2-devel libpng16-devel extra-cmake-modules
+RUN zypper install --no-recommends -y cmake pkg-config make gcc-c++ clang libraw-devel libtiff-devel libjpeg8-devel libjxl-devel libexiv2-devel libpng16-devel extra-cmake-modules
 RUN zypper install --no-recommends -y libX11-devel libxcb-devel libgpgme-devel xcb-util-keysyms-devel
 RUN zypper install --no-recommends -y git
 
@@ -11,6 +11,3 @@ RUN zypper install --no-recommends -y qt6-base-devel qt6-tools-devel qt6-imagefo
 
 # this is what we need for running a pipeline in the container
 RUN zypper install --no-recommends -y sudo shadow util-linux
-
-RUN zypper install --no-recommends -y libjxl-devel
-RUN zypper install --no-recommends -y clang
