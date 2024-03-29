@@ -580,6 +580,6 @@ void ThumbnailListView::doItemsLayout()
 
     if(m != nullptr)
     {
-        m->setLayoutTimerInterval(t * 2);
+        m->setLayoutTimerInterval(t * 3);
     }
 }
