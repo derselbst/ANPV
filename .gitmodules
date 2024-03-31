@@ -7,3 +7,6 @@
 [submodule "icons/oxygen/base"]
 	path = icons/oxygen/base
 	url = https://invent.kde.org/frameworks/oxygen-icons.git
+[submodule "mango"]
+	path = mango
+	url = https://github.com/t0rakka/mango
