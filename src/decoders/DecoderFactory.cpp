@@ -113,20 +113,20 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPoint
 
         if(image->isRaw() || format == "jpeg" || format == "jpg")
         {
-            return std::make_unique<SmartJpegDecoder>(image);
+            // return std::make_unique<SmartJpegDecoder>(image);
         }
         else if(format == "tiff" || format == "tif")
         {
             return std::make_unique<SmartTiffDecoder>(image);
         }
-        // else if(format == "png")
-        // {
+        else if(format == "png")
+        {
         //     return std::make_unique<SmartPngDecoder>(image);
-        // }
-        // else if(format == "jxl")
-        // {
+        }
+        else if(format == "jxl")
+        {
         //     return std::make_unique<SmartJxlDecoder>(image);
-        // }
+        }
         
         return std::make_unique<MangoDecoder>(image);
     }

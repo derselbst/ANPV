@@ -89,6 +89,9 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
 
     // this->convertColorSpace(image, false, toFullScaleTransform);
     this->image()->setDecodedImage(image);
+    this->setDecodingState(DecodingState::FullImage);
+    this->setDecodingMessage("Mango decoding completed successfully.");
+    this->setDecodingProgress(100);
 
     return image;
 }
