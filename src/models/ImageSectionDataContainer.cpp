@@ -11,6 +11,7 @@
 #include "DecoderFactory.hpp"
 #include "SmartImageDecoder.hpp"
 #include "ExifWrapper.hpp"
+#include "LibRawHelper.hpp"
 
 #include <QApplication>
 #include <QPersistentModelIndex>
@@ -105,7 +106,45 @@ ImageSectionDataContainer::~ImageSectionDataContainer()
     qDebug() << "~ImageDatacontainer";
 }
 
-bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
+unsigned ImageSectionDataContainer::addImageItem(const QFileInfoList& fileList)
+{
+    unsigned readableImages = 0;
+    QSharedPointer<Image> parent;
+    bool isValidCombination = false;
+    std::vector<QSharedPointer<Image>> childImages;
+    for (auto& i : fileList)
+    {
+        auto image = this->addImageItem(i);
+        readableImages += image->hasDecoder();
+
+        if (image->isRaw())
+        {
+            if (parent == nullptr)
+            {
+                parent = image;
+                isValidCombination = true;
+            }
+            else
+            {
+                isValidCombination = false;
+            }
+        }
+        else
+        {
+            childImages.push_back(std::move(image));
+        }
+    }
+
+    parent->setRawPreviews(childImages);
+    for (auto& i : childImages)
+    {
+        i->setParentRaw(parent);
+    }
+    
+    return readableImages;
+}
+
+QSharedPointer<Image> ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
 
@@ -256,7 +295,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
             // Just keep adding the file to the list, any error will be visible in the ThumbnailView later.
         }
 
-        return true;
+        return image;
     }
     else
     {
@@ -265,7 +304,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
 
     d->model ? d->model->welcomeImage(image, watcher) : (void)0;
     this->addImageItem(var, image);
-    return false;
+    return image;
 }
 
 /* Adds a given item (item) to a given section item (section). If the section item does not exist, it will be created. */
