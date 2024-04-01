@@ -128,10 +128,24 @@ struct DirectoryWorker::Impl
 
             // create a map which allows us to more easily match RAWs and JPEGs
             auto filename = path.filename().string();
-            std::string filenameWithoutExt = filename.substr(0, filename.find_last_of("."));
-            std::string extension = filename.substr(filename.find_last_of(".") + 1);
-            fileMap[std::move(filenameWithoutExt)].push_back(std::move(extension));
-
+            auto dotPos = filename.find_last_of(".");
+            std::string filenameWithoutExt = filename.substr(0, dotPos);
+            auto& ext = fileMap[std::move(filenameWithoutExt)];
+            
+            if(dotPos != filename.npos)
+            {
+                std::string extension("");
+                try
+                {
+                    extension = filename.substr(dotPos + 1);
+                }
+                catch(const std::out_of_range& e)
+                {
+                }
+                
+                ext.push_back(std::move(extension));
+            }
+            
             if (t.elapsed() > 100)
             {
                 this->throwIfDirectoryDiscoveryCancelled();
@@ -148,7 +162,7 @@ struct DirectoryWorker::Impl
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
 DirectoryWorker::DirectoryWorker(ImageSectionDataContainer *data, QObject *parent)
-    : d(std::make_unique<Impl>()), QObject(parent)
+    : QObject(parent), d(std::make_unique<Impl>())
 {
     d->q = this;
     d->data = data;
@@ -210,9 +224,16 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
                 auto& filename = val.first;
                 auto& ext = val.second;
 
-                for (auto& e : ext)
+                if(ext.size() != 0)
                 {
-                    similarFiles.push_back(QFileInfo(d->currentDir, QString::fromStdString(filename + "." + e)));
+                    for (auto& e : ext)
+                    {
+                        similarFiles.push_back(QFileInfo(d->currentDir, QString::fromStdString(filename + "." + e)));
+                    }
+                }
+                else
+                {
+                    similarFiles.push_back(QFileInfo(d->currentDir, QString::fromStdString(filename)));
                 }
 
                 readableImages += d->data->addImageItem(similarFiles);

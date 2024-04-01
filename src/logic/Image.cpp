@@ -433,7 +433,7 @@ void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
     d->neighbor = newNeighbor.toWeakRef();
     if (newNeighbor)
     {
-        this->connect(newNeighbor.get(), &Image::destroyed, [&]()
+        connect(newNeighbor.get(), &Image::destroyed, this, [&]()
             {
                 d->neighbor = nullptr;
                 emit this->thumbnailChanged(this, d->thumbnail);
