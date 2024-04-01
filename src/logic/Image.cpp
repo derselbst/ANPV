@@ -440,6 +440,39 @@ void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
                 emit this->checkStateChanged(this, d->checked, d->checked);
             });
 
+        if (this->isRaw())
+        {
+            connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this, [&](ViewFlags_t neu, ViewFlags_t old)
+                {
+                    bool before = (old & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0;
+                    bool after = (neu & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0;
+
+                    if (before != after)
+                    {
+                        auto n = d->neighbor.toStrongRef();
+                        if (n)
+                        {
+                            bool previewIsChecked = n->checked();
+                            bool selfIsChecked = d->checked;
+
+                            if (previewIsChecked != selfIsChecked)
+                            {
+                                if (after)
+                                {
+                                    // we shall now combine raws and jpegs, i.e. the raw takes the checkstate of the preview
+                                    emit this->checkStateChanged(this, previewIsChecked, selfIsChecked);
+                                }
+                                else
+                                {
+                                    // we shall stop combining, i.e. the raw takes its own checkstate again
+                                    emit this->checkStateChanged(this, selfIsChecked, previewIsChecked);
+                                }
+                            }
+                        }
+                    }
+                });
+        }
+
         emit this->thumbnailChanged(this, d->thumbnail);
         emit this->checkStateChanged(this, newNeighbor->d->checked, d->checked);
     }
@@ -521,7 +554,7 @@ void Image::setChecked(Qt::CheckState b)
         if (!this->isRaw() && n && (ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
         {
             // also signal the checkStateChange for our parent RAW
-            emit n->checkStateChanged(n.get(), b, n->d->checked);
+            emit n->checkStateChanged(n.get(), b, old);
         }
         emit this->checkStateChanged(this, b, old);
     }
