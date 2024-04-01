@@ -81,9 +81,6 @@ public:
     bool isRaw() const;
 
     void setNeighbor(const QSharedPointer<Image>& newNeighbor);
-
-    bool hasEquallyNamedJpeg() const;
-    bool hasEquallyNamedTiff() const;
     bool hideIfNonRawAvailable(ViewFlags_t viewFlags) const;
 
     DecodingState decodingState() const;

@@ -63,24 +63,6 @@ struct Image::Impl
     Impl(const QFileInfo &url) : fileInfo(url)
     {}
 
-    bool hasEquallyNamedFile(QString wantedSuffix)
-    {
-        QString basename = this->fileInfo.completeBaseName();
-        QString path = this->fileInfo.canonicalPath();
-
-        if(path.isEmpty())
-        {
-            return false;
-        }
-
-        QFileInfo wantedFile(QDir(path).filePath(basename + QLatin1Char('.') + wantedSuffix.toLower()));
-        bool lowerExists = wantedFile.exists();
-
-        wantedFile = QFileInfo(QDir(path).filePath(basename + QLatin1Char('.') + wantedSuffix));
-        bool upperExists = wantedFile.exists();
-        return lowerExists || upperExists;
-    }
-
     QTransform transformMatrixOrIdentity()
     {
         if(this->exifWrapper)
@@ -463,27 +445,11 @@ void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
     }
 }
 
-bool Image::hasEquallyNamedJpeg() const
-{
-    static const QLatin1String JPG("JPG");
-
-    QString suffix = this->fileInfo().suffix().toUpper();
-    return suffix != JPG && d->hasEquallyNamedFile(JPG);
-}
-
-bool Image::hasEquallyNamedTiff() const
-{
-    static const QLatin1String TIF("TIF");
-
-    QString suffix = this->fileInfo().suffix().toUpper();
-    return suffix != TIF && d->hasEquallyNamedFile(TIF);
-}
-
 bool Image::hideIfNonRawAvailable(ViewFlags_t viewFlags) const
 {
     return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
            && this->isRaw()
-           && (this->hasEquallyNamedJpeg() || this->hasEquallyNamedTiff());
+           && d->neighbor;
 }
 
 DecodingState Image::decodingState() const

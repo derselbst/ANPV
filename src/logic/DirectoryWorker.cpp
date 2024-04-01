@@ -28,7 +28,7 @@ struct DirectoryWorker::Impl
     QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
     QScopedPointer<QFileSystemWatcher> watcher;
 
-    using FileMap = std::unordered_map<std::string /* filename without extension */, std::string /* extension */>;
+    using FileMap = std::unordered_map<std::string /* filename without extension */, std::vector<std::string> /* extension(s) */>;
 
     void onDirectoryChanged(const QString &path)
     {
@@ -116,6 +116,9 @@ struct DirectoryWorker::Impl
 
         QElapsedTimer t;
         t.start();
+
+        // dirBegin will become invalidated somehow by std::distance :(
+        dirBegin = std::filesystem::directory_iterator(this->currentDir.filesystemAbsolutePath());
         for (const auto& file : dirBegin)
         {
             auto& path = file.path();
@@ -127,7 +130,7 @@ struct DirectoryWorker::Impl
             auto filename = path.filename().string();
             std::string filenameWithoutExt = filename.substr(0, filename.find_last_of("."));
             std::string extension = filename.substr(filename.find_last_of(".") + 1);
-            fileMap[std::move(filenameWithoutExt)] = std::move(extension);
+            fileMap[std::move(filenameWithoutExt)].push_back(std::move(extension));
 
             if (t.elapsed() > 100)
             {
@@ -167,6 +170,7 @@ QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString &dir)
 {
     d->cancelAndWaitForDirectoryDiscovery();
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
+    d->discoveredFiles.clear();
     emit this->discoverDirectory(dir);
     return d->directoryDiscovery->future();
 }
@@ -188,11 +192,11 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
         auto fileMap = d->readDirectoryEntries();
         d->watcher->addPath(d->currentDir.absolutePath());
 
-        const int entriesToProcess = fileMap.size();
+        const int entriesToProcess = d->discoveredFiles.size();
 
         if(entriesToProcess > 0)
         {
-            d->directoryDiscovery->setProgressRange(0, entriesToProcess);
+            d->directoryDiscovery->setProgressRange(0, entriesToProcess+1);
 
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             d->directoryDiscovery->setProgressValueAndText(0, msg);
@@ -200,29 +204,28 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
             unsigned readableImages = 0;
             QFileInfoList similarFiles;
 
-            for(auto it = fileMap.begin(); it != fileMap.end();)
+            for(auto it = fileMap.begin(); it != fileMap.end(); ++it)
             {
                 auto& val = *it;
+                auto& filename = val.first;
+                auto& ext = val.second;
 
-                auto similarFilesIt = fileMap.equal_range(val.first);
-                for (auto it = similarFilesIt.first; it != similarFilesIt.second; ++it)
+                for (auto& e : ext)
                 {
-                    // LibRawHelper::isRaw(val.second)
-                    similarFiles.push_back(QFileInfo(d->currentDir, QString::fromStdString(it->first + "." + it->second)));
+                    similarFiles.push_back(QFileInfo(d->currentDir, QString::fromStdString(filename + "." + e)));
                 }
 
                 readableImages += d->data->addImageItem(similarFiles);
                 entriesProcessed += similarFiles.size();
 
                 similarFiles.clear();
-                it = fileMap.erase(similarFilesIt.first, similarFilesIt.second);
 
                 d->throwIfDirectoryDiscoveryCancelled();
                 d->directoryDiscovery->setProgressValueAndText(entriesProcessed, msg);
             }
 
             // increase by one, to make sure we meet the 100% below, which in turn ensures that the status message 'successfully loaded' is displayed in the UI
-            d->directoryDiscovery->setProgressValueAndText(entriesProcessed++, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
+            d->directoryDiscovery->setProgressValueAndText(++entriesProcessed, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
         }
         else
         {

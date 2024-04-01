@@ -135,7 +135,7 @@ unsigned ImageSectionDataContainer::addImageItem(const QFileInfoList& fileList)
         }
     }
     
-    if (isValidCombination)
+    if (isValidCombination && childImages.size() > 0)
     {
         QSharedPointer<Image> chosenChild;
         for (auto& i : childImages)
