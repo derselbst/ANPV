@@ -134,11 +134,38 @@ unsigned ImageSectionDataContainer::addImageItem(const QFileInfoList& fileList)
             childImages.push_back(std::move(image));
         }
     }
-
-    parent->setRawPreviews(childImages);
-    for (auto& i : childImages)
+    
+    if (isValidCombination)
     {
-        i->setParentRaw(parent);
+        QSharedPointer<Image> chosenChild;
+        for (auto& i : childImages)
+        {
+            QString ext = i->fileExtension();
+            if (ext == "jpg" || ext == "jpeg")
+            {
+                chosenChild = i;
+                break;
+            }
+        }
+
+        if (chosenChild == nullptr)
+        {
+            for (auto& i : childImages)
+            {
+                QString ext = i->fileExtension();
+                if (ext == "tif" || ext == "tiff")
+                {
+                    chosenChild = i;
+                    break;
+                }
+            }
+        }
+
+        if (chosenChild && parent)
+        {
+            chosenChild->setNeighbor(parent);
+            parent->setNeighbor(chosenChild);
+        }
     }
     
     return readableImages;

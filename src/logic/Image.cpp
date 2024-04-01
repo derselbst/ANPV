@@ -25,6 +25,8 @@ struct Image::Impl
     // Quick reference to the decoder, possibly an owning reference as well
     QSharedPointer<SmartImageDecoder> decoder;
 
+    QWeakPointer<Image> neighbor;
+
     // file path to the decoded input file
     const QFileInfo fileInfo;
 
@@ -429,6 +431,38 @@ bool Image::isRaw() const
     return isRaw;
 }
 
+// If this->isRaw() == true and a neighbor is set, that neighbor will be JPEG (or TIF) image with the same name.
+// If this->isRaw() == false, the neighbor will be RAW file the same name.
+void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+
+    if (d->neighbor)
+    {
+        auto neighbor = d->neighbor.toStrongRef();
+        Q_ASSERT(neighbor != nullptr);
+
+        if (neighbor)
+        {
+            neighbor->disconnect(this);
+        }
+    }
+
+    d->neighbor = newNeighbor.toWeakRef();
+    if (newNeighbor)
+    {
+        this->connect(newNeighbor.get(), &Image::destroyed, [&]()
+            {
+                d->neighbor = nullptr;
+                emit this->thumbnailChanged(this, d->thumbnail);
+                emit this->checkStateChanged(this, d->checked, d->checked);
+            });
+
+        emit this->thumbnailChanged(this, d->thumbnail);
+        emit this->checkStateChanged(this, newNeighbor->checked(), d->checked);
+    }
+}
+
 bool Image::hasEquallyNamedJpeg() const
 {
     static const QLatin1String JPG("JPG");
@@ -496,6 +530,16 @@ void Image::setErrorMessage(const QString &err)
 Qt::CheckState Image::checked()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
+    if (this->isRaw() && d->neighbor != nullptr)
+    {
+        auto n = d->neighbor.toStrongRef();
+        if (n)
+        {
+            return n->checked();
+        }
+
+        throw std::logic_error("Oops, acquiring strongref failed unexpectedly??");
+    }
     return d->checked;
 }
 
