@@ -441,7 +441,7 @@ void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
             });
 
         emit this->thumbnailChanged(this, d->thumbnail);
-        emit this->checkStateChanged(this, newNeighbor->checked(), d->checked);
+        emit this->checkStateChanged(this, newNeighbor->d->checked, d->checked);
     }
 }
 
@@ -496,16 +496,13 @@ void Image::setErrorMessage(const QString &err)
 Qt::CheckState Image::checked()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
-    if (this->isRaw() && d->neighbor != nullptr)
-    {
-        auto n = d->neighbor.toStrongRef();
-        if (n)
-        {
-            return n->checked();
-        }
 
-        throw std::logic_error("Oops, acquiring strongref failed unexpectedly??");
+    auto n = d->neighbor.toStrongRef();
+    if (n && this->hideIfNonRawAvailable(ANPV::globalInstance()->viewFlags()))
+    {
+        return n->checked();
     }
+
     return d->checked;
 }
 
@@ -517,7 +514,15 @@ void Image::setChecked(Qt::CheckState b)
     if(old != b)
     {
         d->checked = b;
+        auto n = d->neighbor.toStrongRef();
+
         lck.unlock();
+
+        if (!this->isRaw() && n && (ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        {
+            // also signal the checkStateChange for our parent RAW
+            emit n->checkStateChanged(n.get(), b, n->d->checked);
+        }
         emit this->checkStateChanged(this, b, old);
     }
 }

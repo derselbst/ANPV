@@ -148,6 +148,17 @@ struct SortedImageModel::Impl
         }
     }
 
+    void onCheckStateChanged(Image* img)
+    {
+        xThreadGuard g(q);
+        QModelIndex m = q->index(img);
+
+        if (m.isValid())
+        {
+            emit q->dataChanged(m, m, { Qt::CheckStateRole });
+        }
+    }
+
     void onBackgroundImageTaskStateChanged(Image *img, quint32 newState, quint32)
     {
         xThreadGuard g(q);
@@ -758,6 +769,8 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QS
                 d->checkedImages.append(i);
             }
         }
+
+        d->onCheckStateChanged(i);
     });
 
     this->connect(image.data(), &Image::destroyed, this,
