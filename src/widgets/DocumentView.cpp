@@ -507,7 +507,7 @@ struct DocumentView::Impl
 
         act = new QAction(QIcon::fromTheme("go-next"), "Next File", q);
         act->setShortcut({Qt::Key_Right});
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(act, &QAction::triggered, q, [&]()
         {
             this->goTo(+1);
@@ -516,7 +516,7 @@ struct DocumentView::Impl
 
         act = new QAction(QIcon::fromTheme("go-previous"), "Previous File", q);
         act->setShortcut({Qt::Key_Left});
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(act, &QAction::triggered, q, [&]()
         {
             this->goTo(-1);
@@ -525,7 +525,7 @@ struct DocumentView::Impl
 
         act = new QAction("Toggle check state of current image", q);
         act->setShortcut({Qt::Key_Space});
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(act, &QAction::triggered, q, [&]()
         {
             this->onToggleSelect();
@@ -538,7 +538,7 @@ struct DocumentView::Impl
 
         act = new QAction("Mirror", q);
         act->setShortcut({ Qt::Key_F });
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         act->setIcon(QIcon::fromTheme("object-flip-horizontal"));
         connect(act, &QAction::triggered, q, [&]()
         {
@@ -548,7 +548,7 @@ struct DocumentView::Impl
 
         act = new QAction("Flip", q);
         act->setShortcut({ Qt::CTRL | Qt::Key_F });
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         act->setIcon(QIcon::fromTheme("object-flip-vertical"));
         connect(act, &QAction::triggered, q, [&]()
         {
@@ -558,7 +558,7 @@ struct DocumentView::Impl
 
         act = new QAction("Rotate Clockwise", q);
         act->setShortcut({ Qt::Key_R });
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         act->setIcon(QIcon::fromTheme("object-rotate-right"));
         connect(act, &QAction::triggered, q, [&]()
         {
@@ -568,8 +568,8 @@ struct DocumentView::Impl
 
         act = new QAction("Rotate Counter-Clockwise", q);
         act->setShortcut({ Qt::Key_L });
-        act->setShortcutContext(Qt::WidgetShortcut);
-        act->setIcon(QIcon::fromTheme("object-rotate-left"));
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        act->setIcon(QIcon::fromTheme("object-rotateWidgetShortcut-left"));
         connect(act, &QAction::triggered, q, [&]()
         {
             q->rotate(-90);
@@ -603,7 +603,7 @@ struct DocumentView::Impl
         this->actionShowInfoBox->setCheckable(true);
         this->actionShowInfoBox->setChecked(true);
         this->actionShowInfoBox->setShortcut({ Qt::Key_I });
-        this->actionShowInfoBox->setShortcutContext(Qt::WidgetShortcut);
+        this->actionShowInfoBox->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionShowInfoBox, &QAction::toggled, q, [&](bool checked)
         {
             this->exifOverlay->setVisible(checked);
@@ -614,7 +614,7 @@ struct DocumentView::Impl
         this->actionShowImageLayout = new QAction("Show Image Layout", q);
         this->actionShowImageLayout->setCheckable(true);
         this->actionShowImageLayout->setChecked(true);
-        this->actionShowImageLayout->setShortcutContext(Qt::WidgetShortcut);
+        this->actionShowImageLayout->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(this->actionShowImageLayout, &QAction::toggled, q, [&](bool checked)
             {
                 this->debugOverlay1->setVisible(checked);
@@ -634,7 +634,7 @@ struct DocumentView::Impl
 
         act = new QAction(QIcon::fromTheme("edit-copy"), "Copy View Transform", q);
         act->setShortcut({ Qt::CTRL | Qt::SHIFT | Qt::Key_C });
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(act, &QAction::triggered, q, [&]()
         {
             this->onCopyViewTransform();
@@ -643,7 +643,7 @@ struct DocumentView::Impl
 
         act = new QAction(QIcon::fromTheme("edit-paste"), "Paste", q);
         act->setShortcut(QKeySequence::Paste);
-        act->setShortcutContext(Qt::WidgetShortcut);
+        act->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         connect(act, &QAction::triggered, q, [&]()
         {
             this->onClipboardPaste();
