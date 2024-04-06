@@ -122,7 +122,6 @@ struct SortedImageModel::Impl
     void updateLayout()
     {
         xThreadGuard g(q);
-
         if(!layoutChangedTimer->isActive())
         {
             layoutChangedTimer->start();
