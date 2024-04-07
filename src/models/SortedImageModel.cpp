@@ -684,7 +684,7 @@ QModelIndex SortedImageModel::index(const Image *img)
     {
         if(i.data() == static_cast<const AbstractListItem *>(img))
         {
-            return this->index(k, 0);
+            return this->createIndex(k, 0, img);
         }
 
         k++;

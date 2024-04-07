@@ -305,15 +305,12 @@ void ImageSectionDataContainer::addImageItem(const QVariant &section, QSharedPoi
         auto itemInsertIt = (*it)->findInsertPosition(item);
         (*it)->insert(itemInsertIt, item);
 
-        int check = this->getLinearIndexOfItem(item.data());
-
         itemsForUIModel.push_back(s);
         itemsForUIModel.push_back(item);
     }
     else
     {
         auto insertIt = (*it)->findInsertPosition(item);
-        auto d = std::distance((*it)->begin(), insertIt);
 
         (*it)->insert(insertIt, item);
 
