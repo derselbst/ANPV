@@ -15,6 +15,7 @@
 #include <cstring> // for strverscmp()
 #include <list>
 #include <iterator>
+#include <unordered_map>
 
 #ifdef _WINDOWS
 #define NOMINMAX
@@ -47,9 +48,9 @@ struct SortedImageModel::Impl
 
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
-    std::map<Image *, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
+    std::unordered_map<Image *, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
 
-    std::map<Image *, QMetaObject::Connection> spinningIconDrawConnections;
+    std::unordered_map<Image *, QMetaObject::Connection> spinningIconDrawConnections;
     QList<Image *> checkedImages; //should contain non-owning references only, so that it can be cleared by Image::destroyed()
 
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
