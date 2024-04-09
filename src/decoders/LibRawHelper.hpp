@@ -11,4 +11,7 @@ public:
 	
     static const QStringList& rawFilesList();
     static void extractThumbnail(QByteArray& encodedThumbnailOut, const void* fileBuf, qint64 buflen);
+
+    static bool isRaw(const QString& extension);
+    static bool isRaw(const std::string& extension);
 };

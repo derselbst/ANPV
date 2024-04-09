@@ -79,8 +79,8 @@ public:
 
     QString fileExtension() const;
     bool isRaw() const;
-    bool hasEquallyNamedJpeg() const;
-    bool hasEquallyNamedTiff() const;
+
+    void setNeighbor(const QSharedPointer<Image>& newNeighbor);
     bool hideIfNonRawAvailable(ViewFlags_t viewFlags) const;
 
     DecodingState decodingState() const;

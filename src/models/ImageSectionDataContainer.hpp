@@ -53,7 +53,8 @@ public:
     ImageSectionDataContainer(SortedImageModel *model);
     ~ImageSectionDataContainer();
 
-    bool addImageItem(const QFileInfo &info);
+    unsigned addImageItem(const QFileInfoList& fileList);
+    QSharedPointer<Image> addImageItem(const QFileInfo &info);
     void addImageItem(const QVariant &section, QSharedPointer<Image> &item);
     bool removeImageItem(const QFileInfo &info);
 

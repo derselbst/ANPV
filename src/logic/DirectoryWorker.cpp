@@ -4,6 +4,7 @@
 #include "xThreadGuard.hpp"
 #include "UserCancellation.hpp"
 #include "ImageSectionDataContainer.hpp"
+#include "LibRawHelper.hpp"
 
 #include <QDir>
 #include <QFileSystemWatcher>
@@ -11,6 +12,9 @@
 #include <QEventLoop>
 #include <QApplication>
 #include <QPromise>
+
+#include <filesystem>
+#include <unordered_map>
 
 struct DirectoryWorker::Impl
 {
@@ -23,6 +27,8 @@ struct DirectoryWorker::Impl
 
     QScopedPointer<QPromise<DecodingState>> directoryDiscovery;
     QScopedPointer<QFileSystemWatcher> watcher;
+
+    using FileMap = std::unordered_map<std::filesystem::path::string_type /* filename without extension */, std::vector<std::filesystem::path::string_type> /* extension(s) */>;
 
     void onDirectoryChanged(const QString &path)
     {
@@ -94,13 +100,69 @@ struct DirectoryWorker::Impl
             directoryDiscovery->future().waitForFinished();
         }
     }
+
+    FileMap readDirectoryEntries()
+    {
+        if (!this->currentDir.isReadable())
+        {
+            throw std::runtime_error("Cannot read directory!");
+        }
+
+        auto dirBegin = std::filesystem::directory_iterator(this->currentDir.filesystemAbsolutePath());
+        auto dirSize = std::distance(dirBegin, std::filesystem::directory_iterator{});
+
+        FileMap fileMap;
+        fileMap.reserve(dirSize);
+
+        QElapsedTimer t;
+        t.start();
+
+        // dirBegin will become invalidated somehow by std::distance :(
+        dirBegin = std::filesystem::directory_iterator(this->currentDir.filesystemAbsolutePath());
+        for (const auto& file : dirBegin)
+        {
+            auto& path = file.path();
+            
+            // keep track of the discovered files in a flat list with Qt data types (could be optimized away, by using the FileMap consistently)
+            discoveredFiles.push_back(QFileInfo(path));
+
+            // create a map which allows us to more easily match RAWs and JPEGs
+            FileMap::key_type filename = path.filename();
+            auto dotPos = filename.find_last_of('.');
+            FileMap::key_type filenameWithoutExt = filename.substr(0, dotPos);
+            auto& ext = fileMap[std::move(filenameWithoutExt)];
+            
+            if(dotPos != filename.npos)
+            {
+                FileMap::key_type extension;
+                try
+                {
+                    extension = filename.substr(dotPos + 1);
+                }
+                catch(const std::out_of_range& e)
+                {
+                }
+                
+                ext.push_back(std::move(extension));
+            }
+            
+            if (t.elapsed() > 100)
+            {
+                this->throwIfDirectoryDiscoveryCancelled();
+                t.restart();
+            }
+        }
+
+        return fileMap;
+    }
+
 };
 
 
 /* Constructs the thread for loading the image thumbnails with size of the thumbnails (thumbsize) and
    the image list (data). */
 DirectoryWorker::DirectoryWorker(ImageSectionDataContainer *data, QObject *parent)
-    : d(std::make_unique<Impl>()), QObject(parent)
+    : QObject(parent), d(std::make_unique<Impl>())
 {
     d->q = this;
     d->data = data;
@@ -122,6 +184,7 @@ QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString &dir)
 {
     d->cancelAndWaitForDirectoryDiscovery();
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
+    d->discoveredFiles.clear();
     emit this->discoverDirectory(dir);
     return d->directoryDiscovery->future();
 }
@@ -140,47 +203,63 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
         d->data->clear();
         d->directoryDiscovery->setProgressValueAndText(0, "Looking up directory");
 
-        if(!d->currentDir.isReadable())
-        {
-            throw std::runtime_error("Cannot read directory!");
-        }
-
-        d->discoveredFiles = d->currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+        auto fileMap = d->readDirectoryEntries();
         d->watcher->addPath(d->currentDir.absolutePath());
 
         const int entriesToProcess = d->discoveredFiles.size();
 
         if(entriesToProcess > 0)
         {
-            d->directoryDiscovery->setProgressRange(0, entriesToProcess);
+            d->directoryDiscovery->setProgressRange(0, entriesToProcess+1);
 
             QString msg = QString("Loading %1 directory entries").arg(entriesToProcess);
             d->directoryDiscovery->setProgressValueAndText(0, msg);
 
             unsigned readableImages = 0;
+            QFileInfoList similarFiles;
 
-            for(auto it = d->discoveredFiles.begin(); it != d->discoveredFiles.end(); ++it)
+            for(auto it = fileMap.begin(); it != fileMap.end(); ++it)
             {
-                if(d->data->addImageItem(*it))
+                auto& val = *it;
+                auto& filename = val.first;
+                auto& ext = val.second;
+
+                QString fname;
+                fname.append(filename);
+                if(ext.size() != 0)
                 {
-                    ++readableImages;
+                    for (auto& e : ext)
+                    {
+                        QString f(fname);
+                        f.append('.');
+                        f.append(e);
+                        similarFiles.push_back(QFileInfo(d->currentDir, f));
+                    }
+                }
+                else
+                {
+                    similarFiles.push_back(QFileInfo(d->currentDir, fname));
                 }
 
+                readableImages += d->data->addImageItem(similarFiles);
+                entriesProcessed += similarFiles.size();
+
+                similarFiles.clear();
+
                 d->throwIfDirectoryDiscoveryCancelled();
-                d->directoryDiscovery->setProgressValueAndText(entriesProcessed++, msg);
+                d->directoryDiscovery->setProgressValueAndText(entriesProcessed, msg);
             }
 
             // increase by one, to make sure we meet the 100% below, which in turn ensures that the status message 'successfully loaded' is displayed in the UI
-            d->directoryDiscovery->setProgressValueAndText(entriesProcessed++, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
+            d->directoryDiscovery->setProgressValueAndText(++entriesProcessed, QString("Directory successfully loaded; discovered %1 readable images of a total of %2 entries").arg(readableImages).arg(entriesToProcess));
         }
         else
         {
             d->directoryDiscovery->setProgressRange(0, 1);
-            entriesProcessed++;
 
             if(d->currentDir.exists())
             {
-                d->directoryDiscovery->setProgressValueAndText(entriesProcessed, "Directory is empty, nothing to see here.");
+                d->directoryDiscovery->setProgressValueAndText(++entriesProcessed, "Directory is empty, nothing to see here.");
             }
             else
             {
