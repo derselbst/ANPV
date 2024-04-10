@@ -49,7 +49,6 @@ struct SortedImageModel::Impl
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
     std::unordered_map<Image *, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
-
     std::unordered_map<Image *, QMetaObject::Connection> spinningIconDrawConnections;
     QList<Image *> checkedImages; //should contain non-owning references only, so that it can be cleared by Image::destroyed()
 
@@ -62,7 +61,10 @@ struct SortedImageModel::Impl
     QPointer<QFutureWatcher<DecodingState>> directoryWorker;
 
     Impl(SortedImageModel *parent) : q(parent)
-    {}
+    {
+        this->backgroundTasks.reserve(QThreadPool::globalInstance()->maxThreadCount());
+        this->spinningIconDrawConnections.reserve(QThreadPool::globalInstance()->maxThreadCount());
+    }
 
     ~Impl()
     {
@@ -75,21 +77,15 @@ struct SortedImageModel::Impl
     {
         xThreadGuard g(q);
         std::lock_guard<std::recursive_mutex> l(m);
+
         // first, go through all the images, take unstarted ones from the threadpool and cancel all the other ones
-        auto size = q->rowCount();
-
-        for(int i = 0; i < size; i++)
+        for (auto& e : this->visibleItemList)
         {
-            auto img = AbstractListItem::imageCast(q->item(q->index(i, 0)));
-
-            if(!img)
+            auto img = AbstractListItem::imageCast(e);
+            auto futIt = this->backgroundTasks.find(img.get());
+            if (img && futIt != this->backgroundTasks.end())
             {
-                continue;
-            }
-
-            if(this->backgroundTasks.contains(img.data()))
-            {
-                auto &fut = this->backgroundTasks[img.data()];
+                auto&fut = futIt->second;
                 fut->disconnect(q);
                 img->decoder()->cancelOrTake(fut->future());
             }
@@ -100,18 +96,14 @@ struct SortedImageModel::Impl
         // now, walk through the list again and wait for the decoders to actually finish
         // do not delete all backgroundTasks as it may already contain tasks for images from a new directory
         // it should be fine to wait while holding the lock
-        for(int i = 0; i < size; i++)
+
+        for (auto& e : this->visibleItemList)
         {
-            auto img = AbstractListItem::imageCast(q->item(q->index(i, 0)));
-
-            if(!img)
+            auto img = AbstractListItem::imageCast(e);
+            auto futIt = this->backgroundTasks.find(img.get());
+            if (img && futIt != this->backgroundTasks.end())
             {
-                continue;
-            }
-
-            if(this->backgroundTasks.contains(img.data()))
-            {
-                auto &fut = this->backgroundTasks[img.data()];
+                auto& fut = futIt->second;
                 Q_ASSERT(!fut.isNull());
                 fut->waitForFinished();
                 this->onBackgroundTaskFinished(fut, img);
@@ -188,12 +180,13 @@ struct SortedImageModel::Impl
     {
         std::lock_guard<std::recursive_mutex> l(m);
 
-        if(this->backgroundTasks.contains(img.data()))
+        auto it = this->backgroundTasks.find(img.data());
+        if(it != this->backgroundTasks.end())
         {
-            auto watcher2 = this->backgroundTasks[img.data()];
+            auto watcher2 = it->second;
             Q_ASSERT(watcher2 == watcher);
             watcher->disconnect(q);
-            this->backgroundTasks.erase(img.data());
+            this->backgroundTasks.erase(it);
 
             if(this->backgroundTasks.empty())
             {
@@ -207,10 +200,11 @@ struct SortedImageModel::Impl
             // Most likely, the task has been already removed by cancelAllBackgroundTasks(). Silently ignore.
         }
 
-        if(this->spinningIconDrawConnections.contains(img.data()))
+        auto it2 = this->spinningIconDrawConnections.find(img.data());
+        if(it2 != this->spinningIconDrawConnections.end())
         {
-            ANPV::globalInstance()->spinningIconHelper()->disconnect(this->spinningIconDrawConnections[img.data()]);
-            this->spinningIconDrawConnections.erase(img.data());
+            ANPV::globalInstance()->spinningIconHelper()->disconnect(it2->second);
+            this->spinningIconDrawConnections.erase(it2);
 
             // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
             this->scheduleSpinningIconRedraw(img);
@@ -502,9 +496,10 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, in
                     {
                         std::lock_guard<std::recursive_mutex> l(d->m);
 
-                        if(d->backgroundTasks.contains(img.data()))
+                        auto it = d->backgroundTasks.find(img.data());
+                        if(it != d->backgroundTasks.end())
                         {
-                            watcher = d->backgroundTasks[img.data()];
+                            watcher = it->second;
                         }
                     }
 
@@ -593,11 +588,15 @@ bool SortedImageModel::insertRows(int row, std::list<QSharedPointer<AbstractList
         return false;
     }
 
+    QElapsedTimer t;
+
     this->beginInsertRows(QModelIndex(), row, row + items.size() - 1);
 
     auto insertIt = d->visibleItemList.begin();
+    t.start();
     std::advance(insertIt, row);
-    d->visibleItemList.splice(insertIt, items);
+    qInfo() << "std::advanced(): " << t.elapsed();
+    d->visibleItemList.splice(insertIt, items); // d->visibleItemList.insert(insertIt, items.begin(), items.end());
 
     this->endInsertRows();
 
