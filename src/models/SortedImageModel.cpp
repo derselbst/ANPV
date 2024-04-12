@@ -410,6 +410,13 @@ QVariant SortedImageModel::data(const QModelIndex &index, int role) const
 {
     xThreadGuard(this);
 
+    auto* p = static_cast<AbstractListItem*>(index.internalPointer());
+    if (p)
+    {
+        // pointer is already known, shortcut here, as there is no need to create an index
+        return this->data(p, role);
+    }
+
     if(!index.isValid())
     {
         return QVariant();
@@ -419,7 +426,12 @@ QVariant SortedImageModel::data(const QModelIndex &index, int role) const
     return this->data(item, role);
 }
 
-QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, int role) const
+QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem>& item, int role) const
+{
+    return this->data(item.data(), role);
+}
+
+QVariant SortedImageModel::data(AbstractListItem* item, int role) const
 {
     xThreadGuard(this);
 
@@ -435,15 +447,13 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, in
         }
         else
         {
-            auto img = AbstractListItem::imageCast(item);
-
+            auto img = dynamic_cast<Image*>(item);
             if(img != nullptr)
             {
                 const QFileInfo fi = img->fileInfo();
 
                 switch(role)
                 {
-
                 case ItemFileSize:
                     return QString::number(fi.size());
 
@@ -496,7 +506,7 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, in
                     {
                         std::lock_guard<std::recursive_mutex> l(d->m);
 
-                        auto it = d->backgroundTasks.find(img.data());
+                        auto it = d->backgroundTasks.find(img);
                         if(it != d->backgroundTasks.end())
                         {
                             watcher = it->second;
@@ -527,7 +537,7 @@ QVariant SortedImageModel::data(const QSharedPointer<AbstractListItem> &item, in
                         if(fi.isFile())
                         {
                             std::lock_guard<std::recursive_mutex> l(d->m);
-                            decodePending = d->backgroundTasks.contains(img.data());
+                            decodePending = d->backgroundTasks.contains(img);
                         }
                         if (decodePending)
                         {
@@ -702,6 +712,19 @@ QModelIndex SortedImageModel::index(const Image *img)
     }
 
     return QModelIndex();
+}
+
+QModelIndex SortedImageModel::index(int row, int column, const QModelIndex& parent) const
+{
+    if (!this->hasIndex(row, column, parent))
+    {
+        return QModelIndex();
+    }
+
+    auto it = d->visibleItemList.begin();
+    std::advance(it, row);
+
+    return this->createIndex(row, column, it->data());
 }
 
 QSharedPointer<AbstractListItem> SortedImageModel::item(const QModelIndex &idx) const
