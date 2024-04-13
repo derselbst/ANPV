@@ -39,12 +39,12 @@ jobs:
     - task: CMake@1
       displayName: 'CMake Build'
       inputs:
-        cmakeArgs: --build . --parallel
+        cmakeArgs: --build .
         workingDirectory: 'build'
     - task: CMake@1
       displayName: 'CMake Check'
       inputs:
-        cmakeArgs: --build . --target check --parallel 2
+        cmakeArgs: --build . --target check
         workingDirectory: 'build'
   - job: Windows
     timeoutInMinutes: 600
