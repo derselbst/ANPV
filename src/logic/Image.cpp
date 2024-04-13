@@ -25,6 +25,8 @@ struct Image::Impl
     // Quick reference to the decoder, possibly an owning reference as well
     QSharedPointer<SmartImageDecoder> decoder;
 
+    QWeakPointer<Image> neighbor;
+
     // file path to the decoded input file
     const QFileInfo fileInfo;
 
@@ -60,24 +62,6 @@ struct Image::Impl
 
     Impl(const QFileInfo &url) : fileInfo(url)
     {}
-
-    bool hasEquallyNamedFile(QString wantedSuffix)
-    {
-        QString basename = this->fileInfo.completeBaseName();
-        QString path = this->fileInfo.canonicalPath();
-
-        if(path.isEmpty())
-        {
-            return false;
-        }
-
-        QFileInfo wantedFile(QDir(path).filePath(basename + QLatin1Char('.') + wantedSuffix.toLower()));
-        bool lowerExists = wantedFile.exists();
-
-        wantedFile = QFileInfo(QDir(path).filePath(basename + QLatin1Char('.') + wantedSuffix));
-        bool upperExists = wantedFile.exists();
-        return lowerExists || upperExists;
-    }
 
     QTransform transformMatrixOrIdentity()
     {
@@ -429,27 +413,76 @@ bool Image::isRaw() const
     return isRaw;
 }
 
-bool Image::hasEquallyNamedJpeg() const
+// If this->isRaw() == true and a neighbor is set, that neighbor will be JPEG (or TIF) image with the same name.
+// If this->isRaw() == false, the neighbor will be RAW file the same name.
+void Image::setNeighbor(const QSharedPointer<Image>& newNeighbor)
 {
-    static const QLatin1String JPG("JPG");
+    std::unique_lock<std::recursive_mutex> lck(d->m);
 
-    QString suffix = this->fileInfo().suffix().toUpper();
-    return suffix != JPG && d->hasEquallyNamedFile(JPG);
-}
+    if (d->neighbor)
+    {
+        auto neighbor = d->neighbor.toStrongRef();
+        Q_ASSERT(neighbor != nullptr);
 
-bool Image::hasEquallyNamedTiff() const
-{
-    static const QLatin1String TIF("TIF");
+        if (neighbor)
+        {
+            neighbor->disconnect(this);
+        }
+    }
 
-    QString suffix = this->fileInfo().suffix().toUpper();
-    return suffix != TIF && d->hasEquallyNamedFile(TIF);
+    d->neighbor = newNeighbor.toWeakRef();
+    if (newNeighbor)
+    {
+        connect(newNeighbor.get(), &Image::destroyed, this, [&]()
+            {
+                d->neighbor = nullptr;
+                emit this->thumbnailChanged(this, d->thumbnail);
+                emit this->checkStateChanged(this, d->checked, d->checked);
+            });
+
+        if (this->isRaw())
+        {
+            connect(ANPV::globalInstance(), &ANPV::viewFlagsChanged, this, [&](ViewFlags_t neu, ViewFlags_t old)
+                {
+                    bool before = (old & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0;
+                    bool after = (neu & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0;
+
+                    if (before != after)
+                    {
+                        auto n = d->neighbor.toStrongRef();
+                        if (n)
+                        {
+                            bool previewIsChecked = n->checked();
+                            bool selfIsChecked = d->checked;
+
+                            if (previewIsChecked != selfIsChecked)
+                            {
+                                if (after)
+                                {
+                                    // we shall now combine raws and jpegs, i.e. the raw takes the checkstate of the preview
+                                    emit this->checkStateChanged(this, previewIsChecked, selfIsChecked);
+                                }
+                                else
+                                {
+                                    // we shall stop combining, i.e. the raw takes its own checkstate again
+                                    emit this->checkStateChanged(this, selfIsChecked, previewIsChecked);
+                                }
+                            }
+                        }
+                    }
+                });
+        }
+
+        emit this->thumbnailChanged(this, d->thumbnail);
+        emit this->checkStateChanged(this, newNeighbor->d->checked, d->checked);
+    }
 }
 
 bool Image::hideIfNonRawAvailable(ViewFlags_t viewFlags) const
 {
     return ((viewFlags & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
            && this->isRaw()
-           && (this->hasEquallyNamedJpeg() || this->hasEquallyNamedTiff());
+           && d->neighbor;
 }
 
 DecodingState Image::decodingState() const
@@ -496,6 +529,13 @@ void Image::setErrorMessage(const QString &err)
 Qt::CheckState Image::checked()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
+
+    auto n = d->neighbor.toStrongRef();
+    if (n && this->hideIfNonRawAvailable(ANPV::globalInstance()->viewFlags()))
+    {
+        return n->checked();
+    }
+
     return d->checked;
 }
 
@@ -507,7 +547,15 @@ void Image::setChecked(Qt::CheckState b)
     if(old != b)
     {
         d->checked = b;
+        auto n = d->neighbor.toStrongRef();
+
         lck.unlock();
+
+        if (!this->isRaw() && n && (ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::CombineRawJpg)) != 0)
+        {
+            // also signal the checkStateChange for our parent RAW
+            emit n->checkStateChanged(n.get(), b, old);
+        }
         emit this->checkStateChanged(this, b, old);
     }
 }

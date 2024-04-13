@@ -46,11 +46,14 @@ struct MultiDocumentView::Impl
         settings.beginGroup("MultiDocumentView");
         settings.setValue("geometry", q->saveGeometry());
         settings.endGroup();
-
-        settings.beginGroup("DocumentView");
-        auto& dv = dynamic_cast<DocumentView&>(*this->tw->currentWidget());
-        dv.writeSettings(settings);
-        settings.endGroup();
+        
+        auto dv = dynamic_cast<DocumentView*>(this->tw->currentWidget());
+        if (dv) // will be NULL closing last remaining tab with CTRL+W
+        {
+            settings.beginGroup("DocumentView");
+            dv->writeSettings(settings);
+            settings.endGroup();
+        }
     }
 
     void readSettings(QMainWindow *parent)

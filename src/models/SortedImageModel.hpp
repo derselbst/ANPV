@@ -55,10 +55,12 @@ public:
     using QAbstractTableModel::index; // don't hide base member
     QModelIndex index(const QSharedPointer<Image> &img);
     QModelIndex index(const Image *img);
+    QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
     QSharedPointer<AbstractListItem> item(const QModelIndex &idx) const;
     QList<Image *> checkedEntries();
 
     QVariant data(const QSharedPointer<AbstractListItem> &item, int role) const;
+    QVariant data(AbstractListItem* item, int role) const;
     Qt::ItemFlags flags(const QSharedPointer<AbstractListItem> &item) const;
 
     bool isSafeToChangeDir();

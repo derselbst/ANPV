@@ -804,6 +804,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     // cancel any background task
     this->setBackgroundTask(QFuture<DecodingState>());
+    ANPV::globalInstance()->fileModel()->cancelAllBackgroundTasks();
     d->writeSettings();
     QMainWindow::closeEvent(event);
 }

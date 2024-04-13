@@ -66,3 +66,14 @@ const QStringList& LibRawHelper::rawFilesList()
     return rawFiles;
 }
 
+bool LibRawHelper::isRaw(const QString& extension)
+{
+	bool isRaw = LibRawHelper::rawFilesList().contains(extension.toLower());
+	return isRaw;
+}
+
+bool LibRawHelper::isRaw(const std::string& extension)
+{
+	QString s = QString::fromStdString(extension);
+	return LibRawHelper::isRaw(s);
+}

@@ -16,27 +16,33 @@ struct ProgressIndicatorHelper::Impl
     ProgressIndicatorHelper *q;
 
     QMetaObject::Connection renderingConnection;
-    QPointer<QSvgRenderer> renderer;
+    QScopedPointer<QSvgRenderer, QScopedPointerDeleteLater> renderer;
     // currentFrame must be destroyed after the painter is being destroyed, mind the order of declaration!
     QImage currentFrame;
     std::unique_ptr<QPainter> painter;
+
+    // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
+    std::recursive_mutex m;
 
     Impl(ProgressIndicatorHelper *parent) : q(parent)
     {}
 
     void renderSvg()
     {
+        std::unique_lock<std::recursive_mutex> l(m);
         if(this->painter->isActive())
         {
             this->currentFrame.fill(0);
             this->renderer->render(this->painter.get());
 
+            l.unlock();
             emit q->needsRepaint();
         }
     }
 
     void onIconHeightChanged(int neu)
     {
+        std::lock_guard<std::recursive_mutex> l(m);
         if(this->painter->isActive())
         {
             this->painter->end();
@@ -58,7 +64,9 @@ struct ProgressIndicatorHelper::Impl
 
 ProgressIndicatorHelper::ProgressIndicatorHelper(QObject *parent) : QObject(parent), d(std::make_unique<Impl>(this))
 {
-    d->renderer = new QSvgRenderer(QStringLiteral(":/images/decoding.svg"), this);
+    d->renderer.reset(new QSvgRenderer(QStringLiteral(":/images/decoding.svg")));
+    d->renderer->moveToThread(ANPV::globalInstance()->backgroundThread());
+
     d->painter = std::make_unique<QPainter>();
 
     auto i = ANPV::globalInstance()->iconHeight();
@@ -82,7 +90,7 @@ void ProgressIndicatorHelper::startRendering()
 
     if(!d->renderingConnection)
     {
-        d->renderingConnection = connect(d->renderer, &QSvgRenderer::repaintNeeded, this, [&]()
+        d->renderingConnection = connect(d->renderer.get(), &QSvgRenderer::repaintNeeded, d->renderer.get(), [&]()
         {
             d->renderSvg();
         });
@@ -98,9 +106,12 @@ void ProgressIndicatorHelper::stopRendering()
 QPixmap ProgressIndicatorHelper::getProgressIndicator(const QFutureWatcher<DecodingState> &future)
 {
     xThreadGuard(this);
-    int prog = future.progressValue();
 
+    std::unique_lock<std::recursive_mutex> l(d->m);
     QImage image = d->currentFrame.copy();
+    l.unlock();
+
+    int prog = future.progressValue();
     QPainter localPainter(&image);
     localPainter.setPen(future.isCanceled() ? Qt::red : Qt::blue);
     localPainter.setFont(QFont("Arial", 30));

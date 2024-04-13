@@ -181,12 +181,6 @@ struct ANPV::Impl
         this->dirModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
 
         this->fileModel = new SortedImageModel(q);
-        connect(qGuiApp, &QGuiApplication::lastWindowClosed, q,
-                [&]()
-        {
-            this->fileModel->cancelAllBackgroundTasks();
-            qInfo() << "lastWindowClose!";
-        });
 
         this->actionGroupFileOperation = new QActionGroup(q);
         this->actionExit = new QAction("Quit", q);

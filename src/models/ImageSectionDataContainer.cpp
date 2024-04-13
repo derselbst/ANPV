@@ -11,6 +11,7 @@
 #include "DecoderFactory.hpp"
 #include "SmartImageDecoder.hpp"
 #include "ExifWrapper.hpp"
+#include "LibRawHelper.hpp"
 
 #include <QApplication>
 #include <QPersistentModelIndex>
@@ -105,7 +106,72 @@ ImageSectionDataContainer::~ImageSectionDataContainer()
     qDebug() << "~ImageDatacontainer";
 }
 
-bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
+unsigned ImageSectionDataContainer::addImageItem(const QFileInfoList& fileList)
+{
+    unsigned readableImages = 0;
+    QSharedPointer<Image> parent;
+    bool isValidCombination = false;
+    std::vector<QSharedPointer<Image>> childImages;
+    for (auto& i : fileList)
+    {
+        auto image = this->addImageItem(i);
+        readableImages += image->hasDecoder();
+
+        if (image->isRaw())
+        {
+            if (parent == nullptr)
+            {
+                parent = image;
+                isValidCombination = true;
+            }
+            else
+            {
+                isValidCombination = false;
+            }
+        }
+        else
+        {
+            childImages.push_back(std::move(image));
+        }
+    }
+    
+    if (isValidCombination && childImages.size() > 0)
+    {
+        QSharedPointer<Image> chosenChild;
+        for (auto& i : childImages)
+        {
+            QString ext = i->fileExtension();
+            if (ext == "jpg" || ext == "jpeg")
+            {
+                chosenChild = i;
+                break;
+            }
+        }
+
+        if (chosenChild == nullptr)
+        {
+            for (auto& i : childImages)
+            {
+                QString ext = i->fileExtension();
+                if (ext == "tif" || ext == "tiff")
+                {
+                    chosenChild = i;
+                    break;
+                }
+            }
+        }
+
+        if (chosenChild && parent)
+        {
+            chosenChild->setNeighbor(parent);
+            parent->setNeighbor(chosenChild);
+        }
+    }
+    
+    return readableImages;
+}
+
+QSharedPointer<Image> ImageSectionDataContainer::addImageItem(const QFileInfo& info)
 {
     auto image = DecoderFactory::globalInstance()->makeImage(info);
 
@@ -256,7 +322,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
             // Just keep adding the file to the list, any error will be visible in the ThumbnailView later.
         }
 
-        return true;
+        return image;
     }
     else
     {
@@ -265,7 +331,7 @@ bool ImageSectionDataContainer::addImageItem(const QFileInfo &info)
 
     d->model ? d->model->welcomeImage(image, watcher) : (void)0;
     this->addImageItem(var, image);
-    return false;
+    return image;
 }
 
 /* Adds a given item (item) to a given section item (section). If the section item does not exist, it will be created. */
@@ -305,15 +371,12 @@ void ImageSectionDataContainer::addImageItem(const QVariant &section, QSharedPoi
         auto itemInsertIt = (*it)->findInsertPosition(item);
         (*it)->insert(itemInsertIt, item);
 
-        int check = this->getLinearIndexOfItem(item.data());
-
         itemsForUIModel.push_back(s);
         itemsForUIModel.push_back(item);
     }
     else
     {
         auto insertIt = (*it)->findInsertPosition(item);
-        auto d = std::distance((*it)->begin(), insertIt);
 
         (*it)->insert(insertIt, item);
 
@@ -328,7 +391,6 @@ void ImageSectionDataContainer::addImageItem(const QVariant &section, QSharedPoi
         {
             auto copy = itemsForUIModel;
             d->model->insertRows(insertIdx, copy);
-            Q_ASSERT(copy.empty());
         }, Qt::AutoConnection);
     }
 }
