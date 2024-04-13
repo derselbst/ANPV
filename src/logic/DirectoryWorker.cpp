@@ -13,6 +13,11 @@
 #include <QApplication>
 #include <QPromise>
 
+#include <QStringView>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#include <QUtf8StringView>
+#endif
+
 #include <filesystem>
 #include <unordered_map>
 
@@ -224,15 +229,35 @@ void DirectoryWorker::onDiscoverDirectory(QString newDir)
                 auto& filename = val.first;
                 auto& ext = val.second;
 
+                auto encodingAwareQStringAppender = []<typename T>(const T& str, QString& dest)
+                {
+                    // constexpr if will only discard the false branch in a template function:
+                    // https://en.cppreference.com/w/cpp/language/if
+                    if constexpr(std::is_same_v<T, std::wstring>)
+                    {
+                        dest.append(QStringView(str));
+                    }
+                    else
+                    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+                        // Will implicitly construct a QString from UTF8 and then append it
+                        dest.append(str.c_str());
+#else
+                        // Constructs the StringView and appends it directly
+                        dest.append(QUtf8StringView(str));
+#endif
+                    }
+                };
+
                 QString fname;
-                fname.append(filename);
+                encodingAwareQStringAppender(filename, fname);
                 if(ext.size() != 0)
                 {
                     for (auto& e : ext)
                     {
                         QString f(fname);
                         f.append('.');
-                        f.append(e);
+                        encodingAwareQStringAppender(e, f);
                         similarFiles.push_back(QFileInfo(d->currentDir, f));
                     }
                 }
