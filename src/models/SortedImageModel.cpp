@@ -13,7 +13,7 @@
 #define _GNU_SOURCE
 #endif
 #include <cstring> // for strverscmp()
-#include <list>
+#include <deque>
 #include <iterator>
 #include <unordered_map>
 
@@ -44,7 +44,7 @@ struct SortedImageModel::Impl
     // the data container might be shared with a DocumentView
     QSharedPointer<ImageSectionDataContainer> entries;
     QScopedPointer<DirectoryWorker> directoryWatcher;
-    std::list<QSharedPointer<AbstractListItem>> visibleItemList;
+    std::deque<QSharedPointer<AbstractListItem>> visibleItemList;
 
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
@@ -603,10 +603,8 @@ bool SortedImageModel::insertRows(int row, std::list<QSharedPointer<AbstractList
     this->beginInsertRows(QModelIndex(), row, row + items.size() - 1);
 
     auto insertIt = d->visibleItemList.begin();
-    t.start();
     std::advance(insertIt, row);
-    qInfo() << "std::advanced(): " << t.elapsed();
-    d->visibleItemList.splice(insertIt, items); // d->visibleItemList.insert(insertIt, items.begin(), items.end());
+    d->visibleItemList.insert(insertIt, items.begin(), items.end());
 
     this->endInsertRows();
 

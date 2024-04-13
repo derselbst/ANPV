@@ -391,7 +391,6 @@ void ImageSectionDataContainer::addImageItem(const QVariant &section, QSharedPoi
         {
             auto copy = itemsForUIModel;
             d->model->insertRows(insertIdx, copy);
-            Q_ASSERT(copy.empty());
         }, Qt::AutoConnection);
     }
 }
