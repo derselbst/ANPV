@@ -106,8 +106,9 @@ find_package(PNG REQUIRED)
 find_package(JXL REQUIRED)
 
 find_package(Mango)
-if(Mango_FOUND)
-  set(MANGO_SRC "src/decoders/MangoDecoder.cpp" "src/decoders/MangoDecoder.hpp")
+if(NOT Mango_FOUND)
+  message(STATUS "Seems like Mango is not installed, using bundled one")
+  add_subdirectory(mango/build)
 endif()
 
 add_subdirectory(libkexiv2)
@@ -158,7 +159,8 @@ src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
 src/decoders/SmartJxlDecoder.cpp
 src/decoders/SmartJxlDecoder.hpp
-${MANGO_SRC}
+src/decoders/MangoDecoder.cpp
+src/decoders/MangoDecoder.hpp
 src/decoders/LibRawHelper.cpp
 src/decoders/LibRawHelper.hpp
 src/logic/ExifWrapper.cpp
@@ -204,10 +206,8 @@ icons/oxygen/oxygen.qrc)
 
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
-target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg LibRaw::LibRaw PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2)
-if(TARGET Mango::Mango)
-  target_link_libraries(anpv-lib PRIVATE Mango::Mango)
-endif()
+target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg LibRaw::LibRaw PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2 mango)
+
 
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
 

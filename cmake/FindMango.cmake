@@ -37,10 +37,10 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Mango REQUIRED_VARS "Mango_LIBRARY" "Mango_INCLUDE_DIR")
 
 # Create the target
-if(Mango_FOUND AND NOT TARGET Mango::Mango)
-  add_library(Mango::Mango UNKNOWN IMPORTED)
+if(Mango_FOUND AND NOT TARGET mango)
+  add_library(mango UNKNOWN IMPORTED)
   set_target_properties(
-    Mango::Mango
+    mango
     PROPERTIES IMPORTED_LOCATION "${Mango_LIBRARY}"
                INTERFACE_INCLUDE_DIRECTORIES "${Mango_INCLUDE_DIR}")
 endif()
