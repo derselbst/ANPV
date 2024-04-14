@@ -330,13 +330,13 @@ SectionItem::~SectionItem() = default;
 
 /* Constructs an section object of the image list model. */
 SectionItem::SectionItem()
-    : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
+    : AbstractListItem(ListItemType::Section), d(std::make_unique<Impl>(this))
 {
 }
 
 /* Constructs an section object of the image list model with the name (itemid) as the type of QVariant. */
 SectionItem::SectionItem(const QVariant &itemid, SortField field, Qt::SortOrder order)
-    : d(std::make_unique<Impl>(this)), AbstractListItem(ListItemType::Section)
+    : AbstractListItem(ListItemType::Section), d(std::make_unique<Impl>(this))
 {
     this->setItemID(itemid);
     d->imageSortField = field;
