@@ -123,8 +123,7 @@ struct SortedImageModel::Impl
 
     void forceUpdateLayout()
     {
-        xThreadGuard g(q);
-        qInfo() << "forceUpdateLayout()";
+        // emitting signals is threadsafe, so no xThreadGuard required
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
     }
@@ -157,7 +156,6 @@ struct SortedImageModel::Impl
         xThreadGuard g(q);
 
         QModelIndex idx = q->index(img);
-
         if(idx.isValid())
         {
             // in case of failure, refresh the thumbnail to show to error icon
@@ -176,8 +174,10 @@ struct SortedImageModel::Impl
         }
     }
 
+    // watcher is owned by the background thread!
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>> &watcher, const QSharedPointer<Image> &img)
     {
+        // executed by background thread
         std::lock_guard<std::recursive_mutex> l(m);
 
         auto it = this->backgroundTasks.find(img.data());
@@ -185,13 +185,18 @@ struct SortedImageModel::Impl
         {
             auto watcher2 = it->second;
             Q_ASSERT(watcher2 == watcher);
-            watcher->disconnect(q);
+
+            // Disconnect the onBackgroundTaskFinished and onBackgroundTaskStarted connections, to destroy the lambda which captured QSharedPointer by value,
+            // to allow the watcher getting destroyed in the following erase call.
+            QObject::disconnect(watcher.get(), nullptr, watcher.get(), nullptr);
+            QObject::disconnect(watcher.get(), nullptr, q, nullptr);
+
             this->backgroundTasks.erase(it);
 
             if(this->backgroundTasks.empty())
             {
                 QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
-                this->layoutChangedTimer->stop();
+                QMetaObject::invokeMethod(this->layoutChangedTimer, &QTimer::stop);
                 this->forceUpdateLayout();
             }
         }
@@ -203,31 +208,20 @@ struct SortedImageModel::Impl
         auto it2 = this->spinningIconDrawConnections.find(img.data());
         if(it2 != this->spinningIconDrawConnections.end())
         {
-            ANPV::globalInstance()->spinningIconHelper()->disconnect(it2->second);
+            QObject::disconnect(it2->second);
             this->spinningIconDrawConnections.erase(it2);
 
             // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
-            this->scheduleSpinningIconRedraw(img);
+            QMetaObject::invokeMethod(q, [this, img]() { this->scheduleSpinningIconRedraw(img); });
         }
     }
 
+    // watcher is owned by the background thread!
     void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>> &watcher, const QSharedPointer<Image> &img)
     {
         std::lock_guard<std::recursive_mutex> l(m);
-        QModelIndex idx = q->index(img);
-
-        if(!idx.isValid())
-        {
-            qInfo() << "onBackgroundTaskStarted: image surprisingly gone before background task could be started?!";
-            this->onBackgroundTaskFinished(watcher, img);
-            return;
-        }
 
         this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [img, this]()
-        {
-            this->scheduleSpinningIconRedraw(img);
-        });
-        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [img, this]()
         {
             this->scheduleSpinningIconRedraw(img);
         });
@@ -235,6 +229,7 @@ struct SortedImageModel::Impl
 
     void scheduleSpinningIconRedraw(const QSharedPointer<Image> &img)
     {
+        xThreadGuard g(q);
         QModelIndex idx = q->index(img);
 
         if(idx.isValid())
@@ -814,17 +809,21 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QS
 
             d->backgroundTasks[image.data()] = watcher;
         }
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [watcher, image, this]()
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskFinished(watcher, image);
         });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [watcher, image, this]()
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskFinished(watcher, image);
         });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [watcher, image, this]()
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskStarted(watcher, image);
+        });
+        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, this, [image, this]()
+        {
+            d->scheduleSpinningIconRedraw(image);
         });
     }
 }
