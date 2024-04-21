@@ -106,11 +106,14 @@ void ProgressIndicatorHelper::drawProgressIndicator(QPainter* localPainter, cons
     xThreadGuard(this);
 
     std::unique_lock<std::recursive_mutex> l(d->m);
-    localPainter->drawImage(bounds, d->currentFrame);
+    QRect icoRect = d->currentFrame.rect();
+    icoRect.moveTo(bounds.topLeft());
+    icoRect = icoRect.intersected(bounds);
+    localPainter->drawImage(icoRect, d->currentFrame);
     l.unlock();
 
     int prog = future.progressValue();
     localPainter->setPen(future.isCanceled() ? Qt::red : Qt::blue);
     localPainter->setFont(QFont("Arial", 30));
-    localPainter->drawText(bounds, Qt::AlignHCenter | Qt::AlignVCenter, QString("%1%").arg(QString::number(prog)));
+    localPainter->drawText(icoRect, Qt::AlignHCenter | Qt::AlignVCenter, QString("%1%").arg(QString::number(prog)));
 }
