@@ -51,11 +51,7 @@ void ListItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
 void ListItemDelegate::paintProgressIcon(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index, const QFutureWatcher<DecodingState>* task) const
 {
-    // transform bounds, otherwise fills the whole cell
-    auto bounds = option.rect;
-    //bounds.setWidth(28);
-    //bounds.moveTo(option.rect.center().x() - bounds.width() / 2, option.rect.center().y() - bounds.height() / 2);
-
+    auto& bounds = option.rect;
     ANPV::globalInstance()->spinningIconHelper()->drawProgressIndicator(painter, bounds, *task);
 }
 
