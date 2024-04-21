@@ -10,6 +10,10 @@
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QSize>
+#include <QFutureWatcher>
+
+#include "DecodingState.hpp"
+
 
 class ListItemDelegate : public QStyledItemDelegate
 {
@@ -23,6 +27,7 @@ public:
 
 protected:
     void paintSection(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    void paintProgressIcon(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex&, const QFutureWatcher<DecodingState>* task) const;
 
 private:
     /* size of a section item */

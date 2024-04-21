@@ -14,6 +14,7 @@
 #include <QMimeData>
 #include <QMetaEnum>
 #include <QScrollBar>
+#include <QtGlobal>
 
 #include <algorithm>
 #include <cmath>
@@ -31,6 +32,7 @@
 #include "WaitCursor.hpp"
 #include "ListItemDelegate.hpp"
 #include "TraceTimer.hpp"
+#include "ProgressIndicatorHelper.hpp"
 
 struct ThumbnailListView::Impl
 {
@@ -516,7 +518,42 @@ void ThumbnailListView::setModel(QAbstractItemModel *model)
 
     if(old)
     {
-        old->disconnect(this);
+        QObject::disconnect(model, nullptr, this, nullptr);
+
+        auto* pm = dynamic_cast<QSortFilterProxyModel*>(model);
+        if (pm)
+        {
+            auto* sm = dynamic_cast<SortedImageModel*>(pm->sourceModel());
+            if (sm)
+            {
+                QObject::disconnect(sm, nullptr, this, nullptr);
+            }
+        }
+    }
+
+    auto* sm = dynamic_cast<SortedImageModel*>(model);
+    if (model && !sm)
+    {
+        auto* pm = dynamic_cast<QSortFilterProxyModel*>(model);
+        if (pm)
+        {
+            sm = dynamic_cast<SortedImageModel*>(pm->sourceModel());
+        }
+    }
+
+    if (sm)
+    {
+        QObject::connect(sm, &SortedImageModel::backgroundProcessingStarted, this, [&]()
+            {
+                auto* a = ANPV::globalInstance()->spinningIconHelper();
+                QObject::connect(a, &ProgressIndicatorHelper::needsRepaint, this->viewport(), qOverload<>(&QWidget::update));
+            });
+
+        QObject::connect(sm, &SortedImageModel::backgroundProcessingStopped, this, [&]()
+            {
+                auto* a = ANPV::globalInstance()->spinningIconHelper();
+                QObject::disconnect(a, &ProgressIndicatorHelper::needsRepaint, this->viewport(), qOverload<>(&QWidget::update));
+            });
     }
 
     QListView::setModel(model);

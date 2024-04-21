@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QFuture>
 #include <QPromise>
+#include <QPainter>
 #include <QMainWindow>
 #include <QApplication>
 
@@ -71,20 +72,26 @@ int main(int argc, char **argv)
     QObject::connect(&spinner, &ProgressIndicatorHelper::needsRepaint, &spinningIcon,
                      [&]()
                      {
-                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         QPixmap frame;
+                         QPainter painter;
+                         spinner.drawProgressIndicator(&painter, spinningIcon.rect(), wat);
                          spinningIcon.setPixmap(frame);
                      });
     QObject::connect(&wat, &QFutureWatcher<DecodingState>::progressValueChanged, &spinner,
                      [&]()
                      {
-                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         QPixmap frame;
+                         QPainter painter;
+                         spinner.drawProgressIndicator(&painter, spinningIcon.rect(), wat);
                          spinningIcon.setPixmap(frame);
                      });
     QObject::connect(&wat, &QFutureWatcher<DecodingState>::started,  &spinner, &ProgressIndicatorHelper::startRendering);
     QObject::connect(&wat, &QFutureWatcher<DecodingState>::finished, &spinner, &ProgressIndicatorHelper::stopRendering);
     QObject::connect(&wat, &QFutureWatcher<DecodingState>::canceled, &spinner,
                      [&](){
-                         QPixmap frame = spinner.getProgressIndicator(wat);
+                         QPixmap frame;
+                         QPainter painter;
+                         spinner.drawProgressIndicator(&painter, spinningIcon.rect(), wat);
                          spinningIcon.setPixmap(frame);
                          spinner.stopRendering(); });
     wat.setFuture(fut);
