@@ -167,6 +167,8 @@ void Image::setThumbnail(QImage thumb)
     // don't hold the lock when querying this
     auto iconHeight = ANPV::globalInstance()->iconHeight();
 
+    thumb.convertTo(QImage::Format_ARGB32_Premultiplied, Qt::ColorOnly | Qt::OrderedDither);
+    
     std::unique_lock<std::recursive_mutex> lck(d->m);
 
     if(thumb.width() > d->thumbnail.width())
@@ -251,7 +253,6 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     else
     {
-        QSize currentSize = d->thumbnailTransformed.size();
         int currentHeight = d->thumbnailTransformed.height();
 
         if(!d->thumbnailTransformed.isNull() && currentHeight >= height)
