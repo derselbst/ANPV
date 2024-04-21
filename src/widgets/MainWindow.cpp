@@ -775,6 +775,12 @@ MainWindow::MainWindow(TomsSplash *splash)
 
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
     connect(d->ui->urlNavigator, &UrlNavigatorWidget::pathChangedByUser, ANPV::globalInstance(), QOverload<const QString &>::of(&ANPV::setCurrentDir));
+
+    connect(qApp, &QApplication::focusWindowChanged, this, [&](QWindow* focusWindow)
+        {
+            bool b = this->windowHandle() == focusWindow;
+            d->ui->thumbnailListView->setUpdatesEnabled(b);
+        });
 }
 
 MainWindow::~MainWindow() = default;
