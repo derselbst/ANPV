@@ -153,22 +153,19 @@ struct SortedImageModel::Impl
     {
         xThreadGuard g(q);
 
-        QModelIndex idx = q->index(img);
-        if(idx.isValid())
+        // in case of failure, refresh the thumbnail to show the error icon
+        if(newState == DecodingState::Error || newState == DecodingState::Fatal)
         {
-            // in case of failure, refresh the thumbnail to show to error icon
-            if(newState == DecodingState::Error || newState == DecodingState::Fatal)
-            {
-                emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
-            }
-            else if(newState == DecodingState::Metadata)
-            {
-                emit q->dataChanged(idx, idx, { Qt::ToolTipRole });
-            }
-            else
-            {
-                // ignore any successful and cancelled states
-            }
+            this->onThumbnailChanged(img);
+        }
+        else if(newState == DecodingState::Metadata)
+        {
+            // disabled to prevent noise, as it's not important
+            // emit q->dataChanged(idx, idx, { Qt::ToolTipRole });
+        }
+        else
+        {
+            // ignore any successful and cancelled states
         }
     }
 
