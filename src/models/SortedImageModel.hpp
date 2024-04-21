@@ -42,6 +42,7 @@ public:
         ItemImageFocalLength,
         ItemImageLens,
         ItemImageCameraModel,
+        ItemBackgroundTask,
     };
 
     SortedImageModel(QObject *parent = nullptr);
@@ -57,6 +58,7 @@ public:
     QModelIndex index(const Image *img);
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
     QSharedPointer<AbstractListItem> item(const QModelIndex &idx) const;
+
     QList<Image *> checkedEntries();
 
     QVariant data(const QSharedPointer<AbstractListItem> &item, int role) const;
@@ -82,6 +84,10 @@ public: // QAbstractItemModel
 
 public slots:
     void cancelAllBackgroundTasks();
+
+signals:
+    void backgroundProcessingStarted();
+    void backgroundProcessingStopped();
 
 private:
     struct Impl;
