@@ -391,7 +391,7 @@ struct ANPV::Impl
         QSvgRenderer renderer(resource);
 
         QSize imgSize = renderer.defaultSize().scaled(this->iconHeight, this->iconHeight, Qt::KeepAspectRatio);
-        QImage image(imgSize, QImage::Format_ARGB32);
+        QImage image(imgSize, QImage::Format_ARGB32_Premultiplied);
 
         if(!image.isNull())
         {
@@ -401,7 +401,7 @@ struct ANPV::Impl
             renderer.render(&painter);
         }
 
-        return QPixmap::fromImage(image);
+        return QPixmap::fromImage(image, Qt::ColorOnly | Qt::DiffuseDither);
     }
 
     void drawNotFoundPixmap()

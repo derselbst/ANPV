@@ -224,7 +224,7 @@ QPixmap Image::thumbnailTransformed(int height)
     std::unique_lock<std::recursive_mutex> lck(d->m);
 
     QPixmap pix;
-    QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::NoFormatConversion);
+    QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::ColorOnly | Qt::DiffuseDither);
 
     if(thumb.isNull())
     {

@@ -49,9 +49,8 @@ struct ProgressIndicatorHelper::Impl
         }
 
         QSize imgSize = this->renderer->defaultSize().scaled(neu, neu, Qt::KeepAspectRatio);
-        QImage image(imgSize, QImage::Format_ARGB32);
+        QImage image(imgSize, QImage::Format_ARGB32_Premultiplied);
         this->currentFrame = image;
-
         if(image.isNull())
         {
             return;
