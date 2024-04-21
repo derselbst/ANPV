@@ -204,14 +204,6 @@ struct SortedImageModel::Impl
             // Most likely, the task has been already removed by cancelAllBackgroundTasks(). Silently ignore.
         }
     }
-
-    // watcher is owned by the background thread!
-    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>> &watcher, const QSharedPointer<Image> &img)
-    {
-        std::lock_guard<std::recursive_mutex> l(m);
-
-        this->backgroundTasks[img.data()] = watcher;
-    }
 };
 
 SortedImageModel::SortedImageModel(QObject *parent) : QAbstractTableModel(parent), d(std::make_unique<Impl>(this))
@@ -774,6 +766,9 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QS
                 ANPV::globalInstance()->spinningIconHelper()->startRendering();
                 emit this->backgroundProcessingStarted();
             }
+
+            // store the background task (even though it hasn't started yet) to allow waiting for it in cancelAllBackgroundTasks()
+            d->backgroundTasks[image.data()] = watcher;
         }
         QObject::connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, watcher.get(), [watcher, image, this]()
         {
@@ -782,10 +777,6 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QS
         QObject::connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskFinished(watcher, image);
-        });
-        QObject::connect(watcher.get(), &QFutureWatcher<DecodingState>::started, watcher.get(), [watcher, image, this]()
-        {
-            d->onBackgroundTaskStarted(watcher, image);
         });
     }
 }
