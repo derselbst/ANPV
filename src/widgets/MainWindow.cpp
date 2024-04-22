@@ -16,6 +16,7 @@
 #include <QCloseEvent>
 #include <QWhatsThis>
 #include <QMessageBox>
+#include <QWindow>
 
 #include "DocumentView.hpp"
 #include "PreviewAllImagesDialog.hpp"
