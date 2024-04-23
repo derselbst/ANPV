@@ -26,6 +26,7 @@ class QAction;
 class ProgressIndicatorHelper;
 class QThread;
 class QSettings;
+class QThreadPool;
 
 template<typename T>
 class QFuture;
@@ -47,6 +48,7 @@ public:
     ~ANPV() override;
 
     QThread *backgroundThread();
+    QThreadPool* threadPool();
     QSettings &settings();
 
     void openImages(const QList<std::pair<QSharedPointer<Image>, QSharedPointer<ImageSectionDataContainer>>> &);

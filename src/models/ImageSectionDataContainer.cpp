@@ -12,6 +12,7 @@
 #include "SmartImageDecoder.hpp"
 #include "ExifWrapper.hpp"
 #include "LibRawHelper.hpp"
+#include "ANPV.hpp"
 
 #include <QApplication>
 #include <QPersistentModelIndex>
@@ -682,7 +683,7 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
 
             if(decoder)
             {
-                bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
+                bool taken = ANPV::globalInstance()->threadPool()->tryTake(decoder.get());
 
                 if(taken)
                 {

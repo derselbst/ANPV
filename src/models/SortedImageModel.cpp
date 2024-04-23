@@ -3,9 +3,8 @@
 
 #include <QPromise>
 #include <QFileInfo>
-#include <QtConcurrent/QtConcurrent>
-#include <QThreadPool>
 #include <QDir>
+#include <QTimer>
 
 // #include <execution>
 #include <algorithm>
@@ -61,7 +60,6 @@ struct SortedImageModel::Impl
 
     Impl(SortedImageModel *parent) : q(parent)
     {
-        this->backgroundTasks.reserve(QThreadPool::globalInstance()->maxThreadCount());
     }
 
     ~Impl()
