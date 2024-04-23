@@ -780,6 +780,7 @@ MainWindow::MainWindow(TomsSplash *splash)
     connect(qApp, &QApplication::focusWindowChanged, this, [&](QWindow* focusWindow)
         {
             bool b = this->windowHandle() == focusWindow;
+            d->ui->thumbnailListView->setEnabled(b);
             d->ui->thumbnailListView->setUpdatesEnabled(b);
         });
 }
