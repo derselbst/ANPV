@@ -30,7 +30,7 @@ ExifOverlay::ExifOverlay(QWidget *parent)
     : MessageWidget(parent), d(std::make_unique<Impl>())
 {
     this->setCloseButtonVisible(false);
-    this->setWordWrap(false);
+    this->setWordWrap(true);
     this->setAttribute(Qt::WA_Hover);
     this->setFocusPolicy(Qt::NoFocus);
     d->opaEffect = new QGraphicsOpacityEffect(this);

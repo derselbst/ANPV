@@ -899,6 +899,9 @@ void DocumentView::resizeEvent(QResizeEvent *event)
     auto wndSize = event->size();
     d->centerMessageWidget(wndSize);
 
+    d->exifOverlay->setMaximumWidth(std::max(static_cast<int>(wndSize.width() * 0.25), 240));
+    d->exifOverlay->adjustSize();
+
     QSize i = d->isSelectedBox->iconSize();
     QPoint bottomLeftCheckPoint(0, wndSize.height() - i.height());
     d->isSelectedBox->move(bottomLeftCheckPoint);

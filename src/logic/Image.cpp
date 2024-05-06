@@ -50,6 +50,8 @@ struct Image::Impl
 
     QColorSpace colorSpace;
 
+    std::unordered_map<std::string, std::string> additionalMetadata;
+
     QString errorMessage;
 
     std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAfPoints;
@@ -303,6 +305,12 @@ void Image::setColorSpace(QColorSpace cs)
     d->colorSpace = cs;
 }
 
+void Image::setAdditionalMetadata(std::unordered_map<std::string, std::string>&& m)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    d->additionalMetadata = std::move(m);
+}
+
 std::optional<std::tuple<std::vector<AfPoint>, QSize>> Image::cachedAutoFocusPoints()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
@@ -396,6 +404,25 @@ QString Image::formatInfoString()
         infoStr += "File modified on:<br>";
         infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
         infoStr += t.toString("hh:mm:ss");
+    }
+
+
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+
+    if (!d->additionalMetadata.empty())
+    {
+        QString s;
+
+        for (auto& [key, value] : d->additionalMetadata)
+        {
+            s += QStringLiteral("<br><br><i>") + QString::fromStdString(key) + QStringLiteral(":</i>");
+            s += QStringLiteral("<br>") + QString::fromStdString(value).replace(QStringLiteral("\n"), QStringLiteral("<br>"));
+        }
+
+        if (!s.isEmpty())
+        {
+            infoStr += QString("<br><br><b>===Decoder Text===</b>") + s;
+        }
     }
 
     return infoStr;

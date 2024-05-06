@@ -107,6 +107,7 @@ protected:
     void setIcon(QIcon ico);
     void setExif(QSharedPointer<ExifWrapper>);
     void setColorSpace(QColorSpace);
+    void setAdditionalMetadata(std::unordered_map<std::string, std::string>&&);
 
     void setDecodingState(DecodingState state);
     void setDecodedImage(QImage, QTransform s = QTransform());

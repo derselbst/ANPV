@@ -96,6 +96,17 @@ struct SmartPngDecoder::Impl
                ? QImage::Format_RGBA64
                : QImage::Format_ARGB32;
     }
+
+    std::unordered_map<std::string, std::string> parseText(png_textp textPtr, int num_comments)
+    {
+        std::unordered_map<std::string, std::string> res;
+        for (int i = 0; i < num_comments; i++)
+        {
+            res[textPtr[i].key] = textPtr[i].text;
+        }
+
+        return res;
+    }
 };
 
 SmartPngDecoder::SmartPngDecoder(QSharedPointer<Image> image) : SmartImageDecoder(image), d(std::make_unique<Impl>(this))
@@ -145,6 +156,11 @@ void SmartPngDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
     uint32_t width, height;
     int bit_depth, color_type, interlace_type, compression_type, filter_type;
     png_get_IHDR(cinfo, d->info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, &compression_type, &filter_type);
+
+    png_textp textPtr;
+    auto num_comments = png_get_text(cinfo, d->info_ptr, &textPtr, nullptr);
+    auto txt = d->parseText(textPtr, num_comments);
+
 
     if(color_type == PNG_COLOR_TYPE_PALETTE)
     {
@@ -258,6 +274,7 @@ void SmartPngDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
 
     this->image()->setSize(QSize(width, height));
     this->image()->setColorSpace(iccProfile);
+    this->image()->setAdditionalMetadata(std::move(txt));
 }
 
 

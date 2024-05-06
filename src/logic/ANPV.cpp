@@ -537,7 +537,7 @@ QThreadPool* ANPV::threadPool()
     static QVersionNumber versionGood(6, 4, 3);
     static QVersionNumber versionCur = QLibraryInfo::version();
     // https://bugreports.qt.io/browse/QTBUG-109511
-    static bool cantUseGlobalThreadPool = versionBad <= versionCur && versionCur < versionGood;
+    static const bool cantUseGlobalThreadPool = versionBad <= versionCur && versionCur < versionGood;
 
     if (cantUseGlobalThreadPool)
     {
