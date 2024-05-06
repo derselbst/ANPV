@@ -343,11 +343,12 @@ QString Image::formatInfoString()
 
     if(this->isRaw())
     {
-        infoStr += "<b>This is a RAW file!</b><br>"
+        infoStr += QStringLiteral(
+                   "<b>This is a RAW file!</b><br>"
                    "What you see is an<br>"
                    "embedded preview, which<br>"
                    "might be of lower quality<br>"
-                   "than the RAW itself!<br><br>";
+                   "than the RAW itself!<br><br>");
     }
 
     auto exifWrapper = this->exif();
@@ -369,31 +370,31 @@ QString Image::formatInfoString()
 
         if(s.isEmpty())
         {
-            s = "unknown";
+            s = QStringLiteral("unknown");
         }
 
-        infoStr += QString("ColorSpace: " + s + "<br><br>");
+        infoStr += QStringLiteral("ColorSpace: ") + s + QStringLiteral("<br><br>");
 
         s = exifWrapper->formatToString();
 
         if(!s.isEmpty())
         {
-            infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
+            infoStr += QStringLiteral("<b>===EXIF===</b><br><br>") + s + QStringLiteral("<br><br>");
         }
     }
 
-    infoStr += QString("<b>===stat()===</b><br><br>");
+    infoStr += QStringLiteral("<b>===stat()===</b><br><br>");
     if (this->fileInfo().isFile())
     {
-        infoStr += "File Size: ";
+        infoStr += QStringLiteral("File Size: ");
         infoStr += ANPV::formatByteHtmlString(this->fileInfo().size());
-        infoStr += "<br><br>";
+        infoStr += QStringLiteral("<br><br>");
     }
 
     QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
     if(t.isValid())
     {
-        infoStr += "File created on:<br>";
+        infoStr += QStringLiteral("File created on:<br>");
         infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
         infoStr += t.toString("  hh:mm:ss<br><br>");
     }
@@ -401,14 +402,12 @@ QString Image::formatInfoString()
     t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
     if(t.isValid())
     {
-        infoStr += "File modified on:<br>";
+        infoStr += QStringLiteral("File modified on:<br>");
         infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
         infoStr += t.toString("hh:mm:ss");
     }
 
-
     std::unique_lock<std::recursive_mutex> lck(d->m);
-
     if (!d->additionalMetadata.empty())
     {
         QString s;
@@ -421,7 +420,7 @@ QString Image::formatInfoString()
 
         if (!s.isEmpty())
         {
-            infoStr += QString("<br><br><b>===Decoder Text===</b>") + s;
+            infoStr += QStringLiteral("<br><br><b>===Decoder Text===</b>") + s;
         }
     }
 
