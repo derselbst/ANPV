@@ -12,6 +12,7 @@
 #include <QEventLoop>
 #include <QApplication>
 #include <QPromise>
+#include <QTimer>
 
 #include <QStringView>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -21,11 +22,19 @@
 #include <filesystem>
 #include <unordered_map>
 
+
+uint qHash(const QFileInfo& inf)
+{
+    return qHash(inf.fileName());
+}
+
 struct DirectoryWorker::Impl
 {
     DirectoryWorker *q;
     ImageSectionDataContainer *data;
     QDir currentDir;
+    QSet<QFileInfo> delayedQueue;
+    QTimer delayedProcessing;
 
     // This list contains the fileInfos of all files in the model. We do not loop over the model itself to avoid aquiring the lock.
     QFileInfoList discoveredFiles;
@@ -35,25 +44,25 @@ struct DirectoryWorker::Impl
 
     using FileMap = std::unordered_map<std::filesystem::path::string_type /* filename without extension */, std::vector<std::filesystem::path::string_type> /* extension(s) */>;
 
-    void onDirectoryChanged(const QString &path)
+    void onDirectoryChanged(const QString& path)
     {
         xThreadGuard g(q);
 
-        if(path != this->currentDir.absolutePath())
+        if (path != this->currentDir.absolutePath())
         {
             return;
         }
 
         QFileInfoList fileInfoList = currentDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
 
-        for(auto it = discoveredFiles.begin(); it != discoveredFiles.end();)
+        for (auto it = discoveredFiles.begin(); it != discoveredFiles.end();)
         {
-            QFileInfo &eInfo = (*it);
+            QFileInfo& eInfo = (*it);
 
             // due to caching, call stat() as exists might otherwise return outdated garbage
             eInfo.stat();
 
-            if(!eInfo.exists())
+            if (!eInfo.exists())
             {
                 // file doesn't exist, probably deleted
                 this->data->removeImageItem(eInfo);
@@ -62,13 +71,13 @@ struct DirectoryWorker::Impl
             }
 
             auto result = std::find_if(fileInfoList.begin(),
-                                       fileInfoList.end(),
-                                       [&](const QFileInfo & other)
-            {
-                return eInfo == other;
-            });
+                fileInfoList.end(),
+                [&](const QFileInfo& other)
+                {
+                    return eInfo == other;
+                });
 
-            if(result != fileInfoList.end())
+            if (result != fileInfoList.end())
             {
                 // we already know about that file, remove it from the current list
                 fileInfoList.erase(result);
@@ -81,12 +90,31 @@ struct DirectoryWorker::Impl
             ++it;
         }
 
-        // any file still in the list are new, we need to add them
-        for(const QFileInfo &i : fileInfoList)
+        while (!fileInfoList.empty())
         {
-            discoveredFiles.push_back(i);
-            this->data->addImageItem(i);
+            this->delayedQueue.insert(fileInfoList.takeFirst());
         }
+        QMetaObject::invokeMethod(&this->delayedProcessing, QOverload<void>::of(&QTimer::start));
+    }
+
+    void onDelayedProcessing()
+    {
+        // any file still in the list are (probably) new, we need to add them
+        for(QFileInfo i : this->delayedQueue)
+        {
+            i.stat();
+            if (!i.exists())
+            {
+                // file doesn't exist, probably deleted
+                this->data->removeImageItem(i);
+            }
+            else
+            {
+                this->discoveredFiles.push_back(i);
+                this->data->addImageItem(i);
+            }
+        }
+        this->delayedQueue.clear();
     }
 
     void throwIfDirectoryDiscoveryCancelled()
@@ -177,6 +205,13 @@ DirectoryWorker::DirectoryWorker(ImageSectionDataContainer *data, QObject *paren
         d->onDirectoryChanged(p);
     });
     connect(this, &DirectoryWorker::discoverDirectory, this, &DirectoryWorker::onDiscoverDirectory, Qt::QueuedConnection);
+
+    d->delayedProcessing.setSingleShot(true);
+    d->delayedProcessing.setInterval(1000);
+    connect(&d->delayedProcessing, &QTimer::timeout, this, [&]()
+    {
+        d->onDelayedProcessing();
+    });
 }
 
 DirectoryWorker::~DirectoryWorker()
@@ -190,6 +225,8 @@ QFuture<DecodingState> DirectoryWorker::changeDirAsync(const QString &dir)
     d->cancelAndWaitForDirectoryDiscovery();
     d->directoryDiscovery.reset(new QPromise<DecodingState>);
     d->discoveredFiles.clear();
+    d->delayedProcessing.stop();
+    d->delayedQueue.clear();
     emit this->discoverDirectory(dir);
     return d->directoryDiscovery->future();
 }
