@@ -354,7 +354,6 @@ bool SortedImageModel::setData(const QModelIndex &index, const QVariant &value, 
             {
             case Qt::CheckStateRole:
                 img->setChecked(static_cast<Qt::CheckState>(value.toInt()));
-                emit this->dataChanged(index, index, { role });
                 return true;
             }
         }
@@ -706,51 +705,57 @@ bool SortedImageModel::isSafeToChangeDir()
     return d->checkedImages.size() == 0;
 }
 
-// this function makes all conections required right after having added a new image to the model, making sure decoding progress is displayed, etc
+// this function makes signals of the image to the model
 // this function is thread-safe
-void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QSharedPointer<QFutureWatcher<DecodingState>> &watcher)
+void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image)
 {
     Q_ASSERT(image != nullptr);
 
     this->connect(image.data(), &Image::decodingStateChanged, this,
-                  [&](Image * img, quint32 newState, quint32 old)
-    {
-        d->onBackgroundImageTaskStateChanged(img, newState, old);
-    });
+        [&](Image* img, quint32 newState, quint32 old)
+        {
+            d->onBackgroundImageTaskStateChanged(img, newState, old);
+        });
 
-    this->connect(image.data(), &Image::thumbnailChanged, this, [&](Image * i, QImage)
-    {
-        d->onThumbnailChanged(i);
-    });
+    this->connect(image.data(), &Image::thumbnailChanged, this, [&](Image* i, QImage)
+        {
+            d->onThumbnailChanged(i);
+        });
 
     this->connect(image.data(), &Image::checkStateChanged, this,
-                  [&](Image * i, int c, int old)
-    {
-        if(c != old)
+        [&](Image* i, int c, int old)
         {
-            if(c == Qt::Unchecked)
+            if (c != old)
             {
-                d->checkedImages.removeAll(i);
+                if (c == Qt::Unchecked)
+                {
+                    d->checkedImages.removeAll(i);
+                }
+                else
+                {
+                    // retrieve the QSharedPointer for *i
+                    // auto qimg = AbstractListItem::imageCast(this->item(this->index(i)));
+                    d->checkedImages.append(i);
+                }
             }
-            else
-            {
-                // retrieve the QSharedPointer for *i
-                // auto qimg = AbstractListItem::imageCast(this->item(this->index(i)));
-                d->checkedImages.append(i);
-            }
-        }
 
-        d->onCheckStateChanged(i);
-    });
+            d->onCheckStateChanged(i);
+        });
 
     this->connect(image.data(), &Image::destroyed, this,
-                  [&](QObject * i)
-    {
-        Q_ASSERT(i != nullptr);
-        // i is already partly destroyed, hence we cannot dynamic_cast here
-        d->checkedImages.removeAll(static_cast<Image *>(i));
-    });
+        [&](QObject* i)
+        {
+            Q_ASSERT(i != nullptr);
+            // i is already partly destroyed, hence we cannot dynamic_cast here
+            d->checkedImages.removeAll(static_cast<Image*>(i));
+        });
+}
 
+// this function makes attaches a future to an image, making sure decoding progress is displayed, etc
+// this function is thread-safe
+// note that this function may be called a second time for the same image, when e.g. decodeAllImages has been requested, but this time the watcher will be a new one
+void SortedImageModel::attachTaskToImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
+{
     if(watcher != nullptr)
     {
         {

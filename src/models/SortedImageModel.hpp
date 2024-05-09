@@ -66,7 +66,8 @@ public:
     Qt::ItemFlags flags(const QSharedPointer<AbstractListItem> &item) const;
 
     bool isSafeToChangeDir();
-    void welcomeImage(const QSharedPointer<Image> &image, const QSharedPointer<QFutureWatcher<DecodingState>> &watcher);
+    void welcomeImage(const QSharedPointer<Image> &image);
+    void attachTaskToImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher);
 
     bool insertRows(int row, std::list<QSharedPointer<AbstractListItem>> &items);
     void setLayoutTimerInterval(qint64 t);
