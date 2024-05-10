@@ -94,7 +94,7 @@ struct DirectoryWorker::Impl
         {
             this->delayedQueue.insert(fileInfoList.takeFirst());
         }
-        QMetaObject::invokeMethod(&this->delayedProcessing, QOverload<void>::of(&QTimer::start));
+        QMetaObject::invokeMethod(&this->delayedProcessing, QOverload<>::of(&QTimer::start));
     }
 
     void onDelayedProcessing()
