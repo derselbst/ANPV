@@ -23,9 +23,9 @@
 #include <unordered_map>
 
 
-uint qHash(const QFileInfo& inf)
+uint qHash(const QFileInfo& inf, size_t seed = 0)
 {
-    return qHash(inf.fileName());
+    return qHash(inf.fileName(), seed);
 }
 
 struct DirectoryWorker::Impl
