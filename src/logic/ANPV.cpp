@@ -19,6 +19,8 @@
 #include <QDataStream>
 #include <QFileDialog>
 #include <QMimeData>
+#include <QVersionNumber>
+#include <QLibraryInfo>
 
 #include <atomic>
 
@@ -123,6 +125,7 @@ struct ANPV::Impl
     QPointer<QAction> actionExit;
     QPointer<QUndoStack> undoStack;
     QPointer<QThread> backgroundThread;
+    QPointer<QThreadPool> myThreadPool;
     QPointer<ProgressIndicatorHelper> spinningIconHelper;
     QPointer<QSettings> globalSettings;
 
@@ -150,6 +153,10 @@ struct ANPV::Impl
         {
             ::global = QPointer<ANPV>(q);
         }
+
+        this->myThreadPool = new QThreadPool(q);
+        q->threadPool()->setThreadPriority(QThread::LowPriority);
+        q->threadPool()->setMaxThreadCount(QThread::idealThreadCount() / 2);
 
         this->backgroundThread = (new QThread(q));
         this->backgroundThread->setObjectName("Background Thread");
@@ -391,7 +398,7 @@ struct ANPV::Impl
         QSvgRenderer renderer(resource);
 
         QSize imgSize = renderer.defaultSize().scaled(this->iconHeight, this->iconHeight, Qt::KeepAspectRatio);
-        QImage image(imgSize, QImage::Format_ARGB32);
+        QImage image(imgSize, QImage::Format_ARGB32_Premultiplied);
 
         if(!image.isNull())
         {
@@ -401,7 +408,7 @@ struct ANPV::Impl
             renderer.render(&painter);
         }
 
-        return QPixmap::fromImage(image);
+        return QPixmap::fromImage(image, Qt::ColorOnly | Qt::DiffuseDither);
     }
 
     void drawNotFoundPixmap()
@@ -522,6 +529,24 @@ QThread *ANPV::backgroundThread()
     Q_ASSERT(d->backgroundThread != nullptr);
     xThreadGuard g(this);
     return d->backgroundThread.get();
+}
+
+QThreadPool* ANPV::threadPool()
+{
+    static QVersionNumber versionBad(6, 4, 0);
+    static QVersionNumber versionGood(6, 4, 3);
+    static QVersionNumber versionCur = QLibraryInfo::version();
+    // https://bugreports.qt.io/browse/QTBUG-109511
+    static const bool cantUseGlobalThreadPool = versionBad <= versionCur && versionCur < versionGood;
+
+    if (cantUseGlobalThreadPool)
+    {
+        return d->myThreadPool;
+    }
+    else
+    {
+        return QThreadPool::globalInstance();
+    }
 }
 
 QSettings &ANPV::settings()

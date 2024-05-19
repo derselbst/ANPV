@@ -16,6 +16,7 @@
 #include <QCloseEvent>
 #include <QWhatsThis>
 #include <QMessageBox>
+#include <QWindow>
 
 #include "DocumentView.hpp"
 #include "PreviewAllImagesDialog.hpp"
@@ -69,6 +70,8 @@ struct MainWindow::Impl
 
     QPointer<QAction> actionBack = nullptr;
     QPointer<QAction> actionForward = nullptr;
+
+    QPointer<QWidget> focusWidgetBackup;
 
     Impl(MainWindow *parent) : q(parent)
     {
@@ -775,6 +778,26 @@ MainWindow::MainWindow(TomsSplash *splash)
 
 //     connect(d->cancellableWidget, &CancellableProgressWidget::expired, this, &MainWindow::hideProgressWidget);
     connect(d->ui->urlNavigator, &UrlNavigatorWidget::pathChangedByUser, ANPV::globalInstance(), QOverload<const QString &>::of(&ANPV::setCurrentDir));
+
+    connect(qApp, &QApplication::focusWindowChanged, this, [&](QWindow* focusWindow)
+        {
+            if (d->ui->thumbnailListView->isEnabled())
+            {
+                d->focusWidgetBackup = this->focusWidget();
+            }
+
+            const auto* wnd = this->windowHandle();
+            bool b = focusWindow != nullptr && (wnd == focusWindow || wnd == focusWindow->transientParent());
+            // disabling the widget causes it to loose focus...
+            d->ui->thumbnailListView->setEnabled(b);
+            d->ui->thumbnailListView->setUpdatesEnabled(b);
+
+            // restore focus...
+            if (b && d->focusWidgetBackup)
+            {
+                d->focusWidgetBackup->setFocus();
+            }
+        });
 }
 
 MainWindow::~MainWindow() = default;

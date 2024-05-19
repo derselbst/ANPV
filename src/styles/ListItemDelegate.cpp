@@ -5,8 +5,12 @@
 
 #include "ListItemDelegate.hpp"
 
+#include <QFutureWatcher>
+
 #include "types.hpp"
 #include "SortedImageModel.hpp"
+#include "ANPV.hpp"
+#include "ProgressIndicatorHelper.hpp"
 
 /* Constructs a ItemDelegate object. */
 ListItemDelegate::ListItemDelegate(QObject *parent)
@@ -23,8 +27,9 @@ void ListItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     {
         return;
     }
+    auto* model = index.model();
 
-    issection = index.model()->data(index, SortedImageModel::ItemIsSection).toBool();
+    issection = model->data(index, SortedImageModel::ItemIsSection).toBool();
 
     if(issection)
     {
@@ -32,8 +37,22 @@ void ListItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     }
     else
     {
-        this->QStyledItemDelegate::paint(painter, option, index);
+        auto task = qvariant_cast<QSharedPointer<QFutureWatcher<DecodingState>>>(model->data(index, SortedImageModel::ItemBackgroundTask));
+        if (task && task->isRunning())
+        {
+            this->paintProgressIcon(painter, option, index, task.data());
+        }
+        else
+        {
+            this->QStyledItemDelegate::paint(painter, option, index);
+        }
     }
+}
+
+void ListItemDelegate::paintProgressIcon(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index, const QFutureWatcher<DecodingState>* task) const
+{
+    auto& bounds = option.rect;
+    ANPV::globalInstance()->spinningIconHelper()->drawProgressIndicator(painter, bounds, *task);
 }
 
 /* Paints a section item with a given model index (index) and options (option) on a painter object (painter). */

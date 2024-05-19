@@ -50,6 +50,8 @@ struct Image::Impl
 
     QColorSpace colorSpace;
 
+    std::unordered_map<std::string, std::string> additionalMetadata;
+
     QString errorMessage;
 
     std::optional<std::tuple<std::vector<AfPoint>, QSize>> cachedAfPoints;
@@ -167,6 +169,8 @@ void Image::setThumbnail(QImage thumb)
     // don't hold the lock when querying this
     auto iconHeight = ANPV::globalInstance()->iconHeight();
 
+    thumb.convertTo(QImage::Format_ARGB32_Premultiplied, Qt::ColorOnly | Qt::OrderedDither);
+    
     std::unique_lock<std::recursive_mutex> lck(d->m);
 
     if(thumb.width() > d->thumbnail.width())
@@ -222,7 +226,7 @@ QPixmap Image::thumbnailTransformed(int height)
     std::unique_lock<std::recursive_mutex> lck(d->m);
 
     QPixmap pix;
-    QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::NoFormatConversion);
+    QPixmap thumb = QPixmap::fromImage(this->thumbnail(), Qt::ColorOnly | Qt::DiffuseDither);
 
     if(thumb.isNull())
     {
@@ -251,7 +255,6 @@ QPixmap Image::thumbnailTransformed(int height)
     }
     else
     {
-        QSize currentSize = d->thumbnailTransformed.size();
         int currentHeight = d->thumbnailTransformed.height();
 
         if(!d->thumbnailTransformed.isNull() && currentHeight >= height)
@@ -302,6 +305,12 @@ void Image::setColorSpace(QColorSpace cs)
     d->colorSpace = cs;
 }
 
+void Image::setAdditionalMetadata(std::unordered_map<std::string, std::string>&& m)
+{
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    d->additionalMetadata = std::move(m);
+}
+
 std::optional<std::tuple<std::vector<AfPoint>, QSize>> Image::cachedAutoFocusPoints()
 {
     std::unique_lock<std::recursive_mutex> lck(d->m);
@@ -334,11 +343,12 @@ QString Image::formatInfoString()
 
     if(this->isRaw())
     {
-        infoStr += "<b>This is a RAW file!</b><br>"
+        infoStr += QStringLiteral(
+                   "<b>This is a RAW file!</b><br>"
                    "What you see is an<br>"
                    "embedded preview, which<br>"
                    "might be of lower quality<br>"
-                   "than the RAW itself!<br><br>";
+                   "than the RAW itself!<br><br>");
     }
 
     auto exifWrapper = this->exif();
@@ -360,31 +370,31 @@ QString Image::formatInfoString()
 
         if(s.isEmpty())
         {
-            s = "unknown";
+            s = QStringLiteral("unknown");
         }
 
-        infoStr += QString("ColorSpace: " + s + "<br><br>");
+        infoStr += QStringLiteral("ColorSpace: ") + s + QStringLiteral("<br><br>");
 
         s = exifWrapper->formatToString();
 
         if(!s.isEmpty())
         {
-            infoStr += QString("<b>===EXIF===</b><br><br>") + s + "<br><br>";
+            infoStr += QStringLiteral("<b>===EXIF===</b><br><br>") + s + QStringLiteral("<br><br>");
         }
     }
 
-    infoStr += QString("<b>===stat()===</b><br><br>");
+    infoStr += QStringLiteral("<b>===stat()===</b><br><br>");
     if (this->fileInfo().isFile())
     {
-        infoStr += "File Size: ";
+        infoStr += QStringLiteral("File Size: ");
         infoStr += ANPV::formatByteHtmlString(this->fileInfo().size());
-        infoStr += "<br><br>";
+        infoStr += QStringLiteral("<br><br>");
     }
 
     QDateTime t = this->fileInfo().fileTime(QFileDevice::FileBirthTime);
     if(t.isValid())
     {
-        infoStr += "File created on:<br>";
+        infoStr += QStringLiteral("File created on:<br>");
         infoStr += t.toString("  yyyy-MM-dd (dddd)<br>");
         infoStr += t.toString("  hh:mm:ss<br><br>");
     }
@@ -392,9 +402,26 @@ QString Image::formatInfoString()
     t = this->fileInfo().fileTime(QFileDevice::FileModificationTime);
     if(t.isValid())
     {
-        infoStr += "File modified on:<br>";
+        infoStr += QStringLiteral("File modified on:<br>");
         infoStr += t.toString("yyyy-MM-dd (dddd)<br>");
         infoStr += t.toString("hh:mm:ss");
+    }
+
+    std::unique_lock<std::recursive_mutex> lck(d->m);
+    if (!d->additionalMetadata.empty())
+    {
+        QString s;
+
+        for (auto& [key, value] : d->additionalMetadata)
+        {
+            s += QStringLiteral("<br><br><i>") + QString::fromStdString(key) + QStringLiteral(":</i>");
+            s += QStringLiteral("<br>") + QString::fromStdString(value).replace(QStringLiteral("\n"), QStringLiteral("<br>"));
+        }
+
+        if (!s.isEmpty())
+        {
+            infoStr += QStringLiteral("<br><br><b>===Decoder Text===</b>") + s;
+        }
     }
 
     return infoStr;

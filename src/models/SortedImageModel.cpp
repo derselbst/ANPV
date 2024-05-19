@@ -3,9 +3,8 @@
 
 #include <QPromise>
 #include <QFileInfo>
-#include <QtConcurrent/QtConcurrent>
-#include <QThreadPool>
 #include <QDir>
+#include <QTimer>
 
 // #include <execution>
 #include <algorithm>
@@ -49,7 +48,6 @@ struct SortedImageModel::Impl
     // keep track of all image decoding tasks we spawn in the background, guarded by mutex, because accessed by UI thread and directory worker thread
     std::recursive_mutex m;
     std::unordered_map<Image *, QSharedPointer<QFutureWatcher<DecodingState>>> backgroundTasks;
-    std::unordered_map<Image *, QMetaObject::Connection> spinningIconDrawConnections;
     QList<Image *> checkedImages; //should contain non-owning references only, so that it can be cleared by Image::destroyed()
 
     // we cache the most recent iconHeight, so avoid asking ANPV::globalInstance() from a worker thread, avoiding an invoke, etc.
@@ -62,8 +60,6 @@ struct SortedImageModel::Impl
 
     Impl(SortedImageModel *parent) : q(parent)
     {
-        this->backgroundTasks.reserve(QThreadPool::globalInstance()->maxThreadCount());
-        this->spinningIconDrawConnections.reserve(QThreadPool::globalInstance()->maxThreadCount());
     }
 
     ~Impl()
@@ -123,8 +119,7 @@ struct SortedImageModel::Impl
 
     void forceUpdateLayout()
     {
-        xThreadGuard g(q);
-        qInfo() << "forceUpdateLayout()";
+        // emitting signals is threadsafe, so no xThreadGuard required
         emit q->layoutAboutToBeChanged();
         emit q->layoutChanged();
     }
@@ -156,28 +151,26 @@ struct SortedImageModel::Impl
     {
         xThreadGuard g(q);
 
-        QModelIndex idx = q->index(img);
-
-        if(idx.isValid())
+        // in case of failure, refresh the thumbnail to show the error icon
+        if(newState == DecodingState::Error || newState == DecodingState::Fatal)
         {
-            // in case of failure, refresh the thumbnail to show to error icon
-            if(newState == DecodingState::Error || newState == DecodingState::Fatal)
-            {
-                emit q->dataChanged(idx, idx, { Qt::DecorationRole, Qt::ToolTipRole });
-            }
-            else if(newState == DecodingState::Metadata)
-            {
-                emit q->dataChanged(idx, idx, { Qt::ToolTipRole });
-            }
-            else
-            {
-                // ignore any successful and cancelled states
-            }
+            this->onThumbnailChanged(img);
+        }
+        else if(newState == DecodingState::Metadata)
+        {
+            // disabled to prevent noise, as it's not important
+            // emit q->dataChanged(idx, idx, { Qt::ToolTipRole });
+        }
+        else
+        {
+            // ignore any successful and cancelled states
         }
     }
 
+    // watcher is owned by the background thread!
     void onBackgroundTaskFinished(const QSharedPointer<QFutureWatcher<DecodingState>> &watcher, const QSharedPointer<Image> &img)
     {
+        // executed by background thread
         std::lock_guard<std::recursive_mutex> l(m);
 
         auto it = this->backgroundTasks.find(img.data());
@@ -185,61 +178,25 @@ struct SortedImageModel::Impl
         {
             auto watcher2 = it->second;
             Q_ASSERT(watcher2 == watcher);
-            watcher->disconnect(q);
+
+            // Disconnect the onBackgroundTaskFinished and onBackgroundTaskStarted connections, to destroy the lambda which captured QSharedPointer by value,
+            // to allow the watcher getting destroyed in the following erase call.
+            QObject::disconnect(watcher.get(), nullptr, watcher.get(), nullptr);
+            QObject::disconnect(watcher.get(), nullptr, q, nullptr);
+
             this->backgroundTasks.erase(it);
 
             if(this->backgroundTasks.empty())
             {
-                QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::stopRendering);
-                this->layoutChangedTimer->stop();
+                QMetaObject::invokeMethod(this->layoutChangedTimer, &QTimer::stop);
+                ANPV::globalInstance()->spinningIconHelper()->stopRendering();
                 this->forceUpdateLayout();
+                emit q->backgroundProcessingStopped();
             }
         }
         else
         {
             // Most likely, the task has been already removed by cancelAllBackgroundTasks(). Silently ignore.
-        }
-
-        auto it2 = this->spinningIconDrawConnections.find(img.data());
-        if(it2 != this->spinningIconDrawConnections.end())
-        {
-            ANPV::globalInstance()->spinningIconHelper()->disconnect(it2->second);
-            this->spinningIconDrawConnections.erase(it2);
-
-            // Reschedule an icon draw event, in case no thumbnail was obtained after decoding finished
-            this->scheduleSpinningIconRedraw(img);
-        }
-    }
-
-    void onBackgroundTaskStarted(const QSharedPointer<QFutureWatcher<DecodingState>> &watcher, const QSharedPointer<Image> &img)
-    {
-        std::lock_guard<std::recursive_mutex> l(m);
-        QModelIndex idx = q->index(img);
-
-        if(!idx.isValid())
-        {
-            qInfo() << "onBackgroundTaskStarted: image surprisingly gone before background task could be started?!";
-            this->onBackgroundTaskFinished(watcher, img);
-            return;
-        }
-
-        this->spinningIconDrawConnections[img.data()] = q->connect(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::needsRepaint, q, [img, this]()
-        {
-            this->scheduleSpinningIconRedraw(img);
-        });
-        q->connect(watcher.get(), &QFutureWatcher<DecodingState>::progressValueChanged, q, [img, this]()
-        {
-            this->scheduleSpinningIconRedraw(img);
-        });
-    }
-
-    void scheduleSpinningIconRedraw(const QSharedPointer<Image> &img)
-    {
-        QModelIndex idx = q->index(img);
-
-        if(idx.isValid())
-        {
-            emit q->dataChanged(idx, idx, { Qt::DecorationRole });
         }
     }
 };
@@ -397,7 +354,6 @@ bool SortedImageModel::setData(const QModelIndex &index, const QVariant &value, 
             {
             case Qt::CheckStateRole:
                 img->setChecked(static_cast<Qt::CheckState>(value.toInt()));
-                emit this->dataChanged(index, index, { role });
                 return true;
             }
         }
@@ -463,6 +419,17 @@ QVariant SortedImageModel::data(AbstractListItem* item, int role) const
                 case ItemFileLastModified:
                     return fi.lastModified();
 
+                case ItemBackgroundTask:
+                    {
+                        QSharedPointer<QFutureWatcher<DecodingState>> wat;
+                        auto it = d->backgroundTasks.find(img);
+                        if (it != d->backgroundTasks.end())
+                        {
+                            wat = it->second;
+                        }
+                        return QVariant::fromValue(wat);
+                    }
+
                 default:
                 {
                     auto exif = img->exif();
@@ -501,26 +468,7 @@ QVariant SortedImageModel::data(AbstractListItem* item, int role) const
                 }
 
                 case Qt::DecorationRole:
-                {
-                    QSharedPointer<QFutureWatcher<DecodingState>> watcher;
-                    {
-                        std::lock_guard<std::recursive_mutex> l(d->m);
-
-                        auto it = d->backgroundTasks.find(img);
-                        if(it != d->backgroundTasks.end())
-                        {
-                            watcher = it->second;
-                        }
-                    }
-
-                    if(watcher && watcher->isRunning())
-                    {
-                        QPixmap frame = ANPV::globalInstance()->spinningIconHelper()->getProgressIndicator(*watcher);
-                        return frame;
-                    }
-
                     return img->thumbnailTransformed(d->cachedIconHeight);
-                }
 
                 case Qt::ToolTipRole:
                 {
@@ -757,51 +705,57 @@ bool SortedImageModel::isSafeToChangeDir()
     return d->checkedImages.size() == 0;
 }
 
-// this function makes all conections required right after having added a new image to the model, making sure decoding progress is displayed, etc
+// this function makes signals of the image to the model
 // this function is thread-safe
-void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QSharedPointer<QFutureWatcher<DecodingState>> &watcher)
+void SortedImageModel::welcomeImage(const QSharedPointer<Image>& image)
 {
     Q_ASSERT(image != nullptr);
 
     this->connect(image.data(), &Image::decodingStateChanged, this,
-                  [&](Image * img, quint32 newState, quint32 old)
-    {
-        d->onBackgroundImageTaskStateChanged(img, newState, old);
-    });
+        [&](Image* img, quint32 newState, quint32 old)
+        {
+            d->onBackgroundImageTaskStateChanged(img, newState, old);
+        });
 
-    this->connect(image.data(), &Image::thumbnailChanged, this, [&](Image * i, QImage)
-    {
-        d->onThumbnailChanged(i);
-    });
+    this->connect(image.data(), &Image::thumbnailChanged, this, [&](Image* i, QImage)
+        {
+            d->onThumbnailChanged(i);
+        });
 
     this->connect(image.data(), &Image::checkStateChanged, this,
-                  [&](Image * i, int c, int old)
-    {
-        if(c != old)
+        [&](Image* i, int c, int old)
         {
-            if(c == Qt::Unchecked)
+            if (c != old)
             {
-                d->checkedImages.removeAll(i);
+                if (c == Qt::Unchecked)
+                {
+                    d->checkedImages.removeAll(i);
+                }
+                else
+                {
+                    // retrieve the QSharedPointer for *i
+                    // auto qimg = AbstractListItem::imageCast(this->item(this->index(i)));
+                    d->checkedImages.append(i);
+                }
             }
-            else
-            {
-                // retrieve the QSharedPointer for *i
-                // auto qimg = AbstractListItem::imageCast(this->item(this->index(i)));
-                d->checkedImages.append(i);
-            }
-        }
 
-        d->onCheckStateChanged(i);
-    });
+            d->onCheckStateChanged(i);
+        });
 
     this->connect(image.data(), &Image::destroyed, this,
-                  [&](QObject * i)
-    {
-        Q_ASSERT(i != nullptr);
-        // i is already partly destroyed, hence we cannot dynamic_cast here
-        d->checkedImages.removeAll(static_cast<Image *>(i));
-    });
+        [&](QObject* i)
+        {
+            Q_ASSERT(i != nullptr);
+            // i is already partly destroyed, hence we cannot dynamic_cast here
+            d->checkedImages.removeAll(static_cast<Image*>(i));
+        });
+}
 
+// this function makes attaches a future to an image, making sure decoding progress is displayed, etc
+// this function is thread-safe
+// note that this function may be called a second time for the same image, when e.g. decodeAllImages has been requested, but this time the watcher will be a new one
+void SortedImageModel::attachTaskToImage(const QSharedPointer<Image>& image, const QSharedPointer<QFutureWatcher<DecodingState>>& watcher)
+{
     if(watcher != nullptr)
     {
         {
@@ -809,22 +763,20 @@ void SortedImageModel::welcomeImage(const QSharedPointer<Image> &image, const QS
 
             if(d->backgroundTasks.empty())
             {
-                QMetaObject::invokeMethod(ANPV::globalInstance()->spinningIconHelper(), &ProgressIndicatorHelper::startRendering);
+                ANPV::globalInstance()->spinningIconHelper()->startRendering();
+                emit this->backgroundProcessingStarted();
             }
 
+            // store the background task (even though it hasn't started yet) to allow waiting for it in cancelAllBackgroundTasks()
             d->backgroundTasks[image.data()] = watcher;
         }
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, this, [watcher, image, this]()
+        QObject::connect(watcher.get(), &QFutureWatcher<DecodingState>::finished, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskFinished(watcher, image);
         });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, this, [watcher, image, this]()
+        QObject::connect(watcher.get(), &QFutureWatcher<DecodingState>::canceled, watcher.get(), [watcher, image, this]()
         {
             d->onBackgroundTaskFinished(watcher, image);
-        });
-        watcher->connect(watcher.get(), &QFutureWatcher<DecodingState>::started,  this, [watcher, image, this]()
-        {
-            d->onBackgroundTaskStarted(watcher, image);
         });
     }
 }

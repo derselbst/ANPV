@@ -152,7 +152,7 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
             [=](QSharedPointer<Image> img)
             {
                 // disconnect Image::thumbnailChanged signal
-                img->disconnect(this);
+                QObject::disconnect(img.data(), nullptr, this, nullptr);
             });
 
         connect(dv, &DocumentView::imageChanged, this,

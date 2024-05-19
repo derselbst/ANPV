@@ -8,8 +8,6 @@
 #include <QPromise>
 #include <QFileInfo>
 #include <QSize>
-#include <QtConcurrent/QtConcurrent>
-#include <QThreadPool>
 #include <QDir>
 
 // #include <execution>

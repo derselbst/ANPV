@@ -17,7 +17,7 @@ class ProgressIndicatorHelper : public QObject
 public:
     ProgressIndicatorHelper(QObject *parent = nullptr);
     ~ProgressIndicatorHelper();
-    QPixmap getProgressIndicator(const QFutureWatcher<DecodingState> &future);
+    void drawProgressIndicator(QPainter* localPainter, const QRect& bounds, const QFutureWatcher<DecodingState> &future);
 
 public slots:
     void startRendering();

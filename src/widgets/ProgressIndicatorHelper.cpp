@@ -49,9 +49,8 @@ struct ProgressIndicatorHelper::Impl
         }
 
         QSize imgSize = this->renderer->defaultSize().scaled(neu, neu, Qt::KeepAspectRatio);
-        QImage image(imgSize, QImage::Format_ARGB32);
+        QImage image(imgSize, QImage::Format_ARGB32_Premultiplied);
         this->currentFrame = image;
-
         if(image.isNull())
         {
             return;
@@ -84,10 +83,9 @@ ProgressIndicatorHelper::ProgressIndicatorHelper(QObject *parent) : QObject(pare
 
 ProgressIndicatorHelper::~ProgressIndicatorHelper() = default;
 
+// method is reentrant
 void ProgressIndicatorHelper::startRendering()
 {
-    xThreadGuard(this);
-
     if(!d->renderingConnection)
     {
         d->renderingConnection = connect(d->renderer.get(), &QSvgRenderer::repaintNeeded, d->renderer.get(), [&]()
@@ -99,24 +97,22 @@ void ProgressIndicatorHelper::startRendering()
 
 void ProgressIndicatorHelper::stopRendering()
 {
-    xThreadGuard(this);
     disconnect(d->renderingConnection);
 }
 
-QPixmap ProgressIndicatorHelper::getProgressIndicator(const QFutureWatcher<DecodingState> &future)
+void ProgressIndicatorHelper::drawProgressIndicator(QPainter* localPainter, const QRect& bounds, const QFutureWatcher<DecodingState> &future)
 {
     xThreadGuard(this);
 
     std::unique_lock<std::recursive_mutex> l(d->m);
-    QImage image = d->currentFrame.copy();
+    QRect icoRect = d->currentFrame.rect();
+    icoRect.moveTo(bounds.topLeft());
+    icoRect = icoRect.intersected(bounds);
+    localPainter->drawImage(icoRect, d->currentFrame);
     l.unlock();
 
     int prog = future.progressValue();
-    QPainter localPainter(&image);
-    localPainter.setPen(future.isCanceled() ? Qt::red : Qt::blue);
-    localPainter.setFont(QFont("Arial", 30));
-    QRect rect(0, 0, image.width(), image.height());
-    localPainter.drawText(rect, Qt::AlignHCenter | Qt::AlignVCenter, QString("%1%").arg(QString::number(prog)));
-
-    return QPixmap::fromImage(image);
+    localPainter->setPen(future.isCanceled() ? Qt::red : Qt::blue);
+    localPainter->setFont(QFont("Arial", 30));
+    localPainter->drawText(icoRect, Qt::AlignHCenter | Qt::AlignVCenter, QString("%1%").arg(QString::number(prog)));
 }

@@ -12,6 +12,7 @@
 #include "SmartImageDecoder.hpp"
 #include "ExifWrapper.hpp"
 #include "LibRawHelper.hpp"
+#include "ANPV.hpp"
 
 #include <QApplication>
 #include <QPersistentModelIndex>
@@ -208,14 +209,15 @@ QSharedPointer<Image> ImageSectionDataContainer::addImageItem(const QFileInfo& i
                     // decode synchronously
                     decoder->decode(DecodingState::Metadata, QSize());
                     decoder->close();
-                    d->model->welcomeImage(image, watcher);
+                    d->model->welcomeImage(image);
                 }
                 else
                 {
                     watcher.reset(new QFutureWatcher<DecodingState>());
                     // Keep the watcher in the background thread, as there seems to be no need to move it to UI thread.
                     //watcher->moveToThread(QGuiApplication::instance()->thread());
-                    d->model->welcomeImage(image, watcher);
+                    d->model->welcomeImage(image);
+                    d->model->attachTaskToImage(image, watcher);
 
                     // decode asynchronously
                     auto fut = decoder->decodeAsync(DecodingState::Metadata, Priority::Background, QSize());
@@ -329,7 +331,7 @@ QSharedPointer<Image> ImageSectionDataContainer::addImageItem(const QFileInfo& i
         QMetaObject::invokeMethod(image.data(), &Image::lookupIconFromFileType);
     }
 
-    d->model ? d->model->welcomeImage(image, watcher) : (void)0;
+    d->model ? d->model->welcomeImage(image) : (void)0;
     this->addImageItem(var, image);
     return image;
 }
@@ -682,7 +684,7 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
 
             if(decoder)
             {
-                bool taken = QThreadPool::globalInstance()->tryTake(decoder.get());
+                bool taken = ANPV::globalInstance()->threadPool()->tryTake(decoder.get());
 
                 if(taken)
                 {
@@ -724,7 +726,7 @@ void ImageSectionDataContainer::decodeAllImages(DecodingState state, int imageHe
                 }
                 );
 
-                d->model ? d->model->welcomeImage(image, watcher) : (void)0;
+                d->model ? d->model->attachTaskToImage(image, watcher) : (void)0;
             }
         }
     }

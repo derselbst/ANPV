@@ -256,7 +256,7 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
         return;
     }
 
-    bool taken = QThreadPool::globalInstance()->tryTake(this);
+    bool taken = ANPV::globalInstance()->threadPool()->tryTake(this);
 
     if(taken)
     {
@@ -313,7 +313,7 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
 
     // The threadpool will take over this instance after calling start. From there on this instance must be seen as deleted and no further calls must be made
     // to any of its members! E.g. calling d->promise->future() afterwards actually led to horribly hard-to-reproduce use-after-frees in the past.
-    QThreadPool::globalInstance()->start(this, static_cast<int>(prio));
+    ANPV::globalInstance()->threadPool()->start(this, static_cast<int>(prio));
     return fut;
 }
 
