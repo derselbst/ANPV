@@ -6,6 +6,7 @@
 #include "ListItemDelegate.hpp"
 
 #include <QFutureWatcher>
+#include <QApplication>
 
 #include "types.hpp"
 #include "SortedImageModel.hpp"
@@ -51,8 +52,21 @@ void ListItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
 void ListItemDelegate::paintProgressIcon(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index, const QFutureWatcher<DecodingState>* task) const
 {
-    auto& bounds = option.rect;
-    ANPV::globalInstance()->spinningIconHelper()->drawProgressIndicator(painter, bounds, *task);
+    QPixmap frame(option.rect.size());
+    frame.fill(QColorConstants::Transparent);
+    QPainter localPainter;
+    localPainter.begin(&frame);
+    ANPV::globalInstance()->spinningIconHelper()->drawProgressIndicator(&localPainter, frame.rect(), *task);
+    localPainter.end();
+    QIcon ico(frame);
+
+    QStyleOptionViewItem myOpt = option;
+    this->initStyleOption(&myOpt, index);
+    myOpt.icon = ico;
+
+    const QWidget *widget = option.widget;
+    QStyle *style = widget ? widget->style() : QApplication::style();
+    style->drawControl(QStyle::CE_ItemViewItem, &myOpt, painter, widget);
 }
 
 /* Paints a section item with a given model index (index) and options (option) on a painter object (painter). */
