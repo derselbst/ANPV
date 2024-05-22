@@ -121,14 +121,13 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPoint
         }
         else if(format == "png")
         {
+            return std::make_unique<MangoDecoder>(image);
         //     return std::make_unique<SmartPngDecoder>(image);
         }
         else if(format == "jxl")
         {
             return std::make_unique<SmartJxlDecoder>(image);
         }
-        
-        return std::make_unique<MangoDecoder>(image);
     }
 
     return nullptr;
