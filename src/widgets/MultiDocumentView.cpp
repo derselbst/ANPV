@@ -209,6 +209,10 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
             }
         });
 
+        // Set the initial Window size for all document views. This is important, as all the inactive tab views would be assigned a very small default geometry by default (#18).
+        QSize initialSize = this->geometry().size();
+        dv->resize(initialSize);
+
         d->tw->addTab(dv, "");
         dv->setModel(model);
         dv->loadImage(e);
