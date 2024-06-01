@@ -173,7 +173,10 @@ struct ThumbnailListView::Impl
 
             for(const auto &i : imgs)
             {
-                imgsWithModel.push_back({ i, ANPV::globalInstance()->fileModel()->dataContainer() });
+                if (i->fileInfo().isFile())
+                {
+                    imgsWithModel.push_back({ i, ANPV::globalInstance()->fileModel()->dataContainer() });
+                }
             }
 
             ANPV::globalInstance()->openImages(imgsWithModel);
