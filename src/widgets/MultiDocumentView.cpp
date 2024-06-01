@@ -212,6 +212,12 @@ void MultiDocumentView::addImages(const QList<std::pair<QSharedPointer<Image>, Q
         // Set the initial Window size for all document views. This is important, as all the inactive tab views would be assigned a very small default geometry by default (#18).
         QSize initialSize = this->geometry().size();
         dv->resize(initialSize);
+        // Setting the size only for the widget itself is not enough to propagate it down to the viewport and trigger a ResizeChangeEvent that will
+        // effectively call DocumentView::resizeEvent() with the correct initial size. Therefore we need to set an initial size for the viewport separately.
+        dv->viewport()->resize(initialSize);
+        // Alternatively we could send the ResizeEvent ourselves:
+        //QResizeEvent ev(initialSize, initialSize);
+        //QCoreApplication::sendEvent(dv, &ev);
 
         d->tw->addTab(dv, "");
         dv->setModel(model);
