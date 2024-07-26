@@ -33,6 +33,59 @@ using namespace std::chrono_literals;
 
 #include "ANPV.hpp"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+char* fluid_get_windows_error(void)
+{
+    static TCHAR err[1024];
+
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL,
+        GetLastError(),
+        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        err,
+        sizeof(err) / sizeof(err[0]),
+        NULL);
+
+#ifdef _UNICODE
+    static char ascii_err[sizeof(err)];
+
+    WideCharToMultiByte(CP_UTF8, 0, err, -1, ascii_err, sizeof(ascii_err) / sizeof(ascii_err[0]), 0, 0);
+    return ascii_err;
+#else
+    return err;
+#endif
+}
+
+QString getLongPathName(const char* shortPath8)
+{
+    auto shortPath16 = QString::fromLocal8Bit(shortPath8);
+
+    QString longPath;
+    auto len = GetLongPathNameW((LPCTSTR)shortPath16.utf16(), nullptr, 0);
+    if (len == 0)
+    {
+        throw std::runtime_error(fluid_get_windows_error());
+    }
+
+    longPath.resize(len-1);
+
+    len = GetLongPathNameW((LPCTSTR)shortPath16.utf16(), (LPWSTR)longPath.data(), len);
+    if (len == 0)
+    {
+        throw std::runtime_error(fluid_get_windows_error());
+    }
+    return longPath;
+}
+
+#else
+inline QString getLongPathName(const char* path)
+{
+    return QString::fromLocal8Bit(path);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(ANPV);
@@ -72,7 +125,7 @@ int main(int argc, char *argv[])
             break;
         case 2:
         {
-            QString arg = QString::fromLocal8Bit(argv[1]);
+            QString arg = getLongPathName(argv[1]);
             QFileInfo info(arg);
             if (info.exists() && info.isDir())
             {
@@ -90,7 +143,7 @@ int main(int argc, char *argv[])
             QFileInfo prevFileInfo;
             for (int i = 1; i < argc; i++)
             {
-                QFileInfo fileInfo(QString::fromLocal8Bit(argv[i]));
+                QFileInfo fileInfo(getLongPathName(argv[i]));
 
                 if (!fileInfo.exists())
                 {
