@@ -787,13 +787,19 @@ MainWindow::MainWindow(TomsSplash *splash)
             }
 
             const auto* wnd = this->windowHandle();
-            bool b = focusWindow != nullptr && (wnd == focusWindow || wnd == focusWindow->transientParent());
+            bool windowHierarchyMatches = false;
+            while (!windowHierarchyMatches && focusWindow != nullptr)
+            {
+                windowHierarchyMatches = wnd == focusWindow;
+                focusWindow = focusWindow->transientParent();
+            }
+
             // disabling the widget causes it to loose focus...
-            d->ui->thumbnailListView->setEnabled(b);
-            d->ui->thumbnailListView->setUpdatesEnabled(b);
+            d->ui->thumbnailListView->setEnabled(windowHierarchyMatches);
+            d->ui->thumbnailListView->setUpdatesEnabled(windowHierarchyMatches);
 
             // restore focus...
-            if (b && d->focusWidgetBackup)
+            if (windowHierarchyMatches && d->focusWidgetBackup)
             {
                 d->focusWidgetBackup->setFocus();
             }
