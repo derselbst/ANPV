@@ -284,6 +284,9 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->setWrapping(true);
     this->setSpacing(5);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
+    // always show scroll bars to prevent flickering, cause by an event loop that turns it on and off
+    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     d->q = this;
     d->itemDelegate = new ListItemDelegate(this);
