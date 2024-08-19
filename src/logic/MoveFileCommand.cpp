@@ -18,6 +18,12 @@ MoveFileCommand::MoveFileCommand(QList<QString> &&ftm, QString &&sourceFolder, Q
     {
         setText(QString("Move %1 files to %2").arg(filesToMove.size()).arg(this->destinationFolder));
     }
+#ifdef _WIN32
+    // Support long file names, also applies to std::filesystem... sadly
+    // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+    this->sourceFolder.prepend("\\\\?\\");
+    this->destinationFolder.prepend("\\\\?\\");
+#endif
 }
 
 MoveFileCommand::~MoveFileCommand() = default;

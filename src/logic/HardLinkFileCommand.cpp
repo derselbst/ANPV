@@ -18,6 +18,12 @@ HardLinkFileCommand::HardLinkFileCommand(QList<QString> &&ftm, QString &&sourceF
     {
         setText(QString("Hardlink %1 files to %2").arg(this->filesToLink.size()).arg(this->destinationFolder));
     }
+#ifdef _WIN32
+    // Support long file names, also applies to std::filesystem... sadly
+    // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+    this->sourceFolder.prepend("\\\\?\\");
+    this->destinationFolder.prepend("\\\\?\\");
+#endif
 }
 
 HardLinkFileCommand::~HardLinkFileCommand() = default;
