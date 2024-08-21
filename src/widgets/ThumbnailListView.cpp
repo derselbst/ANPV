@@ -185,6 +185,17 @@ struct ThumbnailListView::Impl
 
     void openSelectionExternally()
     {
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
+
+        if (imgs.size() == 0)
+        {
+            return;
+        }
+
+        if (imgs.size() == 1)
+        {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(imgs[0]->fileInfo().absoluteFilePath()));
+        }
     }
 
     void onCopyFilePath()
@@ -298,7 +309,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
         d->openSelectionInternally();
     });
 
-    d->actionOpenSelectionExternally = new QAction("Open with", this);
+    d->actionOpenSelectionExternally = new QAction("Open with default app", this);
     connect(d->actionOpenSelectionExternally, &QAction::triggered, this, [&]()
     {
         d->openSelectionExternally();
