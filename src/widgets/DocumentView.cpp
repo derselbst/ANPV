@@ -459,7 +459,7 @@ struct DocumentView::Impl
 
     void onToggleSelect()
     {
-        if(this->currentImageDecoder)
+        if(this->currentImageDecoder && this->isSelectedBox->isEnabled())
         {
             auto img = this->currentImageDecoder->image();
 
@@ -708,6 +708,15 @@ struct DocumentView::Impl
             }
         });
     }
+
+    bool updateIsSelectedCheckBoxEnabledState()
+    {
+        auto fm = ANPV::globalInstance()->fileModel();
+        auto dc = fm ? fm->dataContainer() : nullptr;
+        bool isEnabled = fm && dc == this->model && (this->model->getLinearIndexOfItem(this->owningRefToImage.get()) >= 0);
+        this->isSelectedBox->setEnabled(isEnabled);
+        return isEnabled;
+    }
 };
 
 DocumentView::DocumentView(QWidget *parent)
@@ -789,13 +798,21 @@ DocumentView::DocumentView(QWidget *parent)
 
     d->isSelectedBox = new QCheckBox(this);
     d->isSelectedBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+    d->isSelectedBox->setEnabled(false);
     connect(d->isSelectedBox.get(), &QCheckBox::stateChanged, this, [&](int state)
     {
         auto &dec = d->currentImageDecoder;
 
         if(dec)
         {
-            dec->image()->setChecked(static_cast<Qt::CheckState>(state));
+            auto img = dec->image();
+
+            // if the image is no longer part of the underlying model, disable selection
+            bool b = d->updateIsSelectedCheckBoxEnabledState();
+            if (b)
+            {
+                img->setChecked(static_cast<Qt::CheckState>(state));
+            }
         }
     });
 
@@ -831,6 +848,7 @@ DocumentView::~DocumentView() = default;
 void DocumentView::setModel(QSharedPointer<ImageSectionDataContainer> model)
 {
     d->model = model;
+    d->updateIsSelectedCheckBoxEnabledState();
 }
 
 void DocumentView::zoomIn()
@@ -1105,6 +1123,7 @@ void DocumentView::loadImage(const QSharedPointer<SmartImageDecoder> &dec)
         throw std::logic_error("Oops: DocumentView::loadImage() received a NULL image??");
     }
 
+    d->updateIsSelectedCheckBoxEnabledState();
     this->loadImage();
 }
 
