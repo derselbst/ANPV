@@ -66,7 +66,8 @@ QString getLongPathName(const char* shortPath8)
     auto len = GetLongPathNameW((LPCTSTR)shortPath16.utf16(), nullptr, 0);
     if (len == 0)
     {
-        throw std::runtime_error(fluid_get_windows_error());
+        // probably the file doesn't exist, handle that error later.
+        return shortPath16;
     }
 
     longPath.resize(len-1);
