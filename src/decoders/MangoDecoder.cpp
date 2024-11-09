@@ -1,12 +1,17 @@
 
+#include "UserCancellation.hpp"
 #include "MangoDecoder.hpp"
 #include "Formatter.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
 
 #include <QColorSpace>
+#include <chrono>
 
 #include <mango/mango.hpp>
+
+using namespace std::chrono_literals;
+
 
 struct MangoDecoder::Impl
 {
@@ -81,10 +86,48 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     options.simd = true;
     options.multithread = false;
 
-    mango::image::ImageDecodeStatus status = d->mangoDec->decode(surface, options);
-    if (!status)
+
+    this->cancelCallback();
+
+    if (d->mangoDec->isAsyncDecoder())
     {
-        throw std::runtime_error(Formatter() << "Mango decoder failed during decode: " << status.info);
+        size_t pixelsDecoded = 0;
+
+        auto future = d->mangoDec->launch(
+            [&](const mango::image::ImageDecodeRect& rect)
+            {
+                this->updateDecodedRoiRect(QRect(rect.x, rect.y, rect.width, rect.height));
+
+                pixelsDecoded += rect.width * (size_t)rect.height;
+                int progress = static_cast<int>(pixelsDecoded * 100.0 / ((size_t)surface.width * surface.height));
+
+                this->setDecodingProgress(std::min(progress, 100));
+            }, surface, options);
+
+        std::future_status status = std::future_status::timeout;
+        while (status == std::future_status::timeout)
+        {
+            try
+            {
+                this->cancelCallback();
+            }
+            catch (const UserCancellation& c)
+            {
+                d->mangoDec->cancel();
+                throw;
+            }
+            status = future.wait_for(200ms);
+        }
+
+        future.get();
+    }
+    else
+    {
+        mango::image::ImageDecodeStatus status = d->mangoDec->decode(surface, options);
+        if (!status)
+        {
+            throw std::runtime_error(Formatter() << "Mango decoder failed during decode: " << status.info);
+        }
     }
 
     // this->convertColorSpace(image, false, toFullScaleTransform);
