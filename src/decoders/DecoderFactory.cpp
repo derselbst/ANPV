@@ -113,7 +113,7 @@ std::unique_ptr<SmartImageDecoder> DecoderFactory::getDecoder(const QSharedPoint
 
         if(image->isRaw() || format == "jpeg" || format == "jpg")
         {
-            return std::make_unique<SmartJpegDecoder>(image);
+            return std::make_unique<MangoDecoder>(image);
         }
         else if(format == "tiff" || format == "tif")
         {

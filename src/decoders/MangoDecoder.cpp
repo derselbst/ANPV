@@ -72,6 +72,7 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     const QRect fullImageRect = this->image()->fullResolutionRect();
     QImage image = this->allocateImageBuffer(fullImageRect.size(), d->format());
     image.setOffset(roiRect.topLeft());
+    this->image()->setDecodedImage(image);
     auto *dataPtrBackup = image.constBits();
 
     #define FORMAT_R8G8B8A8             mango::image::Format(32, mango::image::Format::UNORM, mango::image::Format::RGBA, 8, 8, 8, 8)
@@ -86,9 +87,9 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     options.simd = true;
     options.multithread = false;
 
-
     this->cancelCallback();
 
+    mango::image::ImageDecodeStatus result;
     if (d->mangoDec->isAsyncDecoder())
     {
         size_t pixelsDecoded = 0;
@@ -96,12 +97,15 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         auto future = d->mangoDec->launch(
             [&](const mango::image::ImageDecodeRect& rect)
             {
-                this->updateDecodedRoiRect(QRect(rect.x, rect.y, rect.width, rect.height));
+                QRect qrect(rect.x, rect.y, rect.width, rect.height);
+                this->updateDecodedRoiRect(qrect);
+
+                qDebug() << "Mango update rect: " << qrect;
 
                 pixelsDecoded += rect.width * (size_t)rect.height;
                 int progress = static_cast<int>(pixelsDecoded * 100.0 / ((size_t)surface.width * surface.height));
 
-                this->setDecodingProgress(std::min(progress, 100));
+                this->setDecodingProgress(std::min(progress, 99));
             }, surface, options);
 
         std::future_status status = std::future_status::timeout;
@@ -119,22 +123,24 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
             status = future.wait_for(200ms);
         }
 
-        future.get();
+        result = future.get();
     }
     else
     {
-        mango::image::ImageDecodeStatus status = d->mangoDec->decode(surface, options);
-        if (!status)
-        {
-            throw std::runtime_error(Formatter() << "Mango decoder failed during decode: " << status.info);
-        }
+        result = d->mangoDec->decode(surface, options);
+    }
+    
+    if (!result)
+    {
+        throw std::runtime_error(Formatter() << "Mango decoder failed during decode: " << result.info);
     }
 
     // this->convertColorSpace(image, false, toFullScaleTransform);
-    this->image()->setDecodedImage(image);
     this->setDecodingState(DecodingState::FullImage);
     this->setDecodingMessage("Mango decoding completed successfully.");
     this->setDecodingProgress(100);
+
+    Q_ASSERT(image.constBits() == dataPtrBackup);
 
     return image;
 }
