@@ -368,7 +368,7 @@ void SmartTiffDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
 
     if(TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
     {
-        QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
+        QByteArray iccProfile = QByteArray::fromRawData(reinterpret_cast<const char *>(profile), count);
         cs = QColorSpace::fromIccProfile(iccProfile);
     }
 

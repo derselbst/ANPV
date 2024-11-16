@@ -203,7 +203,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             }
             else
             {
-                QByteArray iccProfile(reinterpret_cast<char *>(icc_profile.data()), buffer_size);
+                QByteArray iccProfile = QByteArray::fromRawData(reinterpret_cast<char *>(icc_profile.data()), buffer_size);
                 QColorSpace cs = QColorSpace::fromIccProfile(iccProfile);
                 this->image()->setColorSpace(cs);
             }

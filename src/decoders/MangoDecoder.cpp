@@ -53,7 +53,7 @@ void MangoDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
         auto icc = d->mangoDec->icc();
         if(icc.address != nullptr && icc.size > 0)
         {
-            QByteArray iccProfile(reinterpret_cast<const char *>(icc.address), icc.size);
+            QByteArray iccProfile = QByteArray::fromRawData(reinterpret_cast<const char *>(icc.address), icc.size);
             cs = QColorSpace::fromIccProfile(iccProfile);
         }
         this->image()->setColorSpace(cs);
@@ -62,18 +62,6 @@ void MangoDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
     {
         throw std::runtime_error("Mango decoder creation failed");
     }
-
-    // uint32_t count;
-    // void *profile;
-    // QColorSpace cs{QColorSpace::SRgb};
-    // 
-    // if(TIFFGetField(d->tiff, TIFFTAG_ICCPROFILE, &count, &profile))
-    // {
-    //     QByteArray iccProfile(reinterpret_cast<const char *>(profile), count);
-    //     cs = QColorSpace::fromIccProfile(iccProfile);
-    // }
-    // 
-    // this->image()->setColorSpace(cs);
 }
 
 QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
