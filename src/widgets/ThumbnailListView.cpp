@@ -324,7 +324,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
         d->openContainingFolder();
     });
 
-    d->actionToggle = new QAction("Toggle selected images", this);
+    d->actionToggle = new QAction("Toggle selected files", this);
     d->actionToggle->setShortcut(Qt::Key_Space);
     d->actionToggle->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionToggle, &QAction::triggered, this, [&]()
@@ -332,7 +332,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
         d->checkSelectedImages(d->toggleCheckState);
     });
 
-    d->actionCheck = new QAction("Check selected images", this);
+    d->actionCheck = new QAction("Check selected files", this);
     d->actionCheck->setShortcut(Qt::Key_Insert);
     d->actionCheck->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionCheck, &QAction::triggered, this, [&]()
@@ -340,7 +340,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
         d->checkSelectedImages(d->checkCheckState);
     });
 
-    d->actionUncheck = new QAction("Uncheck selected images", this);
+    d->actionUncheck = new QAction("Uncheck selected files", this);
     d->actionUncheck->setShortcut(Qt::SHIFT | Qt::Key_Insert);
     d->actionUncheck->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(d->actionUncheck, &QAction::triggered, this, [&]()
