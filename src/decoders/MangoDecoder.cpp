@@ -21,7 +21,7 @@ struct MangoDecoder::Impl
     {
         // The zero initialized, not-yet-decoded image buffer should be displayed transparently. Therefore, always use ARGB, even if this
         // would cause a performance drawback for images which do not have one, because Qt may call QPixmap::mask() internally.
-        return QImage::Format_RGBA8888;
+        return QImage::Format_ARGB32;
     }
 };
 
@@ -72,7 +72,7 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     this->image()->setDecodedImage(image);
     auto *dataPtrBackup = image.constBits();
 
-    #define FORMAT_R8G8B8A8             mango::image::Format(32, mango::image::Format::UNORM, mango::image::Format::RGBA, 8, 8, 8, 8)
+    #define FORMAT_R8G8B8A8             mango::image::Format(32, mango::image::Format::UNORM, mango::image::Format::BGRA, 8, 8, 8, 8)
     static const mango::image::Format format = FORMAT_R8G8B8A8;
     auto width = fullImageRect.size().width();
     

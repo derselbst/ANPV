@@ -457,7 +457,11 @@ void SmartImageDecoder::convertColorSpace(QImage &image, bool silent, QTransform
             // and use applyColorTransform in small chunks.
             // This also allows cancelling the transformation.
             QImage tempImg(&destPixel, width, linesToConvertNow, image.format(), nullptr, nullptr);
+            auto *tempImgDataBackup = tempImg.constBits();
             tempImg.applyColorTransform(colorTransform);
+
+            // If this assert fails, QImage::applyColorTransform() has performed a deep copy, because image.format() is not supported for color conversion, Bravo!
+            Q_ASSERT(tempImgDataBackup == tempImg.constBits());
 
             this->cancelCallback();
 
