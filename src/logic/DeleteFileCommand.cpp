@@ -18,6 +18,7 @@ DeleteFileCommand::DeleteFileCommand(QList<QString> &&files, QString &&sourceFol
     {
         this->setText(QString("Delete %1 files").arg(filesToDelete.size()));
     }
+    // Win32 long filename hack \\?\ does not apply here! Because it's Qt and not std::filesystem
 }
 
 DeleteFileCommand::~DeleteFileCommand() = default;

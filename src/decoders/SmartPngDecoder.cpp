@@ -161,7 +161,6 @@ void SmartPngDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
     auto num_comments = png_get_text(cinfo, d->info_ptr, &textPtr, nullptr);
     auto txt = d->parseText(textPtr, num_comments);
 
-
     if(color_type == PNG_COLOR_TYPE_PALETTE)
     {
         png_set_palette_to_rgb(cinfo);

@@ -481,15 +481,31 @@ QVariant SortedImageModel::data(AbstractListItem* item, int role) const
                     default:
                     {
                         QString info;
-                        bool decodePending = false;
                         if(fi.isFile())
                         {
                             std::lock_guard<std::recursive_mutex> l(d->m);
-                            decodePending = d->backgroundTasks.contains(img);
-                        }
-                        if (decodePending)
-                        {
-                            info = QStringLiteral("Decoding not yet started");
+                            auto it = d->backgroundTasks.find(img);
+                            if (it != d->backgroundTasks.end())
+                            {
+                                auto& task = it->second;
+                                if (task->isFinished())
+                                {
+                                    qDebug() << "Task has finished, but hasn't been removed from the tasklist yet?!";
+                                    info = img->formatInfoString();
+                                }
+                                else if (task->isRunning())
+                                {
+                                    info = QStringLiteral("Decoding is currently running.");
+                                }
+                                else
+                                {
+                                    info = QStringLiteral("Decoding is pending, but hasn't started yet.");
+                                }
+                            }
+                            else
+                            {
+                                info = img->formatInfoString();
+                            }
                         }
                         else
                         {

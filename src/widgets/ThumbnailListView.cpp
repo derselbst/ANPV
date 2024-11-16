@@ -173,7 +173,10 @@ struct ThumbnailListView::Impl
 
             for(const auto &i : imgs)
             {
-                imgsWithModel.push_back({ i, ANPV::globalInstance()->fileModel()->dataContainer() });
+                if (i->fileInfo().isFile())
+                {
+                    imgsWithModel.push_back({ i, ANPV::globalInstance()->fileModel()->dataContainer() });
+                }
             }
 
             ANPV::globalInstance()->openImages(imgsWithModel);
@@ -182,6 +185,17 @@ struct ThumbnailListView::Impl
 
     void openSelectionExternally()
     {
+        QList<QSharedPointer<Image>> imgs = q->selectedImages();
+
+        if (imgs.size() == 0)
+        {
+            return;
+        }
+
+        if (imgs.size() == 1)
+        {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(imgs[0]->fileInfo().absoluteFilePath()));
+        }
     }
 
     void onCopyFilePath()
@@ -270,6 +284,9 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
     this->setWrapping(true);
     this->setSpacing(5);
     this->setContextMenuPolicy(Qt::ActionsContextMenu);
+    // always show scroll bars to prevent flickering, cause by an event loop that turns it on and off
+    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     d->q = this;
     d->itemDelegate = new ListItemDelegate(this);
@@ -295,7 +312,7 @@ ThumbnailListView::ThumbnailListView(QWidget *parent)
         d->openSelectionInternally();
     });
 
-    d->actionOpenSelectionExternally = new QAction("Open with", this);
+    d->actionOpenSelectionExternally = new QAction("Open with default app", this);
     connect(d->actionOpenSelectionExternally, &QAction::triggered, this, [&]()
     {
         d->openSelectionExternally();
