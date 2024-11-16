@@ -48,6 +48,15 @@ void MangoDecoder::decodeHeader(const unsigned char *buffer, qint64 nbytes)
         mango::image::ImageHeader header = d->mangoDec->header();
         this->image()->setSize(QSize(header.width, header.height));
         (void)header.format;
+        
+        QColorSpace cs{QColorSpace::SRgb};
+        auto icc = d->mangoDec->icc();
+        if(icc.address != nullptr && icc.size > 0)
+        {
+            QByteArray iccProfile(reinterpret_cast<const char *>(icc.address), icc.size);
+            cs = QColorSpace::fromIccProfile(iccProfile);
+        }
+        this->image()->setColorSpace(cs);
     }
     else
     {
@@ -135,7 +144,7 @@ QImage MangoDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
         throw std::runtime_error(Formatter() << "Mango decoder failed during decode: " << result.info);
     }
 
-    // this->convertColorSpace(image, false, toFullScaleTransform);
+    this->convertColorSpace(image, false);
     this->setDecodingState(DecodingState::FullImage);
     this->setDecodingMessage("Mango decoding completed successfully.");
     this->setDecodingProgress(100);
