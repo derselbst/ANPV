@@ -177,6 +177,7 @@ jobs:
           set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
           set INCLUDE=%INCLUDE%;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\cppwinrt
           @ECHO ON
+          cmake --version
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$(configuration)  -DCMAKE_VERBOSE_MAKEFILE=ON -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DVCPKG_PLATFORM_TOOLSET=$(toolset) -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
           cmake --build . --target anpv
       displayName: 'Compile static ANPV'
