@@ -794,21 +794,20 @@ QString ExifWrapper::formatToString()
     if(!p.isNull())
     {
         f << "<br>GPS: <a href=\"https://www.google.de/maps/place/" << std::setprecision(std::numeric_limits<double>::max_digits10) << p.x() << "," << p.y() << "\">" << std::setprecision(3) << p.x() << ", " << p.y() << "</a><br>";
-    }
-    
-    if(this->gpsAltitude(r))
-    {
-        f << "Altitude: " << std::fixed << std::setprecision(0) << r << "m<br>";
-    }
-    
-    if(this->gpsDop(r))
-    {
-        f << "GPS DOP: " << std::fixed << std::setprecision(1) << r << "<br>";
-    }
-    
-    if(this->gpsHPosErr(r))
-    {
-        f << "GPS HorizPosErr: " << std::fixed << std::setprecision(1) << r << "m<br>";
+        if(this->gpsAltitude(r))
+        {
+            f << "Altitude: " << std::fixed << std::setprecision(0) << r << "m<br>";
+        }
+        
+        if(this->gpsDop(r))
+        {
+            f << "GPS DOP: " << std::fixed << std::setprecision(1) << r << "<br>";
+        }
+        
+        if(this->gpsHPosErr(r))
+        {
+            f << "GPS HorizPosErr: " << std::fixed << std::setprecision(1) << r << "m<br>";
+        }
     }
 
     QDateTime dt = this->dateRecorded();
