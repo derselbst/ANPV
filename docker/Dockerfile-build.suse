@@ -1,4 +1,4 @@
-FROM opensuse/tumbleweed
+FROM opensuse/leap:15.6
 
 RUN zypper refresh
 
