@@ -132,34 +132,37 @@ struct ExifWrapper::Impl
     // Borrowed from https://gitlab.com/lspies/photoqt
     QPointF convertGPSToDecimal(QString gpsLatRef, QString gpsLat, QString gpsLonRef, QString gpsLon)
     {
-        bool ok;
-        const QStringList lat = gpsLat.split(" ");
-        const QStringList lon = gpsLon.split(" ");
-        if(lat.length() != 3 || lon.length() != 3)
+        QRegularExpression regex(QStringLiteral(R"((\d+)\s*deg\s*(\d+)'\s*(\d+)\")"));
+        QRegularExpressionMatch latMatch = regex.match(gpsLat);
+        QRegularExpressionMatch lonMatch = regex.match(gpsLon);
+        if(latMatch.lastCapturedIndex() != 3 || lonMatch.lastCapturedIndex() != 3)
+        {
             return QPointF();
+        }
 
         double x = 0, y = 0;
-
+        bool ok;
         constexpr const std::array<double,3> div = {1, 60, 3600};
 
         for(int i = 0; i < 3; ++i) {
 
             double xval = 0;
 
-            if(lat.at(i).contains("/")) {
-                const QStringList p = lat.at(i).split("/");
+            QString token = latMatch.captured(i+1);
+            if(token.contains("/")) {
+                const QStringList p = token.split("/");
                 const double one = p.at(0).toDouble();
                 const double two = p.at(1).toDouble();
 
                 xval = one;
                 if(two != 0)
+                {
                     xval /= two;
-
+                }
             }
             else
             {
-                QString token = lat.at(i);
-                xval = token.left(token.indexOf(QRegularExpression("[^0-9]"))).toDouble(&ok);
+                xval = token.toDouble(&ok);
                 if(!ok)
                 {
                     qWarning() << "GPS: unable to parse latitude '" << token << "' as double";
@@ -171,20 +174,21 @@ struct ExifWrapper::Impl
 
             double yval = 0;
 
-            if(lon.at(i).contains("/")) {
-                const QStringList p = lon.at(i).split("/");
+            token = lonMatch.captured(i+1);
+            if(token.contains("/")) {
+                const QStringList p = token.split("/");
                 const double one = p.at(0).toDouble();
                 const double two = p.at(1).toDouble();
 
                 yval = one;
                 if(two != 0)
+                {
                     yval /= two;
-
+                }
             }
             else
             {
-                QString token = lon.at(i);
-                yval = token.left(token.indexOf(QRegularExpression("[^0-9]"))).toDouble(&ok);
+                yval = token.toDouble(&ok);
                 if(!ok)
                 {
                     qWarning() << "GPS: unable to parse longitude '" << token << "' as double";
