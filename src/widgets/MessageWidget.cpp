@@ -62,6 +62,7 @@ void MessageWidgetPrivate::init(MessageWidget *q_ptr)
     textLabel = new QLabel(content);
     textLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     textLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    textLabel->setOpenExternalLinks(true);
     QObject::connect(textLabel, &QLabel::linkActivated, q, &MessageWidget::linkActivated);
     QObject::connect(textLabel, &QLabel::linkHovered, q, &MessageWidget::linkHovered);
     q->setMessageType(MessageWidget::Information);

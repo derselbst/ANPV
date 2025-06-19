@@ -6,6 +6,7 @@
 #include <memory>
 #include <QString>
 #include <QTransform>
+#include <QPointF>
 
 
 namespace Exiv2
@@ -60,6 +61,11 @@ public:
     QDateTime dateRecorded();
     QString darkFrameSubtraction();
     bool isMirrorLockupEnabled(bool &isEnabled);
+
+    QPointF gpsLocation();
+    bool gpsAltitude(double& alt);
+    bool gpsDop(double &dop);
+    bool gpsHPosErr(double &dop);
 
     QString formatToString();
 

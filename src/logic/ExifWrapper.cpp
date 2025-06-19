@@ -12,9 +12,11 @@
 #include <QRect>
 #include <cmath>
 #include <QDebug>
+#include <QRegularExpression>
 #include <KExiv2/KExiv2>
 #include <optional>
 #include <iomanip>
+#include <array>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
@@ -124,6 +126,82 @@ struct ExifWrapper::Impl
         }
 
         return QStringLiteral("disabled");
+    }
+
+    // Borrowed from https://gitlab.com/lspies/photoqt
+    QPointF convertGPSToDecimal(QString gpsLatRef, QString gpsLat, QString gpsLonRef, QString gpsLon)
+    {
+        bool ok;
+        const QStringList lat = gpsLat.split(" ");
+        const QStringList lon = gpsLon.split(" ");
+        if(lat.length() != 3 || lon.length() != 3)
+            return QPointF();
+
+        double x = 0, y = 0;
+
+        constexpr const std::array<double,3> div = {1, 60, 3600};
+
+        for(int i = 0; i < 3; ++i) {
+
+            double xval = 0;
+
+            if(lat.at(i).contains("/")) {
+                const QStringList p = lat.at(i).split("/");
+                const double one = p.at(0).toDouble();
+                const double two = p.at(1).toDouble();
+
+                xval = one;
+                if(two != 0)
+                    xval /= two;
+
+            }
+            else
+            {
+                QString token = lat.at(i);
+                xval = token.left(token.indexOf(QRegularExpression("[^0-9]"))).toDouble(&ok);
+                if(!ok)
+                {
+                    qWarning() << "GPS: unable to parse latitude '" << token << "' as double";
+                    return QPointF();
+                }
+            }
+
+            x += xval/div.at(i);
+
+            double yval = 0;
+
+            if(lon.at(i).contains("/")) {
+                const QStringList p = lon.at(i).split("/");
+                const double one = p.at(0).toDouble();
+                const double two = p.at(1).toDouble();
+
+                yval = one;
+                if(two != 0)
+                    yval /= two;
+
+            }
+            else
+            {
+                QString token = lon.at(i);
+                yval = token.left(token.indexOf(QRegularExpression("[^0-9]"))).toDouble(&ok);
+                if(!ok)
+                {
+                    qWarning() << "GPS: unable to parse longitude '" << token << "' as double";
+                    return QPointF();
+                }
+            }
+            y += yval/div.at(i);
+
+        }
+
+        if(gpsLatRef.toLower().at(0) == 's')
+            x *= -1;
+
+        if(gpsLonRef.toLower().at(0) == 'w')
+            y *= -1;
+
+        return QPointF(x,y);
+
     }
 };
 
@@ -576,6 +654,64 @@ QString ExifWrapper::darkFrameSubtraction()
     return QString();
 }
 
+QPointF ExifWrapper::gpsLocation()
+{
+    QString gpsLatRef = d->mExivHandle.getExifTagString("Exif.GPSInfo.GPSLatitudeRef");
+
+    QString gpsLat = d->mExivHandle.getExifTagString("Exif.GPSInfo.GPSLatitude");
+
+    QString gpsLonRef = d->mExivHandle.getExifTagString("Exif.GPSInfo.GPSLongitudeRef");
+
+    QString gpsLon = d->mExivHandle.getExifTagString("Exif.GPSInfo.GPSLongitude");
+
+    return d->convertGPSToDecimal(gpsLatRef, gpsLat, gpsLonRef, gpsLon);
+}
+
+bool ExifWrapper::gpsAltitude(double& alt)
+{
+    long num, den;
+
+    if(d->mExivHandle.getExifTagRational("Exif.GPSInfo.GPSAltitude", num, den))
+    {
+        alt = 1.0 * num / den;
+
+        int64_t l;
+        if(d->mExivHandle.getExifTagInt64("Exif.GPSInfo.GPSAltitudeRef", l))
+        {
+            alt *= (l == 0 ? 1 : -1);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool ExifWrapper::gpsDop(double &dop)
+{
+    long num, den;
+
+    if(d->mExivHandle.getExifTagRational("Exif.GPSInfo.GPSDOP", num, den))
+    {
+        dop = 1.0 * num / den;
+        return true;
+    }
+
+    return false;
+}
+
+bool ExifWrapper::gpsHPosErr(double &dop)
+{
+    long num, den;
+
+    if(d->mExivHandle.getExifTagRational("Exif.GPSInfo.GPSHPositioningError", num, den))
+    {
+        dop = 1.0 * num / den;
+        return true;
+    }
+
+    return false;
+}
+
 bool ExifWrapper::isMirrorLockupEnabled(bool &isEnabled)
 {
     int64_t l;
@@ -597,6 +733,7 @@ QString ExifWrapper::formatToString()
     double r;
     bool b;
     QString s;
+    QPointF p;
 
     if(this->aperture(r))
     {
@@ -638,6 +775,27 @@ QString ExifWrapper::formatToString()
     if(this->focalLength(r))
     {
         f << "Focal Length: " << std::fixed << std::setprecision(0) << r << "<br>";
+    }
+    
+    p = this->gpsLocation();
+    if(!p.isNull())
+    {
+        f << "<br>GPS: <a href=\"https://www.google.de/maps/place/" << std::setprecision(std::numeric_limits<double>::max_digits10) << p.x() << "," << p.y() << "\">" << std::setprecision(3) << p.x() << ", " << p.y() << "</a><br>";
+    }
+    
+    if(this->gpsAltitude(r))
+    {
+        f << "Altitude: " << std::fixed << std::setprecision(0) << r << "m<br>";
+    }
+    
+    if(this->gpsDop(r))
+    {
+        f << "GPS DOP: " << std::fixed << std::setprecision(1) << r << "<br>";
+    }
+    
+    if(this->gpsHPosErr(r))
+    {
+        f << "GPS HorizPosErr: " << std::fixed << std::setprecision(1) << r << "m<br>";
     }
 
     QDateTime dt = this->dateRecorded();
