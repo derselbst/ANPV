@@ -132,10 +132,17 @@ struct ExifWrapper::Impl
     // Borrowed from https://gitlab.com/lspies/photoqt
     QPointF convertGPSToDecimal(QString gpsLatRef, QString gpsLat, QString gpsLonRef, QString gpsLon)
     {
-        QRegularExpression regex(QStringLiteral(R"((\d+)\s*deg\s*(\d+)'\s*(\d+)\")"));
+        // This regex will match strings like:
+        // 51deg 3' 8.36"
+        // 51 deg 3' 8"
+        // 51.5 deg 3.25' 8.36"
+        QRegularExpression regex(QStringLiteral(R"((\d+(?:\.\d+)?)\s*deg\s*(\d+(?:\.\d+)?)'\s*(\d+(?:\.\d+)?)\")"));
         QRegularExpressionMatch latMatch = regex.match(gpsLat);
+        int latMatches = latMatch.lastCapturedIndex();
+        
         QRegularExpressionMatch lonMatch = regex.match(gpsLon);
-        if(latMatch.lastCapturedIndex() != 3 || lonMatch.lastCapturedIndex() != 3)
+        int lonMatches = lonMatch.lastCapturedIndex();
+        if(latMatches != 3 || lonMatches != 3)
         {
             return QPointF();
         }
@@ -797,7 +804,7 @@ QString ExifWrapper::formatToString()
     p = this->gpsLocation();
     if(!p.isNull())
     {
-        f << "<br>GPS: <a href=\"https://www.google.de/maps/place/" << std::setprecision(std::numeric_limits<double>::max_digits10) << p.x() << "," << p.y() << "\">" << std::setprecision(3) << p.x() << ", " << p.y() << "</a><br>";
+        f << "<br>GPS: <a href=\"https://www.google.de/maps/place/" << std::setprecision(std::numeric_limits<double>::max_digits10) << p.x() << "," << p.y() << "\">" << std::setprecision(4) << p.x() << ", " << p.y() << "</a><br>";
         if(this->gpsAltitude(r))
         {
             f << "Altitude: " << std::fixed << std::setprecision(0) << r << "m<br>";
