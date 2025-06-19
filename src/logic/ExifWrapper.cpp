@@ -17,6 +17,7 @@
 #include <optional>
 #include <iomanip>
 #include <array>
+#include <limits>
 
 using OR = KExiv2Iface::KExiv2::ImageOrientation;
 
