@@ -1170,10 +1170,13 @@ void DocumentView::showImage(QSharedPointer<Image> img)
 
             if(afp)
             {
+                double rotationOut = 0;
+                img->exif()->autoFocusRotation(rotationOut);
+
                 std::vector<AfPoint> &afPoints = std::get<0>(*afp);
                 QSize &size = std::get<1>(*afp);
                 d->afPointOverlay->setVisible((ANPV::globalInstance()->viewFlags() & static_cast<ViewFlags_t>(ViewFlag::ShowAfPoints)) != 0);
-                d->afPointOverlay->setAfPoints(afPoints, size);
+                d->afPointOverlay->setAfPoints(afPoints, size, -rotationOut);
 
                 if(viewFlags & static_cast<ViewFlags_t>(ViewFlag::CenterAf))
                 {

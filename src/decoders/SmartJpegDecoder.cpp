@@ -307,7 +307,7 @@ QImage SmartJpegDecoder::decodingLoop(QSize desiredResolution, QRect roiRect)
     {
         /* start a new output pass */
         jpeg_start_output(&cinfo, cinfo.input_scan_number);
-        auto acuallySkipped = jpeg_skip_scanlines(&cinfo, skippedScanlinesTop);
+        auto actuallySkipped = jpeg_skip_scanlines(&cinfo, skippedScanlinesTop);
 
         while(cinfo.output_scanline < lastScanlineToDecode)
         {

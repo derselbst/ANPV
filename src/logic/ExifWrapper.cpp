@@ -459,6 +459,18 @@ std::optional<std::tuple<std::vector<AfPoint>, QSize>> ExifWrapper::autoFocusPoi
     return std::nullopt;
 }
 
+bool ExifWrapper::autoFocusRotation(double& rotation)
+{
+    int64_t r;
+    if(d->mExivHandle.getExifTagInt64("Exif.Canon.AFFineRotation", r))
+    {
+        // anti-clockwise rotation!
+        rotation = r / 100.0; // centidegrees to degrees
+        return true;
+    }
+    return false;
+}
+
 bool ExifWrapper::aperture(double &quot)
 {
     long num, den;

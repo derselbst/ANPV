@@ -8,6 +8,7 @@ struct AfPointOverlay::Impl
 {
     std::vector<AfPoint> afPoints;
     QSize imageSize;
+    double rotationDeg;
 };
 
 AfPointOverlay::AfPointOverlay() : d(std::make_unique<Impl>())
@@ -15,10 +16,11 @@ AfPointOverlay::AfPointOverlay() : d(std::make_unique<Impl>())
 
 AfPointOverlay::~AfPointOverlay() = default;
 
-void AfPointOverlay::setAfPoints(const std::vector<AfPoint> &afPoints, const QSize &size)
+void AfPointOverlay::setAfPoints(const std::vector<AfPoint> &afPoints, const QSize &size, double rotationDeg)
 {
     d->afPoints = afPoints;
     d->imageSize = size;
+    d->rotationDeg = rotationDeg;
     this->prepareGeometryChange();
 }
 
@@ -30,6 +32,7 @@ QRectF AfPointOverlay::boundingRect() const
 void AfPointOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     auto pen = painter->pen();
+    painter->rotate(d->rotationDeg);
 
     for(size_t i = 0; i < d->afPoints.size(); i++)
     {

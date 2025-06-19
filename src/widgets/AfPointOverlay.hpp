@@ -21,7 +21,7 @@ public:
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) override;
 
-    void setAfPoints(const std::vector<AfPoint> &afPoints, const QSize &size);
+    void setAfPoints(const std::vector<AfPoint> &afPoints, const QSize &size, double rotationDeg = 0);
 
 private:
     struct Impl;

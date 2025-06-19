@@ -42,6 +42,7 @@ public:
     QString comment();
     QImage thumbnail();
     std::optional<std::tuple<std::vector<AfPoint>, QSize>> autoFocusPoints();
+    bool autoFocusRotation(double& rotation);
 
     QString aperture();
     bool aperture(double &quot);
