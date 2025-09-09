@@ -1,6 +1,7 @@
 
 #include "SortedImageModel.hpp"
 
+#include <QPointer>
 #include <QPromise>
 #include <QFileInfo>
 #include <QDir>

@@ -1,5 +1,6 @@
 #include "ThumbnailListView.hpp"
 
+#include <QPointer>
 #include <QWheelEvent>
 #include <QGuiApplication>
 #include <QListView>

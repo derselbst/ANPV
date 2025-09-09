@@ -197,6 +197,20 @@ qt_add_library(anpv-ico STATIC
 icons/oxygen/oxygen.qrc)
 
 
+if(WIN32)
+  get_target_property(_jxl_threads_libs JXL::threads INTERFACE_LINK_LIBRARIES)
+  if(_jxl_threads_libs)
+    list(REMOVE_ITEM _jxl_threads_libs "libm" "libm.lib" "m.lib" "-lm" "m")
+    set_property(TARGET JXL::threads PROPERTY INTERFACE_LINK_LIBRARIES "${_jxl_threads_libs}")
+  endif()
+  get_target_property(_jxl_libs JXL::libjxl INTERFACE_LINK_LIBRARIES)
+  if(_jxl_libs)
+    list(REMOVE_ITEM _jxl_libs "libm" "libm.lib" "m.lib" "-lm" "m")
+    set_property(TARGET JXL::libjxl PROPERTY INTERFACE_LINK_LIBRARIES "${_jxl_libs}")
+  endif()
+endif()
+
+
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
 target_link_libraries(anpv-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Svg LibRaw::LibRaw PNG::PNG JPEG::JPEG TIFF::TIFF JXL::libjxl JXL::threads KExiv2)
 target_include_directories(anpv-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets ${CMAKE_CURRENT_SOURCE_DIR}/src/logic ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders ${CMAKE_CURRENT_SOURCE_DIR}/src/models ${CMAKE_CURRENT_SOURCE_DIR}/src/styles)
