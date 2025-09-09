@@ -1,5 +1,6 @@
 #include "DocumentView.hpp"
 
+#include <QPointer>
 #include <QGraphicsScene>
 #include <QWheelEvent>
 #include <QMouseEvent>

@@ -9,6 +9,7 @@
 #include "SmartImageDecoder.hpp"
 #include "LibRawHelper.hpp"
 
+#include <QPointer>
 #include <QDir>
 #include <QIcon>
 #include <QAbstractFileIconProvider>

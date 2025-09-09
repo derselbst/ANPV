@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 
+#include <QPointer>
 #include <QWidget>
 #include <QGuiApplication>
 #include <QApplication>

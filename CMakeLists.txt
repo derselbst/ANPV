@@ -178,6 +178,8 @@ src/logic/DirectoryWorker.cpp
 src/logic/DirectoryWorker.hpp
 src/logic/DeleteFileCommand.cpp
 src/logic/DeleteFileCommand.hpp
+src/logic/RoundshotTagInterpreter.cpp
+src/logic/RoundshotTagInterpreter.hpp
 src/models/AbstractListItem.cpp
 src/models/AbstractListItem.hpp
 src/models/ImageSectionDataContainer.cpp
@@ -195,6 +197,20 @@ ANPV.qrc
 
 qt_add_library(anpv-ico STATIC
 icons/oxygen/oxygen.qrc)
+
+
+if(WIN32)
+  get_target_property(_jxl_threads_libs JXL::threads INTERFACE_LINK_LIBRARIES)
+  if(_jxl_threads_libs)
+    list(REMOVE_ITEM _jxl_threads_libs "libm" "libm.lib" "m.lib" "-lm" "m")
+    set_property(TARGET JXL::threads PROPERTY INTERFACE_LINK_LIBRARIES "${_jxl_threads_libs}")
+  endif()
+  get_target_property(_jxl_libs JXL::libjxl INTERFACE_LINK_LIBRARIES)
+  if(_jxl_libs)
+    list(REMOVE_ITEM _jxl_libs "libm" "libm.lib" "m.lib" "-lm" "m")
+    set_property(TARGET JXL::libjxl PROPERTY INTERFACE_LINK_LIBRARIES "${_jxl_libs}")
+  endif()
+endif()
 
 
 target_compile_definitions(anpv-lib PRIVATE ANPV_VERSION="${PROJECT_VERSION}")
