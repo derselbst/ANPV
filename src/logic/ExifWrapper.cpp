@@ -790,15 +790,15 @@ QString ExifWrapper::formatToString()
     }
 
     s = this->lens();
-
     if(!s.isEmpty())
     {
         f << "Lens: " << s.toStdString() << "<br>";
     }
 
-    if(this->focalLength(r))
+    s = this->focalLength();
+    if(!s.isEmpty())
     {
-        f << "Focal Length: " << std::fixed << std::setprecision(0) << r << "<br>";
+        f << "Focal Length: " << s.toStdString() << "<br>";
     }
     
     p = this->gpsLocation();
