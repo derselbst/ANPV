@@ -1037,6 +1037,7 @@ void DocumentView::onDecodingStateChanged(Image *img, quint32 newState, quint32 
 
     case DecodingState::FullImage:
         d->thumbnailPreviewOverlay->hide();
+        this->update();
         [[fallthrough]];
 
     case DecodingState::PreviewImage:
@@ -1258,3 +1259,68 @@ void DocumentView::writeSettings(QSettings& settings)
     settings.setValue("showScrollBars", d->actionShowScrollBars->isChecked());
     settings.setValue("sceneBackgroundColor", d->scene->backgroundBrush().color());
 }
+
+void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
+{
+    // Default background (for example, solid color)
+    QGraphicsView::drawBackground(painter, rect);
+
+    // Tile the image if it's smaller than the viewport
+    if (!d->currentDocumentPixmap.isNull())
+    {
+        QSize pixSize = d->currentDocumentPixmap.size();
+        QRectF viewRect = this->mapToScene(this->viewport()->rect()).boundingRect();
+
+        bool tileHoriz = pixSize.width() < viewRect.width();
+        bool tileVert  = pixSize.height() < viewRect.height();
+
+        // Only tile if the image is smaller than the viewport
+        if (tileHoriz || tileVert)
+        {
+            // The tiling pattern must match the transform of the image
+            QTransform imgTransform = d->currentPixmapOverlay->transform();
+            // Get the pixmap with the transform applied
+            QPixmap tiledPixmap = d->currentDocumentPixmap;
+
+            imgTransform.scale(-1,1);
+            if (!imgTransform.isIdentity()) {
+                tiledPixmap = d->currentDocumentPixmap.transformed(imgTransform);
+            }
+
+            // Draw tiled pixmap
+            painter->save();
+            painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
+
+            // Get overlay's scene position (top-left of item)
+            QPointF overlayScenePos = d->currentPixmapOverlay->scenePos();
+            // Get overlay's pixmap offset
+            // QPointF overlayOffset = d->currentPixmapOverlay->offset();
+            // overlayOffset = d->currentPixmapOverlay->mapToScene(overlayOffset);
+            
+            // Combine position and offset (offset is in item coordinates, so transform to scene)
+            QPointF tileOrigin = this->mapFromScene(overlayScenePos/* + overlayOffset*/);
+
+            
+            
+            
+            QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
+            dbgPen.setCosmetic(true);
+            painter->setPen(dbgPen);
+            
+            auto orig = d->currentPixmapOverlay->sceneBoundingRect();
+            orig.translate(-orig.width()+1, 0);
+            
+            painter->drawPixmap(orig.topLeft(), tiledPixmap);
+            
+            orig.translate(2*orig.width()-2, 0);
+            painter->drawPixmap(orig.topLeft(), tiledPixmap);
+            // painter->drawTiledPixmap(viewRect, tiledPixmap, orig.topLeft());
+            // painter->drawRect(orig);
+            
+            painter->restore();
+            
+            
+        }
+    }
+}
+
