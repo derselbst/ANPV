@@ -134,12 +134,12 @@ struct ANPV::Impl
     // And
     // QFileInfo sometimes implicitly takes the parent directory, even if the path passed in already is a directory
     QString currentDir;
-    ViewMode viewMode = ViewMode::Unknown;
-    ViewFlags_t viewFlags = static_cast<ViewFlags_t>(ViewFlag::None);
-    Qt::SortOrder imageSortOrder = static_cast<Qt::SortOrder>(-1);
-    Qt::SortOrder sectionSortOrder = static_cast<Qt::SortOrder>(-1);
-    SortField imageSortField = SortField::None;
-    SortField sectionSortField = SortField::None;
+    QProperty<ViewMode> viewMode{ViewMode::Unknown};
+    QProperty<ViewFlags_t> viewFlags{static_cast<ViewFlags_t>(ViewFlag::None)};
+    QProperty<Qt::SortOrder> imageSortOrder{static_cast<Qt::SortOrder>(-1)};
+    QProperty<Qt::SortOrder> sectionSortOrder{static_cast<Qt::SortOrder>(-1)};
+    QProperty<SortField> imageSortField{SortField::None};
+    QProperty<SortField> sectionSortField{SortField::None};
 
     std::atomic<int> iconHeight{ -1 };
 
@@ -675,43 +675,53 @@ ok:
 ViewMode ANPV::viewMode()
 {
     xThreadGuard g(this);
-    return d->viewMode;
+    return d->viewMode.value();
 }
 
 void ANPV::setViewMode(ViewMode v)
 {
     xThreadGuard g(this);
-    ViewMode old = d->viewMode;
+    ViewMode old = d->viewMode.value();
 
     if(true) // always emit, to allow user to press F4 to fit image again
     {
-        d->viewMode = v;
+        d->viewMode.setValue(v);
         emit this->viewModeChanged(v, old);
     }
+}
+
+QBindable<ViewMode> ANPV::bindableViewMode()
+{
+    return QBindable<ViewMode>(&d->viewMode);
 }
 
 ViewFlags_t ANPV::viewFlags()
 {
     xThreadGuard g(this);
-    return d->viewFlags;
+    return d->viewFlags.value();
 }
 
 void ANPV::setViewFlags(ViewFlags_t newFlags)
 {
     xThreadGuard g(this);
-    ViewFlags_t old = d->viewFlags;
+    ViewFlags_t old = d->viewFlags.value();
 
     if(old != newFlags)
     {
-        d->viewFlags = newFlags;
+        d->viewFlags.setValue(newFlags);
         emit this->viewFlagsChanged(newFlags, old);
     }
+}
+
+QBindable<ViewFlags_t> ANPV::bindableViewFlags()
+{
+    return QBindable<ViewFlags_t>(&d->viewFlags);
 }
 
 void ANPV::setViewFlag(ViewFlag v, bool on)
 {
     xThreadGuard g(this);
-    ViewFlags_t newFlags = d->viewFlags;
+    ViewFlags_t newFlags = d->viewFlags.value();
 
     if(on)
     {
@@ -728,73 +738,93 @@ void ANPV::setViewFlag(ViewFlag v, bool on)
 Qt::SortOrder ANPV::imageSortOrder()
 {
     xThreadGuard g(this);
-    return d->imageSortOrder;
+    return d->imageSortOrder.value();
 }
 
 void ANPV::setImageSortOrder(Qt::SortOrder order)
 {
     xThreadGuard g(this);
-    Qt::SortOrder old = d->imageSortOrder;
+    Qt::SortOrder old = d->imageSortOrder.value();
 
     if(order != old)
     {
-        d->imageSortOrder = order;
-        emit this->imageSortOrderChanged(d->imageSortField, order, d->imageSortField, old);
+        d->imageSortOrder.setValue(order);
+        emit this->imageSortOrderChanged(d->imageSortField.value(), order, d->imageSortField.value(), old);
     }
+}
+
+QBindable<Qt::SortOrder> ANPV::bindableImageSortOrder()
+{
+    return QBindable<Qt::SortOrder>(&d->imageSortOrder);
 }
 
 SortField ANPV::imageSortField()
 {
     xThreadGuard g(this);
-    return d->imageSortField;
+    return d->imageSortField.value();
 }
 
 void ANPV::setImageSortField(SortField field)
 {
     xThreadGuard g(this);
-    SortField old = d->imageSortField;
+    SortField old = d->imageSortField.value();
 
     if(field != old)
     {
-        d->imageSortField = field;
-        emit this->imageSortOrderChanged(field, d->imageSortOrder, old, d->imageSortOrder);
+        d->imageSortField.setValue(field);
+        emit this->imageSortOrderChanged(field, d->imageSortOrder.value(), old, d->imageSortOrder.value());
     }
+}
+
+QBindable<SortField> ANPV::bindableImageSortField()
+{
+    return QBindable<SortField>(&d->imageSortField);
 }
 
 Qt::SortOrder ANPV::sectionSortOrder()
 {
     xThreadGuard g(this);
-    return d->sectionSortOrder;
+    return d->sectionSortOrder.value();
 }
 
 void ANPV::setSectionSortOrder(Qt::SortOrder order)
 {
     xThreadGuard g(this);
-    Qt::SortOrder old = d->sectionSortOrder;
+    Qt::SortOrder old = d->sectionSortOrder.value();
 
     if(order != old)
     {
-        d->sectionSortOrder = order;
-        emit this->sectionSortOrderChanged(d->sectionSortField, order, d->sectionSortField, old);
+        d->sectionSortOrder.setValue(order);
+        emit this->sectionSortOrderChanged(d->sectionSortField.value(), order, d->sectionSortField.value(), old);
     }
+}
+
+QBindable<Qt::SortOrder> ANPV::bindableSectionSortOrder()
+{
+    return QBindable<Qt::SortOrder>(&d->sectionSortOrder);
 }
 
 SortField ANPV::sectionSortField()
 {
     xThreadGuard g(this);
-    return d->sectionSortField;
+    return d->sectionSortField.value();
 }
 
 void ANPV::setSectionSortField(SortField field)
 {
     xThreadGuard g(this);
-    SortField old = d->sectionSortField;
+    SortField old = d->sectionSortField.value();
 
     if(field != old)
     {
-        d->sectionSortField = field;
-        emit this->sectionSortOrderChanged(field, d->sectionSortOrder, old, d->sectionSortOrder);
+        d->sectionSortField.setValue(field);
+        emit this->sectionSortOrderChanged(field, d->sectionSortOrder.value(), old, d->sectionSortOrder.value());
     }
+}
+
+QBindable<SortField> ANPV::bindableSectionSortField()
+{
+    return QBindable<SortField>(&d->sectionSortField);
 }
 
 int ANPV::iconHeight()

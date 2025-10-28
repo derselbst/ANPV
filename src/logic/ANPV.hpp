@@ -7,6 +7,7 @@
 #include <QString>
 #include <QFileInfo>
 #include <QSharedPointer>
+#include <QProperty>
 
 #include "DecodingState.hpp"
 #include "SortedImageModel.hpp"
@@ -35,6 +36,13 @@ class QFuture;
 class ANPV : public QObject
 {
     Q_OBJECT
+    
+    Q_PROPERTY(ViewMode viewMode READ viewMode WRITE setViewMode BINDABLE bindableViewMode)
+    Q_PROPERTY(ViewFlags_t viewFlags READ viewFlags WRITE setViewFlags BINDABLE bindableViewFlags)
+    Q_PROPERTY(Qt::SortOrder imageSortOrder READ imageSortOrder WRITE setImageSortOrder BINDABLE bindableImageSortOrder)
+    Q_PROPERTY(SortField imageSortField READ imageSortField WRITE setImageSortField BINDABLE bindableImageSortField)
+    Q_PROPERTY(Qt::SortOrder sectionSortOrder READ sectionSortOrder WRITE setSectionSortOrder BINDABLE bindableSectionSortOrder)
+    Q_PROPERTY(SortField sectionSortField READ sectionSortField WRITE setSectionSortField BINDABLE bindableSectionSortField)
 
 public:
     static constexpr int MaxIconHeight = 500/*px*/;
@@ -67,10 +75,12 @@ public:
 
     ViewMode viewMode();
     void setViewMode(ViewMode);
+    QBindable<ViewMode> bindableViewMode();
 
     ViewFlags_t viewFlags();
     void setViewFlag(ViewFlag, bool on = true);
     void setViewFlags(ViewFlags_t);
+    QBindable<ViewFlags_t> bindableViewFlags();
 
     QString currentDir();
     void setCurrentDir(const QString &str, bool force);
@@ -79,13 +89,17 @@ public:
 
     Qt::SortOrder imageSortOrder();
     void setImageSortOrder(Qt::SortOrder order);
+    QBindable<Qt::SortOrder> bindableImageSortOrder();
     SortField imageSortField();
     void setImageSortField(SortField field);
+    QBindable<SortField> bindableImageSortField();
 
     Qt::SortOrder sectionSortOrder();
     void setSectionSortOrder(Qt::SortOrder order);
+    QBindable<Qt::SortOrder> bindableSectionSortOrder();
     SortField sectionSortField();
     void setSectionSortField(SortField field);
+    QBindable<SortField> bindableSectionSortField();
 
     int iconHeight();
     void setIconHeight(int);
