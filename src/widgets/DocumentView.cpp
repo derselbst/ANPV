@@ -1280,60 +1280,81 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
     QGraphicsView::drawBackground(painter, rect);
 
     // Tile the image if it's smaller than the viewport
-    if (!d->currentDocumentPixmap.isNull())
+    const QPixmap& pix = d->currentDocumentPixmap;
+    if (pix.isNull())
     {
-        QSize pixSize = d->currentDocumentPixmap.size();
-        QRectF viewRect = this->mapToScene(this->viewport()->rect()).boundingRect();
+        return;
+    }
+    QSize pixSize = pix.size();
+    QRectF viewRect = this->mapToScene(this->viewport()->rect()).boundingRect();
 
-        qInfo() << "PixSize: " << pixSize;
-        qInfo() << "viewRect: " << viewRect;
+    qInfo() << "PixSize: " << pixSize;
+    qInfo() << "viewRect: " << viewRect;
 
 
-        bool tileHoriz = pixSize.width() < viewRect.width();
-        bool tileVert  = pixSize.height() < viewRect.height();
+    bool tileHoriz = pixSize.width() < viewRect.width();
+    bool tileVert = pixSize.height() < viewRect.height();
 
-        // Only tile if the image is smaller than the viewport
-        if (tileHoriz || tileVert)
+    // Only tile if the image is smaller than the viewport
+    if (tileHoriz || tileVert)
+    {
+        painter->save();
+        painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
+
+        // Use the item's scene transform so the painter draws in item-local coordinates
+        // and respects any scaling applied to the overlay item.
+        QTransform itemToScene = d->currentPixmapOverlay->sceneTransform();
+        bool invertible = true;
+        QTransform sceneToItem = itemToScene.inverted(&invertible);
+        if (!invertible)
         {
-            // The tiling pattern must match the transform of the image
-            QTransform imgTransform = d->currentPixmapOverlay->transform();
-            // Get the pixmap with the transform applied
-            QPixmap tiledPixmap = d->currentDocumentPixmap;
-
-            imgTransform.scale(-1,1);
-            if (!imgTransform.isIdentity()) {
-                tiledPixmap = d->currentDocumentPixmap.transformed(imgTransform);
-            }
-
-            // Draw tiled pixmap
-            painter->save();
-            painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
-
-            // Get overlay's scene position (top-left of item)
-            QPointF overlayScenePos = d->currentPixmapOverlay->scenePos();
-            // Get overlay's pixmap offset
-            // QPointF overlayOffset = d->currentPixmapOverlay->offset();
-            // overlayOffset = d->currentPixmapOverlay->mapToScene(overlayOffset);
-            
-            // Combine position and offset (offset is in item coordinates, so transform to scene)
-            QPointF tileOrigin = this->mapFromScene(overlayScenePos/* + overlayOffset*/);
-
-            QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
-            dbgPen.setCosmetic(true);
-            painter->setPen(dbgPen);
-            
-            auto orig = d->currentPixmapOverlay->sceneBoundingRect();
-            orig.translate(-orig.width()+1, 0);
-            
-            painter->drawPixmap(orig.topLeft(), tiledPixmap);
-            
-            orig.translate(2*orig.width()-2, 0);
-            painter->drawPixmap(orig.topLeft(), tiledPixmap);
-            // painter->drawTiledPixmap(viewRect, tiledPixmap, orig.topLeft());
-            // painter->drawRect(orig);
-            
-            painter->restore();
+            // don't tile if we can't invert the transform
+            return;
         }
+
+
+        // Offset of the pixmap inside the item (QGraphicsPixmapItem::offset())
+        QPointF offset = d->currentPixmapOverlay->offset();
+
+        // Work in item-local coordinates by setting the painter transform to the item's sceneTransform
+        painter->setTransform(itemToScene, /*combine=*/true);
+
+        // Move origin to pixmap top-left inside item coordinates
+        painter->translate(offset);
+
+        const qreal pw = pixSize.width();
+        const qreal ph = pixSize.height();
+
+        // Compute visible region in item coordinates (we will only generate tiles that intersect this rect)
+        QRectF itemViewRect = sceneToItem.mapRect(viewRect);
+        itemViewRect.translate(offset);
+
+        // Draw the original
+        painter->drawPixmap(0.0, 0.0, pix);
+
+        // Draw a mirrored copy to the left: covers [-pw .. 0]
+        painter->save();
+        painter->translate(0.0, 0.0);
+        painter->scale(-1.0, 1.0);
+        painter->drawPixmap(0.0, 0.0, pix);
+        painter->restore();
+
+        // Draw a mirrored copy to the right: covers [pw .. 2*pw]
+        painter->save();
+        painter->translate(2.0 * pw, 0.0);
+        painter->scale(-1.0, 1.0);
+        painter->drawPixmap(0.0, 0.0, pix);
+        painter->restore();
+
+#if 0
+        // (optional) debug rectangle around the overlay original bounding rect
+        QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
+        dbgPen.setCosmetic(true);
+        painter->setPen(dbgPen);
+
+        QRectF orig = d->currentPixmapOverlay->sceneBoundingRect();
+        painter->drawRect(orig);
+#endif
+        painter->restore();
     }
 }
-
