@@ -1329,23 +1329,60 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
         QRectF itemViewRect = sceneToItem.mapRect(viewRect);
         itemViewRect.translate(offset);
 
-        // Draw the original
-        painter->drawPixmap(0.0, 0.0, pix);
 
-        // Draw a mirrored copy to the left: covers [-pw .. 0]
-        painter->save();
-        painter->translate(0.0, 0.0);
-        painter->scale(-1.0, 1.0);
-        painter->drawPixmap(0.0, 0.0, pix);
-        painter->restore();
+        // Compute destination expansion so adjacent tiles overlap by 1 device pixel.
+        // deviceTransform maps current painter coordinates (item coords at this point) to device pixels.
+        QTransform devT = painter->deviceTransform();
+        qreal epsX = 0.0;
+        qreal epsY = 0.0;
+        if (!qFuzzyIsNull(devT.m11()))
+            epsX = 1.0 / std::abs(devT.m11());
+        if (!qFuzzyIsNull(devT.m22()))
+            epsY = 1.0 / std::abs(devT.m22());
+        // Clamp to small values if very large scale would make eps too big
+        //epsX = qMin<qreal>(epsX, 4.0);
+        //epsY = qMin<qreal>(epsY, 4.0);
 
-        // Draw a mirrored copy to the right: covers [pw .. 2*pw]
-        painter->save();
-        painter->translate(2.0 * pw, 0.0);
-        painter->scale(-1.0, 1.0);
-        painter->drawPixmap(0.0, 0.0, pix);
-        painter->restore();
+        int startX = static_cast<int>(std::floor(itemViewRect.left() / pw)) - 1;
+        int endX = static_cast<int>(std::ceil(itemViewRect.right() / pw)) + 1;
+        int startY = static_cast<int>(std::floor(itemViewRect.top() / ph)) - 1;
+        int endY = static_cast<int>(std::ceil(itemViewRect.bottom() / ph)) + 1;
+        // Loop over the grid and draw each tile. Apply horizontal mirror for odd columns so mirrored neighbors appear.
+        for (int iy = startY; iy <= endY; ++iy) {
+            for (int ix = startX; ix <= endX; ++ix) {
+                // Tile top-left position in item coordinates
+                qreal tx = offset.x() + ix * pw;
+                qreal ty = offset.y() + iy * ph;
 
+                // Quick cull in item coordinates to avoid unnecessary draw calls
+                QRectF tileRectItem(tx, ty, pw, ph);
+                if (!tileRectItem.intersects(itemViewRect))
+                    continue;
+
+                painter->save();
+                painter->translate(tx, ty);
+
+                // Mirror horizontally for odd columns to create left-right mirrored neighbors.
+                bool mirrorX = (ix % 2) != 0;
+                if (mirrorX) {
+                    // Translate by width, then scale by -1 on X so pixmap occupies [0..pw] in item coords
+                    painter->translate(pw + epsX, 0.0);
+                    painter->scale(-1.0, 1.0);
+                }
+
+                bool mirrorY = (iy % 2) != 0;
+                if (mirrorY) {
+                    // Translate by height, then scale by -1 on Y so pixmap occupies [0..ph] in item coords
+                    painter->translate(0.0, ph + (epsY / 2.0));
+                    painter->scale(1.0, -1.0);
+                }
+
+                // Destination rect (expanded by epsX/epsY to ensure a 1-device-pixel overlap)
+                QRectF destRect(0.0, 0.0, pw + epsX, ph + epsY);
+                painter->drawPixmap(destRect, pix, pix.rect());
+                painter->restore();
+            }
+        }
 #if 0
         // (optional) debug rectangle around the overlay original bounding rect
         QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
