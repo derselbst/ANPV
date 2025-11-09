@@ -1315,15 +1315,11 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
         return;
     }
 
-
-    // Offset of the pixmap inside the item (QGraphicsPixmapItem::offset())
+    // Offset of the pixmap inside the item in item coords
     QPointF offset = d->currentPixmapOverlay->offset();
 
     // Work in item-local coordinates by setting the painter transform to the item's sceneTransform
     painter->setTransform(itemToScene, /*combine=*/true);
-
-    // Move origin to pixmap top-left inside item coordinates
-    painter->translate(offset);
 
     qInfo() << "ofset: " << offset;
 
