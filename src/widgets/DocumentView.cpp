@@ -1367,19 +1367,19 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
             bool mirrorX = (ix % 2) != 0;
             if (mirrorX) {
                 // Translate by width, then scale by -1 on X so pixmap occupies [0..pw] in item coords
-                painter->translate(pw + epsX, 0.0);
+                painter->translate(pw, 0.0);
                 painter->scale(-1.0, 1.0);
             }
 
             bool mirrorY = (iy % 2) != 0;
             if (mirrorY) {
                 // Translate by height, then scale by -1 on Y so pixmap occupies [0..ph] in item coords
-                painter->translate(0.0, ph + (epsY / 2.0));
+                painter->translate(0.0, ph);
                 painter->scale(1.0, -1.0);
             }
 
             // Destination rect (expanded by epsX/epsY to ensure a 1-device-pixel overlap)
-            QRectF destRect(0.0, 0.0, pw + epsX, ph + epsY);
+            QRectF destRect(-epsX, -epsY/2.0, pw + 2*epsX, ph + 2*epsY);
             painter->drawPixmap(destRect, pix, pix.rect());
             painter->restore();
         }
