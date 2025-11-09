@@ -1296,102 +1296,98 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
     bool tileVert = pixSize.height() < viewRect.height();
 
     // Only tile if the image is smaller than the viewport
-    if (tileHoriz || tileVert)
+    if (!tileHoriz && !tileVert)
     {
-        painter->save();
-        painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
-
-        // Use the item's scene transform so the painter draws in item-local coordinates
-        // and respects any scaling applied to the overlay item.
-        QTransform itemToScene = d->currentPixmapOverlay->sceneTransform();
-        bool invertible = true;
-        QTransform sceneToItem = itemToScene.inverted(&invertible);
-        if (!invertible)
-        {
-            // don't tile if we can't invert the transform
-            return;
-        }
-
-
-        // Offset of the pixmap inside the item (QGraphicsPixmapItem::offset())
-        QPointF offset = d->currentPixmapOverlay->offset();
-
-        // Work in item-local coordinates by setting the painter transform to the item's sceneTransform
-        painter->setTransform(itemToScene, /*combine=*/true);
-
-        // Move origin to pixmap top-left inside item coordinates
-        painter->translate(offset);
-
-        const qreal pw = pixSize.width();
-        const qreal ph = pixSize.height();
-
-        // Compute visible region in item coordinates (we will only generate tiles that intersect this rect)
-        QRectF itemViewRect = sceneToItem.mapRect(viewRect);
-        itemViewRect.translate(offset);
-
-
-        // Compute destination expansion so adjacent tiles overlap by 1 device pixel.
-        // deviceTransform maps current painter coordinates (item coords at this point) to device pixels.
-        QTransform devT = painter->deviceTransform();
-        qreal epsX = 0.0;
-        qreal epsY = 0.0;
-        if (!qFuzzyIsNull(devT.m11()))
-            epsX = 1.0 / std::abs(devT.m11());
-        if (!qFuzzyIsNull(devT.m22()))
-            epsY = 1.0 / std::abs(devT.m22());
-        // Clamp to small values if very large scale would make eps too big
-        //epsX = qMin<qreal>(epsX, 4.0);
-        //epsY = qMin<qreal>(epsY, 4.0);
-
-        int startX = static_cast<int>(std::floor(itemViewRect.left() / pw)) - 1;
-        int endX = static_cast<int>(std::ceil(itemViewRect.right() / pw)) + 1;
-        int startY = static_cast<int>(std::floor(itemViewRect.top() / ph)) - 1;
-        int endY = static_cast<int>(std::ceil(itemViewRect.bottom() / ph)) + 1;
-        // Loop over the grid and draw each tile. Apply horizontal mirror for odd columns so mirrored neighbors appear.
-        for (int iy = startY; iy <= endY; ++iy) {
-            for (int ix = startX; ix <= endX; ++ix) {
-                // Tile top-left position in item coordinates
-                qreal tx = offset.x() + ix * pw;
-                qreal ty = offset.y() + iy * ph;
-
-                // Quick cull in item coordinates to avoid unnecessary draw calls
-                QRectF tileRectItem(tx, ty, pw, ph);
-                if (!tileRectItem.intersects(itemViewRect))
-                    continue;
-
-                painter->save();
-                painter->translate(tx, ty);
-
-                // Mirror horizontally for odd columns to create left-right mirrored neighbors.
-                bool mirrorX = (ix % 2) != 0;
-                if (mirrorX) {
-                    // Translate by width, then scale by -1 on X so pixmap occupies [0..pw] in item coords
-                    painter->translate(pw + epsX, 0.0);
-                    painter->scale(-1.0, 1.0);
-                }
-
-                bool mirrorY = (iy % 2) != 0;
-                if (mirrorY) {
-                    // Translate by height, then scale by -1 on Y so pixmap occupies [0..ph] in item coords
-                    painter->translate(0.0, ph + (epsY / 2.0));
-                    painter->scale(1.0, -1.0);
-                }
-
-                // Destination rect (expanded by epsX/epsY to ensure a 1-device-pixel overlap)
-                QRectF destRect(0.0, 0.0, pw + epsX, ph + epsY);
-                painter->drawPixmap(destRect, pix, pix.rect());
-                painter->restore();
-            }
-        }
-#if 0
-        // (optional) debug rectangle around the overlay original bounding rect
-        QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
-        dbgPen.setCosmetic(true);
-        painter->setPen(dbgPen);
-
-        QRectF orig = d->currentPixmapOverlay->sceneBoundingRect();
-        painter->drawRect(orig);
-#endif
-        painter->restore();
+        return;
     }
+
+    painter->save();
+    painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
+
+    // Use the item's scene transform so the painter draws in item-local coordinates
+    // and respects any scaling applied to the overlay item.
+    QTransform itemToScene = d->currentPixmapOverlay->sceneTransform();
+    bool invertible = true;
+    QTransform sceneToItem = itemToScene.inverted(&invertible);
+    if (!invertible)
+    {
+        // don't tile if we can't invert the transform
+        return;
+    }
+
+
+    // Offset of the pixmap inside the item (QGraphicsPixmapItem::offset())
+    QPointF offset = d->currentPixmapOverlay->offset();
+
+    // Work in item-local coordinates by setting the painter transform to the item's sceneTransform
+    painter->setTransform(itemToScene, /*combine=*/true);
+
+    // Move origin to pixmap top-left inside item coordinates
+    painter->translate(offset);
+
+    qInfo() << "ofset: " << offset;
+
+    const qreal pw = pixSize.width();
+    const qreal ph = pixSize.height();
+
+    // Compute visible region in item coordinates (we will only generate tiles that intersect this rect)
+    QRectF itemViewRect = sceneToItem.mapRect(viewRect);
+    itemViewRect.translate(-offset);
+
+
+    // Compute destination expansion so adjacent tiles overlap by 1 device pixel.
+    // deviceTransform maps current painter coordinates (item coords at this point) to device pixels.
+    QTransform devT = painter->deviceTransform();
+    qreal epsX = 0.0;
+    qreal epsY = 0.0;
+    if (!qFuzzyIsNull(devT.m11()))
+        epsX = 1.0 / std::abs(devT.m11());
+    if (!qFuzzyIsNull(devT.m22()))
+        epsY = 1.0 / std::abs(devT.m22());
+    // Clamp to small values if very large scale would make eps too big
+    //epsX = qMin<qreal>(epsX, 4.0);
+    //epsY = qMin<qreal>(epsY, 4.0);
+
+    int startX = static_cast<int>(std::floor(itemViewRect.left() / pw)) - 1;
+    int endX = static_cast<int>(std::ceil(itemViewRect.right() / pw)) + 1;
+    int startY = static_cast<int>(std::floor(itemViewRect.top() / ph)) - 1;
+    int endY = static_cast<int>(std::ceil(itemViewRect.bottom() / ph)) + 1;
+    // Loop over the grid and draw each tile. Apply horizontal mirror for odd columns so mirrored neighbors appear.
+    for (int iy = startY; iy <= endY; ++iy) {
+        for (int ix = startX; ix <= endX; ++ix) {
+            // Tile top-left position in item coordinates
+            qreal tx = offset.x() + ix * pw;
+            qreal ty = offset.y() + iy * ph;
+
+            // Quick cull in item coordinates to avoid unnecessary draw calls
+            QRectF tileRectItem(tx, ty, pw, ph);
+            if (!tileRectItem.intersects(itemViewRect))
+                continue;
+
+            painter->save();
+            painter->translate(tx, ty);
+
+            // Mirror horizontally for odd columns to create left-right mirrored neighbors.
+            bool mirrorX = (ix % 2) != 0;
+            if (mirrorX) {
+                // Translate by width, then scale by -1 on X so pixmap occupies [0..pw] in item coords
+                painter->translate(pw + epsX, 0.0);
+                painter->scale(-1.0, 1.0);
+            }
+
+            bool mirrorY = (iy % 2) != 0;
+            if (mirrorY) {
+                // Translate by height, then scale by -1 on Y so pixmap occupies [0..ph] in item coords
+                painter->translate(0.0, ph + (epsY / 2.0));
+                painter->scale(1.0, -1.0);
+            }
+
+            // Destination rect (expanded by epsX/epsY to ensure a 1-device-pixel overlap)
+            QRectF destRect(0.0, 0.0, pw + epsX, ph + epsY);
+            painter->drawPixmap(destRect, pix, pix.rect());
+            painter->restore();
+        }
+    }
+
+    painter->restore();
 }
