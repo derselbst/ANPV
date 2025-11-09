@@ -731,6 +731,13 @@ DocumentView::DocumentView(QWidget *parent)
     this->setDragMode(QGraphicsView::ScrollHandDrag);
     this->setFrameShape(QFrame::NoFrame);
 
+    // QT IS SO STUPID! QGraphicsView initializes an internal flag "mustResizeBackgroundPixmap" with true.
+    // This causes invalidateScene to become a no-op when called with the backgroundLayer flag.
+    // The only way to clear this flag is to set an invalid cacheMode, call resetCachedContent to clear that flag and restore to CacheNone!!!
+    this->setCacheMode((CacheModeFlag)16);
+    this->resetCachedContent();
+    this->setCacheMode(CacheNone);
+
     d->scene = new QGraphicsScene(this);
 
     d->thumbnailPreviewOverlay = new QGraphicsPixmapItem;
@@ -778,6 +785,9 @@ DocumentView::DocumentView(QWidget *parent)
             d->previousDecodedPixmapOverlay->setOffset(d->currentPixmapOverlay->offset());
             d->previousDecodedPixmapOverlay->setPixmap(d->currentPixmapOverlay->pixmap());
             d->previousDecodedPixmapOverlay->show();
+
+            // invalidate background of graphicsview
+            this->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
         });
 
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::started, this, [&]()
@@ -787,6 +797,8 @@ DocumentView::DocumentView(QWidget *parent)
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::canceled, this, [&]()
         {
             d->debugOverlay1->hide();
+            // invalidate background of graphicsview
+            this->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
         });
 
     this->setScene(d->scene);
@@ -1262,6 +1274,8 @@ void DocumentView::writeSettings(QSettings& settings)
 
 void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
 {
+    xThreadGuard g(this);
+
     // Default background (for example, solid color)
     QGraphicsView::drawBackground(painter, rect);
 
@@ -1270,6 +1284,10 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
     {
         QSize pixSize = d->currentDocumentPixmap.size();
         QRectF viewRect = this->mapToScene(this->viewport()->rect()).boundingRect();
+
+        qInfo() << "PixSize: " << pixSize;
+        qInfo() << "viewRect: " << viewRect;
+
 
         bool tileHoriz = pixSize.width() < viewRect.width();
         bool tileVert  = pixSize.height() < viewRect.height();
@@ -1300,9 +1318,6 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
             // Combine position and offset (offset is in item coordinates, so transform to scene)
             QPointF tileOrigin = this->mapFromScene(overlayScenePos/* + overlayOffset*/);
 
-            
-            
-            
             QPen dbgPen(Qt::red, 2, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin);
             dbgPen.setCosmetic(true);
             painter->setPen(dbgPen);
@@ -1318,8 +1333,6 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
             // painter->drawRect(orig);
             
             painter->restore();
-            
-            
         }
     }
 }
