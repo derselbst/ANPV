@@ -65,6 +65,7 @@ struct DocumentView::Impl
     QAction *actionShowScrollBars = nullptr;
     QAction* actionShowInfoBox = nullptr;
     QAction* actionShowImageLayout = nullptr;
+    QAction* actionPeriodicBoundary = nullptr;
 
     AfPointOverlay *afPointOverlay = nullptr;
 
@@ -432,7 +433,9 @@ struct DocumentView::Impl
         q->setHorizontalScrollBarPolicy(policy);
         q->setVerticalScrollBarPolicy(policy);
         this->actionShowScrollBars->setChecked(showScrollBar);
+
         this->cachedViewFlags = v;
+        q->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
     }
 
     void onViewModeChanged(ViewMode v)
@@ -611,7 +614,6 @@ struct DocumentView::Impl
         });
         q->addAction(this->actionShowInfoBox);
 
-
         this->actionShowImageLayout = new QAction("Show Image Layout", q);
         this->actionShowImageLayout->setCheckable(true);
         this->actionShowImageLayout->setChecked(true);
@@ -621,6 +623,18 @@ struct DocumentView::Impl
                 this->debugOverlay1->setVisible(checked);
             });
         q->addAction(this->actionShowImageLayout);
+
+        act = new QAction(q);
+        act->setSeparator(true);
+        q->addAction(act);
+
+        this->actionPeriodicBoundary = new QAction("Periodical Background", q);
+        this->actionPeriodicBoundary->setCheckable(true);
+        connect(this->actionPeriodicBoundary, &QAction::toggled, q, [&](bool checked)
+            {
+                ANPV::globalInstance()->setViewFlag(ViewFlag::PeriodicBoundary, checked);
+            });
+        q->addAction(this->actionPeriodicBoundary);
 
         act = new QAction("Set Background Color", q);
         connect(act, &QAction::triggered, q, [&]()
@@ -1259,6 +1273,7 @@ void DocumentView::readSettings(QSettings& settings)
     d->actionShowImageLayout->setChecked(settings.value("showImageLayout", false).toBool());
     d->actionShowInfoBox->setChecked(settings.value("showInfoBox", true).toBool());
     d->actionShowScrollBars->setChecked(settings.value("showScrollBars", true).toBool());
+    d->actionPeriodicBoundary->setChecked(settings.value("periodicBoundary", false).toBool());
     
     QColor col = settings.value("sceneBackgroundColor", d->scene->backgroundBrush().color()).value<QColor>();
     d->scene->setBackgroundBrush(QBrush(col));
@@ -1269,6 +1284,7 @@ void DocumentView::writeSettings(QSettings& settings)
     settings.setValue("showImageLayout", d->actionShowImageLayout->isChecked());
     settings.setValue("showInfoBox", d->actionShowInfoBox->isChecked());
     settings.setValue("showScrollBars", d->actionShowScrollBars->isChecked());
+    settings.setValue("periodicBoundary", d->actionPeriodicBoundary->isChecked());
     settings.setValue("sceneBackgroundColor", d->scene->backgroundBrush().color());
 }
 
@@ -1281,7 +1297,7 @@ void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
 
     // Tile the image if it's smaller than the viewport
     const QPixmap& pix = d->currentDocumentPixmap;
-    if (pix.isNull())
+    if ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::PeriodicBoundary)) == 0 || pix.isNull())
     {
         return;
     }
