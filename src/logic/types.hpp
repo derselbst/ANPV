@@ -21,6 +21,7 @@ enum class ViewFlag : ViewFlags_t
     RespectExifOrientation = 1 << 2,
     CenterAf = 1 << 3,
     ShowScrollBars = 1 << 4,
+    PeriodicBoundary = 1 << 5,
 };
 
 class Image;
