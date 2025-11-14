@@ -26,7 +26,7 @@ resources:
 jobs:
   - job: Linux
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-22.04'
     container: qt6Container-linux
     steps:
     - checkout: self
