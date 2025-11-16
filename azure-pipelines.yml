@@ -21,7 +21,7 @@ resources:
     image: tommoebert332/qt6-build:latest-suse
   - container: qt6Container-win
     endpoint: 'myDockerHub'
-    image: tommoebert332/qt6-build:win-jxl
+    image: ghcr.io/derselbst/qt6-ps.win:qt6-0e86e13
 
 jobs:
   - job: Linux
