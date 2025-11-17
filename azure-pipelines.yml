@@ -152,41 +152,7 @@ jobs:
                 DESCRIPTION "Image metadata support"
             )
             EOF
-
-            # libjxl's pkgconfig files do not work on windows, because they renamed the static libs
-            # https://github.com/libjxl/libjxl/pull/2754
-            cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl.pc
-            prefix=\${pcfiledir}/../..
-            exec_prefix=\${prefix}
-            libdir=\${exec_prefix}/lib
-            includedir=\${prefix}/include
-
-            Name: libjxl
-            Description: Loads and saves JPEG XL files
-            Version: 0.8.2
-
-            Libs: "-L\${libdir}" -ljxl-static
-            Libs.private: -ljxl_dec-static
-            Requires.private: libhwy libbrotlicommon libbrotlienc libbrotlidec lcms2
-            Cflags: "-I\${includedir}" -DJXL_STATIC_DEFINE
-            EOF
-
-            cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl_threads.pc
-            prefix=\${pcfiledir}/../..
-            exec_prefix=\${prefix}
-            libdir=\${exec_prefix}/lib
-            includedir=\${prefix}/include
-
-            Name: libjxl_threads
-            Description: JPEG XL multi-thread runner using std::threads.
-            Version: 0.8.2
-
-            Libs: "-L\${libdir}" -ljxl_threads-static
-            Requires: 
-            Cflags: "-I\${includedir}" -DJXL_THREADS_STATIC_DEFINE
-            EOF
-
-      displayName: 'Fix libjxl pkgconfig files'
+      displayName: 'Fix KDE's exiv2 find module'
     - script: |
           @ECHO ON
           mkdir build
