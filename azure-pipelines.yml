@@ -152,7 +152,7 @@ jobs:
                 DESCRIPTION "Image metadata support"
             )
             EOF
-      displayName: 'Fix KDE's exiv2 find module'
+      displayName: 'Fix KDEs exiv2 find module'
     - script: |
           @ECHO ON
           mkdir build
