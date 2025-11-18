@@ -21,12 +21,12 @@ resources:
     image: tommoebert332/qt6-build:latest-suse
   - container: qt6Container-win
     endpoint: 'myDockerHub'
-    image: tommoebert332/qt6-build:win-jxl
+    image: ghcr.io/derselbst/qt6-ps.win:master-4b2f2df
 
 jobs:
   - job: Linux
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-22.04'
     container: qt6Container-linux
     steps:
     - checkout: self
@@ -63,9 +63,28 @@ jobs:
       platform: 'x64'
       VCPKG_INSTALLATION_ROOT: 'C:/vcpkg'
       PKG_CONFIG_PATH: '$(VCPKG_INSTALLATION_ROOT)/installed/$(platform)-windows-static/lib/pkgconfig'
+      WindowsSDKVersion: '10.0.22621.0'
+      WindowsSDKDir: 'C:\Program Files (x86)\Windows Kits\10\Include\$(WindowsSDKVersion)'
+      WindowsSDKDirBin: 'C:\Program Files (x86)\Windows Kits\10\bin\$(WindowsSDKVersion)'
+      WindowsSDKDirLib: 'C:\Program Files (x86)\Windows Kits\10\Lib\$(WindowsSDKVersion)'
     steps:
     - checkout: self
       submodules: true
+
+    - script: |
+        @ECHO ON
+        set
+        call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
+        set
+        echo %PATH%
+        echo ##vso[task.prependpath]%PATH%;$(WindowsSDKDirBin)\$(platform)
+        echo ##vso[task.setvariable variable=VCToolsInstallDir]%VCToolsInstallDir%
+        echo ##vso[task.setvariable variable=VS170COMNTOOLS]%VS170COMNTOOLS%
+        echo ##vso[task.setvariable variable=INCLUDE]%INCLUDE%;$(WindowsSDKDir)\ucrt;$(WindowsSDKDir)\um;$(WindowsSDKDir)\shared;$(WindowsSDKDir)\winrt
+        echo ##vso[task.setvariable variable=LIB]%LIB%;$(WindowsSDKDirLib)\um\$(platform);$(WindowsSDKDirLib)\ucrt\$(platform)
+        echo ##vso[task.setvariable variable=LIBPATH]%LIBPATH%;$(WindowsSDKDirLib)\um\$(platform);$(WindowsSDKDirLib)\ucrt\$(platform)
+      displayName: 'Setup environment'
+
     - bash: |
             set -e
 
@@ -133,56 +152,15 @@ jobs:
                 DESCRIPTION "Image metadata support"
             )
             EOF
-
-            # libjxl's pkgconfig files do not work on windows, because they renamed the static libs
-            # https://github.com/libjxl/libjxl/pull/2754
-            cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl.pc
-            prefix=\${pcfiledir}/../..
-            exec_prefix=\${prefix}
-            libdir=\${exec_prefix}/lib
-            includedir=\${prefix}/include
-
-            Name: libjxl
-            Description: Loads and saves JPEG XL files
-            Version: 0.8.2
-
-            Libs: "-L\${libdir}" -ljxl-static
-            Libs.private: -ljxl_dec-static
-            Requires.private: libhwy libbrotlicommon libbrotlienc libbrotlidec lcms2
-            Cflags: "-I\${includedir}" -DJXL_STATIC_DEFINE
-            EOF
-
-            cat << EOF > /c/vcpkg/installed/x64-windows-static/lib/pkgconfig/libjxl_threads.pc
-            prefix=\${pcfiledir}/../..
-            exec_prefix=\${prefix}
-            libdir=\${exec_prefix}/lib
-            includedir=\${prefix}/include
-
-            Name: libjxl_threads
-            Description: JPEG XL multi-thread runner using std::threads.
-            Version: 0.8.2
-
-            Libs: "-L\${libdir}" -ljxl_threads-static
-            Requires: 
-            Cflags: "-I\${includedir}" -DJXL_THREADS_STATIC_DEFINE
-            EOF
-
-      displayName: 'Fix libjxl pkgconfig files'
+      displayName: 'Fix KDEs exiv2 find module'
     - script: |
           @ECHO ON
           mkdir build
           cd build
-          call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
-          set PATH=%PATH%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
-          set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\um\x64;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.19041.0\ucrt\x64
-          set INCLUDE=%INCLUDE%;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\cppwinrt
-          @ECHO ON
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$(configuration)  -DCMAKE_VERBOSE_MAKEFILE=ON -DVCPKG_TARGET_TRIPLET=$(platform)-windows-static -DVCPKG_PLATFORM_TOOLSET=$(toolset) -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%/scripts/buildsystems/vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe -DCMAKE_INSTALL_PREFIX=$VCPKG_INSTALLATION_ROOT/installed/$(platform)-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_VERBOSE_MAKEFILE=1 ..
           cmake --build . --target anpv
       displayName: 'Compile static ANPV'
     - script: |
-          call "C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" $(platform)
-          set path=%path%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
           cmake --build build --target check
       displayName: 'Run unit tests'
       enabled: false
