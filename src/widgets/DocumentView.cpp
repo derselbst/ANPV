@@ -65,6 +65,7 @@ struct DocumentView::Impl
     QAction *actionShowScrollBars = nullptr;
     QAction* actionShowInfoBox = nullptr;
     QAction* actionShowImageLayout = nullptr;
+    QAction* actionPeriodicBoundary = nullptr;
 
     AfPointOverlay *afPointOverlay = nullptr;
 
@@ -432,7 +433,9 @@ struct DocumentView::Impl
         q->setHorizontalScrollBarPolicy(policy);
         q->setVerticalScrollBarPolicy(policy);
         this->actionShowScrollBars->setChecked(showScrollBar);
+
         this->cachedViewFlags = v;
+        q->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
     }
 
     void onViewModeChanged(ViewMode v)
@@ -611,7 +614,6 @@ struct DocumentView::Impl
         });
         q->addAction(this->actionShowInfoBox);
 
-
         this->actionShowImageLayout = new QAction("Show Image Layout", q);
         this->actionShowImageLayout->setCheckable(true);
         this->actionShowImageLayout->setChecked(true);
@@ -621,6 +623,18 @@ struct DocumentView::Impl
                 this->debugOverlay1->setVisible(checked);
             });
         q->addAction(this->actionShowImageLayout);
+
+        act = new QAction(q);
+        act->setSeparator(true);
+        q->addAction(act);
+
+        this->actionPeriodicBoundary = new QAction("Periodical Background", q);
+        this->actionPeriodicBoundary->setCheckable(true);
+        connect(this->actionPeriodicBoundary, &QAction::toggled, q, [&](bool checked)
+            {
+                ANPV::globalInstance()->setViewFlag(ViewFlag::PeriodicBoundary, checked);
+            });
+        q->addAction(this->actionPeriodicBoundary);
 
         act = new QAction("Set Background Color", q);
         connect(act, &QAction::triggered, q, [&]()
@@ -731,6 +745,13 @@ DocumentView::DocumentView(QWidget *parent)
     this->setDragMode(QGraphicsView::ScrollHandDrag);
     this->setFrameShape(QFrame::NoFrame);
 
+    // QT IS SO STUPID! QGraphicsView initializes an internal flag "mustResizeBackgroundPixmap" with true.
+    // This causes invalidateScene to become a no-op when called with the backgroundLayer flag.
+    // The only way to clear this flag is to set an invalid cacheMode, call resetCachedContent to clear that flag and restore to CacheNone!!!
+    this->setCacheMode((CacheModeFlag)16);
+    this->resetCachedContent();
+    this->setCacheMode(CacheNone);
+
     d->scene = new QGraphicsScene(this);
 
     d->thumbnailPreviewOverlay = new QGraphicsPixmapItem;
@@ -778,6 +799,9 @@ DocumentView::DocumentView(QWidget *parent)
             d->previousDecodedPixmapOverlay->setOffset(d->currentPixmapOverlay->offset());
             d->previousDecodedPixmapOverlay->setPixmap(d->currentPixmapOverlay->pixmap());
             d->previousDecodedPixmapOverlay->show();
+
+            // invalidate background of graphicsview
+            this->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
         });
 
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::started, this, [&]()
@@ -787,6 +811,8 @@ DocumentView::DocumentView(QWidget *parent)
     connect(&d->taskFuture, &QFutureWatcher<DecodingState>::canceled, this, [&]()
         {
             d->debugOverlay1->hide();
+            // invalidate background of graphicsview
+            this->invalidateScene(QRectF(), QGraphicsScene::BackgroundLayer);
         });
 
     this->setScene(d->scene);
@@ -1037,6 +1063,7 @@ void DocumentView::onDecodingStateChanged(Image *img, quint32 newState, quint32 
 
     case DecodingState::FullImage:
         d->thumbnailPreviewOverlay->hide();
+        this->update();
         [[fallthrough]];
 
     case DecodingState::PreviewImage:
@@ -1246,6 +1273,7 @@ void DocumentView::readSettings(QSettings& settings)
     d->actionShowImageLayout->setChecked(settings.value("showImageLayout", false).toBool());
     d->actionShowInfoBox->setChecked(settings.value("showInfoBox", true).toBool());
     d->actionShowScrollBars->setChecked(settings.value("showScrollBars", true).toBool());
+    d->actionPeriodicBoundary->setChecked(settings.value("periodicBoundary", false).toBool());
     
     QColor col = settings.value("sceneBackgroundColor", d->scene->backgroundBrush().color()).value<QColor>();
     d->scene->setBackgroundBrush(QBrush(col));
@@ -1256,5 +1284,122 @@ void DocumentView::writeSettings(QSettings& settings)
     settings.setValue("showImageLayout", d->actionShowImageLayout->isChecked());
     settings.setValue("showInfoBox", d->actionShowInfoBox->isChecked());
     settings.setValue("showScrollBars", d->actionShowScrollBars->isChecked());
+    settings.setValue("periodicBoundary", d->actionPeriodicBoundary->isChecked());
     settings.setValue("sceneBackgroundColor", d->scene->backgroundBrush().color());
+}
+
+void DocumentView::drawBackground(QPainter* painter, const QRectF& rect)
+{
+    xThreadGuard g(this);
+
+    // Default background (for example, solid color)
+    QGraphicsView::drawBackground(painter, rect);
+
+    // Tile the image if it's smaller than the viewport
+    const QPixmap& pix = d->currentDocumentPixmap;
+    if ((d->cachedViewFlags & static_cast<ViewFlags_t>(ViewFlag::PeriodicBoundary)) == 0 || pix.isNull())
+    {
+        return;
+    }
+    QSize pixSize = pix.size();
+    QRectF viewRect = this->mapToScene(this->viewport()->rect()).boundingRect();
+
+    qInfo() << "PixSize: " << pixSize;
+    qInfo() << "viewRect: " << viewRect;
+
+
+    bool tileHoriz = pixSize.width() < viewRect.width();
+    bool tileVert = pixSize.height() < viewRect.height();
+
+    // Only tile if the image is smaller than the viewport
+    if (!tileHoriz && !tileVert)
+    {
+        return;
+    }
+
+    painter->save();
+    painter->setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing, true);
+
+    // Use the item's scene transform so the painter draws in item-local coordinates
+    // and respects any scaling applied to the overlay item.
+    QTransform itemToScene = d->currentPixmapOverlay->sceneTransform();
+    bool invertible = true;
+    QTransform sceneToItem = itemToScene.inverted(&invertible);
+    if (!invertible)
+    {
+        // don't tile if we can't invert the transform
+        return;
+    }
+
+    // Offset of the pixmap inside the item in item coords
+    QPointF offset = d->currentPixmapOverlay->offset();
+
+    // Work in item-local coordinates by setting the painter transform to the item's sceneTransform
+    painter->setTransform(itemToScene, /*combine=*/true);
+
+    qInfo() << "ofset: " << offset;
+
+    const qreal pw = pixSize.width();
+    const qreal ph = pixSize.height();
+
+    // Compute visible region in item coordinates (we will only generate tiles that intersect this rect)
+    QRectF itemViewRect = sceneToItem.mapRect(viewRect);
+    itemViewRect.translate(-offset);
+
+
+    // Compute destination expansion so adjacent tiles overlap by 1 device pixel.
+    // deviceTransform maps current painter coordinates (item coords at this point) to device pixels.
+    QTransform devT = painter->deviceTransform();
+    qreal epsX = 0.0;
+    qreal epsY = 0.0;
+    if (!qFuzzyIsNull(devT.m11()))
+        epsX = 1.0 / std::abs(devT.m11());
+    if (!qFuzzyIsNull(devT.m22()))
+        epsY = 1.0 / std::abs(devT.m22());
+    // Clamp to small values if very large scale would make eps too big
+    //epsX = qMin<qreal>(epsX, 4.0);
+    //epsY = qMin<qreal>(epsY, 4.0);
+
+    int startX = static_cast<int>(std::floor(itemViewRect.left() / pw)) - 1;
+    int endX = static_cast<int>(std::ceil(itemViewRect.right() / pw)) + 1;
+    int startY = static_cast<int>(std::floor(itemViewRect.top() / ph)) - 1;
+    int endY = static_cast<int>(std::ceil(itemViewRect.bottom() / ph)) + 1;
+    // Loop over the grid and draw each tile. Apply horizontal mirror for odd columns so mirrored neighbors appear.
+    for (int iy = startY; iy <= endY; ++iy) {
+        for (int ix = startX; ix <= endX; ++ix) {
+            // Tile top-left position in item coordinates
+            qreal tx = offset.x() + ix * pw;
+            qreal ty = offset.y() + iy * ph;
+
+            // Quick cull in item coordinates to avoid unnecessary draw calls
+            QRectF tileRectItem(tx, ty, pw, ph);
+            if (!tileRectItem.intersects(itemViewRect))
+                continue;
+
+            painter->save();
+            painter->translate(tx, ty);
+
+            // Mirror horizontally for odd columns to create left-right mirrored neighbors.
+            bool mirrorX = (ix % 2) != 0;
+            if (mirrorX) {
+                // Translate by width, then scale by -1 on X so pixmap occupies [0..pw] in item coords
+                painter->translate(pw, 0.0);
+                painter->scale(-1.0, 1.0);
+            }
+
+            bool mirrorY = (iy % 2) != 0;
+            if (mirrorY) {
+                // Translate by height, then scale by -1 on Y so pixmap occupies [0..ph] in item coords
+                painter->translate(0.0, ph);
+                painter->scale(1.0, -1.0);
+            }
+
+            // Destination rect (expanded by epsX/epsY to ensure a 1-device-pixel overlap)
+            QRectF destRect(-epsX, -epsY/2.0, pw + 2*epsX, ph + 2*epsY);
+            painter->drawPixmap(destRect, pix, pix.rect());
+            painter->restore();
+        }
+    }
+
+    painter->restore();
 }

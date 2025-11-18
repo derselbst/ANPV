@@ -57,6 +57,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
+    void drawBackground(QPainter* painter, const QRectF& rect) override;
 
     void loadImage();
     void showImage(QSharedPointer<Image> img);
