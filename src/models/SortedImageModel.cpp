@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QTimer>
+#include <QElapsedTimer>
 
 // #include <execution>
 #include <algorithm>
