@@ -22,6 +22,7 @@
 #include <QColorDialog>
 #include <QMimeData>
 #include <QSettings>
+#include <QElapsedTimer>
 
 #include <vector>
 #include <algorithm>
