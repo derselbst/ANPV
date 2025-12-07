@@ -16,6 +16,7 @@
 #include <QMetaEnum>
 #include <QScrollBar>
 #include <QtGlobal>
+#include <QElapsedTimer>
 
 #include <algorithm>
 #include <cmath>
