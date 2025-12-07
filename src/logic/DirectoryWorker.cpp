@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QPromise>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include <QStringView>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
