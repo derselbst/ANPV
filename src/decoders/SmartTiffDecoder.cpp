@@ -55,6 +55,9 @@ struct SmartTiffDecoder::Impl
     std::vector<PageInfo> pageInfos;
     QPainterPath debugTiffLayout;
 
+    // Persistent JXL decoder reused across tiles/strips (created lazily)
+    std::unique_ptr<JxlHelper::Decoder> jxlDecoder;
+
     Impl(SmartTiffDecoder *q) : q(q)
     {
         // those are nasty global, non-thread-safe functions. setting custom handlers will also affect QT's internal QImage decoding.
@@ -546,6 +549,12 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
         // JXL-compressed TIFF: decode using JXL library directly via public libtiff API
         // Read raw compressed data with TIFFReadRawTile/TIFFReadRawStrip, then decompress with JXL
 
+        // Lazily create persistent JXL decoder (reused across tiles/strips)
+        if(!d->jxlDecoder)
+        {
+            d->jxlDecoder = std::make_unique<JxlHelper::Decoder>();
+        }
+
         if(TIFFIsTiled(d->tiff))
         {
             uint32_t tw, tl;
@@ -592,7 +601,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     }
 
                     uint32_t decW = 0, decH = 0;
-                    auto pixels = JxlHelper::decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+                    auto pixels = d->jxlDecoder->decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
 
                     const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
                     const unsigned widthToSkipFromLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
@@ -663,7 +672,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 }
 
                 uint32_t decW = 0, decH = 0;
-                auto pixels = JxlHelper::decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+                auto pixels = d->jxlDecoder->decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
 
                 // JXL decoded data is top-down, convert RGBA to ARGB32 and copy to image
                 std::vector<uint32_t> stripBufConverted(decW * decH);

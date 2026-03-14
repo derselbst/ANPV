@@ -3,38 +3,52 @@
 #include "Formatter.hpp"
 
 #include <stdexcept>
-
-#include <jxl/decode_cxx.h>
+#include <thread>
 
 namespace JxlHelper
 {
 
-std::vector<uint8_t> decodeCodestream(const uint8_t *data, size_t dataSize, uint32_t &outWidth, uint32_t &outHeight)
+Decoder::Decoder()
+    : m_dec(JxlDecoderMake(nullptr))
+    , m_runner(JxlThreadParallelRunnerMake(nullptr, std::thread::hardware_concurrency()))
 {
-    auto dec = JxlDecoderMake(nullptr);
-
-    if(!dec)
+    if(!m_dec)
     {
         throw std::runtime_error("JxlDecoderMake() failed");
     }
 
-    if(JxlDecoderSubscribeEvents(dec.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS)
+    if(!m_runner)
+    {
+        throw std::runtime_error("JxlThreadParallelRunnerMake() failed");
+    }
+}
+
+std::vector<uint8_t> Decoder::decodeCodestream(const uint8_t *data, size_t dataSize, uint32_t &outWidth, uint32_t &outHeight)
+{
+    JxlDecoderReset(m_dec.get());
+
+    if(JxlDecoderSetParallelRunner(m_dec.get(), JxlThreadParallelRunner, m_runner.get()) != JXL_DEC_SUCCESS)
+    {
+        throw std::runtime_error("JxlDecoderSetParallelRunner() failed");
+    }
+
+    if(JxlDecoderSubscribeEvents(m_dec.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS)
     {
         throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
     }
 
-    if(JxlDecoderSetInput(dec.get(), data, dataSize) != JXL_DEC_SUCCESS)
+    if(JxlDecoderSetInput(m_dec.get(), data, dataSize) != JXL_DEC_SUCCESS)
     {
         throw std::runtime_error("JxlDecoderSetInput() failed");
     }
 
-    JxlDecoderCloseInput(dec.get());
+    JxlDecoderCloseInput(m_dec.get());
 
     std::vector<uint8_t> pixels;
 
     for(;;)
     {
-        JxlDecoderStatus status = JxlDecoderProcessInput(dec.get());
+        JxlDecoderStatus status = JxlDecoderProcessInput(m_dec.get());
 
         switch(status)
         {
@@ -42,7 +56,7 @@ std::vector<uint8_t> decodeCodestream(const uint8_t *data, size_t dataSize, uint
         {
             JxlBasicInfo info;
 
-            if(JxlDecoderGetBasicInfo(dec.get(), &info) != JXL_DEC_SUCCESS)
+            if(JxlDecoderGetBasicInfo(m_dec.get(), &info) != JXL_DEC_SUCCESS)
             {
                 throw std::runtime_error("JxlDecoderGetBasicInfo() failed");
             }
@@ -56,14 +70,14 @@ std::vector<uint8_t> decodeCodestream(const uint8_t *data, size_t dataSize, uint
         {
             size_t buffer_size;
 
-            if(JxlDecoderImageOutBufferSize(dec.get(), &jxlFormat, &buffer_size) != JXL_DEC_SUCCESS)
+            if(JxlDecoderImageOutBufferSize(m_dec.get(), &jxlFormat, &buffer_size) != JXL_DEC_SUCCESS)
             {
                 throw std::runtime_error("JxlDecoderImageOutBufferSize() failed");
             }
 
             pixels.resize(buffer_size);
 
-            if(JxlDecoderSetImageOutBuffer(dec.get(), &jxlFormat, pixels.data(), pixels.size()) != JXL_DEC_SUCCESS)
+            if(JxlDecoderSetImageOutBuffer(m_dec.get(), &jxlFormat, pixels.data(), pixels.size()) != JXL_DEC_SUCCESS)
             {
                 throw std::runtime_error("JxlDecoderSetImageOutBuffer() failed");
             }
