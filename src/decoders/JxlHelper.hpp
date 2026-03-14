@@ -6,10 +6,12 @@
 #include <vector>
 #include <deque>
 #include <future>
+#include <functional>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <memory>
+#include <atomic>
 
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
@@ -50,7 +52,15 @@ namespace JxlHelper
     // Usage pattern:
     //   - One producer thread reads raw compressed data (e.g. from libtiff) and calls submit().
     //   - Worker threads owned by the pool decode in parallel, each with its own Decoder.
-    //   - The producer collects results via the returned std::future objects.
+    //     After decoding, the worker calls postProcess() with the decoded block.
+    //   - The producer collects std::future<void> objects and waits for them in the consumer.
+    //
+    // Cancellation:
+    //   - Pass a pointer to a shared std::atomic<bool> cancelFlag to submit().
+    //   - Workers check the flag before decoding and before calling postProcess().
+    //   - If the flag is set, the task is skipped and the future is resolved normally.
+    //   - The consumer should set cancelFlag = true and drain all pending futures before
+    //     propagating any exception (to ensure no worker is writing to a buffer being freed).
     class DecoderPool
     {
     public:
@@ -61,15 +71,24 @@ namespace JxlHelper
         DecoderPool(const DecoderPool &) = delete;
         DecoderPool &operator=(const DecoderPool &) = delete;
 
-        // Submit a raw JXL codestream for asynchronous decoding.
-        // rawData is moved into the task. Returns a future for the decoded result.
-        std::future<DecodedBlock> submit(std::vector<uint8_t> rawData);
+        // Submit a raw JXL codestream for asynchronous decode + post-processing.
+        // - rawData is moved into the task.
+        // - postProcess is called by the worker thread after a successful decode;
+        //   it receives the decoded block and should write pixels to the output buffer.
+        // - cancelFlag: if non-null and set to true before/after decoding, postProcess
+        //   is skipped and the future resolves without calling postProcess.
+        // Returns a future<void> that resolves when the task completes (or is skipped).
+        std::future<void> submit(std::vector<uint8_t> rawData,
+                                 std::function<void(DecodedBlock &&)> postProcess,
+                                 std::atomic<bool> *cancelFlag = nullptr);
 
     private:
         struct Task
         {
             std::vector<uint8_t> rawData;
-            std::promise<DecodedBlock> result;
+            std::function<void(DecodedBlock &&)> postProcess;
+            std::atomic<bool> *cancelFlag = nullptr;
+            std::promise<void> result;
         };
 
         void workerFunc(Decoder &decoder);

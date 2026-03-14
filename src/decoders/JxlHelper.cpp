@@ -120,11 +120,15 @@ DecoderPool::~DecoderPool()
     }
 }
 
-std::future<DecodedBlock> DecoderPool::submit(std::vector<uint8_t> rawData)
+std::future<void> DecoderPool::submit(std::vector<uint8_t> rawData,
+                                      std::function<void(DecodedBlock &&)> postProcess,
+                                      std::atomic<bool> *cancelFlag)
 {
     Task task;
     task.rawData = std::move(rawData);
-    std::future<DecodedBlock> future = task.result.get_future();
+    task.postProcess = std::move(postProcess);
+    task.cancelFlag = cancelFlag;
+    std::future<void> future = task.result.get_future();
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -156,7 +160,23 @@ void DecoderPool::workerFunc(Decoder &decoder)
 
         try
         {
-            task.result.set_value(decoder.decodeCodestream(task.rawData.data(), task.rawData.size()));
+            // Check cancellation before decoding
+            if(task.cancelFlag && task.cancelFlag->load(std::memory_order_acquire))
+            {
+                task.result.set_value();
+                continue;
+            }
+
+            DecodedBlock decoded = decoder.decodeCodestream(task.rawData.data(), task.rawData.size());
+
+            // Check cancellation before writing to the output buffer
+            const bool isCancelled = task.cancelFlag && task.cancelFlag->load(std::memory_order_acquire);
+            if(!isCancelled)
+            {
+                task.postProcess(std::move(decoded));
+            }
+
+            task.result.set_value();
         }
         catch(...)
         {

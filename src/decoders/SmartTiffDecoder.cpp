@@ -3,6 +3,7 @@
 #include "Formatter.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
+#include "UserCancellation.hpp"
 
 #include <cstring>
 #include <QDebug>
@@ -548,13 +549,39 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     {
         // JXL-compressed TIFF: producer/consumer pattern.
         // Producer (this thread): read raw compressed tiles/strips from libtiff single-threaded.
-        // Consumer (worker pool): decode each tile/strip with a dedicated single-threaded JXL decoder.
+        // Workers: decode each tile/strip in parallel, then write ARGB32 pixels directly to buf.
+        // Consumer (this thread): wait for tasks, update progress, handle cancellation.
 
         // Lazily create the decoder pool (persists across calls to avoid recreating threads)
         if(!d->jxlPool)
         {
             d->jxlPool = std::make_unique<JxlHelper::DecoderPool>();
         }
+
+        // cancelFlag is shared across all tasks for this decode call.
+        // Setting it to true tells workers to skip postProcess after decoding.
+        // IMPORTANT: all futures MUST be drained (get() called) before any exception
+        // propagates, to ensure no worker is still writing to buf while it is being freed.
+        std::atomic<bool> cancelFlag{false};
+
+        // Helper: drain futures [from, tasks.size()) ignoring all results/exceptions.
+        // Used to ensure workers finish before we unwind the stack.
+        auto drainFrom = [&cancelFlag](auto &tasks, size_t from)
+        {
+            cancelFlag.store(true, std::memory_order_release);
+            for(size_t j = from; j < tasks.size(); j++)
+            {
+                try
+                {
+                    tasks[j].future.get();
+                }
+                catch(...)
+                {
+                }
+            }
+        };
+
+        const size_t imgWidth = static_cast<size_t>(image.width());
 
         if(TIFFIsTiled(d->tiff))
         {
@@ -574,18 +601,16 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
 
             struct TileTask
             {
-                std::future<JxlHelper::DecodedBlock> future;
+                std::future<void> future;
                 QRect areaToCopy;
-                uint32_t destRow;
-                uint32_t destCol;
-                unsigned linesToSkipFromTop;
-                unsigned widthToSkipFromLeft;
             };
 
             std::vector<TileTask> tileTasks;
             unsigned destRowIncr = 0;
 
-            // Producer: read all raw tiles from libtiff (single-threaded) and submit for decode
+            // Producer: read all raw tiles from libtiff single-threaded and submit for decode.
+            // Each task carries a postProcess lambda that converts RGBA→ARGB32 and writes
+            // directly to buf — this work runs in the worker thread, not the consumer.
             for(uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
             {
                 for(uint32_t x = 0, destCol = 0; x < width; x += tw)
@@ -613,44 +638,64 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                         throw std::runtime_error("Error reading raw TIFF tile for JXL decompression");
                     }
 
-                    this->cancelCallback();
+                    // Capture per-tile state for the post-process lambda (run in worker thread).
+                    const auto capturedArea = areaToCopy;
+                    const auto capturedDestRow = destRow;
+                    const auto capturedDestCol = destCol;
+                    const unsigned capturedSkipTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+                    const unsigned capturedSkipLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
 
-                    const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
-                    const unsigned widthToSkipFromLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
+                    auto postProcess = [buf, imgWidth, capturedArea, capturedDestRow, capturedDestCol,
+                                        capturedSkipTop, capturedSkipLeft](JxlHelper::DecodedBlock &&decoded)
+                    {
+                        const uint32_t decW = decoded.width;
 
-                    tileTasks.push_back({d->jxlPool->submit(std::move(rawBuf)),
-                                         areaToCopy,
-                                         destRow,
-                                         destCol,
-                                         linesToSkipFromTop,
-                                         widthToSkipFromLeft});
+                        for(int row = 0; row < capturedArea.height(); row++)
+                        {
+                            const size_t dr = capturedDestRow + static_cast<size_t>(row);
+                            const unsigned srcRow = static_cast<unsigned>(row) + capturedSkipTop;
+                            JxlHelper::convertRGBAtoARGB32(
+                                &buf[dr * imgWidth + capturedDestCol],
+                                &decoded.pixels[(static_cast<size_t>(srcRow) * decW + capturedSkipLeft) * 4],
+                                static_cast<uint32_t>(capturedArea.width()));
+                        }
+                    };
 
-                    destCol += areaToCopy.width();
-                    destRowIncr = areaToCopy.height();
+                    tileTasks.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
+
+                    destCol += static_cast<uint32_t>(areaToCopy.width());
+                    destRowIncr = static_cast<unsigned>(areaToCopy.height());
                 }
             }
 
-            // Consumer: collect decoded tiles in submission order and write to image buffer.
-            // By the time we reach a future, parallel workers have likely already decoded it.
+            // Consumer: wait for worker tasks in submission order and update UI.
+            // Cancellation: check before each wait; on cancel/error, drain remaining futures
+            // so no worker is still writing to buf when this function returns.
             for(size_t i = 0; i < tileTasks.size(); i++)
             {
-                this->cancelCallback();
-                auto &task = tileTasks[i];
-                auto decoded = task.future.get();
-                const uint32_t decW = decoded.width;
-
-                for(int row = 0; row < task.areaToCopy.height(); row++)
+                try
                 {
-                    size_t dr = static_cast<size_t>(task.destRow) + row;
-                    unsigned srcRow = static_cast<unsigned>(row) + task.linesToSkipFromTop;
-                    JxlHelper::convertRGBAtoARGB32(&buf[dr * static_cast<size_t>(image.width()) + task.destCol],
-                                                    &decoded.pixels[(static_cast<size_t>(srcRow) * decW + task.widthToSkipFromLeft) * 4],
-                                                    static_cast<uint32_t>(task.areaToCopy.width()));
+                    cancelCallback();
+                }
+                catch(...)
+                {
+                    drainFrom(tileTasks, i);
+                    throw;
+                }
+
+                try
+                {
+                    tileTasks[i].future.get();
+                }
+                catch(...)
+                {
+                    drainFrom(tileTasks, i + 1);
+                    throw;
                 }
 
                 if(!quiet)
                 {
-                    this->updateDecodedRoiRect(task.areaToCopy);
+                    this->updateDecodedRoiRect(tileTasks[i].areaToCopy);
                     this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / tileTasks.size()));
                 }
             }
@@ -677,16 +722,14 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
 
             struct StripTask
             {
-                std::future<JxlHelper::DecodedBlock> future;
+                std::future<void> future;
                 QRect areaToCopy;
-                uint32_t destRow;
-                unsigned linesToSkipFromTop;
             };
 
             std::vector<StripTask> stripTasks;
             uint32_t destRow = 0;
 
-            // Producer: read all raw strips from libtiff (single-threaded) and submit for decode
+            // Producer: read all raw strips from libtiff single-threaded and submit for decode.
             for(tstrip_t strip = 0; strip < stripCount; strip++)
             {
                 const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
@@ -711,37 +754,58 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     throw std::runtime_error("Error reading raw TIFF strip for JXL decompression");
                 }
 
-                this->cancelCallback();
+                // Capture per-strip state for the post-process lambda (run in worker thread).
+                const auto capturedArea = areaToCopy;
+                const auto capturedDestRow = destRow;
+                const unsigned capturedSkipTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
 
-                const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+                auto postProcess = [buf, imgWidth, capturedArea, capturedDestRow,
+                                    capturedSkipTop](JxlHelper::DecodedBlock &&decoded)
+                {
+                    const uint32_t decW = decoded.width;
 
-                stripTasks.push_back({d->jxlPool->submit(std::move(rawBuf)),
-                                      areaToCopy,
-                                      destRow,
-                                      linesToSkipFromTop});
+                    for(int row = 0; row < capturedArea.height(); row++)
+                    {
+                        const size_t srcOffset =
+                            (static_cast<size_t>(row + capturedSkipTop) * decW + static_cast<unsigned>(capturedArea.x())) * 4;
+                        JxlHelper::convertRGBAtoARGB32(
+                            &buf[(capturedDestRow + static_cast<size_t>(row)) * imgWidth],
+                            &decoded.pixels[srcOffset],
+                            static_cast<uint32_t>(capturedArea.width()));
+                    }
+                };
+
+                stripTasks.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
 
                 destRow += static_cast<uint32_t>(areaToCopy.height());
             }
 
-            // Consumer: collect decoded strips in submission order and write to image buffer.
+            // Consumer: wait for worker tasks in submission order and update UI.
             for(size_t i = 0; i < stripTasks.size(); i++)
             {
-                this->cancelCallback();
-                auto &task = stripTasks[i];
-                auto decoded = task.future.get();
-                const uint32_t decW = decoded.width;
-
-                for(int row = 0; row < task.areaToCopy.height(); row++)
+                try
                 {
-                    size_t srcOffset = (static_cast<size_t>(row + task.linesToSkipFromTop) * decW + static_cast<unsigned>(task.areaToCopy.x())) * 4;
-                    JxlHelper::convertRGBAtoARGB32(&buf[(static_cast<size_t>(task.destRow) + row) * static_cast<size_t>(image.width())],
-                                                    &decoded.pixels[srcOffset],
-                                                    static_cast<uint32_t>(task.areaToCopy.width()));
+                    cancelCallback();
+                }
+                catch(...)
+                {
+                    drainFrom(stripTasks, i);
+                    throw;
+                }
+
+                try
+                {
+                    stripTasks[i].future.get();
+                }
+                catch(...)
+                {
+                    drainFrom(stripTasks, i + 1);
+                    throw;
                 }
 
                 if(!quiet)
                 {
-                    this->updateDecodedRoiRect(task.areaToCopy);
+                    this->updateDecodedRoiRect(stripTasks[i].areaToCopy);
                     this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / stripTasks.size()));
                 }
             }
