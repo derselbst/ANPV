@@ -153,6 +153,8 @@ src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
 src/decoders/tif_jxl.c
 src/decoders/tif_jxl.h
+src/decoders/JxlHelper.cpp
+src/decoders/JxlHelper.hpp
 src/decoders/SmartJxlDecoder.cpp
 src/decoders/SmartJxlDecoder.hpp
 src/decoders/LibRawHelper.cpp

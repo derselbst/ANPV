@@ -11,9 +11,7 @@
 #include "tiff.h"
 #include "tiffio.h"
 #include "tif_jxl.h"
-
-#include <jxl/decode.h>
-#include <jxl/decode_cxx.h>
+#include "JxlHelper.hpp"
 
 static bool isJxlCompression(uint16_t comp)
 {
@@ -135,98 +133,6 @@ struct SmartTiffDecoder::Impl
         }
 
         return to;
-    }
-
-    // Decode a JXL codestream to RGBA uint8 pixels (top-down row order)
-    static std::vector<uint8_t> decodeJxlCodestream(const uint8_t *data, size_t dataSize, uint32_t &outWidth, uint32_t &outHeight)
-    {
-        auto dec = JxlDecoderMake(nullptr);
-
-        if(!dec)
-        {
-            throw std::runtime_error("JxlDecoderCreate() failed");
-        }
-
-        if(JxlDecoderSubscribeEvents(dec.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS)
-        {
-            throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
-        }
-
-        if(JxlDecoderSetInput(dec.get(), data, dataSize) != JXL_DEC_SUCCESS)
-        {
-            throw std::runtime_error("JxlDecoderSetInput() failed");
-        }
-
-        JxlDecoderCloseInput(dec.get());
-
-        JxlPixelFormat format = {4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
-        std::vector<uint8_t> pixels;
-
-        for(;;)
-        {
-            JxlDecoderStatus status = JxlDecoderProcessInput(dec.get());
-
-            switch(status)
-            {
-            case JXL_DEC_BASIC_INFO:
-            {
-                JxlBasicInfo info;
-
-                if(JxlDecoderGetBasicInfo(dec.get(), &info) != JXL_DEC_SUCCESS)
-                {
-                    throw std::runtime_error("JxlDecoderGetBasicInfo() failed");
-                }
-
-                outWidth = info.xsize;
-                outHeight = info.ysize;
-                break;
-            }
-
-            case JXL_DEC_NEED_IMAGE_OUT_BUFFER:
-            {
-                size_t buffer_size;
-
-                if(JxlDecoderImageOutBufferSize(dec.get(), &format, &buffer_size) != JXL_DEC_SUCCESS)
-                {
-                    throw std::runtime_error("JxlDecoderImageOutBufferSize() failed");
-                }
-
-                pixels.resize(buffer_size);
-
-                if(JxlDecoderSetImageOutBuffer(dec.get(), &format, pixels.data(), pixels.size()) != JXL_DEC_SUCCESS)
-                {
-                    throw std::runtime_error("JxlDecoderSetImageOutBuffer() failed");
-                }
-
-                break;
-            }
-
-            case JXL_DEC_FULL_IMAGE:
-                return pixels;
-
-            case JXL_DEC_SUCCESS:
-                return pixels;
-
-            case JXL_DEC_ERROR:
-                throw std::runtime_error("JXL decoder error");
-
-            default:
-                throw std::runtime_error(Formatter() << "Unexpected JXL decoder status: " << status);
-            }
-        }
-    }
-
-    // Convert RGBA byte-ordered pixels to ARGB32 (0xAARRGGBB) in-place into dst
-    static void convertRGBAtoARGB32(uint32_t *__restrict dst, const uint8_t *__restrict src, uint32_t count)
-    {
-        for(uint32_t i = 0; i < count; i++)
-        {
-            uint8_t r = src[i * 4 + 0];
-            uint8_t g = src[i * 4 + 1];
-            uint8_t b = src[i * 4 + 2];
-            uint8_t a = src[i * 4 + 3];
-            dst[i] = (uint32_t(a) << 24) | (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
-        }
     }
 
     static tsize_t qtiffReadProc(thandle_t fd, tdata_t buf, tsize_t size)
@@ -686,7 +592,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     }
 
                     uint32_t decW = 0, decH = 0;
-                    auto pixels = Impl::decodeJxlCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+                    auto pixels = JxlHelper::decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
 
                     const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
                     const unsigned widthToSkipFromLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
@@ -696,7 +602,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                         size_t dr = destRow + i;
                         unsigned srcRow = i + linesToSkipFromTop;
                         unsigned srcCol = widthToSkipFromLeft;
-                        Impl::convertRGBAtoARGB32(&buf[dr * image.width() + destCol], &pixels[(srcRow * decW + srcCol) * 4], areaToCopy.width());
+                        JxlHelper::convertRGBAtoARGB32(&buf[dr * image.width() + destCol], &pixels[(srcRow * decW + srcCol) * 4], areaToCopy.width());
                     }
 
                     destCol += areaToCopy.width();
@@ -757,11 +663,11 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 }
 
                 uint32_t decW = 0, decH = 0;
-                auto pixels = Impl::decodeJxlCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+                auto pixels = JxlHelper::decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
 
                 // JXL decoded data is top-down, convert RGBA to ARGB32 and copy to image
                 std::vector<uint32_t> stripBufConverted(decW * decH);
-                Impl::convertRGBAtoARGB32(stripBufConverted.data(), pixels.data(), decW * decH);
+                JxlHelper::convertRGBAtoARGB32(stripBufConverted.data(), pixels.data(), decW * decH);
 
                 const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
 
