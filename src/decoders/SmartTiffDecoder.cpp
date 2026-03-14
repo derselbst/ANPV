@@ -55,8 +55,8 @@ struct SmartTiffDecoder::Impl
     std::vector<PageInfo> pageInfos;
     QPainterPath debugTiffLayout;
 
-    // Persistent JXL decoder reused across tiles/strips (created lazily)
-    std::unique_ptr<JxlHelper::Decoder> jxlDecoder;
+    // Pool of single-threaded JXL decoders for producer/consumer parallel decoding (created lazily)
+    std::unique_ptr<JxlHelper::DecoderPool> jxlPool;
 
     Impl(SmartTiffDecoder *q) : q(q)
     {
@@ -546,13 +546,14 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
 
     if(isJxlCompression(comp))
     {
-        // JXL-compressed TIFF: decode using JXL library directly via public libtiff API
-        // Read raw compressed data with TIFFReadRawTile/TIFFReadRawStrip, then decompress with JXL
+        // JXL-compressed TIFF: producer/consumer pattern.
+        // Producer (this thread): read raw compressed tiles/strips from libtiff single-threaded.
+        // Consumer (worker pool): decode each tile/strip with a dedicated single-threaded JXL decoder.
 
-        // Lazily create persistent JXL decoder (reused across tiles/strips)
-        if(!d->jxlDecoder)
+        // Lazily create the decoder pool (persists across calls to avoid recreating threads)
+        if(!d->jxlPool)
         {
-            d->jxlDecoder = std::make_unique<JxlHelper::Decoder>();
+            d->jxlPool = std::make_unique<JxlHelper::DecoderPool>();
         }
 
         if(TIFFIsTiled(d->tiff))
@@ -571,8 +572,20 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 throw std::runtime_error("Failed to read tile byte counts");
             }
 
+            struct TileTask
+            {
+                std::future<JxlHelper::DecodedBlock> future;
+                QRect areaToCopy;
+                uint32_t destRow;
+                uint32_t destCol;
+                unsigned linesToSkipFromTop;
+                unsigned widthToSkipFromLeft;
+            };
+
+            std::vector<TileTask> tileTasks;
             unsigned destRowIncr = 0;
 
+            // Producer: read all raw tiles from libtiff (single-threaded) and submit for decode
             for(uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
             {
                 for(uint32_t x = 0, destCol = 0; x < width; x += tw)
@@ -600,30 +613,45 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                         throw std::runtime_error("Error reading raw TIFF tile for JXL decompression");
                     }
 
-                    uint32_t decW = 0, decH = 0;
-                    auto pixels = d->jxlDecoder->decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+                    this->cancelCallback();
 
                     const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
                     const unsigned widthToSkipFromLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
 
-                    for(unsigned i = 0; i < static_cast<unsigned>(areaToCopy.height()); i++)
-                    {
-                        size_t dr = destRow + i;
-                        unsigned srcRow = i + linesToSkipFromTop;
-                        unsigned srcCol = widthToSkipFromLeft;
-                        JxlHelper::convertRGBAtoARGB32(&buf[dr * image.width() + destCol], &pixels[(srcRow * decW + srcCol) * 4], areaToCopy.width());
-                    }
+                    tileTasks.push_back({d->jxlPool->submit(std::move(rawBuf)),
+                                         areaToCopy,
+                                         destRow,
+                                         destCol,
+                                         linesToSkipFromTop,
+                                         widthToSkipFromLeft});
 
                     destCol += areaToCopy.width();
                     destRowIncr = areaToCopy.height();
+                }
+            }
 
-                    if(!quiet)
-                    {
-                        this->updateDecodedRoiRect(areaToCopy);
+            // Consumer: collect decoded tiles in submission order and write to image buffer.
+            // By the time we reach a future, parallel workers have likely already decoded it.
+            for(size_t i = 0; i < tileTasks.size(); i++)
+            {
+                this->cancelCallback();
+                auto &task = tileTasks[i];
+                auto decoded = task.future.get();
+                const uint32_t decW = decoded.width;
 
-                        double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
-                        this->setDecodingProgress(progress);
-                    }
+                for(int row = 0; row < task.areaToCopy.height(); row++)
+                {
+                    size_t dr = static_cast<size_t>(task.destRow) + row;
+                    unsigned srcRow = static_cast<unsigned>(row) + task.linesToSkipFromTop;
+                    JxlHelper::convertRGBAtoARGB32(&buf[dr * static_cast<size_t>(image.width()) + task.destCol],
+                                                    &decoded.pixels[(static_cast<size_t>(srcRow) * decW + task.widthToSkipFromLeft) * 4],
+                                                    static_cast<uint32_t>(task.areaToCopy.width()));
+                }
+
+                if(!quiet)
+                {
+                    this->updateDecodedRoiRect(task.areaToCopy);
+                    this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / tileTasks.size()));
                 }
             }
 
@@ -647,7 +675,19 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 throw std::runtime_error("Failed to read strip byte counts");
             }
 
-            for(tstrip_t strip = 0, destRow = 0; strip < stripCount; strip++)
+            struct StripTask
+            {
+                std::future<JxlHelper::DecodedBlock> future;
+                QRect areaToCopy;
+                uint32_t destRow;
+                unsigned linesToSkipFromTop;
+            };
+
+            std::vector<StripTask> stripTasks;
+            uint32_t destRow = 0;
+
+            // Producer: read all raw strips from libtiff (single-threaded) and submit for decode
+            for(tstrip_t strip = 0; strip < stripCount; strip++)
             {
                 const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
                 const unsigned y = (strip * rowsperstrip);
@@ -671,26 +711,38 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     throw std::runtime_error("Error reading raw TIFF strip for JXL decompression");
                 }
 
-                uint32_t decW = 0, decH = 0;
-                auto pixels = d->jxlDecoder->decodeCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
-
-                // JXL decoded data is top-down, convert RGBA to ARGB32 and copy to image
-                std::vector<uint32_t> stripBufConverted(decW * decH);
-                JxlHelper::convertRGBAtoARGB32(stripBufConverted.data(), pixels.data(), decW * decH);
+                this->cancelCallback();
 
                 const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
 
-                for(unsigned i = 0; i < static_cast<unsigned>(areaToCopy.height()); i++)
+                stripTasks.push_back({d->jxlPool->submit(std::move(rawBuf)),
+                                      areaToCopy,
+                                      destRow,
+                                      linesToSkipFromTop});
+
+                destRow += static_cast<uint32_t>(areaToCopy.height());
+            }
+
+            // Consumer: collect decoded strips in submission order and write to image buffer.
+            for(size_t i = 0; i < stripTasks.size(); i++)
+            {
+                this->cancelCallback();
+                auto &task = stripTasks[i];
+                auto decoded = task.future.get();
+                const uint32_t decW = decoded.width;
+
+                for(int row = 0; row < task.areaToCopy.height(); row++)
                 {
-                    ::memcpy(&buf[size_t(destRow++) * image.width() + 0], &stripBufConverted[(i + linesToSkipFromTop) * decW + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                    size_t srcOffset = (static_cast<size_t>(row + task.linesToSkipFromTop) * decW + static_cast<unsigned>(task.areaToCopy.x())) * 4;
+                    JxlHelper::convertRGBAtoARGB32(&buf[(static_cast<size_t>(task.destRow) + row) * static_cast<size_t>(image.width())],
+                                                    &decoded.pixels[srcOffset],
+                                                    static_cast<uint32_t>(task.areaToCopy.width()));
                 }
 
                 if(!quiet)
                 {
-                    this->updateDecodedRoiRect(areaToCopy);
-
-                    double progress = strip * 100.0 / stripCount;
-                    this->setDecodingProgress(progress);
+                    this->updateDecodedRoiRect(task.areaToCopy);
+                    this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / stripTasks.size()));
                 }
             }
 
