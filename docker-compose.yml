@@ -2,16 +2,14 @@ version: "3"
 
 services:
   anpv-build:
-    image: qt6-build:latest-suse
+    image: ghcr.io/derselbst/qt6.suse:master
     build:
       context: docker/
-      dockerfile: Dockerfile-build.suse
 
   anpv:
-    image: qt6-devel:latest-suse
+    image: ghcr.io/derselbst/qt6.suse:master
     build:
       context: docker/
-      dockerfile: Dockerfile-devel.suse
     environment:
       - DISPLAY=${DISPLAY}
     volumes:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17.0 FATAL_ERROR) # because of CMAKE_CXX_STANDARD
-project (ANPV VERSION 1.0 LANGUAGES CXX)
+project (ANPV VERSION 1.0 LANGUAGES C CXX)
 
 list( APPEND CMAKE_MODULE_PATH ${ANPV_SOURCE_DIR}/cmake )
 
@@ -151,6 +151,8 @@ src/decoders/SmartPngDecoder.cpp
 src/decoders/SmartPngDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
+src/decoders/tif_jxl.c
+src/decoders/tif_jxl.h
 src/decoders/SmartJxlDecoder.cpp
 src/decoders/SmartJxlDecoder.hpp
 src/decoders/LibRawHelper.cpp
