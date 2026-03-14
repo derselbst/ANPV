@@ -11,6 +11,22 @@
 #include "tiff.h"
 #include "tiffio.h"
 
+#include <jxl/decode.h>
+#include <jxl/decode_cxx.h>
+
+#ifndef COMPRESSION_JXL
+#define COMPRESSION_JXL 50002 /* JPEGXL: WARNING not registered in Adobe-maintained registry */
+#endif
+
+#ifndef COMPRESSION_JXL_DNG_1_7
+#define COMPRESSION_JXL_DNG_1_7 52546 /* JPEGXL from DNG 1.7 specification */
+#endif
+
+static bool isJxlCompression(uint16_t comp)
+{
+    return comp == COMPRESSION_JXL || comp == COMPRESSION_JXL_DNG_1_7;
+}
+
 struct PageInfo
 {
     uint32_t width;
@@ -123,6 +139,98 @@ struct SmartTiffDecoder::Impl
         }
 
         return to;
+    }
+
+    // Decode a JXL codestream to RGBA uint8 pixels (top-down row order)
+    static std::vector<uint8_t> decodeJxlCodestream(const uint8_t *data, size_t dataSize, uint32_t &outWidth, uint32_t &outHeight)
+    {
+        auto dec = JxlDecoderMake(nullptr);
+
+        if(!dec)
+        {
+            throw std::runtime_error("JxlDecoderCreate() failed");
+        }
+
+        if(JxlDecoderSubscribeEvents(dec.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS)
+        {
+            throw std::runtime_error("JxlDecoderSubscribeEvents() failed");
+        }
+
+        if(JxlDecoderSetInput(dec.get(), data, dataSize) != JXL_DEC_SUCCESS)
+        {
+            throw std::runtime_error("JxlDecoderSetInput() failed");
+        }
+
+        JxlDecoderCloseInput(dec.get());
+
+        JxlPixelFormat format = {4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+        std::vector<uint8_t> pixels;
+
+        for(;;)
+        {
+            JxlDecoderStatus status = JxlDecoderProcessInput(dec.get());
+
+            switch(status)
+            {
+            case JXL_DEC_BASIC_INFO:
+            {
+                JxlBasicInfo info;
+
+                if(JxlDecoderGetBasicInfo(dec.get(), &info) != JXL_DEC_SUCCESS)
+                {
+                    throw std::runtime_error("JxlDecoderGetBasicInfo() failed");
+                }
+
+                outWidth = info.xsize;
+                outHeight = info.ysize;
+                break;
+            }
+
+            case JXL_DEC_NEED_IMAGE_OUT_BUFFER:
+            {
+                size_t buffer_size;
+
+                if(JxlDecoderImageOutBufferSize(dec.get(), &format, &buffer_size) != JXL_DEC_SUCCESS)
+                {
+                    throw std::runtime_error("JxlDecoderImageOutBufferSize() failed");
+                }
+
+                pixels.resize(buffer_size);
+
+                if(JxlDecoderSetImageOutBuffer(dec.get(), &format, pixels.data(), pixels.size()) != JXL_DEC_SUCCESS)
+                {
+                    throw std::runtime_error("JxlDecoderSetImageOutBuffer() failed");
+                }
+
+                break;
+            }
+
+            case JXL_DEC_FULL_IMAGE:
+                return pixels;
+
+            case JXL_DEC_SUCCESS:
+                return pixels;
+
+            case JXL_DEC_ERROR:
+                throw std::runtime_error("JXL decoder error");
+
+            default:
+                throw std::runtime_error(Formatter() << "Unexpected JXL decoder status: " << status);
+            }
+        }
+    }
+
+    // Convert RGBA byte-ordered pixels to ARGB32 (0xAARRGGBB) in-place into dst
+    static void convertRGBAtoARGB32(uint32_t *__restrict dst, const uint8_t *__restrict src, uint32_t count)
+    {
+        for(uint32_t i = 0; i < count; i++)
+        {
+            uint8_t r = src[i * 4 + 0];
+            uint8_t g = src[i * 4 + 1];
+            uint8_t b = src[i * 4 + 2];
+            uint8_t a = src[i * 4 + 3];
+            dst[i] = (uint32_t(a) << 24) | (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
+        }
     }
 
     static tsize_t qtiffReadProc(thandle_t fd, tdata_t buf, tsize_t size)
@@ -517,7 +625,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     uint16_t comp = 1;
     TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
 
-    if(!TIFFIsCODECConfigured(comp))
+    if(!isJxlCompression(comp) && !TIFFIsCODECConfigured(comp))
     {
         throw std::runtime_error(Formatter() << "Codec " << (int)comp << " is not supported by libtiff");
     }
@@ -531,7 +639,154 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     auto *dataPtrBackup = image.constBits();
     uint32_t *buf = const_cast<uint32_t *>(reinterpret_cast<const uint32_t *>(dataPtrBackup));
 
-    if(TIFFIsTiled(d->tiff))
+    if(isJxlCompression(comp))
+    {
+        // JXL-compressed TIFF: decode using JXL library directly via public libtiff API
+        // Read raw compressed data with TIFFReadRawTile/TIFFReadRawStrip, then decompress with JXL
+
+        if(TIFFIsTiled(d->tiff))
+        {
+            uint32_t tw, tl;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw) || !TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl))
+            {
+                throw std::runtime_error("Failed to read tile size");
+            }
+
+            uint64_t *tileByteCounts = nullptr;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_TILEBYTECOUNTS, &tileByteCounts) || !tileByteCounts)
+            {
+                throw std::runtime_error("Failed to read tile byte counts");
+            }
+
+            unsigned destRowIncr = 0;
+
+            for(uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
+            {
+                for(uint32_t x = 0, destCol = 0; x < width; x += tw)
+                {
+                    const unsigned linesToCopy = std::min(tl, height - y);
+                    const unsigned widthToCopy = std::min(tw, width - x);
+                    QRect tileRect(x, y, widthToCopy, linesToCopy);
+
+                    QRect areaToCopy = tileRect.intersected(roi);
+
+                    if(areaToCopy.isEmpty())
+                    {
+                        continue;
+                    }
+
+                    d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(tileRect));
+
+                    ttile_t tileIdx = TIFFComputeTile(d->tiff, x, y, 0, 0);
+                    tmsize_t rawSize = static_cast<tmsize_t>(tileByteCounts[tileIdx]);
+                    std::vector<uint8_t> rawBuf(rawSize);
+                    tmsize_t bytesRead = TIFFReadRawTile(d->tiff, tileIdx, rawBuf.data(), rawSize);
+
+                    if(bytesRead <= 0)
+                    {
+                        throw std::runtime_error("Error reading raw TIFF tile for JXL decompression");
+                    }
+
+                    uint32_t decW = 0, decH = 0;
+                    auto pixels = Impl::decodeJxlCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+
+                    const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+                    const unsigned widthToSkipFromLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
+
+                    for(unsigned i = 0; i < static_cast<unsigned>(areaToCopy.height()); i++)
+                    {
+                        size_t dr = destRow + i;
+                        unsigned srcRow = i + linesToSkipFromTop;
+                        unsigned srcCol = widthToSkipFromLeft;
+                        Impl::convertRGBAtoARGB32(&buf[dr * image.width() + destCol], &pixels[(srcRow * decW + srcCol) * 4], areaToCopy.width());
+                    }
+
+                    destCol += areaToCopy.width();
+                    destRowIncr = areaToCopy.height();
+
+                    if(!quiet)
+                    {
+                        this->updateDecodedRoiRect(areaToCopy);
+
+                        double progress = (y * tw + x) * 100.0 / d->pageInfos[imagePageToDecode].nPix();
+                        this->setDecodingProgress(progress);
+                    }
+                }
+            }
+
+            Q_ASSERT(image.constBits() == dataPtrBackup);
+        }
+        else
+        {
+            uint32_t rowsperstrip;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_ROWSPERSTRIP, &rowsperstrip))
+            {
+                throw std::runtime_error("Failed to read RowsPerStrip. Not a TIFF file?");
+            }
+
+            const auto stripCount = TIFFNumberOfStrips(d->tiff);
+
+            uint64_t *stripByteCounts = nullptr;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_STRIPBYTECOUNTS, &stripByteCounts) || !stripByteCounts)
+            {
+                throw std::runtime_error("Failed to read strip byte counts");
+            }
+
+            for(tstrip_t strip = 0, destRow = 0; strip < stripCount; strip++)
+            {
+                const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const unsigned y = (strip * rowsperstrip);
+                QRect stripRect(0, y, width, rowsToDecode);
+
+                QRect areaToCopy = stripRect.intersected(roi);
+
+                if(areaToCopy.isEmpty())
+                {
+                    continue;
+                }
+
+                d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(stripRect));
+
+                tmsize_t rawSize = static_cast<tmsize_t>(stripByteCounts[strip]);
+                std::vector<uint8_t> rawBuf(rawSize);
+                tmsize_t bytesRead = TIFFReadRawStrip(d->tiff, strip, rawBuf.data(), rawSize);
+
+                if(bytesRead <= 0)
+                {
+                    throw std::runtime_error("Error reading raw TIFF strip for JXL decompression");
+                }
+
+                uint32_t decW = 0, decH = 0;
+                auto pixels = Impl::decodeJxlCodestream(rawBuf.data(), static_cast<size_t>(bytesRead), decW, decH);
+
+                // JXL decoded data is top-down, convert RGBA to ARGB32 and copy to image
+                std::vector<uint32_t> stripBufConverted(decW * decH);
+                Impl::convertRGBAtoARGB32(stripBufConverted.data(), pixels.data(), decW * decH);
+
+                const unsigned linesToSkipFromTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+
+                for(unsigned i = 0; i < static_cast<unsigned>(areaToCopy.height()); i++)
+                {
+                    ::memcpy(&buf[size_t(destRow++) * image.width() + 0], &stripBufConverted[(i + linesToSkipFromTop) * decW + areaToCopy.x()], areaToCopy.width() * sizeof(uint32_t));
+                }
+
+                if(!quiet)
+                {
+                    this->updateDecodedRoiRect(areaToCopy);
+
+                    double progress = strip * 100.0 / stripCount;
+                    this->setDecodingProgress(progress);
+                }
+            }
+
+            Q_ASSERT(image.constBits() == dataPtrBackup);
+        }
+    }
+    else if(TIFFIsTiled(d->tiff))
     {
         uint32_t tw, tl;
 
