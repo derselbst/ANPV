@@ -10,17 +10,10 @@
 
 #include "tiff.h"
 #include "tiffio.h"
+#include "tif_jxl.h"
 
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
-
-#ifndef COMPRESSION_JXL
-#define COMPRESSION_JXL 50002 /* JPEGXL: WARNING not registered in Adobe-maintained registry */
-#endif
-
-#ifndef COMPRESSION_JXL_DNG_1_7
-#define COMPRESSION_JXL_DNG_1_7 52546 /* JPEGXL from DNG 1.7 specification */
-#endif
 
 static bool isJxlCompression(uint16_t comp)
 {
@@ -45,6 +38,9 @@ struct PageInfo
 };
 
 constexpr const char TiffModule[] = "SmartTiffDecoder";
+
+static TIFFCodec *pJXLCodec = TIFFRegisterCODEC(COMPRESSION_JXL, "JXL", TIFFInitJXL);
+static TIFFCodec *pJXLCodecDNG17 = TIFFRegisterCODEC(COMPRESSION_JXL_DNG_1_7, "JXL", TIFFInitJXL);
 
 // Note: a lot of the code has been taken from:
 // https://github.com/qt/qtimageformats/blob/c64f19516dd2467bf5746eb24afe883bdbc15b25/src/plugins/imageformats/tiff/qtiffhandler.cpp
