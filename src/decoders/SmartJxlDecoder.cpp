@@ -280,6 +280,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             }
 
             this->cancelCallback();
+            // We feed JXL only with small chunks, to keep JXL's decoder callback responsive, allowing us to call cancelCallback().
             JxlDecoderSetInput(d->djxl.get(), d->buffer + seen, remaining);
             break;
 

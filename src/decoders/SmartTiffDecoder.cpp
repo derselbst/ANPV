@@ -41,6 +41,13 @@ constexpr const char TiffModule[] = "SmartTiffDecoder";
 static TIFFCodec *pJXLCodec = TIFFRegisterCODEC(COMPRESSION_JXL, "JXL", TIFFInitJXL);
 static TIFFCodec *pJXLCodecDNG17 = TIFFRegisterCODEC(COMPRESSION_JXL_DNG_1_7, "JXL", TIFFInitJXL);
 
+// Task Handles for parallel JXL decodes
+struct DecodeTaskHandle
+{
+    std::future<void> future;
+    QRect areaToCopy;
+};
+
 // Note: a lot of the code has been taken from:
 // https://github.com/qt/qtimageformats/blob/c64f19516dd2467bf5746eb24afe883bdbc15b25/src/plugins/imageformats/tiff/qtiffhandler.cpp
 
@@ -545,6 +552,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     auto *dataPtrBackup = image.constBits();
     uint32_t *buf = const_cast<uint32_t *>(reinterpret_cast<const uint32_t *>(dataPtrBackup));
 
+    std::vector<DecodeTaskHandle> decodeTaskHandles;
     if(isJxlCompression(comp))
     {
         // JXL-compressed TIFF: producer/consumer pattern.
@@ -599,13 +607,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 throw std::runtime_error("Failed to read tile byte counts");
             }
 
-            struct TileTask
-            {
-                std::future<void> future;
-                QRect areaToCopy;
-            };
-
-            std::vector<TileTask> tileTasks;
             unsigned destRowIncr = 0;
 
             // Producer: read all raw tiles from libtiff single-threaded and submit for decode.
@@ -661,42 +662,10 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                         }
                     };
 
-                    tileTasks.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
+                    decodeTaskHandles.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
 
                     destCol += static_cast<uint32_t>(areaToCopy.width());
                     destRowIncr = static_cast<unsigned>(areaToCopy.height());
-                }
-            }
-
-            // Consumer: wait for worker tasks in submission order and update UI.
-            // Cancellation: check before each wait; on cancel/error, drain remaining futures
-            // so no worker is still writing to buf when this function returns.
-            for(size_t i = 0; i < tileTasks.size(); i++)
-            {
-                try
-                {
-                    cancelCallback();
-                }
-                catch(...)
-                {
-                    drainFrom(tileTasks, i);
-                    throw;
-                }
-
-                try
-                {
-                    tileTasks[i].future.get();
-                }
-                catch(...)
-                {
-                    drainFrom(tileTasks, i + 1);
-                    throw;
-                }
-
-                if(!quiet)
-                {
-                    this->updateDecodedRoiRect(tileTasks[i].areaToCopy);
-                    this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / tileTasks.size()));
                 }
             }
 
@@ -720,13 +689,6 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                 throw std::runtime_error("Failed to read strip byte counts");
             }
 
-            struct StripTask
-            {
-                std::future<void> future;
-                QRect areaToCopy;
-            };
-
-            std::vector<StripTask> stripTasks;
             uint32_t destRow = 0;
 
             // Producer: read all raw strips from libtiff single-threaded and submit for decode.
@@ -775,42 +737,44 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     }
                 };
 
-                stripTasks.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
+                decodeTaskHandles.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
 
                 destRow += static_cast<uint32_t>(areaToCopy.height());
             }
 
-            // Consumer: wait for worker tasks in submission order and update UI.
-            for(size_t i = 0; i < stripTasks.size(); i++)
+            Q_ASSERT(image.constBits() == dataPtrBackup);
+        }
+
+        // Consumer: wait for worker tasks in submission order and update UI.
+        // Cancellation: check before each wait; on cancel/error, drain remaining futures
+        // so no worker is still writing to buf when this function returns.
+        for (size_t i = 0; i < decodeTaskHandles.size(); i++)
+        {
+            try
             {
-                try
-                {
-                    cancelCallback();
-                }
-                catch(...)
-                {
-                    drainFrom(stripTasks, i);
-                    throw;
-                }
-
-                try
-                {
-                    stripTasks[i].future.get();
-                }
-                catch(...)
-                {
-                    drainFrom(stripTasks, i + 1);
-                    throw;
-                }
-
-                if(!quiet)
-                {
-                    this->updateDecodedRoiRect(stripTasks[i].areaToCopy);
-                    this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / stripTasks.size()));
-                }
+                cancelCallback();
+            }
+            catch (...)
+            {
+                drainFrom(decodeTaskHandles, i);
+                throw;
             }
 
-            Q_ASSERT(image.constBits() == dataPtrBackup);
+            try
+            {
+                decodeTaskHandles[i].future.get();
+            }
+            catch (...)
+            {
+                drainFrom(decodeTaskHandles, i + 1);
+                throw;
+            }
+
+            if (!quiet)
+            {
+                this->updateDecodedRoiRect(decodeTaskHandles[i].areaToCopy);
+                this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / decodeTaskHandles.size()));
+            }
         }
     }
     else if(TIFFIsTiled(d->tiff))
