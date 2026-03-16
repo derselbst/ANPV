@@ -63,9 +63,6 @@ struct SmartTiffDecoder::Impl
     std::vector<PageInfo> pageInfos;
     QPainterPath debugTiffLayout;
 
-    // Pool of single-threaded JXL decoders for producer/consumer parallel decoding (created lazily)
-    std::unique_ptr<JxlHelper::DecoderPool> jxlPool;
-
     Impl(SmartTiffDecoder *q) : q(q)
     {
         // those are nasty global, non-thread-safe functions. setting custom handlers will also affect QT's internal QImage decoding.
@@ -557,26 +554,21 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     {
         // JXL-compressed TIFF: producer/consumer pattern.
         // Producer (this thread): read raw compressed tiles/strips from libtiff single-threaded.
-        // Workers: decode each tile/strip in parallel, then write ARGB32 pixels directly to buf.
+        // Workers (singleton DecoderPool): decode each tile/strip in parallel, then write
+        //   ARGB32 pixels directly to buf via the postProcess callback.
         // Consumer (this thread): wait for tasks, update progress, handle cancellation.
 
-        // Lazily create the decoder pool (persists across calls to avoid recreating threads)
-        if(!d->jxlPool)
-        {
-            d->jxlPool = std::make_unique<JxlHelper::DecoderPool>();
-        }
+        // cancelCb wraps this decoder's cancelCallback(). Each SmartTiffDecoder instance
+        // provides its own, so cancelling one decoder does not affect others sharing the pool.
+        // Workers call it periodically inside the JXL decode loop for near-instant cancellation.
+        std::function<void()> cancelCb = [this] { this->cancelCallback(); };
 
-        // cancelFlag is shared across all tasks for this decode call.
-        // Setting it to true tells workers to skip postProcess after decoding.
-        // IMPORTANT: all futures MUST be drained (get() called) before any exception
-        // propagates, to ensure no worker is still writing to buf while it is being freed.
-        std::atomic<bool> cancelFlag{false};
-
-        // Helper: drain futures [from, tasks.size()) ignoring all results/exceptions.
-        // Used to ensure workers finish before we unwind the stack.
-        auto drainFrom = [&cancelFlag](auto &tasks, size_t from)
+        // Helper: drain futures [from, tasks.size()) waiting for all workers to finish.
+        // IMPORTANT: must be called before propagating any exception, to ensure no worker
+        // is still writing to buf while it is being freed.
+        // Workers cancel themselves via cancelCb, so draining completes quickly.
+        auto drainFrom = [](std::vector<DecodeTaskHandle> &tasks, size_t from)
         {
-            cancelFlag.store(true, std::memory_order_release);
             for(size_t j = from; j < tasks.size(); j++)
             {
                 try
@@ -662,7 +654,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                         }
                     };
 
-                    decodeTaskHandles.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
+                    decodeTaskHandles.push_back({JxlHelper::DecoderPool::instance().submit(std::move(rawBuf), std::move(postProcess), cancelCb), areaToCopy});
 
                     destCol += static_cast<uint32_t>(areaToCopy.width());
                     destRowIncr = static_cast<unsigned>(areaToCopy.height());
@@ -737,7 +729,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
                     }
                 };
 
-                decodeTaskHandles.push_back({d->jxlPool->submit(std::move(rawBuf), std::move(postProcess), &cancelFlag), areaToCopy});
+                decodeTaskHandles.push_back({JxlHelper::DecoderPool::instance().submit(std::move(rawBuf), std::move(postProcess), cancelCb), areaToCopy});
 
                 destRow += static_cast<uint32_t>(areaToCopy.height());
             }

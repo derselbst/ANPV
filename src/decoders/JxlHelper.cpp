@@ -17,7 +17,8 @@ Decoder::Decoder()
     }
 }
 
-DecodedBlock Decoder::decodeCodestream(const uint8_t *data, size_t dataSize)
+DecodedBlock Decoder::decodeCodestream(const uint8_t *data, size_t dataSize,
+                                        const std::function<void()> &cancelCallback)
 {
     JxlDecoderReset(m_dec.get());
 
@@ -37,6 +38,13 @@ DecodedBlock Decoder::decodeCodestream(const uint8_t *data, size_t dataSize)
 
     for(;;)
     {
+        // Check for cancellation before each decode step so that a request to cancel
+        // is noticed almost immediately rather than only between tiles/strips.
+        if(cancelCallback)
+        {
+            cancelCallback();
+        }
+
         JxlDecoderStatus status = JxlDecoderProcessInput(m_dec.get());
 
         switch(status)
@@ -87,6 +95,16 @@ DecodedBlock Decoder::decodeCodestream(const uint8_t *data, size_t dataSize)
     }
 }
 
+DecoderPool &DecoderPool::instance()
+{
+    // C++11 guarantees that function-local statics are initialized in a thread-safe manner
+    // (only once, even if multiple threads race to call instance() simultaneously).
+    // Worker threads spawned by the constructor simply wait for tasks; the pool is safe
+    // to use as soon as submit() is called after instance() returns.
+    static DecoderPool pool;
+    return pool;
+}
+
 DecoderPool::DecoderPool(size_t numWorkers)
 {
     if(numWorkers == 0)
@@ -122,12 +140,12 @@ DecoderPool::~DecoderPool()
 
 std::future<void> DecoderPool::submit(std::vector<uint8_t> rawData,
                                       std::function<void(DecodedBlock &&)> postProcess,
-                                      std::atomic<bool> *cancelFlag)
+                                      std::function<void()> cancelCallback)
 {
     Task task;
     task.rawData = std::move(rawData);
     task.postProcess = std::move(postProcess);
-    task.cancelFlag = cancelFlag;
+    task.cancelCallback = std::move(cancelCallback);
     std::future<void> future = task.result.get_future();
 
     {
@@ -160,22 +178,18 @@ void DecoderPool::workerFunc(Decoder &decoder)
 
         try
         {
-            // Check cancellation before decoding
-            if(task.cancelFlag && task.cancelFlag->load(std::memory_order_acquire))
+            // Decode the codestream. The cancelCallback is passed in so that cancellation
+            // is checked periodically inside the JXL decode loop — not only between tasks.
+            DecodedBlock decoded = decoder.decodeCodestream(
+                task.rawData.data(), task.rawData.size(), task.cancelCallback);
+
+            // One final cancellation check before writing to the output buffer.
+            if(task.cancelCallback)
             {
-                task.result.set_value();
-                continue;
+                task.cancelCallback();
             }
 
-            DecodedBlock decoded = decoder.decodeCodestream(task.rawData.data(), task.rawData.size());
-
-            // Check cancellation before writing to the output buffer
-            const bool isCancelled = task.cancelFlag && task.cancelFlag->load(std::memory_order_acquire);
-            if(!isCancelled)
-            {
-                task.postProcess(std::move(decoded));
-            }
-
+            task.postProcess(std::move(decoded));
             task.result.set_value();
         }
         catch(...)

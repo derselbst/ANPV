@@ -11,7 +11,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <memory>
-#include <atomic>
 
 #include <jxl/decode.h>
 #include <jxl/decode_cxx.h>
@@ -41,13 +40,16 @@ namespace JxlHelper
 
         // Decode a JXL codestream to RGBA uint8 pixels (top-down row order).
         // The decoder instance is reset automatically between calls.
-        DecodedBlock decodeCodestream(const uint8_t *data, size_t dataSize);
+        // cancelCallback (optional): called between each internal decode iteration.
+        //   If it throws, decoding is aborted and the exception propagates to the caller.
+        DecodedBlock decodeCodestream(const uint8_t *data, size_t dataSize,
+                                      const std::function<void()> &cancelCallback = {});
 
     private:
         JxlDecoderPtr m_dec;
     };
 
-    // Thread pool of single-threaded JXL decoders for producer/consumer parallel decoding.
+    // Singleton thread pool of single-threaded JXL decoders for parallel decoding.
     //
     // Usage pattern:
     //   - One producer thread reads raw compressed data (e.g. from libtiff) and calls submit().
@@ -56,14 +58,21 @@ namespace JxlHelper
     //   - The producer collects std::future<void> objects and waits for them in the consumer.
     //
     // Cancellation:
-    //   - Pass a pointer to a shared std::atomic<bool> cancelFlag to submit().
-    //   - Workers check the flag before decoding and before calling postProcess().
-    //   - If the flag is set, the task is skipped and the future is resolved normally.
-    //   - The consumer should set cancelFlag = true and drain all pending futures before
-    //     propagating any exception (to ensure no worker is writing to a buffer being freed).
+    //   - Pass a cancelCallback std::function to submit(). It is called by the worker
+    //     (1) before decoding starts, (2) periodically during the JXL decode loop, and
+    //     (3) before calling postProcess.
+    //   - If cancelCallback throws (e.g. UserCancellation), the exception is stored in
+    //     the future and postProcess is NOT called (so the output buffer is never touched).
+    //   - Each caller (e.g. each SmartTiffDecoder instance) provides its own cancelCallback,
+    //     so cancelling one decoder does not affect tasks submitted by other decoders.
+    //   - The consumer should drain all pending futures before propagating any exception,
+    //     to ensure no worker is writing to a buffer being freed.
     class DecoderPool
     {
     public:
+        // Access the process-wide singleton instance.
+        static DecoderPool &instance();
+
         // numWorkers == 0 uses std::thread::hardware_concurrency() (at least 1).
         explicit DecoderPool(size_t numWorkers = 0);
         ~DecoderPool();
@@ -75,19 +84,20 @@ namespace JxlHelper
         // - rawData is moved into the task.
         // - postProcess is called by the worker thread after a successful decode;
         //   it receives the decoded block and should write pixels to the output buffer.
-        // - cancelFlag: if non-null and set to true before/after decoding, postProcess
-        //   is skipped and the future resolves without calling postProcess.
-        // Returns a future<void> that resolves when the task completes (or is skipped).
+        // - cancelCallback (optional): called by the worker periodically during decode
+        //   and before postProcess. If it throws, the task is aborted and the exception
+        //   is propagated through the returned future.
+        // Returns a future<void> that resolves when the task completes (or is cancelled).
         std::future<void> submit(std::vector<uint8_t> rawData,
                                  std::function<void(DecodedBlock &&)> postProcess,
-                                 std::atomic<bool> *cancelFlag = nullptr);
+                                 std::function<void()> cancelCallback = {});
 
     private:
         struct Task
         {
             std::vector<uint8_t> rawData;
             std::function<void(DecodedBlock &&)> postProcess;
-            std::atomic<bool> *cancelFlag = nullptr;
+            std::function<void()> cancelCallback;
             std::promise<void> result;
         };
 
