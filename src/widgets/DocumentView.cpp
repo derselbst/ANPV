@@ -92,6 +92,11 @@ struct DocumentView::Impl
 
     ViewFlags_t cachedViewFlags = ViewFlags_t(ViewFlag::None);
 
+    // User interaction (zoom, scroll, drag) is disabled while a new image is being loaded
+    // and no metadata is available yet. It is re-enabled once metadata has been decoded
+    // and the view has been aligned.
+    bool userInteractionEnabled = true;
+
     Impl(DocumentView *parent) : q(parent)
     {}
 
@@ -102,6 +107,12 @@ struct DocumentView::Impl
 
     void clearScene()
     {
+        // Disable user interaction while loading a new image.
+        // The user must not modify the view transform until metadata is decoded
+        // and the view has been properly aligned.
+        userInteractionEnabled = false;
+        q->setDragMode(QGraphicsView::NoDrag);
+
         if(currentImageDecoder)
         {
             // stop receiving events from the decoder
@@ -116,7 +127,7 @@ struct DocumentView::Impl
             currentImageDecoder.reset();
             // clear dec state
             latestDecodingState = DecodingState::Ready;
-            // this makes ensures that the if clause will be entered next time we enter onViewportChanged(),
+            // this ensures that the if clause will be entered next time we enter onViewportChanged(),
             // to display the next or previous image
             previousFovTransform = std::nullopt;
         }
@@ -146,38 +157,54 @@ struct DocumentView::Impl
         owningRefToImage = nullptr;
     }
 
-    void forceTriggerDecoding()
+    // Schedule an image decode, using appropriate delay depending on the current state.
+    // If we already have the full resolution image, just apply smooth scaling instead.
+    // Uses a short delay when no preview exists (initial decode after metadata),
+    // or a longer debounce delay when re-decoding after user interaction.
+    void scheduleDecoding()
     {
+        if(this->latestDecodingState == DecodingState::FullImage)
+        {
+            // Full resolution image already decoded, only apply smooth pixmap scaling
+            this->createSmoothPixmap();
+            return;
+        }
+
         if(this->latestDecodingState <= DecodingState::Metadata)
         {
-            // no preview image available, quickly start the decoding
+            // No preview image available yet, start decoding quickly.
+            // Use a short delay to coalesce multiple rapid events (e.g. duplicate resize events).
             if(!this->fovChangedTimer.isActive())
             {
-                // delay the decoding by a few milliseconds, as sometimes there may be two resizeEvents being sent, I don't know why
                 this->fovChangedTimer.start(50);
             }
         }
         else
         {
-            // We already have a preview image, the user zoomed or scrolled around, no need to hurry.
-            // Do not wrap this in a if(!timer.isActive()), because if the user keeps scrolling around, this should
-            // cause the timer restart from being until the user has stopped all viewport changes.
+            // A preview image exists; the user is scrolling or zooming.
+            // Restart the timer on every event so that decoding waits
+            // until the user has stopped all viewport changes.
             this->fovChangedTimer.start();
         }
     }
 
+    // Called whenever the viewport transform changes (scroll, zoom, resize, etc.).
+    // Tracks the current transform and schedules a re-decode if the view actually changed.
     void onViewportChanged()
     {
         QTransform newTransform = q->viewportTransform();
 
         if(newTransform != this->previousFovTransform)
         {
-            forceTriggerDecoding();
             this->previousFovTransform = newTransform;
             removeSmoothPixmap();
+            scheduleDecoding();
         }
     }
 
+    // Align the view transform to match the given view mode.
+    // For Fit mode: reset transform, apply EXIF orientation, fit the image in the view.
+    // For None mode: just schedule a decode for the current viewport.
     void alignImageAccordingToViewMode(const QSharedPointer<Image> &img, ViewMode viewMode)
     {
         auto exif = img->exif();
@@ -196,7 +223,7 @@ struct DocumentView::Impl
         }
         else if(viewMode == ViewMode::None)
         {
-            this->forceTriggerDecoding();
+            this->scheduleDecoding();
         }
     }
 
@@ -283,17 +310,18 @@ struct DocumentView::Impl
         }
     }
 
+    // Perform the actual async image decode for the current viewport.
+    // Cancels any in-progress decode, computes the visible region, and starts a new decode.
     void startImageDecoding()
     {
         if(!this->currentImageDecoder)
         {
-            // error while loadImage()
             return;
         }
 
         if(this->latestDecodingState == DecodingState::FullImage)
         {
-            // full resolution image already decoded, only create a smooth pixmap
+            // Full resolution already available; nothing to decode.
             this->createSmoothPixmap();
             return;
         }
@@ -301,10 +329,10 @@ struct DocumentView::Impl
         currentImageDecoder->cancelOrTake(taskFuture.future());
         taskFuture.waitForFinished();
 
-        // get the area of what the user sees
+        // Get the area of what the user sees
         QRect viewportRect = q->viewport()->rect();
 
-        // and map that rect to scene coordinates
+        // Map that rect to scene coordinates
         QRectF viewportRectScene = q->mapToScene(viewportRect).boundingRect();
 
         QFuture<DecodingState> fut;
@@ -312,11 +340,10 @@ struct DocumentView::Impl
 
         if(!fullResRect.isEmpty())
         {
-            // The user might have zoomed out too far, crop the rect, as we are not interseted in the surrounding void.
+            // Crop to the visible part of the image (the user might have zoomed out beyond it)
             QRectF visPixRect = viewportRectScene.intersected(fullResRect);
 
-            // the GraphicsView may have been scaled; we must translate the visible rectangle
-            // (which is in scene coordinates) into the view's coordinates
+            // Translate visible rect from scene coordinates to view coordinates
             QRectF visPixRectMappedToView = q->mapFromScene(visPixRect).boundingRect();
 
             QSize desiredRes = visPixRectMappedToView.toAlignedRect().size();
@@ -338,6 +365,7 @@ struct DocumentView::Impl
         this->startImageDecoding();
     }
 
+    // Display the embedded thumbnail as a quick preview while the full image is being decoded.
     void addThumbnailPreview(QSharedPointer<Image> img)
     {
         QImage thumb = img->thumbnail();
@@ -899,6 +927,12 @@ void DocumentView::zoomOut()
 
 void DocumentView::wheelEvent(QWheelEvent *event)
 {
+    if(!d->userInteractionEnabled)
+    {
+        event->accept();
+        return;
+    }
+
     auto angleDelta = event->angleDelta();
     auto modifiers = event->modifiers();
 
@@ -1198,6 +1232,8 @@ void DocumentView::showImage(QSharedPointer<Image> img)
         {
             d->latestDecodingState = DecodingState::Metadata;
 
+            // Align the view to fit the image according to the current view mode.
+            // This may also trigger the initial image decode via onViewportChanged().
             d->alignImageAccordingToViewMode(img, ANPV::globalInstance()->viewMode());
 
             auto viewFlags = ANPV::globalInstance()->viewFlags();
@@ -1244,6 +1280,11 @@ void DocumentView::showImage(QSharedPointer<Image> img)
                     }
                 }
             }
+
+            // Metadata has been decoded and the view has been aligned.
+            // Now permit user interaction (zoom, scroll, drag) again.
+            d->userInteractionEnabled = true;
+            this->setDragMode(QGraphicsView::ScrollHandDrag);
         }
     }
 
