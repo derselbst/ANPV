@@ -257,7 +257,6 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
     }
 
     bool taken = ANPV::globalInstance()->threadPool()->tryTake(this);
-
     if(taken)
     {
         // current decoder was taken from the pool and will therefore never emit finished event, even though some clients are relying on this...
@@ -265,15 +264,16 @@ void SmartImageDecoder::cancelOrTake(QFuture<DecodingState> taskFuture)
         this->setDecodingState(DecodingState::Cancelled);
         d->promise->addResult(d->decodingState());
         d->promise->finish();
-        return;
     }
-
-    bool isFinished = taskFuture.isFinished();
-
-    if(!isFinished)
+    else
     {
-        taskFuture.cancel();
+        bool isFinished = taskFuture.isFinished();
+        if (!isFinished)
+        {
+            taskFuture.cancel();
+        }
     }
+    qInfo() << "Canceled decoding of file " << this->image()->fileInfo().fileName() << " instance " << (void*)this;
 }
 
 // FIXME This function may not be called concurrently by multiple threads
@@ -310,6 +310,8 @@ QFuture<DecodingState> SmartImageDecoder::decodeAsync(DecodingState targetState,
     // Stop the image update rect timer now, before starting decoding, to avoid a race condition due to delayed events if being called from the decoder worker thread
     this->resetDecodedRoiRect();
     QFuture<DecodingState> fut = d->promise->future();
+
+    qInfo() << "Starting decode of " << this->image()->fileInfo().fileName() << " instance " << (void*)this;
 
     // The threadpool will take over this instance after calling start. From there on this instance must be seen as deleted and no further calls must be made
     // to any of its members! E.g. calling d->promise->future() afterwards actually led to horribly hard-to-reproduce use-after-frees in the past.

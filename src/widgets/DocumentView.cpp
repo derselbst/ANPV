@@ -104,11 +104,17 @@ struct DocumentView::Impl
     {
         if(currentImageDecoder)
         {
-            currentImageDecoder->cancelOrTake(taskFuture.future());
-            taskFuture.waitForFinished();
-            currentImageDecoder->releaseFullImage();
+            // stop receiving events from the decoder
             currentImageDecoder->image()->disconnect(q);
+            // request cancel decoding
+            currentImageDecoder->cancelOrTake(taskFuture.future());
+            // join async decoding
+            taskFuture.waitForFinished();
+            // free memory
+            currentImageDecoder->releaseFullImage();
+            // clear decoder instance
             currentImageDecoder.reset();
+            // clear dec state
             latestDecodingState = DecodingState::Ready;
             // this makes ensures that the if clause will be entered next time we enter onViewportChanged(),
             // to display the next or previous image
