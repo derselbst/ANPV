@@ -68,6 +68,8 @@ public:
     bool gpsDop(double &dop);
     bool gpsHPosErr(double &dop);
 
+    QString roundshotPanoTag();
+
     QString formatToString();
 
 private:

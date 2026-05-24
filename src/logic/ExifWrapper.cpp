@@ -4,7 +4,9 @@
 #include "AfPointOverlay.hpp"
 #include "Formatter.hpp"
 #include "MoonPhase.hpp"
+#include "RoundshotTagInterpreter.hpp"
 
+#include <QPointer>
 #include <QByteArray>
 #include <QImage>
 #include <QSize>
@@ -736,6 +738,31 @@ bool ExifWrapper::gpsHPosErr(double &dop)
     return false;
 }
 
+QString ExifWrapper::roundshotPanoTag()
+{
+    QString cameraManufac = d->mExivHandle.getExifTagString("Exif.Image.Make");
+    QString ownerName = d->mExivHandle.getExifTagString("Exif.Photo.CameraOwnerName");
+    QString comment = d->mExivHandle.getExifTagString("Exif.Photo.UserComment");
+    QString copyright = d->mExivHandle.getExifTagString("Exif.Image.Copyright");
+
+    if ((cameraManufac.toLower()).contains("canon") && ownerName.size() >= 18)
+    {
+        return ownerName;
+    }
+    else if ((cameraManufac.toLower()).contains("nikon") && comment.size() >= 18+16)
+    {
+        // Skip 16 chars and strip whitespace
+        return comment.mid(16, comment.size()).replace(" ", "");
+    }
+    else if ((cameraManufac.toLower()).contains("fujifilm") && copyright.size() >= 18)
+    {
+        return copyright.replace(" ", "");
+    }
+
+    // unknown / not implemented
+    return QString();
+}
+
 bool ExifWrapper::isMirrorLockupEnabled(bool &isEnabled)
 {
     int64_t l;
@@ -821,8 +848,25 @@ QString ExifWrapper::formatToString()
         }
     }
 
-    QDateTime dt = this->dateRecorded();
+    s = this->roundshotPanoTag();
+    if (!s.isEmpty())
+    {
+        try
+        {
+            f << "<br>Roundshot ID: " << RoundshotTagInterpreter::decodeDateTime(s).toStdString();
+            f << "<br>  ImgIdx: " << std::setfill('0') << std::setw(4) << RoundshotTagInterpreter::imageIndex(s) << " / " << std::setw(4) << RoundshotTagInterpreter::numberOfImages(s);
+            f << std::setw(0) << std::fixed << std::setprecision(1);
+            f << "<br>    Yaw: " << RoundshotTagInterpreter::yaw(s) << " &ordm;";
+            f << "<br>  Pitch: " << RoundshotTagInterpreter::pitch(s) << " &ordm;";
+            f << "<br>   Roll: " << RoundshotTagInterpreter::roll(s) << " &ordm;<br>";
+        }
+        catch (const std::invalid_argument& e)
+        {
+            qWarning() << "Interpreting presumed Roundshot ID failed: " << e.what();
+        }
+    }
 
+    QDateTime dt = this->dateRecorded();
     if(dt.isValid())
     {
         int phase = MoonPhase::fromDateTime(dt);
