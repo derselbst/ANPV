@@ -151,7 +151,6 @@ src/decoders/SmartPngDecoder.cpp
 src/decoders/SmartPngDecoder.hpp
 src/decoders/SmartTiffDecoder.cpp
 src/decoders/SmartTiffDecoder.hpp
-src/decoders/tif_jxl.c
 src/decoders/tif_jxl.h
 src/decoders/JxlHelper.cpp
 src/decoders/JxlHelper.hpp
