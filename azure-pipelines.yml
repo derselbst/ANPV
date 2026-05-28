@@ -18,7 +18,7 @@ resources:
   containers:
   - container: qt6Container-linux
     endpoint: 'myDockerHub'
-    image: tommoebert332/qt6-build:latest-suse
+    image: ghcr.io/derselbst/qt6.suse:master-57b52fd
   - container: qt6Container-win
     endpoint: 'myDockerHub'
     image: ghcr.io/derselbst/qt6-ps.win:master-4b2f2df
