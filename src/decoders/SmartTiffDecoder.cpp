@@ -19,6 +19,15 @@ static bool isJxlCompression(uint16_t comp)
     return comp == COMPRESSION_JXL || comp == COMPRESSION_JXL_DNG_1_7;
 }
 
+extern "C" int TIFFInitJXL(TIFF *tif, int scheme)
+{
+    (void)tif;
+    (void)scheme;
+    /* No codec-level setup needed; decoding is handled at the application
+     * level using TIFFReadRawTile/TIFFReadRawStrip and libjxl directly. */
+    return 1;
+}
+
 struct PageInfo
 {
     uint32_t width;
