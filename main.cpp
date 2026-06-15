@@ -89,6 +89,16 @@ inline QString getLongPathName(const char* path)
 
 int main(int argc, char *argv[])
 {
+#if defined(Q_OS_WIN) && !defined(NDEBUG)
+    if (GetConsoleWindow() == nullptr)
+    {
+        AllocConsole();
+        FILE* f;
+        freopen_s(&f, "CONOUT$", "w", stdout);
+        freopen_s(&f, "CONOUT$", "w", stderr);
+    }
+#endif
+
     Q_INIT_RESOURCE(ANPV);
     Q_INIT_RESOURCE(oxygen);
     QApplication app(argc, argv);
