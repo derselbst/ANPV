@@ -3,6 +3,7 @@
 #include "Formatter.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
+#include "UserCancellation.hpp"
 
 #include <cstring>
 #include <QDebug>
@@ -10,6 +11,22 @@
 
 #include "tiff.h"
 #include "tiffio.h"
+#include "tif_jxl.h"
+#include "JxlHelper.hpp"
+
+static bool isJxlCompression(uint16_t comp)
+{
+    return comp == COMPRESSION_JXL || comp == COMPRESSION_JXL_DNG_1_7;
+}
+
+extern "C" int TIFFInitJXL(TIFF *tif, int scheme)
+{
+    (void)tif;
+    (void)scheme;
+    /* No codec-level setup needed; decoding is handled at the application
+     * level using TIFFReadRawTile/TIFFReadRawStrip and libjxl directly. */
+    return 1;
+}
 
 struct PageInfo
 {
@@ -29,6 +46,16 @@ struct PageInfo
 };
 
 constexpr const char TiffModule[] = "SmartTiffDecoder";
+
+static TIFFCodec *pJXLCodec = TIFFRegisterCODEC(COMPRESSION_JXL, "JXL", TIFFInitJXL);
+static TIFFCodec *pJXLCodecDNG17 = TIFFRegisterCODEC(COMPRESSION_JXL_DNG_1_7, "JXL", TIFFInitJXL);
+
+// Task Handles for parallel JXL decodes
+struct DecodeTaskHandle
+{
+    std::future<void> future;
+    QRect areaToCopy;
+};
 
 // Note: a lot of the code has been taken from:
 // https://github.com/qt/qtimageformats/blob/c64f19516dd2467bf5746eb24afe883bdbc15b25/src/plugins/imageformats/tiff/qtiffhandler.cpp
@@ -517,7 +544,7 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     uint16_t comp = 1;
     TIFFGetField(d->tiff, TIFFTAG_COMPRESSION, &comp);
 
-    if(!TIFFIsCODECConfigured(comp))
+    if(!isJxlCompression(comp) && !TIFFIsCODECConfigured(comp))
     {
         throw std::runtime_error(Formatter() << "Codec " << (int)comp << " is not supported by libtiff");
     }
@@ -531,7 +558,227 @@ void SmartTiffDecoder::decodeInternal(int imagePageToDecode, QImage &image, QRec
     auto *dataPtrBackup = image.constBits();
     uint32_t *buf = const_cast<uint32_t *>(reinterpret_cast<const uint32_t *>(dataPtrBackup));
 
-    if(TIFFIsTiled(d->tiff))
+    std::vector<DecodeTaskHandle> decodeTaskHandles;
+    if(isJxlCompression(comp))
+    {
+        // JXL-compressed TIFF: producer/consumer pattern.
+        // Producer (this thread): read raw compressed tiles/strips from libtiff single-threaded.
+        // Workers (singleton DecoderPool): decode each tile/strip in parallel, then write
+        //   ARGB32 pixels directly to buf via the postProcess callback.
+        // Consumer (this thread): wait for tasks, update progress, handle cancellation.
+
+        // cancelCb wraps this decoder's cancelCallback(). Each SmartTiffDecoder instance
+        // provides its own, so cancelling one decoder does not affect others sharing the pool.
+        // Workers call it periodically inside the JXL decode loop for near-instant cancellation.
+        std::function<void()> cancelCb = [this] { this->cancelCallback(); };
+
+        // Helper: drain futures [from, tasks.size()) waiting for all workers to finish.
+        // IMPORTANT: must be called before propagating any exception, to ensure no worker
+        // is still writing to buf while it is being freed.
+        // Workers cancel themselves via cancelCb, so draining completes quickly.
+        auto drainFrom = [](std::vector<DecodeTaskHandle> &tasks, size_t from)
+        {
+            for(size_t j = from; j < tasks.size(); j++)
+            {
+                try
+                {
+                    tasks[j].future.get();
+                }
+                catch(...)
+                {
+                }
+            }
+        };
+
+        const size_t imgWidth = static_cast<size_t>(image.width());
+
+        if(TIFFIsTiled(d->tiff))
+        {
+            uint32_t tw, tl;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_TILEWIDTH, &tw) || !TIFFGetField(d->tiff, TIFFTAG_TILELENGTH, &tl))
+            {
+                throw std::runtime_error("Failed to read tile size");
+            }
+
+            uint64_t *tileByteCounts = nullptr;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_TILEBYTECOUNTS, &tileByteCounts) || !tileByteCounts)
+            {
+                throw std::runtime_error("Failed to read tile byte counts");
+            }
+
+            unsigned destRowIncr = 0;
+
+            // Producer: read all raw tiles from libtiff single-threaded and submit for decode.
+            // Each task carries a postProcess lambda that converts RGBA→ARGB32 and writes
+            // directly to buf — this work runs in the worker thread, not the consumer.
+            for(uint32_t y = 0, destRow = 0; y < height; y += tl, destRow += destRowIncr)
+            {
+                for(uint32_t x = 0, destCol = 0; x < width; x += tw)
+                {
+                    const unsigned linesToCopy = std::min(tl, height - y);
+                    const unsigned widthToCopy = std::min(tw, width - x);
+                    QRect tileRect(x, y, widthToCopy, linesToCopy);
+
+                    QRect areaToCopy = tileRect.intersected(roi);
+
+                    if(areaToCopy.isEmpty())
+                    {
+                        continue;
+                    }
+
+                    d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(tileRect));
+
+                    ttile_t tileIdx = TIFFComputeTile(d->tiff, x, y, 0, 0);
+                    tmsize_t rawSize = static_cast<tmsize_t>(tileByteCounts[tileIdx]);
+                    std::vector<uint8_t> rawBuf(rawSize);
+                    tmsize_t bytesRead = TIFFReadRawTile(d->tiff, tileIdx, rawBuf.data(), rawSize);
+
+                    if(bytesRead <= 0)
+                    {
+                        throw std::runtime_error("Error reading raw TIFF tile for JXL decompression");
+                    }
+
+                    // Capture per-tile state for the post-process lambda (run in worker thread).
+                    const auto capturedArea = areaToCopy;
+                    const auto capturedDestRow = destRow;
+                    const auto capturedDestCol = destCol;
+                    const unsigned capturedSkipTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+                    const unsigned capturedSkipLeft = x < static_cast<unsigned>(areaToCopy.x()) ? areaToCopy.x() - x : 0;
+
+                    auto postProcess = [buf, imgWidth, capturedArea, capturedDestRow, capturedDestCol,
+                                        capturedSkipTop, capturedSkipLeft](JxlHelper::DecodedBlock &&decoded)
+                    {
+                        const uint32_t decW = decoded.width;
+
+                        for(int row = 0; row < capturedArea.height(); row++)
+                        {
+                            const size_t dr = capturedDestRow + static_cast<size_t>(row);
+                            const unsigned srcRow = static_cast<unsigned>(row) + capturedSkipTop;
+                            JxlHelper::convertRGBAtoARGB32(
+                                &buf[dr * imgWidth + capturedDestCol],
+                                &decoded.pixels[(static_cast<size_t>(srcRow) * decW + capturedSkipLeft) * 4],
+                                static_cast<uint32_t>(capturedArea.width()));
+                        }
+                    };
+
+                    decodeTaskHandles.push_back({JxlHelper::DecoderPool::instance().submit(std::move(rawBuf), std::move(postProcess), cancelCb), areaToCopy});
+
+                    destCol += static_cast<uint32_t>(areaToCopy.width());
+                    destRowIncr = static_cast<unsigned>(areaToCopy.height());
+                }
+            }
+
+            Q_ASSERT(image.constBits() == dataPtrBackup);
+        }
+        else
+        {
+            uint32_t rowsperstrip;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_ROWSPERSTRIP, &rowsperstrip))
+            {
+                throw std::runtime_error("Failed to read RowsPerStrip. Not a TIFF file?");
+            }
+
+            const auto stripCount = TIFFNumberOfStrips(d->tiff);
+
+            uint64_t *stripByteCounts = nullptr;
+
+            if(!TIFFGetField(d->tiff, TIFFTAG_STRIPBYTECOUNTS, &stripByteCounts) || !stripByteCounts)
+            {
+                throw std::runtime_error("Failed to read strip byte counts");
+            }
+
+            uint32_t destRow = 0;
+
+            // Producer: read all raw strips from libtiff single-threaded and submit for decode.
+            for(tstrip_t strip = 0; strip < stripCount; strip++)
+            {
+                const uint32_t rowsToDecode = std::min<size_t>(rowsperstrip, height - strip * rowsperstrip);
+                const unsigned y = (strip * rowsperstrip);
+                QRect stripRect(0, y, width, rowsToDecode);
+
+                QRect areaToCopy = stripRect.intersected(roi);
+
+                if(areaToCopy.isEmpty())
+                {
+                    continue;
+                }
+
+                d->debugTiffLayout.addRect(currentPageToFullResTransform.mapRect(stripRect));
+
+                tmsize_t rawSize = static_cast<tmsize_t>(stripByteCounts[strip]);
+                std::vector<uint8_t> rawBuf(rawSize);
+                tmsize_t bytesRead = TIFFReadRawStrip(d->tiff, strip, rawBuf.data(), rawSize);
+
+                if(bytesRead <= 0)
+                {
+                    throw std::runtime_error("Error reading raw TIFF strip for JXL decompression");
+                }
+
+                // Capture per-strip state for the post-process lambda (run in worker thread).
+                const auto capturedArea = areaToCopy;
+                const auto capturedDestRow = destRow;
+                const unsigned capturedSkipTop = y < static_cast<unsigned>(areaToCopy.y()) ? areaToCopy.y() - y : 0;
+
+                auto postProcess = [buf, imgWidth, capturedArea, capturedDestRow,
+                                    capturedSkipTop](JxlHelper::DecodedBlock &&decoded)
+                {
+                    const uint32_t decW = decoded.width;
+
+                    for(int row = 0; row < capturedArea.height(); row++)
+                    {
+                        const size_t srcOffset =
+                            (static_cast<size_t>(row + capturedSkipTop) * decW + static_cast<unsigned>(capturedArea.x())) * 4;
+                        JxlHelper::convertRGBAtoARGB32(
+                            &buf[(capturedDestRow + static_cast<size_t>(row)) * imgWidth],
+                            &decoded.pixels[srcOffset],
+                            static_cast<uint32_t>(capturedArea.width()));
+                    }
+                };
+
+                decodeTaskHandles.push_back({JxlHelper::DecoderPool::instance().submit(std::move(rawBuf), std::move(postProcess), cancelCb), areaToCopy});
+
+                destRow += static_cast<uint32_t>(areaToCopy.height());
+            }
+
+            Q_ASSERT(image.constBits() == dataPtrBackup);
+        }
+
+        // Consumer: wait for worker tasks in submission order and update UI.
+        // Cancellation: check before each wait; on cancel/error, drain remaining futures
+        // so no worker is still writing to buf when this function returns.
+        for (size_t i = 0; i < decodeTaskHandles.size(); i++)
+        {
+            try
+            {
+                cancelCallback();
+            }
+            catch (...)
+            {
+                drainFrom(decodeTaskHandles, i);
+                throw;
+            }
+
+            try
+            {
+                decodeTaskHandles[i].future.get();
+            }
+            catch (...)
+            {
+                drainFrom(decodeTaskHandles, i + 1);
+                throw;
+            }
+
+            if (!quiet)
+            {
+                this->updateDecodedRoiRect(decodeTaskHandles[i].areaToCopy);
+                this->setDecodingProgress(static_cast<int>((i + 1) * 100.0 / decodeTaskHandles.size()));
+            }
+        }
+    }
+    else if(TIFFIsTiled(d->tiff))
     {
         uint32_t tw, tl;
 

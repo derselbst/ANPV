@@ -3,6 +3,7 @@
 #include "Formatter.hpp"
 #include "Image.hpp"
 #include "ANPV.hpp"
+#include "JxlHelper.hpp"
 
 #include <cstring>
 #include <thread>
@@ -16,8 +17,6 @@
 
 struct SmartJxlDecoder::Impl
 {
-    static const inline JxlPixelFormat jxlFormat = { 4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0 };
-
     SmartJxlDecoder *q;
 
     JxlDecoderPtr djxl;
@@ -46,7 +45,7 @@ struct SmartJxlDecoder::Impl
     {
         auto *self = static_cast<SmartJxlDecoder::Impl *>(opaque);
 
-        std::memcpy(&self->imgBuf[(y * self->jxlInfo.xsize + x) * self->jxlFormat.num_channels], pixels, self->jxlFormat.num_channels * num_pixels);
+        std::memcpy(&self->imgBuf[(y * self->jxlInfo.xsize + x) * JxlHelper::jxlFormat.num_channels], pixels, JxlHelper::jxlFormat.num_channels * num_pixels);
 
         self->pixelsSeen += num_pixels;
         self->q->setDecodingProgress(self->pixelsSeen * 100.0f / (self->jxlInfo.xsize * self->jxlInfo.ysize));
@@ -211,7 +210,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             break;
 
         case JXL_DEC_NEED_PREVIEW_OUT_BUFFER:
-            ret = JxlDecoderPreviewOutBufferSize(d->djxl.get(), &d->jxlFormat, &buffer_size);
+            ret = JxlDecoderPreviewOutBufferSize(d->djxl.get(), &JxlHelper::jxlFormat, &buffer_size);
 
             if(JXL_DEC_SUCCESS != ret)
             {
@@ -221,7 +220,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             thumb = this->allocateImageBuffer(info.preview.xsize, info.preview.ysize, d->format());
             Q_ASSERT(thumb.bytesPerLine() * thumb.height() == buffer_size);
 
-            ret = JxlDecoderSetPreviewOutBuffer(d->djxl.get(), &d->jxlFormat, const_cast<uint8_t *>(thumb.constBits()), buffer_size);
+            ret = JxlDecoderSetPreviewOutBuffer(d->djxl.get(), &JxlHelper::jxlFormat, const_cast<uint8_t *>(thumb.constBits()), buffer_size);
 
             if(JXL_DEC_SUCCESS != ret)
             {
@@ -248,7 +247,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             break;
 
         case JXL_DEC_NEED_IMAGE_OUT_BUFFER:
-            ret = JxlDecoderImageOutBufferSize(d->djxl.get(), &d->jxlFormat, &buffer_size);
+            ret = JxlDecoderImageOutBufferSize(d->djxl.get(), &JxlHelper::jxlFormat, &buffer_size);
 
             if(JXL_DEC_SUCCESS != ret)
             {
@@ -260,7 +259,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
 
             d->pixelsSeen = 0;
             d->imgBuf = const_cast<uint8_t *>(image.constBits());
-            ret = JxlDecoderSetImageOutCallback(d->djxl.get(), &d->jxlFormat, &d->decoderCallback, d.get());
+            ret = JxlDecoderSetImageOutCallback(d->djxl.get(), &JxlHelper::jxlFormat, &d->decoderCallback, d.get());
 
             if(JXL_DEC_SUCCESS != ret)
             {
@@ -281,6 +280,7 @@ void SmartJxlDecoder::decodeInternal(QImage &image)
             }
 
             this->cancelCallback();
+            // We feed JXL only with small chunks, to keep JXL's decoder callback responsive, allowing us to call cancelCallback().
             JxlDecoderSetInput(d->djxl.get(), d->buffer + seen, remaining);
             break;
 
