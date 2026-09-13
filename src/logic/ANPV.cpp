@@ -293,7 +293,7 @@ struct ANPV::Impl
         actionRespect_EXIF_orientation->setStatusTip(actionRespect_EXIF_orientation->toolTip());
 
         this->undoStack = new QUndoStack(q);
-        this->globalSettings = new QSettings(QSettings::UserScope, q);
+        this->globalSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, QApplication::organizationName(), QApplication::applicationName(), q);
     }
 
     void connectLogic()
