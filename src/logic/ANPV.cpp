@@ -293,7 +293,9 @@ struct ANPV::Impl
         actionRespect_EXIF_orientation->setStatusTip(actionRespect_EXIF_orientation->toolTip());
 
         this->undoStack = new QUndoStack(q);
-        this->globalSettings = new QSettings(QSettings::UserScope, q);
+
+        // Prevent using the registry on Windows, as Defender's real-time protection keeps stalling ANPV upon calling writeSettings(), which performs a synchronous write into the registry
+        this->globalSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, QApplication::organizationName(), QApplication::applicationName(), q);
     }
 
     void connectLogic()
